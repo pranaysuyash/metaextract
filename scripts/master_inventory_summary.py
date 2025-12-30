@@ -2,7 +2,7 @@
 """Master inventory summary for MetaExtract 45K+ goal.
 
 This script combines all field inventories and shows total progress
-toward 45,000+ field target.
+toward the 45,000+ field target.
 """
 
 import json
@@ -10,128 +10,83 @@ from pathlib import Path
 from typing import Dict
 
 
-INVENTORY_FILES = [
-    "dist/field_inventory_comprehensive/field_inventory_summary.json",
-    "dist/video_codec_inventory/video_codec_inventory.json",
-    "dist/id3_inventory/id3_frames_inventory.json",
-    "dist/audio_format_inventory/audio_format_inventory.json",
+INVENTORY_DIRS = [
+    ("field_inventory_comprehensive", "field_inventory_summary.json"),
+    ("video_codec_inventory", "video_codec_inventory.json"),
+    ("id3_inventory", "id3_frames_inventory.json"),
+    ("audio_format_inventory", "audio_format_inventory.json"),
+    ("fits_inventory", "fits_inventory.json"),
+    ("filesystem_inventory", "filesystem_inventory.json"),
+    ("network_inventory", "network_inventory.json"),
+    ("web_standards_inventory", "web_standards_inventory.json"),
+    ("device_hardware_inventory", "device_hardware_inventory.json"),
+    ("social_media_inventory", "social_media_summary.json"),
 ]
 
 
-def load_inventory(path: str) -> Dict:
+def load_inventory(dir_name: str, filename: str) -> Dict:
     """Load inventory JSON file."""
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"[skip] {path} (not found)")
-        return {}
-    except Exception as e:
-        print(f"[error] Failed to load {path}: {e}")
-        return {}
-
-
-def summarize_field_inventory(inventory: Dict) -> Dict[str, int]:
-    """Summarize field inventory."""
-
-    totals = inventory.get("totals", {})
-    return {
-        "tags": totals.get("tags", 0),
-        "categories": totals.get("categories", 0),
-        "unique": totals.get("unique_by_category_table_name", 0),
-    }
-
-
-def summarize_video_codecs(inventory: Dict) -> Dict[str, int]:
-    """Summarize video codec inventory."""
-
-    totals = inventory.get("totals", {})
-    categories = inventory.get("categories", {})
-
-    total = 0
-    codec_categories = []
-
-    for key, value in categories.items():
-        if key.startswith("Video Codec") and isinstance(value, dict) and "tags" in value:
-            tag_count = value.get("tags", 0)
-            if isinstance(tag_count, int):
-                total += tag_count
-                codec_categories.append(key)
-
-    return {
-        "tags": total,
-        "categories": len(codec_categories),
-    }
-
-
-def summarize_id3_frames(inventory: Dict) -> Dict[str, int]:
-    """Summarize ID3 frame inventory."""
-
-    totals = inventory.get("totals", {})
-    return {
-        "total_frames": totals.get("total_frames", 0),
-        "total_versions": totals.get("total_versions", 0),
-        "total_categories": totals.get("total_categories", 0),
-    }
-
-
-def summarize_audio_formats(inventory: Dict) -> Dict[str, int]:
-    """Summarize audio format inventory."""
-
-    totals = inventory.get("totals", {})
-    return {
-        "total_fields": totals.get("total_fields", 0),
-        "total_formats": totals.get("total_formats", 0),
-    }
+    dir_path = Path("dist") / dir_name
+    summary_file = dir_path / filename
+    if summary_file.exists():
+        try:
+            with open(summary_file) as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[warn] Failed to load {dir_path}/{filename}: {e}")
+    return {}
 
 
 def main():
     from datetime import datetime, timezone
 
     print("=" * 70)
-    print("METAFIELD INVENTORY MASTER SUMMARY")
+    print("METAFIELD INVENTORY MASTER SUMMARY (EXPANDED)")
     print("=" * 70)
     print()
 
-    field_inv = load_inventory(INVENTORY_FILES[0])
-    video_codec_inv = load_inventory(INVENTORY_FILES[1])
-    id3_frames_inv = load_inventory(INVENTORY_FILES[2])
-    audio_format_inv = load_inventory(INVENTORY_FILES[3])
+    # Load all inventories
+    inventories = {}
+    totals_by_source = {}
 
-    field_summary = summarize_field_inventory(field_inv)
-    video_codec_summary = summarize_video_codecs(video_codec_inv)
-    id3_summary = summarize_id3_frames(id3_frames_inv)
-    audio_summary = summarize_audio_formats(audio_format_inv)
+    for dir_name, filename in INVENTORY_DIRS:
+        inv = load_inventory(dir_name, filename)
+        if inv:
+            inventories[dir_name] = inv
 
-    grand_total = (
-        field_summary["tags"] +
-        video_codec_summary["tags"] +
-        id3_summary["total_frames"] +
-        audio_summary["total_fields"]
-    )
+            # Extract totals - check multiple locations
+            totals = inv.get("totals", {})
+            source_name = dir_name.replace("_inventory", "").replace("_comprehensive", "")
+
+            if "tags" in totals:
+                totals_by_source[source_name] = ("tags", totals["tags"])
+            elif "total_fields" in totals:
+                totals_by_source[source_name] = ("fields", totals["total_fields"])
+            elif "total_keywords" in totals:
+                totals_by_source[source_name] = ("keywords", totals["total_keywords"])
+            elif "total_frames" in totals:
+                totals_by_source[source_name] = ("frames", totals["total_frames"])
+            elif "total_fields" in inv:  # Check top level for some inventories
+                totals_by_source[source_name] = ("fields", inv["total_fields"])
+            elif "total" in inv:  # Check top level for some inventories
+                total_val = inv["total"]
+                if isinstance(total_val, int):
+                    totals_by_source[source_name] = ("fields", total_val)
+
+    # Calculate grand total
+    grand_total = sum(count for _, count in totals_by_source.values())
+
+    # 45K target
+    target_45k = 45000
+    coverage = (grand_total / target_45k) * 100
+    remaining = target_45k - grand_total
 
     print("FIELD INVENTORIES")
     print("-" * 70)
     print()
 
-    print(f"ExifTool Field Inventory:")
-    print(f"  Tags: {field_summary['tags']:,}")
-    print(f"  Categories: {field_summary['categories']:,}")
-
-    print()
-    print(f"Video Codec Inventory:")
-    print(f"  Tags: {video_codec_summary['tags']:,}")
-    print(f"  Categories: {video_codec_summary['categories']:}")
-
-    print()
-    print(f"ID3 Frame Inventory:")
-    print(f"  Frames: {id3_summary['total_frames']:,}")
-    print(f"  Versions: {id3_summary['total_versions']:,}")
-
-    print()
-    print(f"Audio Format Inventory:")
-    print(f"  Fields: {audio_summary['total_fields']:,}")
-    print(f"  Formats: {audio_summary['total_formats']:,}")
+    for source_name, (unit, count) in sorted(totals_by_source.items(), key=lambda x: x[1][1], reverse=True):
+        print(f"  {source_name:35s}: {count:>8,} {unit}")
 
     print()
     print("=" * 70)
@@ -139,58 +94,71 @@ def main():
     print("=" * 70)
     print()
 
-    target_45k = 45000
-    coverage = (grand_total / target_45k) * 100
-    remaining = target_45k - grand_total
-
-    print(f"Target fields: {target_45k:,}")
-    print(f"Current total:  {grand_total:,}")
-    print(f"Coverage: {coverage:.1f}%")
-    print(f"Remaining: {remaining:,}")
-
-    print()
-    print("TOP GAP AREAS (fields needed)")
-    print("-" * 70)
-    print()
-
-    gap_areas = [
-        ("Audio format specifics (APEv2, MP4 atoms, WAV/RIFF, AIFF, Opus, DSD, BWF)", 2315),
-        ("FITS/Geospatial (FITS keywords, GeoTIFF, Shapefile, KML)", 3200),
-        ("File system/OS metadata (NTFS, APFS/HFS+, extended attributes)", 500),
-        ("Network/communication (email, HTTP, DNS, TLS)", 600),
-        ("Digital signatures (code signing, PDF, C2PA, blockchain)", 500),
-        ("Device/hardware (CPU ID, TPM, MAC, firmware)", 400),
-        ("Social media APIs (Instagram, TikTok, YouTube)", 800),
-        ("Web standards (Open Graph, Twitter Cards, Schema.org)", 500),
-        ("Video codec depth (H.264/HEVC/VP9/AV1 bitstream params, HDR, color space)", 3000),
-        ("Full ID3v2.4 registry expansion", 1008),
-    ]
-
-    gap_total = sum(g[1] for g in gap_areas)
-
-    for area, count in sorted(gap_areas, key=lambda x: x[1], reverse=True):
-        pct = (count / gap_total) * 100
-        print(f"  {area}: {count:,} fields ({pct:.1f}%)")
-
-    print()
-    print(f"Gap total: {gap_total:,}")
-    print(f"Grand total with gaps: {grand_total + gap_total:,}")
+    print(f"  Target fields: {target_45k:,}")
+    print(f"  Current total:  {grand_total:,}")
+    print(f"  Coverage: {coverage:.1f}%")
+    print(f"  Remaining: {remaining:,}")
 
     print()
     print("=" * 70)
-    print("NEXT PRIORITIES")
+    print("INVENTORY BREAKDOWN")
     print("=" * 70)
     print()
-    print("1. Implement audio format extractors (APEv2, MP4 atoms, WAV/RIFF, AIFF, Opus, DSD, BWF)")
-    print("2. Add FITS keyword inventory")
-    print("3. Add file system metadata extraction")
-    print("4. Implement network/communication header parsing")
-    print("5. Implement digital signature extraction")
-    print("6. Add device/hardware fingerprint extraction")
-    print("7. Build social media API extractors")
-    print("8. Implement web standards parsing")
-    print("9. Expand video codec depth extractors")
-    print("10. Expand ID3 frame registry (full ID3v2.4 list)")
+
+    # Show category breakdown
+    all_categories = []
+    for dir_name, inv in inventories.items():
+        source = dir_name.replace("_inventory", "").replace("_comprehensive", "")
+        categories = inv.get("categories") or inv.get("by_category", {})
+        if categories:
+            for cat_name, cat_data in categories.items():
+                if isinstance(cat_data, dict):
+                    count = cat_data.get("count", cat_data.get("tags", cat_data.get("fields", 0)))
+                    if isinstance(count, list):
+                        count = len(count)
+                    if count > 0:
+                        all_categories.append((f"{source}/{cat_name}", count))
+
+    all_categories.sort(key=lambda x: x[1], reverse=True)
+
+    for cat_name, count in all_categories[:25]:
+        pct = (count / grand_total * 100) if grand_total > 0 else 0
+        print(f"  {cat_name:50s}: {count:>6,} ({pct:5.1f}%)")
+
+    if len(all_categories) > 25:
+        print(f"  ... and {len(all_categories) - 25} more categories")
+
+    print()
+    print("=" * 70)
+    print("NEXT IMPLEMENTATION STEPS")
+    print("=" * 70)
+    print()
+    print("  1. Implement audio format extractors (APEv2, MP4 atoms, WAV/RIFF, AIFF, Opus, DSD, BWF)")
+    print("  2. Implement social media API extractors (Instagram, TikTok, YouTube)")
+    print("  3. Implement digital signature extraction (code signing, PDF, C2PA, blockchain)")
+    print("  4. Expand video codec depth extractors")
+    print("  5. Expand ID3 frame registry (full ID3v2.4 list)")
+    print()
+
+    # Write summary
+    summary = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "totals_by_source": {k: {"unit": v[0], "count": v[1]} for k, v in totals_by_source.items()},
+        "categories": all_categories,
+        "totals": {
+            "current": grand_total,
+            "target_45k": target_45k,
+            "coverage_pct": coverage,
+            "remaining": remaining,
+        },
+    }
+
+    output_dir = Path("dist/inventory_summary")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    summary_path = output_dir / "master_inventory_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    print(f"  Wrote: {summary_path}")
 
 
 if __name__ == "__main__":

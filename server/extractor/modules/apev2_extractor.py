@@ -133,7 +133,7 @@ def parse_ape_tags(filepath: Path) -> Dict[str, Any]:
                 if len(item_header) < 4:
                     break
 
-                size = struct.unpack("<I", item_header)[0])
+                size = struct.unpack("<I", item_header)[0]
 
                 # Skip to tag name (null-terminated string)
                 tag_name = []
