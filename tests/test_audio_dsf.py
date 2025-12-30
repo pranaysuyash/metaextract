@@ -18,6 +18,7 @@ def test_parse_dsf_header(tmp_path):
         + struct.pack("<Q", 1000)  # sample_count
         + struct.pack("<I", 4096)  # block_size_per_channel
         + struct.pack("<I", 0)  # reserved
+        + b"\x00" * 12
     )
     dsf = (
         b"DSD "

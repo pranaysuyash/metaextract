@@ -139,6 +139,61 @@ try:
 except Exception:
     VIDEO_TELEMETRY_AVAILABLE = False
 
+# Phase 4 module availability (emerging technologies)
+try:
+    from .ai_ml_metadata import extract_ai_ml_metadata
+    AI_ML_AVAILABLE = True
+except Exception:
+    AI_ML_AVAILABLE = False
+
+try:
+    from .blockchain_nft_metadata import extract_blockchain_nft_metadata
+    BLOCKCHAIN_NFT_AVAILABLE = True
+except Exception:
+    BLOCKCHAIN_NFT_AVAILABLE = False
+
+try:
+    from .ar_vr_metadata import extract_ar_vr_metadata
+    AR_VR_AVAILABLE = True
+except Exception:
+    AR_VR_AVAILABLE = False
+
+try:
+    from .iot_metadata import extract_iot_metadata
+    IOT_AVAILABLE = True
+except Exception:
+    IOT_AVAILABLE = False
+
+try:
+    from .quantum_metadata import extract_quantum_metadata
+    QUANTUM_AVAILABLE = True
+except Exception:
+    QUANTUM_AVAILABLE = False
+
+try:
+    from .neural_network_metadata import extract_neural_network_metadata
+    NEURAL_NETWORK_AVAILABLE = True
+except Exception:
+    NEURAL_NETWORK_AVAILABLE = False
+
+try:
+    from .robotics_metadata import extract_robotics_metadata
+    ROBOTICS_AVAILABLE = True
+except Exception:
+    ROBOTICS_AVAILABLE = False
+
+try:
+    from .autonomous_metadata import extract_autonomous_metadata
+    AUTONOMOUS_AVAILABLE = True
+except Exception:
+    AUTONOMOUS_AVAILABLE = False
+
+try:
+    from .biotechnology_metadata import extract_biotechnology_metadata
+    BIOTECHNOLOGY_AVAILABLE = True
+except Exception:
+    BIOTECHNOLOGY_AVAILABLE = False
+
 try:
     from pillow_heif import register_heif_opener
     register_heif_opener()
@@ -236,6 +291,11 @@ class TierConfig:
     blockchain_nft_metadata: bool = False
     ar_vr_metadata: bool = False
     iot_metadata: bool = False
+    quantum_metadata: bool = False
+    neural_network_metadata: bool = False
+    robotics_metadata: bool = False
+    autonomous_metadata: bool = False
+    biotechnology_metadata: bool = False
 
 TIER_CONFIGS = {
     Tier.FREE: TierConfig(),
@@ -264,6 +324,11 @@ TIER_CONFIGS = {
         blockchain_nft_metadata=True,
         ar_vr_metadata=True,
         iot_metadata=True,
+        quantum_metadata=True,
+        neural_network_metadata=True,
+        robotics_metadata=True,
+        autonomous_metadata=True,
+        biotechnology_metadata=True,
     ),
     Tier.SUPER: TierConfig(
         file_hashes=True, filesystem_details=True, calculated_fields=True,
@@ -1692,6 +1757,78 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
         else:
             result["iot"] = {"_locked": True}
             result["locked_fields"].append("iot")
+    
+    # Quantum computing metadata (circuits, algorithms, QASM)
+    elif ext in [".qasm", ".qc", ".qsd", ".qstate", ".qreg", ".qobj", ".qpy", ".qiskit", ".cirq", ".qsharp", ".quil"] or (ext in [".py", ".ipynb"] and any(x in filepath.lower() for x in ["quantum", "qasm", "qubit", "qreg", "circuit", "qiskit", "cirq", "pennylane"])):
+        if tier_config.quantum_metadata:
+            try:
+                from .modules.quantum_metadata import extract_quantum_complete
+                quantum_data = extract_quantum_complete(filepath)
+                if quantum_data:
+                    result["quantum"] = quantum_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["quantum"] = {"_locked": True}
+            result["locked_fields"].append("quantum")
+    
+    # Neural network metadata (models, architectures, training configs)
+    elif ext in [".h5", ".hdf5", ".pb", ".pbtxt", ".onnx", ".pt", ".pth", ".ckpt", ".tflite", ".mlmodel", ".caffemodel", ".prototxt"] or (ext in [".json", ".yaml", ".yml", ".py", ".ipynb"] and any(x in filepath.lower() for x in ["model", "network", "neural", "keras", "tensorflow", "pytorch", "layer", "training"])):
+        if tier_config.neural_network_metadata:
+            try:
+                from .modules.neural_network_metadata import extract_neural_network_complete
+                nn_data = extract_neural_network_complete(filepath)
+                if nn_data:
+                    result["neural_network"] = nn_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["neural_network"] = {"_locked": True}
+            result["locked_fields"].append("neural_network")
+    
+    # Robotics metadata (URDF, SDF, ROS configs, robot programs)
+    elif ext in [".urdf", ".sdf", ".xacro", ".srdf", ".launch", ".world"] or (ext in [".py", ".cpp", ".xml", ".yaml", ".yml", ".json", ".config"] and any(x in filepath.lower() for x in ["robot", "urdf", "sdf", "ros", "gazebo", "rviz", "manipulator", "joint", "link", "sensor", "actuator"])):
+        if tier_config.robotics_metadata:
+            try:
+                from .modules.robotics_metadata import extract_robotics_complete
+                robotics_data = extract_robotics_complete(filepath)
+                if robotics_data:
+                    result["robotics"] = robotics_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["robotics"] = {"_locked": True}
+            result["locked_fields"].append("robotics")
+    
+    # Autonomous systems metadata (self-driving, drones, autonomous robots)
+    elif (ext in [".json", ".yaml", ".yml", ".xml", ".launch", ".world", ".bag", ".db3"] and
+          any(x in filepath.lower() for x in ["autonomous", "selfdriving", "vehicle", "drone", "uav", "navigation", "planning", "perception", "control", "sensor", "fusion", "localization"])):
+        if tier_config.autonomous_metadata:
+            try:
+                from .modules.autonomous_metadata import extract_autonomous_complete
+                autonomous_data = extract_autonomous_complete(filepath)
+                if autonomous_data:
+                    result["autonomous"] = autonomous_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["autonomous"] = {"_locked": True}
+            result["locked_fields"].append("autonomous")
+    
+    # Biotechnology metadata (genomics, proteomics, drug discovery)
+    elif (ext in [".fasta", ".fastq", ".fa", ".fq", ".bam", ".sam", ".vcf", ".bcf", ".pdb", ".cif", ".mmcif", ".sdf", ".mol", ".mol2", ".pdbqt", ".gb", ".gbk", ".gff", ".gtf", ".bed", ".wig", ".bigwig", ".json", ".yaml", ".yml", ".xml", ".csv", ".tsv", ".txt"] and
+          any(x in filepath.lower() for x in ["genome", "dna", "rna", "protein", "sequence", "gene", "chromosome", "transcript", "snp", "variant", "primer", "pcr", "sequencing", "crispr", "antibody", "pdb", "structure", "drug", "compound"])):
+        if tier_config.biotechnology_metadata:
+            try:
+                from .modules.biotechnology_metadata import extract_biotechnology_complete
+                biotech_data = extract_biotechnology_complete(filepath)
+                if biotech_data:
+                    result["biotechnology"] = biotech_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["biotechnology"] = {"_locked": True}
+            result["locked_fields"].append("biotechnology")
     
     # SVG
     elif ext == ".svg": result["svg"] = extract_svg_properties(filepath)

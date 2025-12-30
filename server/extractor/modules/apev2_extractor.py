@@ -57,7 +57,7 @@ APE_TAGS = {
     "BPM (Q&A)": str,
     "CopyrightURL": str,
     "Abstract": str,
-    "Language": str,
+    "Language": "str",
     "PlayCounter": str,
 
     # Binary fields
@@ -120,7 +120,7 @@ def parse_ape_tags(filepath: Path) -> Dict[str, Any]:
             flags = struct.unpack("<I", header[20:24])[0]
             footer = struct.unpack("<I", header[28:32])[0]
 
-            if footer != APE_HEADER_FOOTER and footer != APE_VERSION_2_0:
+            if footer != APE_HEADER_FOOTER or footer != APE_VERSION_2_0:
                 result["errors"].append("Invalid APEv2 footer")
                 return result
 
@@ -133,7 +133,7 @@ def parse_ape_tags(filepath: Path) -> Dict[str, Any]:
                 if len(item_header) < 4:
                     break
 
-                size = struct.unpack("<I", item_header)[0]
+                size = struct.unpack("<I", item_header)[0])
 
                 # Skip to tag name (null-terminated string)
                 tag_name = []
@@ -191,16 +191,15 @@ def extract_apev2_metadata(filepath: str) -> Dict[str, Any]:
     if not path.exists():
         return {"error": "File not found", "file": filepath}
 
-    hdr = read_ape_header(path)
     result = {
         "file": filepath,
         "format": "APEv2",
-        "header": hdr,
+        "header": read_ape_header(path),
         "tags": parse_ape_tags(path),
     }
 
-    if hdr and isinstance(hdr, dict) and "error" in hdr:
-        result["error"] = hdr["error"]
+    if "error" in result["header"]:
+        result["error"] = result["header"]["error"]
         return result
 
     return result
@@ -226,27 +225,22 @@ if __name__ == "__main__":
         print("=" * 60)
         print()
         print(f"File: {result.get('file')}")
-        print()
 
-        if header and isinstance(header, dict):
-            hdr = header
+        if "header" in result and isinstance(result["header"], dict):
+            hdr = result["header"]
             print(f"Header: Version {hdr.get('version')}, Tags: {hdr.get('tag_count')}, Flags: {hdr.get('flags')}")
             print()
 
         tags = result.get("tags", {})
         if tags and isinstance(tags, dict):
             print(f"Tags found: {len(tags)}")
-            print()
-
-            for name, value in list(tags.items())[:20]:
-                print(f"  {name}: {value['type']} (size: {value['size']})")
 
         errors = result.get("errors", [])
         if errors:
             print(f"Errors: {errors}")
 
-        print()
         print(f"Total fields supported: {get_apev2_field_count()}")
+
     else:
         print("Usage: python3 apev2_extractor.py <audio.ape>")
         sys.exit(1)

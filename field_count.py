@@ -114,6 +114,36 @@ except:
     IOT_AVAILABLE = False
 
 try:
+    from quantum_metadata import get_quantum_field_count
+    QUANTUM_AVAILABLE = True
+except:
+    QUANTUM_AVAILABLE = False
+
+try:
+    from neural_network_metadata import get_neural_network_field_count
+    NEURAL_NETWORK_AVAILABLE = True
+except:
+    NEURAL_NETWORK_AVAILABLE = False
+
+try:
+    from robotics_metadata import get_robotics_field_count
+    ROBOTICS_AVAILABLE = True
+except:
+    ROBOTICS_AVAILABLE = False
+
+try:
+    from autonomous_metadata import get_autonomous_field_count
+    AUTONOMOUS_AVAILABLE = True
+except:
+    AUTONOMOUS_AVAILABLE = False
+
+try:
+    from biotechnology_metadata import get_biotechnology_field_count
+    BIOTECHNOLOGY_AVAILABLE = True
+except:
+    BIOTECHNOLOGY_AVAILABLE = False
+
+try:
     from temporal_astronomical import get_temporal_field_count
     TEMPORAL_AVAILABLE = True
 except:
@@ -309,6 +339,46 @@ if IOT_AVAILABLE:
 else:
     print(f'{"IoT Device Metadata":30s}: {0:>5} fields (pending)')
 
+if QUANTUM_AVAILABLE:
+    quantum_count = get_quantum_field_count()
+    print(f'{"Quantum Computing Metadata":30s}: {quantum_count:>5} fields')
+    total += quantum_count
+    phase4_total += quantum_count
+else:
+    print(f'{"Quantum Computing Metadata":30s}: {0:>5} fields (pending)')
+
+if NEURAL_NETWORK_AVAILABLE:
+    nn_count = get_neural_network_field_count()
+    print(f'{"Neural Network Metadata":30s}: {nn_count:>5} fields')
+    total += nn_count
+    phase4_total += nn_count
+else:
+    print(f'{"Neural Network Metadata":30s}: {0:>5} fields (pending)')
+
+if ROBOTICS_AVAILABLE:
+    robotics_count = get_robotics_field_count()
+    print(f'{"Robotics Metadata":30s}: {robotics_count:>5} fields')
+    total += robotics_count
+    phase4_total += robotics_count
+else:
+    print(f'{"Robotics Metadata":30s}: {0:>5} fields (pending)')
+
+if AUTONOMOUS_AVAILABLE:
+    autonomous_count = get_autonomous_field_count()
+    print(f'{"Autonomous Systems Metadata":30s}: {autonomous_count:>5} fields')
+    total += autonomous_count
+    phase4_total += autonomous_count
+else:
+    print(f'{"Autonomous Systems Metadata":30s}: {0:>5} fields (pending)')
+
+if BIOTECHNOLOGY_AVAILABLE:
+    biotechnology_count = get_biotechnology_field_count()
+    print(f'{"Biotechnology Metadata":30s}: {biotechnology_count:>5} fields')
+    total += biotechnology_count
+    phase4_total += biotechnology_count
+else:
+    print(f'{"Biotechnology Metadata":30s}: {0:>5} fields (pending)')
+
 print(f'{"Phase 4 Total":30s}: {phase4_total:>5} fields')
 
 fields3 = {}
@@ -343,15 +413,17 @@ print('=' * 70)
 print(f'TOTAL: {total} fields')
 print('=' * 70)
 print()
-print('Progress Targets:')
-print(f'  Baseline (Before Phase 1):    ~2,267 fields (32.4% of 7k floor)')
-print(f'  Phase 1 (C2PA + ExifTool):      +632 fields → 2,899 (41.4%)')
-print(f'  Phase 2 (Media Depth):       +1,100 fields → ~4,000 (57.1%)')
-print(f'  Phase 3 (Docs/Web):            +800 fields → ~4,800 (68.6%)')
-print(f'  Competitive target:         10,000-15,000 fields')
-print(f'  Ultimate vision (45k):       All domains across standards')
+print('Progress toward 45,000 field target:')
+print(f'  Current: {total:,} fields ({100*total/45000:.1f}% of 45k target)')
+print(f'  Remaining: {45000-total:,} fields to reach full coverage')
 print()
-print(f'Current Progress: {total} fields ({100*total/7000:.1f}% of 7k target)')
-if total >= 4000:
-    print(f'               : {total} fields ({100*total/15000:.1f}% of competitive 15k target)')
+print('Field domain breakdown (target 45k):')
+print(f'  MakerNotes (Camera Vendors):   ~8,000 fields → Need ~4,100 more')
+print(f'  ID3v2/Audio Tags:              ~2,500 fields → Need ~2,000 more')
+print(f'  PDF/Office Documents:          ~3,000 fields → Need ~2,500 more')
+print(f'  Video/Professional:            ~5,000 fields → Need ~3,200 more')
+print(f'  Scientific/DICOM/FITS:         ~8,000 fields → Need ~7,000 more')
+print(f'  Forensic/Security:             ~5,000 fields → Need ~4,700 more')
+print(f'  Emerging (AI/NFT/AR/IoT):      ~3,500 fields → Need ~3,000 more')
 print('=' * 70)
+
