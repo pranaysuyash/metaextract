@@ -20,6 +20,8 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 
 ## Scientific / Medical Imaging
 - DICOM (CT/MR) with populated patient/study/series tags.
+- DICOM multi-file study/series folder (50-500 slices) to validate “study-level” behavior.
+- DICOMDIR-based media set (if we decide to support DICOMDIR workflows).
 - FITS image with WCS keywords.
 - OME-TIFF with OME-XML in ImageDescription.
 - OME-XML standalone file.
@@ -32,8 +34,10 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 
 ## Image Metadata (Vendor/MakerNotes)
 - Canon/Nikon/Sony RAW with MakerNote fields populated.
-- iPhone HEIC/HEIF with Live Photo + HDR/Portrait tags.
+- iPhone HEIC/HEIF with Live Photo pair (HEIC + MOV) + HDR/Portrait tags.
+- iPhone HEIF with HDR gain map / “HDR photo” auxiliary items (newer devices).
 - Android Pixel JPEG with GDepth/GImage XMP namespaces.
+- Android “Motion Photo” JPEG (Pixel/Samsung) with embedded MP4 segment + XMP flags.
 
 ## Audio Metadata (Professional / Broadcast)
 - BWF WAV with bext + iXML chunks.
@@ -62,6 +66,9 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - GLB with JSON chunk and mesh/material data.
 - GLTF with multiple scenes/nodes/materials.
 - USDZ package with internal assets.
+- TFLite model with valid flatbuffer header.
+- ONNX model with producer metadata.
+- USDZ with USDC (crate) asset to validate binary magic.
 - QASM file with qreg/creg and gates.
 - URDF or SDF robot model with links/joints.
 - FASTA/DNA sequence file with headers.

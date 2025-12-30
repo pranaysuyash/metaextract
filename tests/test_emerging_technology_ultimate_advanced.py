@@ -1,5 +1,6 @@
 import json
 import struct
+import zipfile
 
 from server.extractor.modules.emerging_technology_ultimate_advanced import (
     extract_emerging_technology_ultimate_advanced,
@@ -53,6 +54,31 @@ def test_gltf_parsing(tmp_path):
     assert result.get("arvr_ultimate_material_count") == 2
 
 
+def test_usdz_parsing(tmp_path):
+    usdz_path = tmp_path / "asset.usdz"
+    with zipfile.ZipFile(usdz_path, "w") as zf:
+        zf.writestr(
+            "model.usda",
+            "#usda 1.0\n"
+            "defaultPrim = \"Root\"\n"
+            "upAxis = \"Y\"\n"
+            "metersPerUnit = 0.01\n"
+            "def Xform \"Root\" {}\n",
+        )
+        zf.writestr("model.usdc", b"PXR-USDC\x00\x00")
+        zf.writestr("Textures/tex.png", b"\x89PNG\r\n\x1a\n")
+    result = extract_emerging_technology_ultimate_advanced(str(usdz_path))
+    assert result.get("arvr_ultimate_asset_format") == "usdz"
+    assert result.get("arvr_ultimate_usdz_is_zip") is True
+    assert result.get("arvr_ultimate_usdz_has_usd") is True
+    assert result.get("arvr_ultimate_usdz_texture_count") == 1
+    assert result.get("arvr_ultimate_usdz_usda_default_prim") == "Root"
+    assert result.get("arvr_ultimate_usdz_usda_up_axis") == "Y"
+    assert result.get("arvr_ultimate_usdz_usda_meters_per_unit") == 0.01
+    assert result.get("arvr_ultimate_usdz_usdc_count") == 1
+    assert result.get("arvr_ultimate_usdz_usdc_has_magic") is True
+
+
 def test_qasm_parsing(tmp_path):
     qasm_path = tmp_path / "circuit.qasm"
     qasm = "\n".join([
@@ -78,6 +104,8 @@ def test_robotics_urdf_parsing(tmp_path):
         "<link name=\"base\" />"
         "<link name=\"arm\" />"
         "<joint name=\"joint1\" />"
+        "<transmission name=\"t1\"></transmission>"
+        "<gazebo></gazebo>"
         "</robot>"
     )
     _write(urdf_path, xml.encode("utf-8"))
@@ -85,6 +113,8 @@ def test_robotics_urdf_parsing(tmp_path):
     assert result.get("robotics_ultimate_robot_name") == "test"
     assert result.get("robotics_ultimate_link_count") == 2
     assert result.get("robotics_ultimate_joint_count") == 1
+    assert result.get("robotics_ultimate_transmission_count") == 1
+    assert result.get("robotics_ultimate_gazebo_tag_count") == 1
 
 
 def test_biotech_fasta_parsing(tmp_path):
@@ -113,6 +143,33 @@ def test_blockchain_json_parsing(tmp_path):
     assert result.get("blockchain_ultimate_chain_id") == 1
     assert result.get("blockchain_ultimate_token_symbol") == "TKN"
     assert result.get("blockchain_ultimate_transaction_count") == 2
+
+
+def test_tflite_header_parsing(tmp_path):
+    tflite_path = tmp_path / "model.tflite"
+    header = struct.pack("<I4s", 16, b"TFL3")
+    payload = header + b"CONV_2D" + b"\x00" * 24
+    _write(tflite_path, payload)
+    result = extract_emerging_technology_ultimate_advanced(str(tflite_path))
+    assert result.get("ai_ultimate_model_has_tflite_signature") is True
+    assert result.get("ai_ultimate_model_tflite_identifier") == "TFL3"
+    assert result.get("ai_ultimate_model_tflite_root_offset") == 16
+    tflite_strings = result.get("ai_ultimate_model_tflite_strings") or []
+    assert "CONV_2D" in tflite_strings
+    assert result.get("ai_ultimate_model_tflite_op_type_count") >= 1
+
+
+def test_onnx_header_parsing(tmp_path):
+    onnx_path = tmp_path / "model.onnx"
+    payload = b"ONNX\x00producer_name\x00unit\x00Conv\x00Relu"
+    _write(onnx_path, payload + b"\\x00" * 16)
+    result = extract_emerging_technology_ultimate_advanced(str(onnx_path))
+    assert result.get("ai_ultimate_model_has_onnx_signature") is True
+    markers = result.get("ai_ultimate_model_onnx_markers") or []
+    assert any("onnx" in marker.lower() for marker in markers)
+    op_types = result.get("ai_ultimate_model_onnx_op_type_guess") or []
+    assert "Conv" in op_types
+    assert result.get("ai_ultimate_model_onnx_op_type_count") >= 1
 
 
 def test_iot_json_parsing(tmp_path):

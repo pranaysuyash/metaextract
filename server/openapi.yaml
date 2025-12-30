@@ -10,7 +10,7 @@ info:
     - **Universal Metadata Extraction**: Extract metadata from images, videos, audio, documents, and scientific files
     - **Forensic Analysis**: Steganography detection, manipulation detection, AI content detection
     - **Timeline Reconstruction**: Chronological analysis of file events
-    - **Batch Processing**: Process multiple files simultaneously (Professional+ tiers)
+    - **Batch Processing**: Process multiple files simultaneously (Forensic+ tiers)
 
     ## Tiers
     | Tier | Fields | Max Size | File Types |

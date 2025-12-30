@@ -450,6 +450,198 @@ try:
 except:
     MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = False
 
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension import get_scientific_dicom_fits_ultimate_advanced_extension_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_AVAILABLE = False
+
+try:
+    from video_professional_ultimate_advanced_extension_ii import get_video_professional_ultimate_advanced_extension_ii_field_count
+    VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = True
+except:
+    VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = False
+
+try:
+    from video_professional_ultimate_advanced_extension_iii import get_video_professional_ultimate_advanced_extension_iii_field_count
+    VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = True
+except:
+    VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_ii import get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_iii import get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_iv import get_scientific_dicom_fits_ultimate_advanced_extension_iv_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_v import get_scientific_dicom_fits_ultimate_advanced_extension_v_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_V_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_V_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_vi import get_scientific_dicom_fits_ultimate_advanced_extension_vi_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VI_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VI_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_vii import get_scientific_dicom_fits_ultimate_advanced_extension_vii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VII_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_viii import get_scientific_dicom_fits_ultimate_advanced_extension_viii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VIII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VIII_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_ix import get_scientific_dicom_fits_ultimate_advanced_extension_ix_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_IX_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_IX_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_x import get_scientific_dicom_fits_ultimate_advanced_extension_x_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_X_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_X_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xi import get_scientific_dicom_fits_ultimate_advanced_extension_xi_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XI_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XI_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xii import get_scientific_dicom_fits_ultimate_advanced_extension_xii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XII_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xiii import get_scientific_dicom_fits_ultimate_advanced_extension_xiii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIII_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xiv import get_scientific_dicom_fits_ultimate_advanced_extension_xiv_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIV_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIV_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xv import get_scientific_dicom_fits_ultimate_advanced_extension_xv_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XV_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XV_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xvi import get_scientific_dicom_fits_ultimate_advanced_extension_xvi_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVI_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVI_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xvii import get_scientific_dicom_fits_ultimate_advanced_extension_xvii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVII_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xviii import get_scientific_dicom_fits_ultimate_advanced_extension_xviii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVIII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVIII_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xix import get_scientific_dicom_fits_ultimate_advanced_extension_xix_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIX_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIX_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xx import get_scientific_dicom_fits_ultimate_advanced_extension_xx_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XX_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XX_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xxi import get_scientific_dicom_fits_ultimate_advanced_extension_xxi_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XXI_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XXI_AVAILABLE = False
+
+try:
+    from scientific_dicom_fits_ultimate_advanced_extension_xxii import get_scientific_dicom_fits_ultimate_advanced_extension_xxii_field_count
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XXII_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XXII_AVAILABLE = False
+
+try:
+    from forensic_security_ultimate_advanced_extension_ii import get_forensic_security_ultimate_advanced_extension_ii_field_count
+    FORENSIC_SECURITY_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = True
+except:
+    FORENSIC_SECURITY_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = False
+
+try:
+    from forensic_security_ultimate_advanced_extension_iii import get_forensic_security_ultimate_advanced_extension_iii_field_count
+    FORENSIC_SECURITY_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = True
+except:
+    FORENSIC_SECURITY_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = False
+
+try:
+    from makernotes_ultimate_advanced_extension_iii import get_makernotes_ultimate_advanced_extension_iii_field_count
+    MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = True
+except:
+    MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = False
+
+try:
+    from makernotes_ultimate_advanced_extension_iv import get_makernotes_ultimate_advanced_extension_iv_field_count
+    MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE = True
+except:
+    MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE = False
+
+try:
+    from emerging_technology_ultimate_advanced_extension_iii import get_emerging_technology_ultimate_advanced_extension_iii_field_count
+    EMERGING_TECHNOLOGY_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = True
+except:
+    EMERGING_TECHNOLOGY_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE = False
+
+try:
+    from emerging_technology_ultimate_advanced_extension_iv import get_emerging_technology_ultimate_advanced_extension_iv_field_count
+    EMERGING_TECHNOLOGY_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE = True
+except:
+    EMERGING_TECHNOLOGY_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE = False
+
+try:
+    from pdf_office_ultimate_advanced_extension_ii import get_pdf_office_ultimate_advanced_extension_ii_field_count
+    PDF_OFFICE_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = True
+except:
+    PDF_OFFICE_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = False
+
+try:
+    from id3_audio_ultimate_advanced_extension_ii import get_id3_audio_ultimate_advanced_extension_ii_field_count
+    ID3_AUDIO_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = True
+except:
+    ID3_AUDIO_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = False
+
 total = 0
 fields = {}
 
@@ -968,6 +1160,230 @@ if MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE:
     print(f'{"MakerNotes Ultimate Advanced Extension II":30s}: {makernotes_ultimate_adv_ext_ii_count:>5} fields')
 else:
     print(f'{"MakerNotes Ultimate Advanced Extension II":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_count = get_scientific_dicom_fits_ultimate_advanced_extension_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension'] = scientific_dicom_fits_ultimate_adv_ext_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension":30s}: {scientific_dicom_fits_ultimate_adv_ext_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension":30s}: {0:>5} fields (pending)')
+
+if VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE:
+    video_professional_ultimate_adv_ext_ii_count = get_video_professional_ultimate_advanced_extension_ii_field_count()
+    fields3['Video Professional Ultimate Advanced Extension II'] = video_professional_ultimate_adv_ext_ii_count
+    print(f'{"Video Professional Ultimate Advanced Extension II":30s}: {video_professional_ultimate_adv_ext_ii_count:>5} fields')
+else:
+    print(f'{"Video Professional Ultimate Advanced Extension II":30s}: {0:>5} fields (pending)')
+
+if VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE:
+    video_professional_ultimate_adv_ext_iii_count = get_video_professional_ultimate_advanced_extension_iii_field_count()
+    fields3['Video Professional Ultimate Advanced Extension III'] = video_professional_ultimate_adv_ext_iii_count
+    print(f'{"Video Professional Ultimate Advanced Extension III":30s}: {video_professional_ultimate_adv_ext_iii_count:>5} fields')
+else:
+    print(f'{"Video Professional Ultimate Advanced Extension III":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_ii_count = get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension II'] = scientific_dicom_fits_ultimate_adv_ext_ii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension II":30s}: {scientific_dicom_fits_ultimate_adv_ext_ii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension II":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_iii_count = get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension III'] = scientific_dicom_fits_ultimate_adv_ext_iii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension III":30s}: {scientific_dicom_fits_ultimate_adv_ext_iii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension III":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_iv_count = get_scientific_dicom_fits_ultimate_advanced_extension_iv_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension IV'] = scientific_dicom_fits_ultimate_adv_ext_iv_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension IV":30s}: {scientific_dicom_fits_ultimate_adv_ext_iv_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension IV":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_V_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_v_count = get_scientific_dicom_fits_ultimate_advanced_extension_v_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension V'] = scientific_dicom_fits_ultimate_adv_ext_v_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension V":30s}: {scientific_dicom_fits_ultimate_adv_ext_v_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension V":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VI_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_vi_count = get_scientific_dicom_fits_ultimate_advanced_extension_vi_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension VI'] = scientific_dicom_fits_ultimate_adv_ext_vi_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension VI":30s}: {scientific_dicom_fits_ultimate_adv_ext_vi_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension VI":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_vii_count = get_scientific_dicom_fits_ultimate_advanced_extension_vii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension VII'] = scientific_dicom_fits_ultimate_adv_ext_vii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension VII":30s}: {scientific_dicom_fits_ultimate_adv_ext_vii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension VII":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_VIII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_viii_count = get_scientific_dicom_fits_ultimate_advanced_extension_viii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension VIII'] = scientific_dicom_fits_ultimate_adv_ext_viii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension VIII":30s}: {scientific_dicom_fits_ultimate_adv_ext_viii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension VIII":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_IX_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_ix_count = get_scientific_dicom_fits_ultimate_advanced_extension_ix_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension IX'] = scientific_dicom_fits_ultimate_adv_ext_ix_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension IX":30s}: {scientific_dicom_fits_ultimate_adv_ext_ix_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension IX":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_X_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_x_count = get_scientific_dicom_fits_ultimate_advanced_extension_x_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension X'] = scientific_dicom_fits_ultimate_adv_ext_x_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension X":30s}: {scientific_dicom_fits_ultimate_adv_ext_x_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension X":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XI_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xi_count = get_scientific_dicom_fits_ultimate_advanced_extension_xi_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XI'] = scientific_dicom_fits_ultimate_adv_ext_xi_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XI":30s}: {scientific_dicom_fits_ultimate_adv_ext_xi_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XI":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xii_count = get_scientific_dicom_fits_ultimate_advanced_extension_xii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XII'] = scientific_dicom_fits_ultimate_adv_ext_xii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XII":30s}: {scientific_dicom_fits_ultimate_adv_ext_xii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XII":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xiii_count = get_scientific_dicom_fits_ultimate_advanced_extension_xiii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XIII'] = scientific_dicom_fits_ultimate_adv_ext_xiii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XIII":30s}: {scientific_dicom_fits_ultimate_adv_ext_xiii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XIII":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIV_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xiv_count = get_scientific_dicom_fits_ultimate_advanced_extension_xiv_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XIV'] = scientific_dicom_fits_ultimate_adv_ext_xiv_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XIV":30s}: {scientific_dicom_fits_ultimate_adv_ext_xiv_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XIV":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XV_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xv_count = get_scientific_dicom_fits_ultimate_advanced_extension_xv_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XV'] = scientific_dicom_fits_ultimate_adv_ext_xv_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XV":30s}: {scientific_dicom_fits_ultimate_adv_ext_xv_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XV":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVI_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xvi_count = get_scientific_dicom_fits_ultimate_advanced_extension_xvi_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XVI'] = scientific_dicom_fits_ultimate_adv_ext_xvi_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XVI":30s}: {scientific_dicom_fits_ultimate_adv_ext_xvi_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XVI":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xvii_count = get_scientific_dicom_fits_ultimate_advanced_extension_xvii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XVII'] = scientific_dicom_fits_ultimate_adv_ext_xvii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XVII":30s}: {scientific_dicom_fits_ultimate_adv_ext_xvii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XVII":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XVIII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xviii_count = get_scientific_dicom_fits_ultimate_advanced_extension_xviii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XVIII'] = scientific_dicom_fits_ultimate_adv_ext_xviii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XVIII":30s}: {scientific_dicom_fits_ultimate_adv_ext_xviii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XVIII":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XIX_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xix_count = get_scientific_dicom_fits_ultimate_advanced_extension_xix_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XIX'] = scientific_dicom_fits_ultimate_adv_ext_xix_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XIX":30s}: {scientific_dicom_fits_ultimate_adv_ext_xix_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XIX":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XX_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xx_count = get_scientific_dicom_fits_ultimate_advanced_extension_xx_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XX'] = scientific_dicom_fits_ultimate_adv_ext_xx_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XX":30s}: {scientific_dicom_fits_ultimate_adv_ext_xx_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XX":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XXI_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xxi_count = get_scientific_dicom_fits_ultimate_advanced_extension_xxi_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XXI'] = scientific_dicom_fits_ultimate_adv_ext_xxi_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XXI":30s}: {scientific_dicom_fits_ultimate_adv_ext_xxi_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XXI":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_XXII_AVAILABLE:
+    scientific_dicom_fits_ultimate_adv_ext_xxii_count = get_scientific_dicom_fits_ultimate_advanced_extension_xxii_field_count()
+    fields3['Scientific DICOM FITS Ultimate Advanced Extension XXII'] = scientific_dicom_fits_ultimate_adv_ext_xxii_count
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XXII":30s}: {scientific_dicom_fits_ultimate_adv_ext_xxii_count:>5} fields')
+else:
+    print(f'{"Scientific DICOM FITS Ultimate Advanced Extension XXII":30s}: {0:>5} fields (pending)')
+
+if FORENSIC_SECURITY_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE:
+    forensic_security_ultimate_adv_ext_ii_count = get_forensic_security_ultimate_advanced_extension_ii_field_count()
+    fields3['Forensic Security Ultimate Advanced Extension II'] = forensic_security_ultimate_adv_ext_ii_count
+    print(f'{"Forensic Security Ultimate Advanced Extension II":30s}: {forensic_security_ultimate_adv_ext_ii_count:>5} fields')
+else:
+    print(f'{"Forensic Security Ultimate Advanced Extension II":30s}: {0:>5} fields (pending)')
+
+if FORENSIC_SECURITY_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE:
+    forensic_security_ultimate_adv_ext_iii_count = get_forensic_security_ultimate_advanced_extension_iii_field_count()
+    fields3['Forensic Security Ultimate Advanced Extension III'] = forensic_security_ultimate_adv_ext_iii_count
+    print(f'{"Forensic Security Ultimate Advanced Extension III":30s}: {forensic_security_ultimate_adv_ext_iii_count:>5} fields')
+else:
+    print(f'{"Forensic Security Ultimate Advanced Extension III":30s}: {0:>5} fields (pending)')
+
+if MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE:
+    makernotes_ultimate_adv_ext_iii_count = get_makernotes_ultimate_advanced_extension_iii_field_count()
+    fields3['MakerNotes Ultimate Advanced Extension III'] = makernotes_ultimate_adv_ext_iii_count
+    print(f'{"MakerNotes Ultimate Advanced Extension III":30s}: {makernotes_ultimate_adv_ext_iii_count:>5} fields')
+else:
+    print(f'{"MakerNotes Ultimate Advanced Extension III":30s}: {0:>5} fields (pending)')
+
+if MAKERNOTES_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE:
+    makernotes_ultimate_adv_ext_iv_count = get_makernotes_ultimate_advanced_extension_iv_field_count()
+    fields3['MakerNotes Ultimate Advanced Extension IV'] = makernotes_ultimate_adv_ext_iv_count
+    print(f'{"MakerNotes Ultimate Advanced Extension IV":30s}: {makernotes_ultimate_adv_ext_iv_count:>5} fields')
+else:
+    print(f'{"MakerNotes Ultimate Advanced Extension IV":30s}: {0:>5} fields (pending)')
+
+if EMERGING_TECHNOLOGY_ULTIMATE_ADVANCED_EXTENSION_III_AVAILABLE:
+    emerging_technology_ultimate_adv_ext_iii_count = get_emerging_technology_ultimate_advanced_extension_iii_field_count()
+    fields3['Emerging Technology Ultimate Advanced Extension III'] = emerging_technology_ultimate_adv_ext_iii_count
+    print(f'{"Emerging Technology Ultimate Advanced Extension III":30s}: {emerging_technology_ultimate_adv_ext_iii_count:>5} fields')
+else:
+    print(f'{"Emerging Technology Ultimate Advanced Extension III":30s}: {0:>5} fields (pending)')
+
+if EMERGING_TECHNOLOGY_ULTIMATE_ADVANCED_EXTENSION_IV_AVAILABLE:
+    emerging_technology_ultimate_adv_ext_iv_count = get_emerging_technology_ultimate_advanced_extension_iv_field_count()
+    fields3['Emerging Technology Ultimate Advanced Extension IV'] = emerging_technology_ultimate_adv_ext_iv_count
+    print(f'{"Emerging Technology Ultimate Advanced Extension IV":30s}: {emerging_technology_ultimate_adv_ext_iv_count:>5} fields')
+else:
+    print(f'{"Emerging Technology Ultimate Advanced Extension IV":30s}: {0:>5} fields (pending)')
+
+if PDF_OFFICE_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE:
+    pdf_office_ultimate_adv_ext_ii_count = get_pdf_office_ultimate_advanced_extension_ii_field_count()
+    fields3['PDF Office Ultimate Advanced Extension II'] = pdf_office_ultimate_adv_ext_ii_count
+    print(f'{"PDF Office Ultimate Advanced Extension II":30s}: {pdf_office_ultimate_adv_ext_ii_count:>5} fields')
+else:
+    print(f'{"PDF Office Ultimate Advanced Extension II":30s}: {0:>5} fields (pending)')
+
+if ID3_AUDIO_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE:
+    id3_audio_ultimate_adv_ext_ii_count = get_id3_audio_ultimate_advanced_extension_ii_field_count()
+    fields3['ID3 Audio Ultimate Advanced Extension II'] = id3_audio_ultimate_adv_ext_ii_count
+    print(f'{"ID3 Audio Ultimate Advanced Extension II":30s}: {id3_audio_ultimate_adv_ext_ii_count:>5} fields')
+else:
+    print(f'{"ID3 Audio Ultimate Advanced Extension II":30s}: {0:>5} fields (pending)')
 
 print()
 print('--- All Specialized Modules Summary ---')

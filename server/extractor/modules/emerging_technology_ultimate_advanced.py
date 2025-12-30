@@ -26,12 +26,419 @@ import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 import json
+import zipfile
 
 logger = logging.getLogger(__name__)
 
+# Extensions this module considers "emerging technology" artifacts.
+EMERGING_TECH_EXTENSIONS = {
+    ".ai", ".ml", ".model", ".h5", ".pb", ".onnx", ".tflite", ".pt", ".pth", ".ckpt", ".pkl", ".joblib",
+    ".blockchain", ".chain", ".ledger", ".crypto", ".nft", ".token",
+    ".ar", ".vr", ".xr", ".gltf", ".glb", ".usdz", ".reality",
+    ".iot", ".device", ".sensor",
+    ".quantum", ".qasm", ".qisk", ".cirq", ".qubit",
+    ".neural", ".nn", ".dl",
+    ".robot", ".urdf", ".sdf", ".xacro",
+    ".bio", ".dna", ".rna", ".protein", ".genome",
+    ".nano",
+    ".space", ".satellite", ".tle",
+    ".renewable", ".grid",
+    ".autonomous", ".vehicle",
+    ".telecom", ".5g", ".6g",
+    ".security", ".encrypt",
+    ".digital", ".twin", ".sim",
+}
+
+# Extensions that are likely to be JSON containers (configs, manifests, exports).
+JSONISH_EXTENSIONS = {
+    ".json",
+    ".ai", ".ml", ".model",
+    ".blockchain", ".chain", ".ledger", ".crypto", ".nft", ".token",
+    ".iot", ".device", ".sensor",
+    ".qisk", ".cirq", ".quantum",
+    ".robot",
+    ".nano",
+    ".space", ".satellite",
+    ".renewable", ".grid",
+    ".autonomous", ".vehicle",
+    ".telecom", ".5g", ".6g",
+    ".security", ".encrypt",
+    ".digital", ".twin", ".sim",
+}
+
+def _looks_like_json_bytes(data: bytes) -> bool:
+    if not data:
+        return False
+    head = data.lstrip()
+    return head.startswith((b"{", b"["))
+
+def _maybe_parse_json(
+    filepath: str,
+    *,
+    ext: Optional[str] = None,
+    header: Optional[bytes] = None,
+    max_bytes: int = 2_000_000,
+) -> Optional[Any]:
+    """Parse JSON only when it is plausible (by header or extension)."""
+    try:
+        if header is None:
+            header = _read_header(filepath, 256)
+        if _looks_like_json_bytes(header):
+            return _parse_json_file(filepath, max_bytes=max_bytes)
+        if ext and ext in JSONISH_EXTENSIONS:
+            return _parse_json_file(filepath, max_bytes=max_bytes)
+    except Exception:
+        return None
+    return None
+
+# Field lists moved to module-level constants so counts stay correct.
+AI_ULTIMATE_FIELDS = [
+    'ai_ultimate_model_architecture_deep_neural_network',
+    'ai_ultimate_training_dataset_size_parameters',
+    'ai_ultimate_hyperparameters_learning_rate_optimizer',
+    'ai_ultimate_convergence_metrics_loss_accuracy',
+    'ai_ultimate_feature_engineering_data_preprocessing',
+    'ai_ultimate_model_compression_quantization_pruning',
+    'ai_ultimate_edge_deployment_tflite_onnx_conversion',
+    'ai_ultimate_federated_learning_privacy_preservation',
+    'ai_ultimate_explainable_ai_xai_feature_importance',
+    'ai_ultimate_adversarial_training_robustness_testing',
+    'ai_ultimate_transfer_learning_domain_adaptation',
+    'ai_ultimate_meta_learning_few_shot_learning',
+    'ai_ultimate_reinforcement_learning_policy_gradients',
+    'ai_ultimate_generative_adversarial_networks_gan',
+    'ai_ultimate_variational_autoencoders_vae',
+    'ai_ultimate_attention_mechanisms_transformers',
+    'ai_ultimate_graph_neural_networks_gnn',
+    'ai_ultimate_self_supervised_learning_contrastive',
+    'ai_ultimate_multi_modal_learning_vision_language',
+    'ai_ultimate_zero_shot_few_shot_learning',
+    'ai_ultimate_continual_learning_catastrophic_forgetting',
+    'ai_ultimate_neural_architecture_search_nas',
+    'ai_ultimate_automl_hyperparameter_optimization',
+    'ai_ultimate_model_interpretability_shap_lime',
+    'ai_ultimate_bias_fairness_audit_mitigation',
+    'ai_ultimate_energy_efficient_ai_green_ai',
+    'ai_ultimate_model_file_format',
+    'ai_ultimate_model_file_size_bytes',
+    'ai_ultimate_model_is_binary',
+    'ai_ultimate_model_framework_guess',
+    'ai_ultimate_model_header_signature',
+    'ai_ultimate_model_has_hdf5_signature',
+    'ai_ultimate_model_has_tflite_signature',
+    'ai_ultimate_model_has_onnx_signature',
+    'ai_ultimate_model_is_zip_container',
+    'ai_ultimate_model_json_keys',
+    'ai_ultimate_model_tflite_identifier',
+    'ai_ultimate_model_tflite_root_offset',
+    'ai_ultimate_model_tflite_file_size',
+    'ai_ultimate_model_onnx_strings',
+    'ai_ultimate_model_onnx_markers',
+]
+
+BLOCKCHAIN_ULTIMATE_FIELDS = [
+    'blockchain_ultimate_consensus_mechanism_pow_pos',
+    'blockchain_ultimate_smart_contract_solidity_vyper',
+    'blockchain_ultimate_decentralized_finance_defi_protocols',
+    'blockchain_ultimate_non_fungible_tokens_nft_standards',
+    'blockchain_ultimate_decentralized_autonomous_organization_dao',
+    'blockchain_ultimate_cross_chain_bridges_interoperability',
+    'blockchain_ultimate_layer_two_scaling_solutions',
+    'blockchain_ultimate_zero_knowledge_proofs_zkp',
+    'blockchain_ultimate_decentralized_identity_did',
+    'blockchain_ultimate_oracle_networks_price_feeds',
+    'blockchain_ultimate_tokenomics_supply_demand_dynamics',
+    'blockchain_ultimate_governance_mechanisms_voting',
+    'blockchain_ultimate_cryptographic_primitives_hashing',
+    'blockchain_ultimate_consensus_byzantine_fault_tolerance',
+    'blockchain_ultimate_sharding_horizontal_scaling',
+    'blockchain_ultimate_sidechains_child_chains',
+    'blockchain_ultimate_state_channels_payment_channels',
+    'blockchain_ultimate_privacy_coins_ring_signatures',
+    'blockchain_ultimate_central_bank_digital_currency_cbdc',
+    'blockchain_ultimate_regulatory_compliance_kyc_aml',
+    'blockchain_ultimate_supply_chain_transparency',
+    'blockchain_ultimate_voting_systems_election_integrity',
+    'blockchain_ultimate_carbon_credits_trading',
+    'blockchain_ultimate_real_estate_tokenization',
+    'blockchain_ultimate_insurance_parametric_contracts',
+    'blockchain_ultimate_healthcare_data_monetization',
+    'blockchain_ultimate_metadata_file_format',
+    'blockchain_ultimate_json_keys',
+    'blockchain_ultimate_chain_id',
+    'blockchain_ultimate_contract_address',
+    'blockchain_ultimate_token_name',
+    'blockchain_ultimate_token_symbol',
+    'blockchain_ultimate_token_standard',
+    'blockchain_ultimate_token_supply',
+    'blockchain_ultimate_transaction_count',
+]
+
+ARVR_ULTIMATE_FIELDS = [
+    'arvr_ultimate_spatial_mapping_point_clouds',
+    'arvr_ultimate_simultaneous_localization_mapping_slam',
+    'arvr_ultimate_hand_tracking_gesture_recognition',
+    'arvr_ultimate_eye_tracking_foveated_rendering',
+    'arvr_ultimate_haptic_feedback_force_feedback',
+    'arvr_ultimate_pass_through_ar_camera_passthrough',
+    'arvr_ultimate_mixed_reality_holographic_display',
+    'arvr_ultimate_volumetric_capture_light_field',
+    'arvr_ultimate_social_presence_avatar_systems',
+    'arvr_ultimate_collaborative_workspaces_metaverse',
+    'arvr_ultimate_world_locked_content_persistence',
+    'arvr_ultimate_cross_platform_compatibility',
+    'arvr_ultimate_locomotion_teleportation_smoothing',
+    'arvr_ultimate_comfort_settings_motion_sickness',
+    'arvr_ultimate_accessibility_features_color_blindness',
+    'arvr_ultimate_content_rating_age_appropriate',
+    'arvr_ultimate_privacy_data_collection_policies',
+    'arvr_ultimate_monetization_in_app_purchases',
+    'arvr_ultimate_user_generated_content_moderation',
+    'arvr_ultimate_live_streaming_real_time_encoding',
+    'arvr_ultimate_cloud_rendering_edge_computing',
+    'arvr_ultimate_ai_generated_content_synthetic_media',
+    'arvr_ultimate_biometric_authentication_security',
+    'arvr_ultimate_health_monitoring_biological_signals',
+    'arvr_ultimate_therapeutic_applications_phobia_treatment',
+    'arvr_ultimate_educational_simulations_training',
+    'arvr_ultimate_asset_format',
+    'arvr_ultimate_gltf_version',
+    'arvr_ultimate_gltf_generator',
+    'arvr_ultimate_scene_count',
+    'arvr_ultimate_node_count',
+    'arvr_ultimate_mesh_count',
+    'arvr_ultimate_material_count',
+    'arvr_ultimate_animation_count',
+    'arvr_ultimate_glb_version',
+    'arvr_ultimate_glb_length',
+    'arvr_ultimate_glb_json_chunk_size',
+    'arvr_ultimate_usdz_is_zip',
+    'arvr_ultimate_usdz_file_count',
+    'arvr_ultimate_usdz_has_usd',
+    'arvr_ultimate_usdz_texture_count',
+    'arvr_ultimate_usdz_asset_names',
+]
+
+IOT_ULTIMATE_FIELDS = [
+    'iot_ultimate_sensor_fusion_data_aggregation',
+    'iot_ultimate_edge_computing_local_processing',
+    'iot_ultimate_fog_computing_hierarchical_processing',
+    'iot_ultimate_digital_twin_device_modeling',
+    'iot_ultimate_predictive_maintenance_anomaly_detection',
+    'iot_ultimate_over_the_air_updates_firmware',
+    'iot_ultimate_device_provisioning_zero_touch',
+    'iot_ultimate_energy_harvesting_power_management',
+    'iot_ultimate_mesh_networking_zigbee_thread',
+    'iot_ultimate_low_power_wide_area_lpwa',
+    'iot_ultimate_satellite_iot_starlink_orbit',
+    'iot_ultimate_industrial_iot_iiot_protocols',
+    'iot_ultimate_smart_cities_urban_planning',
+    'iot_ultimate_agricultural_iot_precision_farming',
+    'iot_ultimate_healthcare_iot_remote_monitoring',
+    'iot_ultimate_retail_iot_inventory_management',
+    'iot_ultimate_logistics_iot_supply_chain',
+    'iot_ultimate_smart_homes_automation_systems',
+    'iot_ultimate_wearables_biosensor_integration',
+    'iot_ultimate_connected_vehicles_telematics',
+    'iot_ultimate_smart_grid_demand_response',
+    'iot_ultimate_environmental_monitoring_pollution',
+    'iot_ultimate_wildlife_tracking_conservation',
+    'iot_ultimate_ocean_monitoring_marine_research',
+    'iot_ultimate_space_iot_cube_satellites',
+    'iot_ultimate_quantum_iot_secure_communication',
+    'iot_ultimate_metadata_file_format',
+    'iot_ultimate_device_id',
+    'iot_ultimate_device_type',
+    'iot_ultimate_protocol',
+    'iot_ultimate_sensor_types',
+    'iot_ultimate_sensor_count',
+    'iot_ultimate_firmware_version',
+    'iot_ultimate_location',
+    'iot_ultimate_json_keys',
+]
+
+QUANTUM_ULTIMATE_FIELDS = [
+    'quantum_ultimate_qubit_technologies_superconducting',
+    'quantum_ultimate_quantum_gates_universal_set',
+    'quantum_ultimate_quantum_circuits_algorithm_implementation',
+    'quantum_ultimate_quantum_error_correction_syndromes',
+    'quantum_ultimate_quantum_noise_mitigation_techniques',
+    'quantum_ultimate_quantum_algorithms_shors_grover',
+    'quantum_ultimate_variational_quantum_eigensolver_vqe',
+    'quantum_ultimate_quantum_machine_learning_qml',
+    'quantum_ultimate_quantum_chemistry_molecular_simulation',
+    'quantum_ultimate_quantum_optimization_problems',
+    'quantum_ultimate_quantum_cryptography_bb84_protocol',
+    'quantum_ultimate_post_quantum_cryptography_pqc',
+    'quantum_ultimate_quantum_key_distribution_qkd',
+    'quantum_ultimate_quantum_random_number_generation',
+    'quantum_ultimate_quantum_sensing_magnetometry',
+    'quantum_ultimate_quantum_imaging_ghost_imaging',
+    'quantum_ultimate_quantum_communication_entanglement',
+    'quantum_ultimate_quantum_teleportation_protocols',
+    'quantum_ultimate_topological_quantum_computing',
+    'quantum_ultimate_quantum_annealing_dwave_systems',
+    'quantum_ultimate_quantum_simulation_many_body_physics',
+    'quantum_ultimate_quantum_metrology_precision_measurement',
+    'quantum_ultimate_quantum_information_theory',
+    'quantum_ultimate_quantum_field_theory_simulation',
+    'quantum_ultimate_quantum_gravity_holographic_principle',
+    'quantum_ultimate_quantum_neural_networks_qnn',
+    'quantum_ultimate_file_format',
+    'quantum_ultimate_qasm_version',
+    'quantum_ultimate_qubit_registers',
+    'quantum_ultimate_classical_registers',
+    'quantum_ultimate_gate_set',
+    'quantum_ultimate_gate_count',
+    'quantum_ultimate_circuit_depth_estimate',
+    'quantum_ultimate_json_keys',
+]
+
+NEURAL_ULTIMATE_FIELDS = [
+    'neural_ultimate_convolutional_neural_network_cnn',
+    'neural_ultimate_recurrent_neural_network_rnn',
+    'neural_ultimate_long_short_term_memory_lstm',
+    'neural_ultimate_gated_recurrent_unit_gru',
+    'neural_ultimate_transformer_architecture_attention',
+    'neural_ultimate_bert_gpt_language_models',
+    'neural_ultimate_vision_transformer_vit',
+    'neural_ultimate_diffusion_models_stable_diffusion',
+    'neural_ultimate_generative_adversarial_network_gan',
+    'neural_ultimate_variational_autoencoder_vae',
+    'neural_ultimate_autoencoder_dimensionality_reduction',
+    'neural_ultimate_reinforcement_learning_deep_rl',
+    'neural_ultimate_multi_agent_systems_cooperation',
+    'neural_ultimate_neural_architecture_search_nas',
+    'neural_ultimate_federated_learning_privacy',
+    'neural_ultimate_meta_learning_maml_algorithm',
+    'neural_ultimate_continual_learning_elastic_weight',
+    'neural_ultimate_self_supervised_learning_moco',
+    'neural_ultimate_contrastive_learning_simclr',
+    'neural_ultimate_zero_shot_learning_clip_model',
+    'neural_ultimate_few_shot_learning_prototypical',
+    'neural_ultimate_one_shot_learning_siamese_networks',
+    'neural_ultimate_transfer_learning_fine_tuning',
+    'neural_ultimate_domain_adaptation_adversarial',
+    'neural_ultimate_neural_ordinary_differential_equations',
+    'neural_ultimate_graph_neural_network_gcn_gat',
+    'neural_ultimate_file_format',
+    'neural_ultimate_layer_count_estimate',
+    'neural_ultimate_contains_transformer',
+    'neural_ultimate_contains_cnn',
+    'neural_ultimate_contains_rnn',
+    'neural_ultimate_contains_attention',
+    'neural_ultimate_contains_gan',
+    'neural_ultimate_json_keys',
+]
+
+ROBOTICS_ULTIMATE_FIELDS = [
+    'robotics_ultimate_manipulator_kinematics_dynamics',
+    'robotics_ultimate_motion_planning_rrt_astar',
+    'robotics_ultimate_control_systems_pid_impedance',
+    'robotics_ultimate_sensor_fusion_kalman_filtering',
+    'robotics_ultimate_computer_vision_object_detection',
+    'robotics_ultimate_machine_learning_reinforcement',
+    'robotics_ultimate_human_robot_interaction_hri',
+    'robotics_ultimate_collaborative_robots_cobots',
+    'robotics_ultimate_autonomous_navigation_slam',
+    'robotics_ultimate_grasping_manipulation_dexterity',
+    'robotics_ultimate_soft_robotics_pneumatic_actuators',
+    'robotics_ultimate_swarm_robotics_coordination',
+    'robotics_ultimate_micro_nano_robotics_precision',
+    'robotics_ultimate_medical_robotics_minimally_invasive',
+    'robotics_ultimate_industrial_automation_flexibility',
+    'robotics_ultimate_service_robotics_assistance',
+    'robotics_ultimate_aerial_robotics_drone_swarms',
+    'robotics_ultimate_underwater_robotics_rov_auv',
+    'robotics_ultimate_space_robotics_orbit_servicing',
+    'robotics_ultimate_agricultural_robotics_automation',
+    'robotics_ultimate_construction_robotics_3d_printing',
+    'robotics_ultimate_search_rescue_robotics_hazards',
+    'robotics_ultimate_entertainment_robotics_interaction',
+    'robotics_ultimate_educational_robotics_stem_learning',
+    'robotics_ultimate_rehabilitation_robotics_therapy',
+    'robotics_ultimate_exoskeleton_power_amplification',
+    'robotics_ultimate_file_format',
+    'robotics_ultimate_robot_name',
+    'robotics_ultimate_link_count',
+    'robotics_ultimate_joint_count',
+    'robotics_ultimate_sensor_count',
+    'robotics_ultimate_plugin_count',
+    'robotics_ultimate_transmission_count',
+    'robotics_ultimate_gazebo_tag_count',
+    'robotics_ultimate_actuator_count',
+    'robotics_ultimate_xml_version',
+    'robotics_ultimate_json_keys',
+]
+
+# Extensions this module considers "emerging technology" artifacts.
+EMERGING_TECH_EXTENSIONS = {
+    ".ai", ".ml", ".model", ".h5", ".pb", ".onnx", ".tflite", ".pt", ".pth", ".ckpt", ".pkl", ".joblib",
+    ".blockchain", ".chain", ".ledger", ".crypto", ".nft", ".token",
+    ".ar", ".vr", ".xr", ".gltf", ".glb", ".usdz", ".reality",
+    ".iot", ".device", ".sensor",
+    ".quantum", ".qasm", ".qisk", ".cirq", ".qubit",
+    ".neural", ".nn", ".dl",
+    ".robot", ".urdf", ".sdf", ".xacro",
+    ".bio", ".dna", ".rna", ".protein", ".genome",
+    ".nano",
+    ".space", ".satellite", ".tle",
+    ".renewable", ".grid",
+    ".autonomous", ".vehicle",
+    ".telecom", ".5g", ".6g",
+    ".security", ".encrypt",
+    ".digital", ".twin", ".sim",
+}
+
+# Extensions that are likely to be JSON containers (configs, manifests, exports).
+JSONISH_EXTENSIONS = {
+    ".json",
+    ".ai", ".ml", ".model",
+    ".blockchain", ".chain", ".ledger", ".crypto", ".nft", ".token",
+    ".iot", ".device", ".sensor",
+    ".qisk", ".cirq", ".quantum",
+    ".robot",
+    ".nano",
+    ".space", ".satellite",
+    ".renewable", ".grid",
+    ".autonomous", ".vehicle",
+    ".telecom", ".5g", ".6g",
+    ".security", ".encrypt",
+    ".digital", ".twin", ".sim",
+}
+
+def _looks_like_json_bytes(data: bytes) -> bool:
+    if not data:
+        return False
+    head = data.lstrip()
+    return head.startswith((b"{", b"["))
+
+def _maybe_parse_json(
+    filepath: str,
+    *,
+    ext: Optional[str] = None,
+    header: Optional[bytes] = None,
+    max_bytes: int = 2_000_000,
+) -> Optional[Any]:
+    """Parse JSON only when it is plausible (by header or extension)."""
+    try:
+        if header is None:
+            header = _read_header(filepath, 256)
+        if _looks_like_json_bytes(header):
+            return _parse_json_file(filepath, max_bytes=max_bytes)
+        if ext and ext in JSONISH_EXTENSIONS:
+            return _parse_json_file(filepath, max_bytes=max_bytes)
+    except Exception:
+        return None
+    return None
+
 
 def _read_header(filepath: str, size: int = 4096) -> bytes:
+    """Read up to `size` bytes from the start of the file (never raises)."""
     try:
+        if not isinstance(size, int) or size <= 0:
+            return b""
+        size = min(size, 4 * 1024 * 1024)
         with open(filepath, "rb") as f:
             return f.read(size)
     except Exception:
@@ -40,12 +447,10 @@ def _read_header(filepath: str, size: int = 4096) -> bytes:
 
 def _read_text(filepath: str, max_bytes: int = 2_000_000) -> str:
     try:
-        file_size = Path(filepath).stat().st_size
-    except Exception:
-        file_size = 0
-    try:
+        if not isinstance(max_bytes, int) or max_bytes <= 0:
+            return ""
         with open(filepath, "rb") as f:
-            data = f.read(min(max_bytes, file_size if file_size else max_bytes))
+            data = f.read(max_bytes)
         return data.decode("utf-8", errors="ignore")
     except Exception:
         return ""
@@ -86,15 +491,71 @@ def _extract_json_value(payload: Any, candidates: list) -> Optional[Any]:
                         return item.get(key)
     return None
 
+
+def _extract_ascii_strings(data: bytes, min_len: int = 4, max_count: int = 50) -> list:
+    strings = []
+    current = []
+    for byte in data:
+        if 32 <= byte < 127:
+            current.append(chr(byte))
+        else:
+            if len(current) >= min_len:
+                strings.append("".join(current))
+                if len(strings) >= max_count:
+                    break
+            current = []
+    if len(current) >= min_len and len(strings) < max_count:
+        strings.append("".join(current))
+    return strings
+
+
+def _filter_op_strings(strings: list, max_count: int = 30) -> list:
+    filtered = []
+    for value in strings:
+        if len(value) < 3 or len(value) > 32:
+            continue
+        if " " in value or "\t" in value:
+            continue
+        if not any(ch.isalpha() for ch in value):
+            continue
+        if not all(ch.isalnum() or ch in "._-" for ch in value):
+            continue
+        filtered.append(value)
+        if len(filtered) >= max_count:
+            break
+    return filtered
+
+
+def _filter_tflite_ops(strings: list, max_count: int = 30) -> list:
+    filtered = []
+    for value in strings:
+        if len(value) < 3 or len(value) > 32:
+            continue
+        if any(ch.isspace() for ch in value):
+            continue
+        if not all(ch.isalnum() or ch in "._-" for ch in value):
+            continue
+        if value.upper() != value:
+            continue
+        filtered.append(value)
+        if len(filtered) >= max_count:
+            break
+    return filtered
+
 def extract_emerging_technology_ultimate_advanced(filepath: str) -> Dict[str, Any]:
     """Extract ultimate advanced emerging technology metadata."""
     result = {}
 
     try:
-        file_ext = Path(filepath).suffix.lower()
+        p = Path(filepath)
+        file_ext = p.suffix.lower()
+
+        if not p.exists() or not p.is_file():
+            result["emerging_technology_ultimate_advanced_extraction_error"] = "file_not_found"
+            return result
 
         # Check for emerging technology file types
-        if file_ext not in ['.ai', '.ml', '.model', '.h5', '.pb', '.onnx', '.tflite', '.pt', '.pth', '.ckpt', '.pkl', '.joblib', '.blockchain', '.chain', '.ledger', '.crypto', '.nft', '.token', '.ar', '.vr', '.xr', '.gltf', '.glb', '.usdz', '.reality', '.iot', '.device', '.sensor', '.quantum', '.qasm', '.qisk', '.cirq', '.qubit', '.neural', '.nn', '.dl', '.robot', '.urdf', '.sdf', '.xacro', '.bio', '.dna', '.rna', '.protein', '.genome', '.nano', '.space', '.satellite', '.tle', '.renewable', '.grid', '.autonomous', '.vehicle', '.telecom', '.5g', '.6g', '.security', '.encrypt', '.digital', '.twin', '.sim']:
+        if file_ext not in EMERGING_TECH_EXTENSIONS:
             return result
 
         result['emerging_technology_ultimate_advanced_detected'] = True
@@ -180,9 +641,7 @@ def _extract_ai_ml_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         tflite_sig = len(header) >= 8 and header[4:8] == b"TFL3"
         onnx_sig = (b"ONNX" in header[:128]) or ext == ".onnx"
         zip_sig = header[:4] in [b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"]
-        json_data = None
-        if header.lstrip().startswith((b"{", b"[")) or ext in [".ai", ".ml", ".model"]:
-            json_data = _parse_json_file(filepath)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
 
         model_format = None
         if hdf5_sig or ext in [".h5", ".hdf5"]:
@@ -209,45 +668,10 @@ def _extract_ai_ml_ultimate_advanced(filepath: str) -> Dict[str, Any]:
             framework_guess = "onnx"
         elif model_format in ["pytorch_zip", "pt", "pth"]:
             framework_guess = "pytorch"
+        tflite_info = _parse_tflite_header(header, file_size) if tflite_sig else {}
+        onnx_info = _parse_onnx_header(filepath) if onnx_sig else {}
 
-        ai_fields = [
-            'ai_ultimate_model_architecture_deep_neural_network',
-            'ai_ultimate_training_dataset_size_parameters',
-            'ai_ultimate_hyperparameters_learning_rate_optimizer',
-            'ai_ultimate_convergence_metrics_loss_accuracy',
-            'ai_ultimate_feature_engineering_data_preprocessing',
-            'ai_ultimate_model_compression_quantization_pruning',
-            'ai_ultimate_edge_deployment_tflite_onnx_conversion',
-            'ai_ultimate_federated_learning_privacy_preservation',
-            'ai_ultimate_explainable_ai_xai_feature_importance',
-            'ai_ultimate_adversarial_training_robustness_testing',
-            'ai_ultimate_transfer_learning_domain_adaptation',
-            'ai_ultimate_meta_learning_few_shot_learning',
-            'ai_ultimate_reinforcement_learning_policy_gradients',
-            'ai_ultimate_generative_adversarial_networks_gan',
-            'ai_ultimate_variational_autoencoders_vae',
-            'ai_ultimate_attention_mechanisms_transformers',
-            'ai_ultimate_graph_neural_networks_gnn',
-            'ai_ultimate_self_supervised_learning_contrastive',
-            'ai_ultimate_multi_modal_learning_vision_language',
-            'ai_ultimate_zero_shot_few_shot_learning',
-            'ai_ultimate_continual_learning_catastrophic_forgetting',
-            'ai_ultimate_neural_architecture_search_nas',
-            'ai_ultimate_automl_hyperparameter_optimization',
-            'ai_ultimate_model_interpretability_shap_lime',
-            'ai_ultimate_bias_fairness_audit_mitigation',
-            'ai_ultimate_energy_efficient_ai_green_ai',
-            'ai_ultimate_model_file_format',
-            'ai_ultimate_model_file_size_bytes',
-            'ai_ultimate_model_is_binary',
-            'ai_ultimate_model_framework_guess',
-            'ai_ultimate_model_header_signature',
-            'ai_ultimate_model_has_hdf5_signature',
-            'ai_ultimate_model_has_tflite_signature',
-            'ai_ultimate_model_has_onnx_signature',
-            'ai_ultimate_model_is_zip_container',
-            'ai_ultimate_model_json_keys',
-        ]
+        ai_fields = AI_ULTIMATE_FIELDS
 
         for field in ai_fields:
             ai_data[field] = None
@@ -262,8 +686,20 @@ def _extract_ai_ml_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         ai_data['ai_ultimate_model_has_onnx_signature'] = onnx_sig
         ai_data['ai_ultimate_model_is_zip_container'] = zip_sig
         ai_data['ai_ultimate_model_json_keys'] = _extract_json_keys(json_data) if json_data else None
+        ai_data['ai_ultimate_model_tflite_identifier'] = tflite_info.get("identifier")
+        ai_data['ai_ultimate_model_tflite_root_offset'] = tflite_info.get("root_table_offset")
+        ai_data['ai_ultimate_model_tflite_file_size'] = tflite_info.get("file_size")
+        ai_data['ai_ultimate_model_onnx_strings'] = onnx_info.get("strings")
+        ai_data['ai_ultimate_model_onnx_markers'] = onnx_info.get("markers")
+        ai_data['ai_ultimate_model_tflite_strings'] = tflite_info.get("strings")
+        ai_data['ai_ultimate_model_tflite_string_count'] = tflite_info.get("string_count")
+        ai_data['ai_ultimate_model_onnx_string_count'] = onnx_info.get("string_count")
+        ai_data['ai_ultimate_model_onnx_op_type_guess'] = onnx_info.get("op_types")
+        ai_data['ai_ultimate_model_tflite_op_type_guess'] = tflite_info.get("op_types")
+        ai_data['ai_ultimate_model_tflite_op_type_count'] = tflite_info.get("op_type_count")
+        ai_data['ai_ultimate_model_onnx_op_type_count'] = onnx_info.get("op_type_count")
 
-        ai_data['emerging_ai_ml_ultimate_advanced_field_count'] = len(ai_fields)
+        ai_data['emerging_ai_ml_ultimate_advanced_field_count'] = len(AI_ULTIMATE_FIELDS)
 
     except Exception as e:
         ai_data['emerging_ai_ml_ultimate_advanced_error'] = str(e)
@@ -277,7 +713,8 @@ def _extract_blockchain_ultimate_advanced(filepath: str) -> Dict[str, Any]:
 
     try:
         ext = Path(filepath).suffix.lower()
-        json_data = _parse_json_file(filepath) if ext in [".blockchain", ".chain", ".ledger", ".crypto", ".nft", ".token", ".json"] else _parse_json_file(filepath)
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
 
         chain_id = _extract_json_value(json_data, ["chainId", "chain_id", "chain"])
@@ -291,43 +728,7 @@ def _extract_blockchain_ultimate_advanced(filepath: str) -> Dict[str, Any]:
 
         file_format = "json" if json_data is not None else (ext.lstrip(".") if ext else None)
 
-        blockchain_fields = [
-            'blockchain_ultimate_consensus_mechanism_pow_pos',
-            'blockchain_ultimate_smart_contract_solidity_vyper',
-            'blockchain_ultimate_decentralized_finance_defi_protocols',
-            'blockchain_ultimate_non_fungible_tokens_nft_standards',
-            'blockchain_ultimate_decentralized_autonomous_organization_dao',
-            'blockchain_ultimate_cross_chain_bridges_interoperability',
-            'blockchain_ultimate_layer_two_scaling_solutions',
-            'blockchain_ultimate_zero_knowledge_proofs_zkp',
-            'blockchain_ultimate_decentralized_identity_did',
-            'blockchain_ultimate_oracle_networks_price_feeds',
-            'blockchain_ultimate_tokenomics_supply_demand_dynamics',
-            'blockchain_ultimate_governance_mechanisms_voting',
-            'blockchain_ultimate_cryptographic_primitives_hashing',
-            'blockchain_ultimate_consensus_byzantine_fault_tolerance',
-            'blockchain_ultimate_sharding_horizontal_scaling',
-            'blockchain_ultimate_sidechains_child_chains',
-            'blockchain_ultimate_state_channels_payment_channels',
-            'blockchain_ultimate_privacy_coins_ring_signatures',
-            'blockchain_ultimate_central_bank_digital_currency_cbdc',
-            'blockchain_ultimate_regulatory_compliance_kyc_aml',
-            'blockchain_ultimate_supply_chain_transparency',
-            'blockchain_ultimate_voting_systems_election_integrity',
-            'blockchain_ultimate_carbon_credits_trading',
-            'blockchain_ultimate_real_estate_tokenization',
-            'blockchain_ultimate_insurance_parametric_contracts',
-            'blockchain_ultimate_healthcare_data_monetization',
-            'blockchain_ultimate_metadata_file_format',
-            'blockchain_ultimate_json_keys',
-            'blockchain_ultimate_chain_id',
-            'blockchain_ultimate_contract_address',
-            'blockchain_ultimate_token_name',
-            'blockchain_ultimate_token_symbol',
-            'blockchain_ultimate_token_standard',
-            'blockchain_ultimate_token_supply',
-            'blockchain_ultimate_transaction_count',
-        ]
+        blockchain_fields = BLOCKCHAIN_ULTIMATE_FIELDS
 
         for field in blockchain_fields:
             blockchain_data[field] = None
@@ -342,7 +743,7 @@ def _extract_blockchain_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         blockchain_data['blockchain_ultimate_token_supply'] = token_supply
         blockchain_data['blockchain_ultimate_transaction_count'] = transaction_count
 
-        blockchain_data['emerging_blockchain_ultimate_advanced_field_count'] = len(blockchain_fields)
+        blockchain_data['emerging_blockchain_ultimate_advanced_field_count'] = len(BLOCKCHAIN_ULTIMATE_FIELDS)
 
     except Exception as e:
         blockchain_data['emerging_blockchain_ultimate_advanced_error'] = str(e)
@@ -365,49 +766,11 @@ def _extract_arvr_ultimate_advanced(filepath: str) -> Dict[str, Any]:
             gltf_json = glb_info.get("json")
 
         gltf_meta = _parse_gltf_json(gltf_json) if gltf_json else {}
-        usdz_is_zip = header[:4] in [b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"] if ext == ".usdz" else None
+        usdz_info = _parse_usdz(filepath) if ext == ".usdz" else {}
+        usdz_is_zip = usdz_info.get("is_zip") if ext == ".usdz" else None
         asset_format = "glb" if glb_info else "gltf" if gltf_json else "usdz" if ext == ".usdz" else (ext.lstrip(".") if ext else None)
 
-        arvr_fields = [
-            'arvr_ultimate_spatial_mapping_point_clouds',
-            'arvr_ultimate_simultaneous_localization_mapping_slam',
-            'arvr_ultimate_hand_tracking_gesture_recognition',
-            'arvr_ultimate_eye_tracking_foveated_rendering',
-            'arvr_ultimate_haptic_feedback_force_feedback',
-            'arvr_ultimate_pass_through_ar_camera_passthrough',
-            'arvr_ultimate_mixed_reality_holographic_display',
-            'arvr_ultimate_volumetric_capture_light_field',
-            'arvr_ultimate_social_presence_avatar_systems',
-            'arvr_ultimate_collaborative_workspaces_metaverse',
-            'arvr_ultimate_world_locked_content_persistence',
-            'arvr_ultimate_cross_platform_compatibility',
-            'arvr_ultimate_locomotion_teleportation_smoothing',
-            'arvr_ultimate_comfort_settings_motion_sickness',
-            'arvr_ultimate_accessibility_features_color_blindness',
-            'arvr_ultimate_content_rating_age_appropriate',
-            'arvr_ultimate_privacy_data_collection_policies',
-            'arvr_ultimate_monetization_in_app_purchases',
-            'arvr_ultimate_user_generated_content_moderation',
-            'arvr_ultimate_live_streaming_real_time_encoding',
-            'arvr_ultimate_cloud_rendering_edge_computing',
-            'arvr_ultimate_ai_generated_content_synthetic_media',
-            'arvr_ultimate_biometric_authentication_security',
-            'arvr_ultimate_health_monitoring_biological_signals',
-            'arvr_ultimate_therapeutic_applications_phobia_treatment',
-            'arvr_ultimate_educational_simulations_training',
-            'arvr_ultimate_asset_format',
-            'arvr_ultimate_gltf_version',
-            'arvr_ultimate_gltf_generator',
-            'arvr_ultimate_scene_count',
-            'arvr_ultimate_node_count',
-            'arvr_ultimate_mesh_count',
-            'arvr_ultimate_material_count',
-            'arvr_ultimate_animation_count',
-            'arvr_ultimate_glb_version',
-            'arvr_ultimate_glb_length',
-            'arvr_ultimate_glb_json_chunk_size',
-            'arvr_ultimate_usdz_is_zip',
-        ]
+        arvr_fields = ARVR_ULTIMATE_FIELDS
 
         for field in arvr_fields:
             arvr_data[field] = None
@@ -424,8 +787,19 @@ def _extract_arvr_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         arvr_data['arvr_ultimate_glb_length'] = glb_info.get("length")
         arvr_data['arvr_ultimate_glb_json_chunk_size'] = glb_info.get("json_chunk_length")
         arvr_data['arvr_ultimate_usdz_is_zip'] = usdz_is_zip
+        arvr_data['arvr_ultimate_usdz_file_count'] = usdz_info.get("file_count")
+        arvr_data['arvr_ultimate_usdz_has_usd'] = usdz_info.get("has_usd")
+        arvr_data['arvr_ultimate_usdz_texture_count'] = usdz_info.get("texture_count")
+        arvr_data['arvr_ultimate_usdz_asset_names'] = usdz_info.get("asset_names")
+        arvr_data['arvr_ultimate_usdz_usda_default_prim'] = usdz_info.get("default_prim")
+        arvr_data['arvr_ultimate_usdz_usda_up_axis'] = usdz_info.get("up_axis")
+        arvr_data['arvr_ultimate_usdz_usda_meters_per_unit'] = usdz_info.get("meters_per_unit")
+        arvr_data['arvr_ultimate_usdz_usda_def_count'] = usdz_info.get("def_count")
+        arvr_data['arvr_ultimate_usdz_usda_class_count'] = usdz_info.get("class_count")
+        arvr_data['arvr_ultimate_usdz_usdc_count'] = usdz_info.get("usdc_count")
+        arvr_data['arvr_ultimate_usdz_usdc_has_magic'] = usdz_info.get("usdc_has_magic")
 
-        arvr_data['emerging_arvr_ultimate_advanced_field_count'] = len(arvr_fields)
+        arvr_data['emerging_arvr_ultimate_advanced_field_count'] = len(ARVR_ULTIMATE_FIELDS)
 
     except Exception as e:
         arvr_data['emerging_arvr_ultimate_advanced_error'] = str(e)
@@ -438,7 +812,9 @@ def _extract_iot_ultimate_advanced(filepath: str) -> Dict[str, Any]:
     iot_data = {'emerging_iot_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         device_id = _extract_json_value(json_data, ["deviceId", "device_id", "id"])
         device_type = _extract_json_value(json_data, ["deviceType", "device_type", "type"])
@@ -459,43 +835,7 @@ def _extract_iot_ultimate_advanced(filepath: str) -> Dict[str, Any]:
             sensor_types = list(dict.fromkeys(types)) if types else None
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        iot_fields = [
-            'iot_ultimate_sensor_fusion_data_aggregation',
-            'iot_ultimate_edge_computing_local_processing',
-            'iot_ultimate_fog_computing_hierarchical_processing',
-            'iot_ultimate_digital_twin_device_modeling',
-            'iot_ultimate_predictive_maintenance_anomaly_detection',
-            'iot_ultimate_over_the_air_updates_firmware',
-            'iot_ultimate_device_provisioning_zero_touch',
-            'iot_ultimate_energy_harvesting_power_management',
-            'iot_ultimate_mesh_networking_zigbee_thread',
-            'iot_ultimate_low_power_wide_area_lpwa',
-            'iot_ultimate_satellite_iot_starlink_orbit',
-            'iot_ultimate_industrial_iot_iiot_protocols',
-            'iot_ultimate_smart_cities_urban_planning',
-            'iot_ultimate_agricultural_iot_precision_farming',
-            'iot_ultimate_healthcare_iot_remote_monitoring',
-            'iot_ultimate_retail_iot_inventory_management',
-            'iot_ultimate_logistics_iot_supply_chain',
-            'iot_ultimate_smart_homes_automation_systems',
-            'iot_ultimate_wearables_biosensor_integration',
-            'iot_ultimate_connected_vehicles_telematics',
-            'iot_ultimate_smart_grid_demand_response',
-            'iot_ultimate_environmental_monitoring_pollution',
-            'iot_ultimate_wildlife_tracking_conservation',
-            'iot_ultimate_ocean_monitoring_marine_research',
-            'iot_ultimate_space_iot_cube_satellites',
-            'iot_ultimate_quantum_iot_secure_communication',
-            'iot_ultimate_metadata_file_format',
-            'iot_ultimate_device_id',
-            'iot_ultimate_device_type',
-            'iot_ultimate_protocol',
-            'iot_ultimate_sensor_types',
-            'iot_ultimate_sensor_count',
-            'iot_ultimate_firmware_version',
-            'iot_ultimate_location',
-            'iot_ultimate_json_keys',
-        ]
+        iot_fields = IOT_ULTIMATE_FIELDS
 
         for field in iot_fields:
             iot_data[field] = None
@@ -510,7 +850,7 @@ def _extract_iot_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         iot_data['iot_ultimate_location'] = location
         iot_data['iot_ultimate_json_keys'] = json_keys
 
-        iot_data['emerging_iot_ultimate_advanced_field_count'] = len(iot_fields)
+        iot_data['emerging_iot_ultimate_advanced_field_count'] = len(IOT_ULTIMATE_FIELDS)
 
     except Exception as e:
         iot_data['emerging_iot_ultimate_advanced_error'] = str(e)
@@ -526,46 +866,12 @@ def _extract_quantum_computing_ultimate_advanced(filepath: str) -> Dict[str, Any
         ext = Path(filepath).suffix.lower()
         text = _read_text(filepath, max_bytes=500_000)
         qasm_info = _parse_qasm(text) if ext == ".qasm" else {}
-        json_data = _parse_json_file(filepath) if ext in [".qisk", ".cirq", ".quantum"] else None
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header) if ext in [".qisk", ".cirq", ".quantum"] else None
         json_keys = _extract_json_keys(json_data) if json_data else None
         file_format = "qasm" if qasm_info else ("json" if json_data else ext.lstrip("."))
 
-        quantum_fields = [
-            'quantum_ultimate_qubit_technologies_superconducting',
-            'quantum_ultimate_quantum_gates_universal_set',
-            'quantum_ultimate_quantum_circuits_algorithm_implementation',
-            'quantum_ultimate_quantum_error_correction_syndromes',
-            'quantum_ultimate_quantum_noise_mitigation_techniques',
-            'quantum_ultimate_quantum_algorithms_shors_grover',
-            'quantum_ultimate_variational_quantum_eigensolver_vqe',
-            'quantum_ultimate_quantum_machine_learning_qml',
-            'quantum_ultimate_quantum_chemistry_molecular_simulation',
-            'quantum_ultimate_quantum_optimization_problems',
-            'quantum_ultimate_quantum_cryptography_bb84_protocol',
-            'quantum_ultimate_post_quantum_cryptography_pqc',
-            'quantum_ultimate_quantum_key_distribution_qkd',
-            'quantum_ultimate_quantum_random_number_generation',
-            'quantum_ultimate_quantum_sensing_magnetometry',
-            'quantum_ultimate_quantum_imaging_ghost_imaging',
-            'quantum_ultimate_quantum_communication_entanglement',
-            'quantum_ultimate_quantum_teleportation_protocols',
-            'quantum_ultimate_topological_quantum_computing',
-            'quantum_ultimate_quantum_annealing_dwave_systems',
-            'quantum_ultimate_quantum_simulation_many_body_physics',
-            'quantum_ultimate_quantum_metrology_precision_measurement',
-            'quantum_ultimate_quantum_information_theory',
-            'quantum_ultimate_quantum_field_theory_simulation',
-            'quantum_ultimate_quantum_gravity_holographic_principle',
-            'quantum_ultimate_quantum_neural_networks_qnn',
-            'quantum_ultimate_file_format',
-            'quantum_ultimate_qasm_version',
-            'quantum_ultimate_qubit_registers',
-            'quantum_ultimate_classical_registers',
-            'quantum_ultimate_gate_set',
-            'quantum_ultimate_gate_count',
-            'quantum_ultimate_circuit_depth_estimate',
-            'quantum_ultimate_json_keys',
-        ]
+        quantum_fields = QUANTUM_ULTIMATE_FIELDS
 
         for field in quantum_fields:
             quantum_data[field] = None
@@ -579,7 +885,7 @@ def _extract_quantum_computing_ultimate_advanced(filepath: str) -> Dict[str, Any
         quantum_data['quantum_ultimate_circuit_depth_estimate'] = qasm_info.get("depth_estimate")
         quantum_data['quantum_ultimate_json_keys'] = json_keys
 
-        quantum_data['emerging_quantum_computing_ultimate_advanced_field_count'] = len(quantum_fields)
+        quantum_data['emerging_quantum_computing_ultimate_advanced_field_count'] = len(QUANTUM_ULTIMATE_FIELDS)
 
     except Exception as e:
         quantum_data['emerging_quantum_computing_ultimate_advanced_error'] = str(e)
@@ -594,7 +900,8 @@ def _extract_neural_networks_ultimate_advanced(filepath: str) -> Dict[str, Any]:
     try:
         ext = Path(filepath).suffix.lower()
         text = _read_text(filepath, max_bytes=500_000).lower()
-        json_data = _parse_json_file(filepath) if text.startswith("{") or text.startswith("[") else None
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         layer_count = text.count("layer") if text else 0
         contains_cnn = "conv" in text or "convolution" in text
@@ -603,42 +910,7 @@ def _extract_neural_networks_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         contains_gan = "gan" in text or "generative adversarial" in text
         file_format = "json" if json_data is not None else ext.lstrip(".")
 
-        neural_fields = [
-            'neural_ultimate_convolutional_neural_network_cnn',
-            'neural_ultimate_recurrent_neural_network_rnn',
-            'neural_ultimate_long_short_term_memory_lstm',
-            'neural_ultimate_gated_recurrent_unit_gru',
-            'neural_ultimate_transformer_architecture_attention',
-            'neural_ultimate_bert_gpt_language_models',
-            'neural_ultimate_vision_transformer_vit',
-            'neural_ultimate_diffusion_models_stable_diffusion',
-            'neural_ultimate_generative_adversarial_network_gan',
-            'neural_ultimate_variational_autoencoder_vae',
-            'neural_ultimate_autoencoder_dimensionality_reduction',
-            'neural_ultimate_reinforcement_learning_deep_rl',
-            'neural_ultimate_multi_agent_systems_cooperation',
-            'neural_ultimate_neural_architecture_search_nas',
-            'neural_ultimate_federated_learning_privacy',
-            'neural_ultimate_meta_learning_maml_algorithm',
-            'neural_ultimate_continual_learning_elastic_weight',
-            'neural_ultimate_self_supervised_learning_moco',
-            'neural_ultimate_contrastive_learning_simclr',
-            'neural_ultimate_zero_shot_learning_clip_model',
-            'neural_ultimate_few_shot_learning_prototypical',
-            'neural_ultimate_one_shot_learning_siamese_networks',
-            'neural_ultimate_transfer_learning_fine_tuning',
-            'neural_ultimate_domain_adaptation_adversarial',
-            'neural_ultimate_neural_ordinary_differential_equations',
-            'neural_ultimate_graph_neural_network_gcn_gat',
-            'neural_ultimate_file_format',
-            'neural_ultimate_layer_count_estimate',
-            'neural_ultimate_contains_transformer',
-            'neural_ultimate_contains_cnn',
-            'neural_ultimate_contains_rnn',
-            'neural_ultimate_contains_attention',
-            'neural_ultimate_contains_gan',
-            'neural_ultimate_json_keys',
-        ]
+        neural_fields = NEURAL_ULTIMATE_FIELDS
 
         for field in neural_fields:
             neural_data[field] = None
@@ -652,7 +924,7 @@ def _extract_neural_networks_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         neural_data['neural_ultimate_contains_gan'] = contains_gan
         neural_data['neural_ultimate_json_keys'] = json_keys
 
-        neural_data['emerging_neural_networks_ultimate_advanced_field_count'] = len(neural_fields)
+        neural_data['emerging_neural_networks_ultimate_advanced_field_count'] = len(NEURAL_ULTIMATE_FIELDS)
 
     except Exception as e:
         neural_data['emerging_neural_networks_ultimate_advanced_error'] = str(e)
@@ -671,42 +943,7 @@ def _extract_robotics_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         json_keys = _extract_json_keys(json_data) if json_data else None
         file_format = "xml" if xml_info else ("json" if json_data else ext.lstrip("."))
 
-        robotics_fields = [
-            'robotics_ultimate_manipulator_kinematics_dynamics',
-            'robotics_ultimate_motion_planning_rrt_astar',
-            'robotics_ultimate_control_systems_pid_impedance',
-            'robotics_ultimate_sensor_fusion_kalman_filtering',
-            'robotics_ultimate_computer_vision_object_detection',
-            'robotics_ultimate_machine_learning_reinforcement',
-            'robotics_ultimate_human_robot_interaction_hri',
-            'robotics_ultimate_collaborative_robots_cobots',
-            'robotics_ultimate_autonomous_navigation_slam',
-            'robotics_ultimate_grasping_manipulation_dexterity',
-            'robotics_ultimate_soft_robotics_pneumatic_actuators',
-            'robotics_ultimate_swarm_robotics_coordination',
-            'robotics_ultimate_micro_nano_robotics_precision',
-            'robotics_ultimate_medical_robotics_minimally_invasive',
-            'robotics_ultimate_industrial_automation_flexibility',
-            'robotics_ultimate_service_robotics_assistance',
-            'robotics_ultimate_aerial_robotics_drone_swarms',
-            'robotics_ultimate_underwater_robotics_rov_auv',
-            'robotics_ultimate_space_robotics_orbit_servicing',
-            'robotics_ultimate_agricultural_robotics_automation',
-            'robotics_ultimate_construction_robotics_3d_printing',
-            'robotics_ultimate_search_rescue_robotics_hazards',
-            'robotics_ultimate_entertainment_robotics_interaction',
-            'robotics_ultimate_educational_robotics_stem_learning',
-            'robotics_ultimate_rehabilitation_robotics_therapy',
-            'robotics_ultimate_exoskeleton_power_amplification',
-            'robotics_ultimate_file_format',
-            'robotics_ultimate_robot_name',
-            'robotics_ultimate_link_count',
-            'robotics_ultimate_joint_count',
-            'robotics_ultimate_sensor_count',
-            'robotics_ultimate_plugin_count',
-            'robotics_ultimate_xml_version',
-            'robotics_ultimate_json_keys',
-        ]
+        robotics_fields = ROBOTICS_ULTIMATE_FIELDS
 
         for field in robotics_fields:
             robotics_data[field] = None
@@ -717,10 +954,13 @@ def _extract_robotics_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         robotics_data['robotics_ultimate_joint_count'] = xml_info.get("joint_count")
         robotics_data['robotics_ultimate_sensor_count'] = xml_info.get("sensor_count")
         robotics_data['robotics_ultimate_plugin_count'] = xml_info.get("plugin_count")
+        robotics_data['robotics_ultimate_transmission_count'] = xml_info.get("transmission_count")
+        robotics_data['robotics_ultimate_gazebo_tag_count'] = xml_info.get("gazebo_tag_count")
+        robotics_data['robotics_ultimate_actuator_count'] = xml_info.get("actuator_count")
         robotics_data['robotics_ultimate_xml_version'] = xml_info.get("xml_version")
         robotics_data['robotics_ultimate_json_keys'] = json_keys
 
-        robotics_data['emerging_robotics_ultimate_advanced_field_count'] = len(robotics_fields)
+        robotics_data['emerging_robotics_ultimate_advanced_field_count'] = len(ROBOTICS_ULTIMATE_FIELDS)
 
     except Exception as e:
         robotics_data['emerging_robotics_ultimate_advanced_error'] = str(e)
@@ -737,41 +977,7 @@ def _extract_biotechnology_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         fasta_info = _parse_fasta(text) if text else {}
         file_format = Path(filepath).suffix.lower().lstrip(".")
 
-        biotech_fields = [
-            'biotech_ultimate_crispr_gene_editing_cas9_cas12',
-            'biotech_ultimate_dna_sequencing_next_generation',
-            'biotech_ultimate_rna_interference_gene_silencing',
-            'biotech_ultimate_synthetic_biology_genetic_circuits',
-            'biotech_ultimate_stem_cell_therapy_regenerative',
-            'biotech_ultimate_personalized_medicine_pharmacogenomics',
-            'biotech_ultimate_microbiome_analysis_gut_brain_axis',
-            'biotech_ultimate_nanopore_sequencing_real_time',
-            'biotech_ultimate_optogenetics_neural_control',
-            'biotech_ultimate_biosensors_glucose_continuous',
-            'biotech_ultimate_biofabrication_3d_bioprinting',
-            'biotech_ultimate_tissue_engineering_scaffolds',
-            'biotech_ultimate_gene_therapy_viral_vectors',
-            'biotech_ultimate_immunotherapy_checkpoint_inhibitors',
-            'biotech_ultimate_vaccine_development_mrna_platform',
-            'biotech_ultimate_drug_discovery_high_throughput',
-            'biotech_ultimate_protein_engineering_directed_evolution',
-            'biotech_ultimate_metabolomics_pathway_analysis',
-            'biotech_ultimate_epigenetics_dna_methylation',
-            'biotech_ultimate_single_cell_sequencing_resolution',
-            'biotech_ultimate_crispr_screening_genome_wide',
-            'biotech_ultimate_bioinformatics_pipeline_analysis',
-            'biotech_ultimate_structural_biology_cryo_em',
-            'biotech_ultimate_systems_biology_network_modeling',
-            'biotech_ultimate_synthetic_genomics_minimal_genomes',
-            'biotech_ultimate_bioethics_regulatory_compliance',
-            'biotech_ultimate_file_format',
-            'biotech_ultimate_sequence_length',
-            'biotech_ultimate_gc_content',
-            'biotech_ultimate_base_counts',
-            'biotech_ultimate_record_count',
-            'biotech_ultimate_has_fasta_headers',
-            'biotech_ultimate_sequence_type_guess',
-        ]
+        biotech_fields = BIOTECH_ULTIMATE_FIELDS
 
         for field in biotech_fields:
             biotech_data[field] = None
@@ -784,7 +990,7 @@ def _extract_biotechnology_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         biotech_data['biotech_ultimate_has_fasta_headers'] = fasta_info.get("has_headers")
         biotech_data['biotech_ultimate_sequence_type_guess'] = fasta_info.get("sequence_type")
 
-        biotech_data['emerging_biotechnology_ultimate_advanced_field_count'] = len(biotech_fields)
+        biotech_data['emerging_biotechnology_ultimate_advanced_field_count'] = len(BIOTECH_ULTIMATE_FIELDS)
 
     except Exception as e:
         biotech_data['emerging_biotechnology_ultimate_advanced_error'] = str(e)
@@ -797,7 +1003,9 @@ def _extract_nanotechnology_ultimate_advanced(filepath: str) -> Dict[str, Any]:
     nano_data = {'emerging_nanotechnology_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         materials = _extract_json_value(json_data, ["materials", "material", "composition"])
         particle_size = _extract_json_value(json_data, ["particleSize", "particle_size", "size_nm"])
@@ -805,40 +1013,7 @@ def _extract_nanotechnology_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         tags = _extract_json_value(json_data, ["tags", "keywords"])
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        nano_fields = [
-            'nano_ultimate_carbon_nanotubes_properties_applications',
-            'nano_ultimate_graphene_2d_materials_electronics',
-            'nano_ultimate_nanoparticles_drug_delivery_targeting',
-            'nano_ultimate_nanofabrication_lithography_precision',
-            'nano_ultimate_nanomaterials_composites_strength',
-            'nano_ultimate_nanophotonics_plasmonics_sensing',
-            'nano_ultimate_nanofluidics_lab_on_chip_diagnostics',
-            'nano_ultimate_nanomechanics_nems_sensors',
-            'nano_ultimate_nanobiotechnology_dna_nanostructures',
-            'nano_ultimate_nanomedicine_cancer_therapy_targeted',
-            'nano_ultimate_nanoelectronics_molecular_transistors',
-            'nano_ultimate_nanobatteries_energy_storage_density',
-            'nano_ultimate_nanocatalysts_reaction_efficiency',
-            'nano_ultimate_nanosensors_environmental_monitoring',
-            'nano_ultimate_nanocoatings_self_cleaning_surfaces',
-            'nano_ultimate_nanofilters_water_purification',
-            'nano_ultimate_nanomotors_propulsion_mechanisms',
-            'nano_ultimate_nanorobotics_manipulation_precision',
-            'nano_ultimate_nanocomposites_polymer_enhancement',
-            'nano_ultimate_nanowires_transistor_applications',
-            'nano_ultimate_nanocrystals_quantum_dots_display',
-            'nano_ultimate_nanoporous_materials_selective_separation',
-            'nano_ultimate_nanofibers_tissue_engineering_scaffolds',
-            'nano_ultimate_nanogels_drug_release_controlled',
-            'nano_ultimate_nanovesicles_liposomes_delivery',
-            'nano_ultimate_nanotoxicity_safety_assessment',
-            'nano_ultimate_metadata_file_format',
-            'nano_ultimate_materials_list',
-            'nano_ultimate_particle_size',
-            'nano_ultimate_surface_area',
-            'nano_ultimate_json_keys',
-            'nano_ultimate_metadata_tags',
-        ]
+        nano_fields = NANO_ULTIMATE_FIELDS
 
         for field in nano_fields:
             nano_data[field] = None
@@ -850,7 +1025,7 @@ def _extract_nanotechnology_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         nano_data['nano_ultimate_json_keys'] = json_keys
         nano_data['nano_ultimate_metadata_tags'] = tags
 
-        nano_data['emerging_nanotechnology_ultimate_advanced_field_count'] = len(nano_fields)
+        nano_data['emerging_nanotechnology_ultimate_advanced_field_count'] = len(NANO_ULTIMATE_FIELDS)
 
     except Exception as e:
         nano_data['emerging_nanotechnology_ultimate_advanced_error'] = str(e)
@@ -870,42 +1045,7 @@ def _extract_space_technology_ultimate_advanced(filepath: str) -> Dict[str, Any]
         json_keys = _extract_json_keys(json_data) if json_data else None
         file_format = "tle" if tle_info else ("json" if json_data else ext.lstrip("."))
 
-        space_fields = [
-            'space_ultimate_satellite_constellation_starlink',
-            'space_ultimate_cube_satellites_standardization',
-            'space_ultimate_small_satellite_technology_ssm',
-            'space_ultimate_reusable_rocket_technology_falcon9',
-            'space_ultimate_space_tourism_orbital_station',
-            'space_ultimate_mars_colonization_life_support',
-            'space_ultimate_lunar_base_establishment',
-            'space_ultimate_asteroid_mining_resource_extraction',
-            'space_ultimate_space_debris_tracking_removal',
-            'space_ultimate_space_situational_awareness_ssa',
-            'space_ultimate_space_weather_monitoring_solar',
-            'space_ultimate_space_based_solar_power_sbsp',
-            'space_ultimate_quantum_communication_satellites',
-            'space_ultimate_space_based_internet_starlink',
-            'space_ultimate_earth_observation_hyper_spectral',
-            'space_ultimate_climate_monitoring_greenhouse_gases',
-            'space_ultimate_disaster_response_imaging_realtime',
-            'space_ultimate_precision_agriculture_yield_monitoring',
-            'space_ultimate_ocean_monitoring_currents_pollution',
-            'space_ultimate_wildlife_tracking_migration_patterns',
-            'space_ultimate_archaeological_site_discovery',
-            'space_ultimate_border_security_surveillance',
-            'space_ultimate_military_reconnaissance_imaging',
-            'space_ultimate_space_tourism_suborbital_flights',
-            'space_ultimate_space_elevator_concept_feasibility',
-            'space_ultimate_interstellar_probe_design_voyager',
-            'space_ultimate_file_format',
-            'space_ultimate_tle_satellite_name',
-            'space_ultimate_tle_norad_id',
-            'space_ultimate_tle_epoch',
-            'space_ultimate_tle_inclination',
-            'space_ultimate_tle_mean_motion',
-            'space_ultimate_tle_eccentricity',
-            'space_ultimate_json_keys',
-        ]
+        space_fields = SPACE_ULTIMATE_FIELDS
 
         for field in space_fields:
             space_data[field] = None
@@ -919,7 +1059,7 @@ def _extract_space_technology_ultimate_advanced(filepath: str) -> Dict[str, Any]
         space_data['space_ultimate_tle_eccentricity'] = tle_info.get("eccentricity")
         space_data['space_ultimate_json_keys'] = json_keys
 
-        space_data['emerging_space_technology_ultimate_advanced_field_count'] = len(space_fields)
+        space_data['emerging_space_technology_ultimate_advanced_field_count'] = len(SPACE_ULTIMATE_FIELDS)
 
     except Exception as e:
         space_data['emerging_space_technology_ultimate_advanced_error'] = str(e)
@@ -932,7 +1072,9 @@ def _extract_renewable_energy_ultimate_advanced(filepath: str) -> Dict[str, Any]
     renewable_data = {'emerging_renewable_energy_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         site_name = _extract_json_value(json_data, ["site", "siteName", "plant", "facility"])
         capacity = _extract_json_value(json_data, ["capacityMW", "capacity", "capacity_mw"])
@@ -940,40 +1082,7 @@ def _extract_renewable_energy_ultimate_advanced(filepath: str) -> Dict[str, Any]
         storage_type = _extract_json_value(json_data, ["storage", "storageType"])
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        renewable_fields = [
-            'renewable_ultimate_solar_photovoltaic_efficiency_records',
-            'renewable_ultimate_wind_turbine_vertical_axis_design',
-            'renewable_ultimate_battery_storage_lithium_ion_sodium',
-            'renewable_ultimate_smart_grid_demand_response',
-            'renewable_ultimate_microgrid_island_operation',
-            'renewable_ultimate_energy_storage_pumped_hydro',
-            'renewable_ultimate_geothermal_power_enhanced_systems',
-            'renewable_ultimate_ocean_wave_power_conversion',
-            'renewable_ultimate_tidal_energy_predictable_generation',
-            'renewable_ultimate_hydrogen_fuel_cell_efficiency',
-            'renewable_ultimate_biofuels_algae_cultivation',
-            'renewable_ultimate_carbon_capture_utilization_storage',
-            'renewable_ultimate_energy_efficiency_building_automation',
-            'renewable_ultimate_vehicle_electric_charging_infrastructure',
-            'renewable_ultimate_power_electronics_wide_bandgap',
-            'renewable_ultimate_energy_management_systems_ems',
-            'renewable_ultimate_predictive_maintenance_wind_solar',
-            'renewable_ultimate_ai_optimization_energy_systems',
-            'renewable_ultimate_blockchain_energy_trading',
-            'renewable_ultimate_peer_to_peer_energy_markets',
-            'renewable_ultimate_virtual_power_plants_aggregation',
-            'renewable_ultimate_demand_side_management_flexibility',
-            'renewable_ultimate_energy_storage_thermal_solar',
-            'renewable_ultimate_flywheel_energy_storage',
-            'renewable_ultimate_compressed_air_energy_storage',
-            'renewable_ultimate_superconducting_magnetic_storage',
-            'renewable_ultimate_metadata_file_format',
-            'renewable_ultimate_site_name',
-            'renewable_ultimate_capacity_mw',
-            'renewable_ultimate_energy_source',
-            'renewable_ultimate_storage_type',
-            'renewable_ultimate_json_keys',
-        ]
+        renewable_fields = RENEWABLE_ULTIMATE_FIELDS
 
         for field in renewable_fields:
             renewable_data[field] = None
@@ -985,7 +1094,7 @@ def _extract_renewable_energy_ultimate_advanced(filepath: str) -> Dict[str, Any]
         renewable_data['renewable_ultimate_storage_type'] = storage_type
         renewable_data['renewable_ultimate_json_keys'] = json_keys
 
-        renewable_data['emerging_renewable_energy_ultimate_advanced_field_count'] = len(renewable_fields)
+        renewable_data['emerging_renewable_energy_ultimate_advanced_field_count'] = len(RENEWABLE_ULTIMATE_FIELDS)
 
     except Exception as e:
         renewable_data['emerging_renewable_energy_ultimate_advanced_error'] = str(e)
@@ -998,7 +1107,9 @@ def _extract_autonomous_vehicles_ultimate_advanced(filepath: str) -> Dict[str, A
     autonomous_data = {'emerging_autonomous_vehicles_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         vehicle_id = _extract_json_value(json_data, ["vehicleId", "vehicle_id", "id"])
         sensor_suite = _extract_json_value(json_data, ["sensors", "sensorSuite", "sensor_suite"])
@@ -1007,40 +1118,7 @@ def _extract_autonomous_vehicles_ultimate_advanced(filepath: str) -> Dict[str, A
         waypoint_count = len(route) if isinstance(route, list) else None
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        autonomous_fields = [
-            'autonomous_ultimate_lidar_sensor_fusion_360_degree',
-            'autonomous_ultimate_radar_detection_long_range',
-            'autonomous_ultimate_camera_vision_stereo_depth',
-            'autonomous_ultimate_ultrasonic_parking_assistance',
-            'autonomous_ultimate_gps_gnss_high_precision',
-            'autonomous_ultimate_imu_inertial_measurement_unit',
-            'autonomous_ultimate_v2v_vehicle_communication',
-            'autonomous_ultimate_v2i_infrastructure_communication',
-            'autonomous_ultimate_hd_maps_precision_navigation',
-            'autonomous_ultimate_simultaneous_localization_mapping',
-            'autonomous_ultimate_path_planning_behavior_prediction',
-            'autonomous_ultimate_motion_control_trajectory_tracking',
-            'autonomous_ultimate_sensor_calibration_online_adjustment',
-            'autonomous_ultimate_adverse_weather_adaptation',
-            'autonomous_ultimate_pedestrian_cyclist_detection',
-            'autonomous_ultimate_emergency_vehicle_priority',
-            'autonomous_ultimate_platooning_convoy_driving',
-            'autonomous_ultimate_high_occupancy_vehicle_priority',
-            'autonomous_ultimate_dynamic_routing_traffic_avoidance',
-            'autonomous_ultimate_predictive_maintenance_failure_prediction',
-            'autonomous_ultimate_over_air_updates_firmware',
-            'autonomous_ultimate_cybersecurity_vehicle_hacking_protection',
-            'autonomous_ultimate_data_privacy_anonymization',
-            'autonomous_ultimate_liability_insurance_autonomous',
-            'autonomous_ultimate_regulatory_compliance_certification',
-            'autonomous_ultimate_human_machine_interface_hmi',
-            'autonomous_ultimate_metadata_file_format',
-            'autonomous_ultimate_vehicle_id',
-            'autonomous_ultimate_sensor_suite',
-            'autonomous_ultimate_software_stack',
-            'autonomous_ultimate_json_keys',
-            'autonomous_ultimate_route_waypoints_count',
-        ]
+        autonomous_fields = AUTONOMOUS_ULTIMATE_FIELDS
 
         for field in autonomous_fields:
             autonomous_data[field] = None
@@ -1052,7 +1130,7 @@ def _extract_autonomous_vehicles_ultimate_advanced(filepath: str) -> Dict[str, A
         autonomous_data['autonomous_ultimate_json_keys'] = json_keys
         autonomous_data['autonomous_ultimate_route_waypoints_count'] = waypoint_count
 
-        autonomous_data['emerging_autonomous_vehicles_ultimate_advanced_field_count'] = len(autonomous_fields)
+        autonomous_data['emerging_autonomous_vehicles_ultimate_advanced_field_count'] = len(AUTONOMOUS_ULTIMATE_FIELDS)
 
     except Exception as e:
         autonomous_data['emerging_autonomous_vehicles_ultimate_advanced_error'] = str(e)
@@ -1065,7 +1143,9 @@ def _extract_telecommunications_ultimate_advanced(filepath: str) -> Dict[str, An
     telecom_data = {'emerging_telecommunications_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         network_generation = _extract_json_value(json_data, ["generation", "networkGeneration", "tech"])
         band = _extract_json_value(json_data, ["band", "frequencyBand", "frequency"])
@@ -1073,40 +1153,7 @@ def _extract_telecommunications_ultimate_advanced(filepath: str) -> Dict[str, An
         spectrum = _extract_json_value(json_data, ["spectrum", "spectrumBand"])
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        telecom_fields = [
-            'telecom_ultimate_5g_network_slicing_virtualization',
-            'telecom_ultimate_6g_terahertz_frequency_bands',
-            'telecom_ultimate_edge_computing_multi_access',
-            'telecom_ultimate_network_function_virtualization_nfv',
-            'telecom_ultimate_software_defined_networking_sdn',
-            'telecom_ultimate_open_ran_disaggregated_architecture',
-            'telecom_ultimate_massive_mimo_beamforming',
-            'telecom_ultimate_small_cells_heterogeneous_networks',
-            'telecom_ultimate_satellite_integration_non_terrestrial',
-            'telecom_ultimate_quantum_communication_secure_transmission',
-            'telecom_ultimate_blockchain_network_management',
-            'telecom_ultimate_ai_ml_network_optimization',
-            'telecom_ultimate_digital_twin_network_simulation',
-            'telecom_ultimate_predictive_maintenance_proactive',
-            'telecom_ultimate_zero_touch_network_automation',
-            'telecom_ultimate_energy_efficient_base_stations',
-            'telecom_ultimate_spectrum_sharing_dynamic_allocation',
-            'telecom_ultimate_cognitive_radio_intelligent_spectrum',
-            'telecom_ultimate_visible_light_communication_vlc',
-            'telecom_ultimate_molecular_communication_nanoscale',
-            'telecom_ultimate_holographic_communication_3d_display',
-            'telecom_ultimate_brain_computer_interface_bci',
-            'telecom_ultimate_implantable_communication_devices',
-            'telecom_ultimate_underwater_acoustic_communication',
-            'telecom_ultimate_interplanetary_communication_delay',
-            'telecom_ultimate_regulatory_compliance_spectrum_licensing',
-            'telecom_ultimate_metadata_file_format',
-            'telecom_ultimate_network_generation',
-            'telecom_ultimate_band_frequency',
-            'telecom_ultimate_cell_id',
-            'telecom_ultimate_spectrum_band',
-            'telecom_ultimate_json_keys',
-        ]
+        telecom_fields = TELECOM_ULTIMATE_FIELDS
 
         for field in telecom_fields:
             telecom_data[field] = None
@@ -1118,7 +1165,7 @@ def _extract_telecommunications_ultimate_advanced(filepath: str) -> Dict[str, An
         telecom_data['telecom_ultimate_spectrum_band'] = spectrum
         telecom_data['telecom_ultimate_json_keys'] = json_keys
 
-        telecom_data['emerging_telecommunications_ultimate_advanced_field_count'] = len(telecom_fields)
+        telecom_data['emerging_telecommunications_ultimate_advanced_field_count'] = len(TELECOM_ULTIMATE_FIELDS)
 
     except Exception as e:
         telecom_data['emerging_telecommunications_ultimate_advanced_error'] = str(e)
@@ -1131,46 +1178,16 @@ def _extract_cybersecurity_emerging_ultimate_advanced(filepath: str) -> Dict[str
     security_data = {'emerging_cybersecurity_emerging_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         policy_name = _extract_json_value(json_data, ["policy", "policyName", "name"])
         framework = _extract_json_value(json_data, ["framework", "controlFramework", "standard"])
         threat_level = _extract_json_value(json_data, ["threatLevel", "severity", "risk"])
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        security_fields = [
-            'cyber_emerging_ultimate_zero_trust_architecture_continuous',
-            'cyber_emerging_ultimate_homomorphic_encryption_computation',
-            'cyber_emerging_ultimate_multi_party_computation_mpc',
-            'cyber_emerging_ultimate_secure_multi_party_computation',
-            'cyber_emerging_ultimate_differential_privacy_analytics',
-            'cyber_emerging_ultimate_federated_learning_privacy',
-            'cyber_emerging_ultimate_confidential_computing_tee',
-            'cyber_emerging_ultimate_blockchain_based_security',
-            'cyber_emerging_ultimate_decentralized_identity_management',
-            'cyber_emerging_ultimate_quantum_resistant_cryptography',
-            'cyber_emerging_ultimate_post_quantum_cryptography_pqc',
-            'cyber_emerging_ultimate_dna_based_cryptography',
-            'cyber_emerging_ultimate_biometric_cryptography_keys',
-            'cyber_emerging_ultimate_behavioral_biometrics_continuous',
-            'cyber_emerging_ultimate_ai_driven_threat_detection',
-            'cyber_emerging_ultimate_autonomous_response_systems',
-            'cyber_emerging_ultimate_digital_forensics_blockchain',
-            'cyber_emerging_ultimate_supply_chain_security_slsa',
-            'cyber_emerging_ultimate_runtime_application_self_protection',
-            'cyber_emerging_ultimate_api_security_gateway_protection',
-            'cyber_emerging_ultimate_container_security_orchestration',
-            'cyber_emerging_ultimate_serverless_security_function',
-            'cyber_emerging_ultimate_edge_security_iot_protection',
-            'cyber_emerging_ultimate_cloud_security_configuration',
-            'cyber_emerging_ultimate_devsecops_pipeline_security',
-            'cyber_emerging_ultimate_threat_intelligence_sharing',
-            'cyber_emerging_ultimate_metadata_file_format',
-            'cyber_emerging_ultimate_policy_name',
-            'cyber_emerging_ultimate_control_framework',
-            'cyber_emerging_ultimate_threat_level',
-            'cyber_emerging_ultimate_json_keys',
-        ]
+        security_fields = SECURITY_ULTIMATE_FIELDS
 
         for field in security_fields:
             security_data[field] = None
@@ -1181,7 +1198,7 @@ def _extract_cybersecurity_emerging_ultimate_advanced(filepath: str) -> Dict[str
         security_data['cyber_emerging_ultimate_threat_level'] = threat_level
         security_data['cyber_emerging_ultimate_json_keys'] = json_keys
 
-        security_data['emerging_cybersecurity_emerging_ultimate_advanced_field_count'] = len(security_fields)
+        security_data['emerging_cybersecurity_emerging_ultimate_advanced_field_count'] = len(SECURITY_ULTIMATE_FIELDS)
 
     except Exception as e:
         security_data['emerging_cybersecurity_emerging_ultimate_advanced_error'] = str(e)
@@ -1194,7 +1211,9 @@ def _extract_digital_twins_ultimate_advanced(filepath: str) -> Dict[str, Any]:
     digital_twin_data = {'emerging_digital_twins_ultimate_advanced_detected': True}
 
     try:
-        json_data = _parse_json_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        header = _read_header(filepath, 256)
+        json_data = _maybe_parse_json(filepath, ext=ext, header=header)
         json_keys = _extract_json_keys(json_data) if json_data else None
         twin_id = _extract_json_value(json_data, ["twinId", "twin_id", "id"])
         sim_engine = _extract_json_value(json_data, ["simulationEngine", "engine", "simEngine"])
@@ -1203,40 +1222,7 @@ def _extract_digital_twins_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         asset_count = len(assets) if isinstance(assets, list) else None
         file_format = "json" if json_data is not None else Path(filepath).suffix.lower().lstrip(".")
 
-        digital_twin_fields = [
-            'digital_twin_ultimate_physics_based_simulation_fidelity',
-            'digital_twin_ultimate_real_time_data_synchronization',
-            'digital_twin_ultimate_machine_learning_behavior_modeling',
-            'digital_twin_ultimate_sensor_data_fusion_integration',
-            'digital_twin_ultimate_predictive_maintenance_algorithms',
-            'digital_twin_ultimate_digital_thread_manufacturing',
-            'digital_twin_ultimate_product_lifecycle_management_plm',
-            'digital_twin_ultimate_building_information_modeling_bim',
-            'digital_twin_ultimate_smart_city_infrastructure_modeling',
-            'digital_twin_ultimate_healthcare_patient_specific_models',
-            'digital_twin_ultimate_automotive_vehicle_dynamics',
-            'digital_twin_ultimate_aerospace_aircraft_performance',
-            'digital_twin_ultimate_energy_system_optimization',
-            'digital_twin_ultimate_environmental_impact_assessment',
-            'digital_twin_ultimate_supply_chain_digital_twin',
-            'digital_twin_ultimate_financial_portfolio_simulation',
-            'digital_twin_ultimate_human_digital_twin_healthcare',
-            'digital_twin_ultimate_cyber_physical_systems_integration',
-            'digital_twin_ultimate_augmented_reality_overlay',
-            'digital_twin_ultimate_virtual_reality_training',
-            'digital_twin_ultimate_mixed_reality_collaboration',
-            'digital_twin_ultimate_metaverse_integration',
-            'digital_twin_ultimate_blockchain_based_ownership',
-            'digital_twin_ultimate_nft_digital_asset_tokenization',
-            'digital_twin_ultimate_ai_generated_content_creation',
-            'digital_twin_ultimate_quantum_computing_simulation',
-            'digital_twin_ultimate_metadata_file_format',
-            'digital_twin_ultimate_twin_id',
-            'digital_twin_ultimate_simulation_engine',
-            'digital_twin_ultimate_model_format',
-            'digital_twin_ultimate_asset_count',
-            'digital_twin_ultimate_json_keys',
-        ]
+        digital_twin_fields = DIGITAL_TWIN_ULTIMATE_FIELDS
 
         for field in digital_twin_fields:
             digital_twin_data[field] = None
@@ -1248,7 +1234,7 @@ def _extract_digital_twins_ultimate_advanced(filepath: str) -> Dict[str, Any]:
         digital_twin_data['digital_twin_ultimate_asset_count'] = asset_count
         digital_twin_data['digital_twin_ultimate_json_keys'] = json_keys
 
-        digital_twin_data['emerging_digital_twins_ultimate_advanced_field_count'] = len(digital_twin_fields)
+        digital_twin_data['emerging_digital_twins_ultimate_advanced_field_count'] = len(DIGITAL_TWIN_ULTIMATE_FIELDS)
 
     except Exception as e:
         digital_twin_data['emerging_digital_twins_ultimate_advanced_error'] = str(e)
@@ -1295,6 +1281,124 @@ def _parse_gltf_json(payload: Any) -> Dict[str, Any]:
         "material_count": len(payload.get("materials") or []),
         "animation_count": len(payload.get("animations") or []),
     }
+
+
+def _parse_usdz(filepath: str) -> Dict[str, Any]:
+    info: Dict[str, Any] = {"is_zip": False}
+    try:
+        if not zipfile.is_zipfile(filepath):
+            return info
+        info["is_zip"] = True
+        with zipfile.ZipFile(filepath, "r") as zf:
+            names = zf.namelist()
+            usda_text = None
+            usdc_magic = False
+            usdc_count = 0
+            for name in names:
+                lower = name.lower()
+                if lower.endswith(".usda"):
+                    try:
+                        usda_text = zf.read(name).decode("utf-8", errors="ignore")
+                        break
+                    except Exception:
+                        continue
+            for name in names:
+                lower = name.lower()
+                if lower.endswith(".usdc"):
+                    usdc_count += 1
+                    try:
+                        data = zf.read(name)[:16]
+                        if data.startswith(b"PXR-USDC"):
+                            usdc_magic = True
+                    except Exception:
+                        continue
+        lower_names = [name.lower() for name in names]
+        usd_exts = (".usd", ".usda", ".usdc")
+        texture_exts = (".png", ".jpg", ".jpeg", ".ktx", ".tga", ".bmp")
+        info["file_count"] = len(names)
+        info["asset_names"] = names[:30]
+        info["has_usd"] = any(name.endswith(usd_exts) for name in lower_names)
+        info["texture_count"] = sum(1 for name in lower_names if name.endswith(texture_exts))
+        info["usdc_count"] = usdc_count if usdc_count else None
+        info["usdc_has_magic"] = usdc_magic if usdc_count else None
+        if usda_text:
+            info.update(_parse_usda_text(usda_text))
+    except Exception:
+        return info
+    return info
+
+
+def _parse_tflite_header(header: bytes, file_size: Optional[int]) -> Dict[str, Any]:
+    if len(header) < 8:
+        return {}
+    root_offset = struct.unpack("<I", header[0:4])[0]
+    identifier = header[4:8].decode("latin1", errors="ignore")
+    strings = _extract_ascii_strings(header, min_len=4, max_count=30)
+    split_strings = []
+    for value in strings:
+        if value.startswith("TFL3") and len(value) > 4:
+            split_strings.append("TFL3")
+            split_strings.append(value[4:])
+        else:
+            split_strings.append(value)
+    strings = split_strings
+    op_types = _filter_tflite_ops(strings, max_count=30)
+    return {
+        "root_table_offset": root_offset,
+        "identifier": identifier,
+        "file_size": file_size,
+        "strings": strings,
+        "string_count": len(strings),
+        "op_types": op_types if op_types else None,
+        "op_type_count": len(op_types) if op_types else 0,
+    }
+
+
+def _parse_onnx_header(filepath: str) -> Dict[str, Any]:
+    info: Dict[str, Any] = {}
+    try:
+        header = _read_header(filepath, 65536)
+    except Exception:
+        return info
+    strings = _extract_ascii_strings(header, min_len=4, max_count=80)
+    markers = [s for s in strings if "onnx" in s.lower() or "producer" in s.lower() or "op_type" in s.lower()]
+    op_types = _filter_op_strings(strings, max_count=30)
+    info["strings"] = strings[:30]
+    info["markers"] = markers[:20] if markers else None
+    info["string_count"] = len(strings)
+    info["op_types"] = op_types if op_types else None
+    info["op_type_count"] = len(op_types) if op_types else 0
+    return info
+
+
+def _parse_usda_text(text: str) -> Dict[str, Any]:
+    info: Dict[str, Any] = {}
+    if not text:
+        return info
+    lower = text.lower()
+    info["def_count"] = lower.count("\ndef ") + (1 if lower.startswith("def ") else 0)
+    info["class_count"] = lower.count("\nclass ") + (1 if lower.startswith("class ") else 0)
+    default_prim = None
+    up_axis = None
+    meters = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if "defaultprim" in stripped.lower() and "=" in stripped:
+            parts = stripped.split("=", 1)[1].strip().strip(";").strip()
+            default_prim = parts.strip("\"")
+        if "upaxis" in stripped.lower() and "=" in stripped:
+            parts = stripped.split("=", 1)[1].strip().strip(";").strip()
+            up_axis = parts.strip("\"")
+        if "metersperunit" in stripped.lower() and "=" in stripped:
+            parts = stripped.split("=", 1)[1].strip().strip(";").strip()
+            try:
+                meters = float(parts)
+            except Exception:
+                meters = parts.strip("\"")
+    info["default_prim"] = default_prim
+    info["up_axis"] = up_axis
+    info["meters_per_unit"] = meters
+    return info
 
 
 def _parse_qasm(text: str) -> Dict[str, Any]:
@@ -1363,6 +1467,9 @@ def _parse_robotics_xml(filepath: str) -> Dict[str, Any]:
         info["joint_count"] = len(root.findall(".//joint"))
         info["sensor_count"] = len(root.findall(".//sensor"))
         info["plugin_count"] = len(root.findall(".//plugin"))
+        info["transmission_count"] = len(root.findall(".//transmission"))
+        info["gazebo_tag_count"] = len(root.findall(".//gazebo"))
+        info["actuator_count"] = len(root.findall(".//actuator"))
     except Exception:
         return info
     return info
@@ -1434,57 +1541,280 @@ def _parse_tle(text: str) -> Dict[str, Any]:
 
 def get_emerging_technology_ultimate_advanced_field_count() -> int:
     """Return the number of ultimate advanced emerging technology metadata fields."""
-    # AI/ML fields
-    ai_fields = 36
-
-    # Blockchain fields
-    blockchain_fields = 35
-
-    # AR/VR fields
-    arvr_fields = 38
-
-    # IoT fields
-    iot_fields = 35
-
-    # Quantum computing fields
-    quantum_fields = 34
-
-    # Neural networks fields
-    neural_fields = 34
-
-    # Robotics fields
-    robotics_fields = 34
-
-    # Biotechnology fields
-    biotech_fields = 33
-
-    # Nanotechnology fields
-    nano_fields = 32
-
-    # Space technology fields
-    space_fields = 34
-
-    # Renewable energy fields
-    renewable_fields = 32
-
-    # Autonomous vehicles fields
-    autonomous_fields = 32
-
-    # Telecommunications fields
-    telecom_fields = 32
-
-    # Cybersecurity fields
-    security_fields = 31
-
-    # Digital twins fields
-    digital_twin_fields = 32
-
-    return (ai_fields + blockchain_fields + arvr_fields + iot_fields + quantum_fields +
-            neural_fields + robotics_fields + biotech_fields + nano_fields + space_fields +
-            renewable_fields + autonomous_fields + telecom_fields + security_fields + digital_twin_fields)
+    return (
+        len(AI_ULTIMATE_FIELDS)
+        + len(BLOCKCHAIN_ULTIMATE_FIELDS)
+        + len(ARVR_ULTIMATE_FIELDS)
+        + len(IOT_ULTIMATE_FIELDS)
+        + len(QUANTUM_ULTIMATE_FIELDS)
+        + len(NEURAL_ULTIMATE_FIELDS)
+        + len(ROBOTICS_ULTIMATE_FIELDS)
+        + len(BIOTECH_ULTIMATE_FIELDS)
+        + len(NANO_ULTIMATE_FIELDS)
+        + len(SPACE_ULTIMATE_FIELDS)
+        + len(RENEWABLE_ULTIMATE_FIELDS)
+        + len(AUTONOMOUS_ULTIMATE_FIELDS)
+        + len(TELECOM_ULTIMATE_FIELDS)
+        + len(SECURITY_ULTIMATE_FIELDS)
+        + len(DIGITAL_TWIN_ULTIMATE_FIELDS)
+    )
 
 
 # Integration point
 def extract_emerging_technology_ultimate_advanced_complete(filepath: str) -> Dict[str, Any]:
     """Main entry point for ultimate advanced emerging technology metadata extraction."""
-    return extract_emerging_technology_ultimate_advanced(filepath)
+    return extract_emerging_technology_ultimate_advanced(filepath)atory_compliance',
+    'biotech_ultimate_file_format',
+    'biotech_ultimate_sequence_length',
+    'biotech_ultimate_gc_content',
+    'biotech_ultimate_base_counts',
+    'biotech_ultimate_record_count',
+    'biotech_ultimate_has_fasta_headers',
+    'biotech_ultimate_sequence_type_guess',
+]
+
+NANO_ULTIMATE_FIELDS = [
+    'nano_ultimate_carbon_nanotubes_properties_applications',
+    'nano_ultimate_graphene_2d_materials_electronics',
+    'nano_ultimate_nanoparticles_drug_delivery_targeting',
+    'nano_ultimate_nanofabrication_lithography_precision',
+    'nano_ultimate_nanomaterials_composites_strength',
+    'nano_ultimate_nanophotonics_plasmonics_sensing',
+    'nano_ultimate_nanofluidics_lab_on_chip_diagnostics',
+    'nano_ultimate_nanomechanics_nems_sensors',
+    'nano_ultimate_nanobiotechnology_dna_nanostructures',
+    'nano_ultimate_nanomedicine_cancer_therapy_targeted',
+    'nano_ultimate_nanoelectronics_molecular_transistors',
+    'nano_ultimate_nanobatteries_energy_storage_density',
+    'nano_ultimate_nanocatalysts_reaction_efficiency',
+    'nano_ultimate_nanosensors_environmental_monitoring',
+    'nano_ultimate_nanocoatings_self_cleaning_surfaces',
+    'nano_ultimate_nanofilters_water_purification',
+    'nano_ultimate_nanomotors_propulsion_mechanisms',
+    'nano_ultimate_nanorobotics_manipulation_precision',
+    'nano_ultimate_nanocomposites_polymer_enhancement',
+    'nano_ultimate_nanowires_transistor_applications',
+    'nano_ultimate_nanocrystals_quantum_dots_display',
+    'nano_ultimate_nanoporous_materials_selective_separation',
+    'nano_ultimate_nanofibers_tissue_engineering_scaffolds',
+    'nano_ultimate_nanogels_drug_release_controlled',
+    'nano_ultimate_nanovesicles_liposomes_delivery',
+    'nano_ultimate_nanotoxicity_safety_assessment',
+    'nano_ultimate_metadata_file_format',
+    'nano_ultimate_materials_list',
+    'nano_ultimate_particle_size',
+    'nano_ultimate_surface_area',
+    'nano_ultimate_json_keys',
+    'nano_ultimate_metadata_tags',
+]
+
+SPACE_ULTIMATE_FIELDS = [
+    'space_ultimate_satellite_constellation_starlink',
+    'space_ultimate_cube_satellites_standardization',
+    'space_ultimate_small_satellite_technology_ssm',
+    'space_ultimate_reusable_rocket_technology_falcon9',
+    'space_ultimate_space_tourism_orbital_station',
+    'space_ultimate_mars_colonization_life_support',
+    'space_ultimate_lunar_base_establishment',
+    'space_ultimate_asteroid_mining_resource_extraction',
+    'space_ultimate_space_debris_tracking_removal',
+    'space_ultimate_space_situational_awareness_ssa',
+    'space_ultimate_space_weather_monitoring_solar',
+    'space_ultimate_space_based_solar_power_sbsp',
+    'space_ultimate_quantum_communication_satellites',
+    'space_ultimate_space_based_internet_starlink',
+    'space_ultimate_earth_observation_hyper_spectral',
+    'space_ultimate_climate_monitoring_greenhouse_gases',
+    'space_ultimate_disaster_response_imaging_realtime',
+    'space_ultimate_precision_agriculture_yield_monitoring',
+    'space_ultimate_ocean_monitoring_currents_pollution',
+    'space_ultimate_wildlife_tracking_migration_patterns',
+    'space_ultimate_archaeological_site_discovery',
+    'space_ultimate_border_security_surveillance',
+    'space_ultimate_military_reconnaissance_imaging',
+    'space_ultimate_space_tourism_suborbital_flights',
+    'space_ultimate_space_elevator_concept_feasibility',
+    'space_ultimate_interstellar_probe_design_voyager',
+    'space_ultimate_file_format',
+    'space_ultimate_tle_satellite_name',
+    'space_ultimate_tle_norad_id',
+    'space_ultimate_tle_epoch',
+    'space_ultimate_tle_inclination',
+    'space_ultimate_tle_mean_motion',
+    'space_ultimate_tle_eccentricity',
+    'space_ultimate_json_keys',
+]
+
+RENEWABLE_ULTIMATE_FIELDS = [
+    'renewable_ultimate_solar_photovoltaic_efficiency_records',
+    'renewable_ultimate_wind_turbine_vertical_axis_design',
+    'renewable_ultimate_battery_storage_lithium_ion_sodium',
+    'renewable_ultimate_smart_grid_demand_response',
+    'renewable_ultimate_microgrid_island_operation',
+    'renewable_ultimate_energy_storage_pumped_hydro',
+    'renewable_ultimate_geothermal_power_enhanced_systems',
+    'renewable_ultimate_ocean_wave_power_conversion',
+    'renewable_ultimate_tidal_energy_predictable_generation',
+    'renewable_ultimate_hydrogen_fuel_cell_efficiency',
+    'renewable_ultimate_biofuels_algae_cultivation',
+    'renewable_ultimate_carbon_capture_utilization_storage',
+    'renewable_ultimate_energy_efficiency_building_automation',
+    'renewable_ultimate_vehicle_electric_charging_infrastructure',
+    'renewable_ultimate_power_electronics_wide_bandgap',
+    'renewable_ultimate_energy_management_systems_ems',
+    'renewable_ultimate_predictive_maintenance_wind_solar',
+    'renewable_ultimate_ai_optimization_energy_systems',
+    'renewable_ultimate_blockchain_energy_trading',
+    'renewable_ultimate_peer_to_peer_energy_markets',
+    'renewable_ultimate_virtual_power_plants_aggregation',
+    'renewable_ultimate_demand_side_management_flexibility',
+    'renewable_ultimate_energy_storage_thermal_solar',
+    'renewable_ultimate_flywheel_energy_storage',
+    'renewable_ultimate_compressed_air_energy_storage',
+    'renewable_ultimate_superconducting_magnetic_storage',
+    'renewable_ultimate_metadata_file_format',
+    'renewable_ultimate_site_name',
+    'renewable_ultimate_capacity_mw',
+    'renewable_ultimate_energy_source',
+    'renewable_ultimate_storage_type',
+    'renewable_ultimate_json_keys',
+]
+
+AUTONOMOUS_ULTIMATE_FIELDS = [
+    'autonomous_ultimate_lidar_sensor_fusion_360_degree',
+    'autonomous_ultimate_radar_detection_long_range',
+    'autonomous_ultimate_camera_vision_stereo_depth',
+    'autonomous_ultimate_ultrasonic_parking_assistance',
+    'autonomous_ultimate_gps_gnss_high_precision',
+    'autonomous_ultimate_imu_inertial_measurement_unit',
+    'autonomous_ultimate_v2v_vehicle_communication',
+    'autonomous_ultimate_v2i_infrastructure_communication',
+    'autonomous_ultimate_hd_maps_precision_navigation',
+    'autonomous_ultimate_simultaneous_localization_mapping',
+    'autonomous_ultimate_path_planning_behavior_prediction',
+    'autonomous_ultimate_motion_control_trajectory_tracking',
+    'autonomous_ultimate_sensor_calibration_online_adjustment',
+    'autonomous_ultimate_adverse_weather_adaptation',
+    'autonomous_ultimate_pedestrian_cyclist_detection',
+    'autonomous_ultimate_emergency_vehicle_priority',
+    'autonomous_ultimate_platooning_convoy_driving',
+    'autonomous_ultimate_high_occupancy_vehicle_priority',
+    'autonomous_ultimate_dynamic_routing_traffic_avoidance',
+    'autonomous_ultimate_predictive_maintenance_failure_prediction',
+    'autonomous_ultimate_over_air_updates_firmware',
+    'autonomous_ultimate_cybersecurity_vehicle_hacking_protection',
+    'autonomous_ultimate_data_privacy_anonymization',
+    'autonomous_ultimate_liability_insurance_autonomous',
+    'autonomous_ultimate_regulatory_compliance_certification',
+    'autonomous_ultimate_human_machine_interface_hmi',
+    'autonomous_ultimate_metadata_file_format',
+    'autonomous_ultimate_vehicle_id',
+    'autonomous_ultimate_sensor_suite',
+    'autonomous_ultimate_software_stack',
+    'autonomous_ultimate_json_keys',
+    'autonomous_ultimate_route_waypoints_count',
+]
+
+TELECOM_ULTIMATE_FIELDS = [
+    'telecom_ultimate_5g_network_slicing_virtualization',
+    'telecom_ultimate_6g_terahertz_frequency_bands',
+    'telecom_ultimate_edge_computing_multi_access',
+    'telecom_ultimate_network_function_virtualization_nfv',
+    'telecom_ultimate_software_defined_networking_sdn',
+    'telecom_ultimate_open_ran_disaggregated_architecture',
+    'telecom_ultimate_massive_mimo_beamforming',
+    'telecom_ultimate_small_cells_heterogeneous_networks',
+    'telecom_ultimate_satellite_integration_non_terrestrial',
+    'telecom_ultimate_quantum_communication_secure_transmission',
+    'telecom_ultimate_blockchain_network_management',
+    'telecom_ultimate_ai_ml_network_optimization',
+    'telecom_ultimate_digital_twin_network_simulation',
+    'telecom_ultimate_predictive_maintenance_proactive',
+    'telecom_ultimate_zero_touch_network_automation',
+    'telecom_ultimate_energy_efficient_base_stations',
+    'telecom_ultimate_spectrum_sharing_dynamic_allocation',
+    'telecom_ultimate_cognitive_radio_intelligent_spectrum',
+    'telecom_ultimate_visible_light_communication_vlc',
+    'telecom_ultimate_molecular_communication_nanoscale',
+    'telecom_ultimate_holographic_communication_3d_display',
+    'telecom_ultimate_brain_computer_interface_bci',
+    'telecom_ultimate_implantable_communication_devices',
+    'telecom_ultimate_underwater_acoustic_communication',
+    'telecom_ultimate_interplanetary_communication_delay',
+    'telecom_ultimate_regulatory_compliance_spectrum_licensing',
+    'telecom_ultimate_metadata_file_format',
+    'telecom_ultimate_network_generation',
+    'telecom_ultimate_band_frequency',
+    'telecom_ultimate_cell_id',
+    'telecom_ultimate_spectrum_band',
+    'telecom_ultimate_json_keys',
+]
+
+SECURITY_ULTIMATE_FIELDS = [
+    'cyber_emerging_ultimate_zero_trust_architecture_continuous',
+    'cyber_emerging_ultimate_homomorphic_encryption_computation',
+    'cyber_emerging_ultimate_multi_party_computation_mpc',
+    'cyber_emerging_ultimate_secure_multi_party_computation',
+    'cyber_emerging_ultimate_differential_privacy_analytics',
+    'cyber_emerging_ultimate_federated_learning_privacy',
+    'cyber_emerging_ultimate_confidential_computing_tee',
+    'cyber_emerging_ultimate_blockchain_based_security',
+    'cyber_emerging_ultimate_decentralized_identity_management',
+    'cyber_emerging_ultimate_quantum_resistant_cryptography',
+    'cyber_emerging_ultimate_post_quantum_cryptography_pqc',
+    'cyber_emerging_ultimate_dna_based_cryptography',
+    'cyber_emerging_ultimate_biometric_cryptography_keys',
+    'cyber_emerging_ultimate_behavioral_biometrics_continuous',
+    'cyber_emerging_ultimate_ai_driven_threat_detection',
+    'cyber_emerging_ultimate_autonomous_response_systems',
+    'cyber_emerging_ultimate_digital_forensics_blockchain',
+    'cyber_emerging_ultimate_supply_chain_security_slsa',
+    'cyber_emerging_ultimate_runtime_application_self_protection',
+    'cyber_emerging_ultimate_api_security_gateway_protection',
+    'cyber_emerging_ultimate_container_security_orchestration',
+    'cyber_emerging_ultimate_serverless_security_function',
+    'cyber_emerging_ultimate_edge_security_iot_protection',
+    'cyber_emerging_ultimate_cloud_security_configuration',
+    'cyber_emerging_ultimate_devsecops_pipeline_security',
+    'cyber_emerging_ultimate_threat_intelligence_sharing',
+    'cyber_emerging_ultimate_metadata_file_format',
+    'cyber_emerging_ultimate_policy_name',
+    'cyber_emerging_ultimate_control_framework',
+    'cyber_emerging_ultimate_threat_level',
+    'cyber_emerging_ultimate_json_keys',
+]
+
+DIGITAL_TWIN_ULTIMATE_FIELDS = [
+    'digital_twin_ultimate_physics_based_simulation_fidelity',
+    'digital_twin_ultimate_real_time_data_synchronization',
+    'digital_twin_ultimate_machine_learning_behavior_modeling',
+    'digital_twin_ultimate_sensor_data_fusion_integration',
+    'digital_twin_ultimate_predictive_maintenance_algorithms',
+    'digital_twin_ultimate_digital_thread_manufacturing',
+    'digital_twin_ultimate_product_lifecycle_management_plm',
+    'digital_twin_ultimate_building_information_modeling_bim',
+    'digital_twin_ultimate_smart_city_infrastructure_modeling',
+    'digital_twin_ultimate_healthcare_patient_specific_models',
+    'digital_twin_ultimate_automotive_vehicle_dynamics',
+    'digital_twin_ultimate_aerospace_aircraft_performance',
+    'digital_twin_ultimate_energy_system_optimization',
+    'digital_twin_ultimate_environmental_impact_assessment',
+    'digital_twin_ultimate_supply_chain_digital_twin',
+    'digital_twin_ultimate_financial_portfolio_simulation',
+    'digital_twin_ultimate_human_digital_twin_healthcare',
+    'digital_twin_ultimate_cyber_physical_systems_integration',
+    'digital_twin_ultimate_augmented_reality_overlay',
+    'digital_twin_ultimate_virtual_reality_training',
+    'digital_twin_ultimate_mixed_reality_collaboration',
+    'digital_twin_ultimate_metaverse_integration',
+    'digital_twin_ultimate_blockchain_based_ownership',
+    'digital_twin_ultimate_nft_digital_asset_tokenization',
+    'digital_twin_ultimate_ai_generated_content_creation',
+    'digital_twin_ultimate_quantum_computing_simulation',
+    'digital_twin_ultimate_metadata_file_format',
+    'digital_twin_ultimate_twin_id',
+    'digital_twin_ultimate_simulation_engine',
+    'digital_twin_ultimate_model_format',
+    'digital_twin_ultimate_asset_count',
+    'digital_twin_ultimate_json_keys',
+]

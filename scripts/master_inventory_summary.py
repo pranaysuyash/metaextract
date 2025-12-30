@@ -43,6 +43,19 @@ INVENTORY_DIRS = [
     ("ebook_inventory", "ebook_summary.json"),
     ("aviation_inventory", "aviation_summary.json"),
     ("financial_inventory", "financial_summary.json"),
+    ("iot_inventory", "iot_summary.json"),
+    ("gaming_inventory", "gaming_summary.json"),
+    ("biology_inventory", "biology_summary.json"),
+    ("geophysics_inventory", "geophysics_summary.json"),
+    ("medical_inventory", "medical_summary.json"),
+    ("satellite_inventory", "satellite_summary.json"),
+    ("broadcast_inventory", "broadcast_summary.json"),
+    ("semiconductor_inventory", "semiconductor_summary.json"),
+    ("crypto_wallets_inventory", "crypto_wallets_summary.json"),
+    ("3dprinting_inventory", "3dprinting_summary.json"),
+    ("radar_inventory", "radar_summary.json"),
+    ("music_inventory", "music_summary.json"),
+    ("automotive_inventory", "automotive_summary.json"),
 ]
 
 
