@@ -764,7 +764,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = output_dir / "scientific_inventory.json"
-    output_file.write_text(str(inventory), encoding="utf-8")
+    output_file.write_text(json.dumps(inventory, indent=2, sort_keys=True), encoding="utf-8")
     print()
     print(f"Wrote: {output_file}")
 
@@ -776,7 +776,7 @@ def main():
     }
 
     summary_file = output_dir / "scientific_summary.json"
-    summary_file.write_text(str(summary), encoding="utf-8")
+    summary_file.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     print(f"Wrote: {summary_file}")
 
 

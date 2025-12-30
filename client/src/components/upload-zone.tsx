@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, AlertCircle, Cpu, Scan, Database, Lock, X, FileWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -114,7 +114,7 @@ export function UploadZone() {
   const [processingStage, setProcessingStage] = useState("Initializing...");
   const [currentFile, setCurrentFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<UploadError | null>(null);
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -255,7 +255,7 @@ export function UploadZone() {
 
       // Navigate to results
       setTimeout(() => {
-        setLocation("/results");
+        navigate("/results");
       }, 600);
 
     } catch (error) {

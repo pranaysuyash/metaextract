@@ -1,11 +1,11 @@
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ArrowRight } from "lucide-react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 export default function CheckoutSuccess() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const [tier, setTier] = useState<string | null>(null);
 
   useEffect(() => {

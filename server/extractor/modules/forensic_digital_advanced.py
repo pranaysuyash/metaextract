@@ -29,11 +29,41 @@ import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 import os
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
+#
+# Keep this module fast: prefer small reads over full-file scans.
+#
+HEADER_SIZE_DEFAULT = 4096
+HEADER_SIZE_SMALL = 512
+HEADER_SIZE_NETWORK = 64
+MAX_MALWARE_SCAN_BYTES = 1_048_576  # 1 MiB
 
-def _read_header(filepath: str, size: int = 4096) -> bytes:
+
+def _shannon_entropy(data: bytes) -> Optional[float]:
+    """Return Shannon entropy in bits/byte (0..8)."""
+    if not data:
+        return None
+    from math import log2
+
+    counts = [0] * 256
+    for b in data:
+        counts[b] += 1
+
+    n = len(data)
+    ent = 0.0
+    for c in counts:
+        if c:
+            p = c / n
+            ent -= p * log2(p)
+    return round(ent, 4)
+
+
+def _read_header(filepath: str, size: int = HEADER_SIZE_DEFAULT) -> bytes:
+    if not size or size <= 0:
+        return b""
     try:
         with open(filepath, "rb") as f:
             return f.read(size)
@@ -47,17 +77,26 @@ def _bytes_to_printable(data: bytes) -> str:
 
 def extract_forensic_digital_advanced_metadata(filepath: str) -> Dict[str, Any]:
     """Extract advanced digital forensics and security metadata."""
-    result = {}
+    result: Dict[str, Any] = {
+        "forensic_digital_advanced_detected": False
+    }
 
     try:
-        result['forensic_digital_advanced_detected'] = True
+        if not Path(filepath).is_file():
+            result["forensic_digital_advanced_extraction_error"] = "file_not_found"
+            return result
+
+        result["forensic_digital_advanced_detected"] = True
+
+        # Cache a single header read for this module
+        header_4k = _read_header(filepath, HEADER_SIZE_DEFAULT)
 
         # File signature analysis
-        signature_data = _extract_file_signature_analysis(filepath)
+        signature_data = _extract_file_signature_analysis(filepath, header_4k)
         result.update(signature_data)
 
         # Executable metadata
-        executable_data = _extract_executable_metadata(filepath)
+        executable_data = _extract_executable_metadata(filepath, header_4k)
         result.update(executable_data)
 
         # File system analysis
@@ -65,15 +104,15 @@ def extract_forensic_digital_advanced_metadata(filepath: str) -> Dict[str, Any]:
         result.update(fs_data)
 
         # Windows artifacts
-        windows_data = _extract_windows_artifacts(filepath)
+        windows_data = _extract_windows_artifacts(filepath, header_4k)
         result.update(windows_data)
 
         # Browser forensics
-        browser_data = _extract_browser_forensics(filepath)
+        browser_data = _extract_browser_forensics(filepath, header_4k)
         result.update(browser_data)
 
         # Network forensics
-        network_data = _extract_network_forensics(filepath)
+        network_data = _extract_network_forensics(filepath, header_4k)
         result.update(network_data)
 
         # Malware analysis
@@ -85,7 +124,7 @@ def extract_forensic_digital_advanced_metadata(filepath: str) -> Dict[str, Any]:
         result.update(anti_forensic_data)
 
         # Encryption analysis
-        encryption_data = _extract_encryption_analysis(filepath)
+        encryption_data = _extract_encryption_analysis(filepath, header_4k)
         result.update(encryption_data)
 
         # Timeline reconstruction
@@ -162,10 +201,20 @@ def _extract_filesystem_forensics(filepath: str) -> Dict[str, Any]:
     return fs_data
 
 
-def _extract_file_signature_analysis(filepath: str) -> Dict[str, Any]:
+def _extract_file_signature_analysis(filepath: str, header: Optional[bytes] = None) -> Dict[str, Any]:
     """Extract header signature and container indicators."""
     signature_data: Dict[str, Any] = {}
-    header = _read_header(filepath, 4096)
+
+    # Basic file facts (cheap and useful)
+    try:
+        p = Path(filepath)
+        signature_data["forensic_file_size_bytes"] = p.stat().st_size
+        signature_data["forensic_file_extension"] = p.suffix.lower() or None
+    except Exception:
+        signature_data["forensic_file_size_bytes"] = None
+        signature_data["forensic_file_extension"] = None
+
+    header = header if header is not None else _read_header(filepath, HEADER_SIZE_DEFAULT)
     if not header:
         signature_data["forensic_file_signature_error"] = "header_unavailable"
         return signature_data
@@ -174,6 +223,7 @@ def _extract_file_signature_analysis(filepath: str) -> Dict[str, Any]:
     signature_data["forensic_file_magic_hex"] = head.hex()
     signature_data["forensic_file_magic_ascii"] = _bytes_to_printable(head)
     signature_data["forensic_file_header_length"] = len(header)
+    signature_data["forensic_file_header_entropy"] = _shannon_entropy(header)
 
     printable = sum(1 for b in header if 32 <= b < 127 or b in (9, 10, 13))
     signature_data["forensic_file_printable_ratio"] = round(printable / len(header), 4) if header else 0.0
@@ -290,10 +340,10 @@ def _extract_file_signature_analysis(filepath: str) -> Dict[str, Any]:
     return signature_data
 
 
-def _extract_executable_metadata(filepath: str) -> Dict[str, Any]:
+def _extract_executable_metadata(filepath: str, header: Optional[bytes] = None) -> Dict[str, Any]:
     """Extract basic executable header metadata."""
     exe_data: Dict[str, Any] = {}
-    header = _read_header(filepath, 4096)
+    header = header if header is not None else _read_header(filepath, HEADER_SIZE_DEFAULT)
     if not header:
         return exe_data
 
@@ -337,6 +387,18 @@ def _extract_executable_metadata(filepath: str) -> Dict[str, Any]:
                         if len(optional) >= 92:
                             exe_data["forensic_pe_subsystem"] = struct.unpack("<H", optional[88:90])[0]
                             exe_data["forensic_pe_dll_characteristics"] = struct.unpack("<H", optional[90:92])[0]
+                section_headers_offset = pe_offset + 24 + opt_size
+                sections_info = _parse_pe_sections(f, section_headers_offset, sections)
+                exe_data["forensic_pe_section_count"] = sections_info.get("section_count")
+                exe_data["forensic_pe_section_names"] = sections_info.get("section_names")
+                exe_data["forensic_pe_section_details"] = sections_info.get("sections")
+                exe_data["forensic_pe_section_entropies"] = sections_info.get("section_entropies")
+                import_info = _parse_pe_imports(f, optional, sections_info.get("sections", []))
+                exe_data["forensic_pe_import_table_rva"] = import_info.get("import_rva")
+                exe_data["forensic_pe_import_table_size"] = import_info.get("import_size")
+                exe_data["forensic_pe_import_dll_count"] = import_info.get("dll_count")
+                exe_data["forensic_pe_import_dlls"] = import_info.get("dlls")
+                exe_data["forensic_pe_has_imports"] = import_info.get("dll_count", 0) > 0
         except Exception:
             return exe_data
         return exe_data
@@ -404,13 +466,13 @@ def _extract_executable_metadata(filepath: str) -> Dict[str, Any]:
     return exe_data
 
 
-def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
+def _extract_windows_artifacts(filepath: str, header: Optional[bytes] = None) -> Dict[str, Any]:
     """Extract Windows forensic artifacts."""
     windows_data = {'forensic_windows_artifacts_detected': True}
 
     try:
         filename = Path(filepath).name.lower()
-        header = _read_header(filepath, 512)
+        header = (header[:HEADER_SIZE_SMALL] if header else _read_header(filepath, HEADER_SIZE_SMALL))
         regf_detected = header.startswith(b"regf")
         evtx_detected = header.startswith(b"ElfFile")
         prefetch_detected = len(header) >= 8 and header[4:8] == b"SCCA"
@@ -418,6 +480,10 @@ def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
         lnk_detected = header.startswith(
             b"L\x00\x00\x00\x01\x14\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46"
         )
+        regf_info = _parse_regf_header(header) if regf_detected else {}
+        evtx_info = _parse_evtx_header(header) if evtx_detected else {}
+        prefetch_info = _parse_prefetch_header(header) if prefetch_detected else {}
+        lnk_info = _parse_lnk_header(header) if lnk_detected else {}
 
         # Registry hives
         registry_hives = ['ntuser.dat', 'sam', 'system', 'software', 'security', 'default']
@@ -458,6 +524,30 @@ def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
             'forensic_evtx_detected',
             'forensic_prefetch_version',
             'forensic_shell_link_detected',
+            'forensic_registry_sequence_1',
+            'forensic_registry_sequence_2',
+            'forensic_registry_timestamp_raw',
+            'forensic_registry_major_version',
+            'forensic_registry_minor_version',
+            'forensic_evtx_first_chunk',
+            'forensic_evtx_last_chunk',
+            'forensic_evtx_next_record',
+            'forensic_evtx_header_size',
+            'forensic_evtx_minor_version',
+            'forensic_evtx_major_version',
+            'forensic_prefetch_file_size',
+            'forensic_prefetch_executable_name',
+            'forensic_prefetch_hash',
+            'forensic_lnk_header_size',
+            'forensic_lnk_link_flags',
+            'forensic_lnk_file_attributes',
+            'forensic_lnk_creation_time_raw',
+            'forensic_lnk_access_time_raw',
+            'forensic_lnk_write_time_raw',
+            'forensic_lnk_file_size',
+            'forensic_lnk_icon_index',
+            'forensic_lnk_show_command',
+            'forensic_lnk_hotkey',
         ]
 
         for field in windows_artifacts_fields:
@@ -467,6 +557,30 @@ def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
         windows_data['forensic_evtx_detected'] = evtx_detected
         windows_data['forensic_prefetch_version'] = prefetch_version
         windows_data['forensic_shell_link_detected'] = lnk_detected
+        windows_data['forensic_registry_sequence_1'] = regf_info.get("sequence_1")
+        windows_data['forensic_registry_sequence_2'] = regf_info.get("sequence_2")
+        windows_data['forensic_registry_timestamp_raw'] = regf_info.get("timestamp_raw")
+        windows_data['forensic_registry_major_version'] = regf_info.get("major_version")
+        windows_data['forensic_registry_minor_version'] = regf_info.get("minor_version")
+        windows_data['forensic_evtx_first_chunk'] = evtx_info.get("first_chunk")
+        windows_data['forensic_evtx_last_chunk'] = evtx_info.get("last_chunk")
+        windows_data['forensic_evtx_next_record'] = evtx_info.get("next_record")
+        windows_data['forensic_evtx_header_size'] = evtx_info.get("header_size")
+        windows_data['forensic_evtx_minor_version'] = evtx_info.get("minor_version")
+        windows_data['forensic_evtx_major_version'] = evtx_info.get("major_version")
+        windows_data['forensic_prefetch_file_size'] = prefetch_info.get("file_size")
+        windows_data['forensic_prefetch_executable_name'] = prefetch_info.get("executable_name")
+        windows_data['forensic_prefetch_hash'] = prefetch_info.get("hash")
+        windows_data['forensic_lnk_header_size'] = lnk_info.get("header_size")
+        windows_data['forensic_lnk_link_flags'] = lnk_info.get("link_flags")
+        windows_data['forensic_lnk_file_attributes'] = lnk_info.get("file_attributes")
+        windows_data['forensic_lnk_creation_time_raw'] = lnk_info.get("creation_time_raw")
+        windows_data['forensic_lnk_access_time_raw'] = lnk_info.get("access_time_raw")
+        windows_data['forensic_lnk_write_time_raw'] = lnk_info.get("write_time_raw")
+        windows_data['forensic_lnk_file_size'] = lnk_info.get("file_size")
+        windows_data['forensic_lnk_icon_index'] = lnk_info.get("icon_index")
+        windows_data['forensic_lnk_show_command'] = lnk_info.get("show_command")
+        windows_data['forensic_lnk_hotkey'] = lnk_info.get("hotkey")
         windows_data['forensic_windows_field_count'] = len(windows_artifacts_fields)
 
     except Exception as e:
@@ -475,15 +589,16 @@ def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
     return windows_data
 
 
-def _extract_browser_forensics(filepath: str) -> Dict[str, Any]:
+def _extract_browser_forensics(filepath: str, header: Optional[bytes] = None) -> Dict[str, Any]:
     """Extract browser forensic artifacts."""
     browser_data = {'forensic_browser_artifacts_detected': True}
 
     try:
         filename = Path(filepath).name.lower()
-        header = _read_header(filepath, 512)
+        header = (header[:HEADER_SIZE_SMALL] if header else _read_header(filepath, HEADER_SIZE_SMALL))
         sqlite_header = _parse_sqlite_header(header)
         plist_detected = header.startswith(b"bplist00") or (header.lstrip().startswith(b"<?xml") and b"<plist" in header)
+        sqlite_schema = _extract_sqlite_schema(filepath) if sqlite_header else {}
 
         # Chrome artifacts
         chrome_artifacts = ['history', 'cookies', 'login data', 'web data', 'favicons']
@@ -526,7 +641,17 @@ def _extract_browser_forensics(filepath: str) -> Dict[str, Any]:
             'forensic_browser_sqlite_text_encoding',
             'forensic_browser_sqlite_user_version',
             'forensic_browser_sqlite_application_id',
+            'forensic_browser_sqlite_schema_format',
             'forensic_browser_plist_detected',
+            'forensic_browser_sqlite_table_count',
+            'forensic_browser_sqlite_tables',
+            'forensic_browser_sqlite_index_count',
+            'forensic_browser_has_urls_table',
+            'forensic_browser_has_visits_table',
+            'forensic_browser_has_cookies_table',
+            'forensic_browser_has_downloads_table',
+            'forensic_browser_has_moz_places',
+            'forensic_browser_db_type_guess',
         ]
 
         for field in browser_forensic_fields:
@@ -541,6 +666,17 @@ def _extract_browser_forensics(filepath: str) -> Dict[str, Any]:
             browser_data['forensic_browser_sqlite_text_encoding'] = sqlite_header.get("text_encoding")
             browser_data['forensic_browser_sqlite_user_version'] = sqlite_header.get("user_version")
             browser_data['forensic_browser_sqlite_application_id'] = sqlite_header.get("application_id")
+            browser_data['forensic_browser_sqlite_schema_format'] = sqlite_header.get("schema_format")
+            if sqlite_schema:
+                browser_data['forensic_browser_sqlite_table_count'] = sqlite_schema.get("table_count")
+                browser_data['forensic_browser_sqlite_tables'] = sqlite_schema.get("tables")
+                browser_data['forensic_browser_sqlite_index_count'] = sqlite_schema.get("index_count")
+                browser_data['forensic_browser_has_urls_table'] = sqlite_schema.get("has_urls")
+                browser_data['forensic_browser_has_visits_table'] = sqlite_schema.get("has_visits")
+                browser_data['forensic_browser_has_cookies_table'] = sqlite_schema.get("has_cookies")
+                browser_data['forensic_browser_has_downloads_table'] = sqlite_schema.get("has_downloads")
+                browser_data['forensic_browser_has_moz_places'] = sqlite_schema.get("has_moz_places")
+                browser_data['forensic_browser_db_type_guess'] = sqlite_schema.get("db_type_guess")
         browser_data['forensic_browser_plist_detected'] = plist_detected
         browser_data['forensic_browser_field_count'] = len(browser_forensic_fields)
 
@@ -550,13 +686,13 @@ def _extract_browser_forensics(filepath: str) -> Dict[str, Any]:
     return browser_data
 
 
-def _extract_network_forensics(filepath: str) -> Dict[str, Any]:
+def _extract_network_forensics(filepath: str, header: Optional[bytes] = None) -> Dict[str, Any]:
     """Extract network forensic artifacts."""
     network_data = {'forensic_network_artifacts_detected': True}
 
     try:
         filename = Path(filepath).name.lower()
-        header = _read_header(filepath, 64)
+        header = (header[:HEADER_SIZE_NETWORK] if header else _read_header(filepath, HEADER_SIZE_NETWORK))
         pcap = _parse_pcap_header(header)
         pcapng = _parse_pcapng_header(header)
 
@@ -640,24 +776,24 @@ def _extract_malware_indicators(filepath: str) -> Dict[str, Any]:
 
     try:
         with open(filepath, 'rb') as f:
-            content = f.read(min(1048576, os.path.getsize(filepath)))  # First 1MB
+            content = f.read(min(MAX_MALWARE_SCAN_BYTES, os.path.getsize(filepath)))  # First chunk
 
-        # Common malware signatures
+        # Common executable/script markers (coarse heuristics)
         malware_signatures = [
-            b'MZ\x90\x00',  # PE file header
-            b'\x7fELF',     # ELF executable
-            b'#!/bin/sh',  # Shell script
-            b'powershell', # PowerShell
-            b'cmd.exe',    # Windows command
-            b'WScript',    # Windows Script Host
+            ("PE_MZ", b"MZ"),
+            ("ELF", b"\x7fELF"),
+            ("SHELL_SH", b"#!/bin/sh"),
+            ("POWERSHELL", b"powershell"),
+            ("CMD_EXE", b"cmd.exe"),
+            ("WSCRIPT", b"WScript"),
         ]
 
-        detected_signatures = []
-        for sig in malware_signatures:
+        detected = []
+        for name, sig in malware_signatures:
             if sig in content:
-                detected_signatures.append(sig.decode('ascii', errors='ignore')[:20])
+                detected.append(name)
 
-        malware_data['forensic_malware_signatures'] = detected_signatures
+        malware_data["forensic_malware_signatures"] = detected
 
         # Suspicious strings
         suspicious_strings = [
@@ -748,12 +884,12 @@ def _extract_anti_forensic_indicators(filepath: str) -> Dict[str, Any]:
     return anti_forensic_data
 
 
-def _extract_encryption_analysis(filepath: str) -> Dict[str, Any]:
+def _extract_encryption_analysis(filepath: str, header: Optional[bytes] = None) -> Dict[str, Any]:
     """Extract encryption analysis metadata."""
     encryption_data = {'forensic_encryption_analysis_detected': True}
 
     try:
-        header = _read_header(filepath, 512)
+        header = (header[:HEADER_SIZE_SMALL] if header else _read_header(filepath, HEADER_SIZE_SMALL))
         openssl_salted = header.startswith(b"Salted__")
         pgp_ascii = b"-----BEGIN PGP" in header
 
@@ -960,12 +1096,15 @@ def _parse_pcapng_header(header: bytes) -> Dict[str, Any]:
         return {}
     if header[0:4] != b"\x0a\x0d\x0d\x0a":
         return {}
-    block_length = struct.unpack("<I", header[4:8])[0]
+    block_length_le = struct.unpack("<I", header[4:8])[0]
+    block_length_be = struct.unpack(">I", header[4:8])[0]
     bom = header[8:12]
     if bom == b"\x1a\x2b\x3c\x4d":
         endian = "big"
+        block_length = block_length_be
     elif bom == b"\x4d\x3c\x2b\x1a":
         endian = "little"
+        block_length = block_length_le
     else:
         return {}
     fmt = ">" if endian == "big" else "<"
@@ -980,42 +1119,269 @@ def _parse_pcapng_header(header: bytes) -> Dict[str, Any]:
     }
 
 
+def _parse_regf_header(header: bytes) -> Dict[str, Any]:
+    if not header.startswith(b"regf") or len(header) < 0x1C:
+        return {}
+    return {
+        "sequence_1": struct.unpack("<I", header[0x04:0x08])[0],
+        "sequence_2": struct.unpack("<I", header[0x08:0x0C])[0],
+        "timestamp_raw": struct.unpack("<Q", header[0x0C:0x14])[0],
+        "major_version": struct.unpack("<I", header[0x14:0x18])[0] if len(header) >= 0x18 else None,
+        "minor_version": struct.unpack("<I", header[0x18:0x1C])[0] if len(header) >= 0x1C else None,
+    }
+
+
+def _parse_evtx_header(header: bytes) -> Dict[str, Any]:
+    if not header.startswith(b"ElfFile") or len(header) < 0x28:
+        return {}
+    return {
+        "first_chunk": struct.unpack("<Q", header[0x08:0x10])[0],
+        "last_chunk": struct.unpack("<Q", header[0x10:0x18])[0],
+        "next_record": struct.unpack("<Q", header[0x18:0x20])[0],
+        "header_size": struct.unpack("<I", header[0x20:0x24])[0],
+        "minor_version": struct.unpack("<H", header[0x24:0x26])[0],
+        "major_version": struct.unpack("<H", header[0x26:0x28])[0],
+    }
+
+
+def _parse_prefetch_header(header: bytes) -> Dict[str, Any]:
+    if len(header) < 0x50 or header[4:8] != b"SCCA":
+        return {}
+    name_bytes = header[0x10:0x10 + 60]
+    try:
+        name = name_bytes.decode("utf-16le", errors="ignore").rstrip("\x00")
+    except Exception:
+        name = None
+    return {
+        "file_size": struct.unpack("<I", header[0x0C:0x10])[0],
+        "executable_name": name,
+        "hash": struct.unpack("<I", header[0x4C:0x50])[0],
+    }
+
+
+def _parse_lnk_header(header: bytes) -> Dict[str, Any]:
+    if len(header) < 0x4C:
+        return {}
+    return {
+        "header_size": struct.unpack("<I", header[0x00:0x04])[0],
+        "link_flags": struct.unpack("<I", header[0x14:0x18])[0],
+        "file_attributes": struct.unpack("<I", header[0x18:0x1C])[0],
+        "creation_time_raw": struct.unpack("<Q", header[0x1C:0x24])[0],
+        "access_time_raw": struct.unpack("<Q", header[0x24:0x2C])[0],
+        "write_time_raw": struct.unpack("<Q", header[0x2C:0x34])[0],
+        "file_size": struct.unpack("<I", header[0x34:0x38])[0],
+        "icon_index": struct.unpack("<I", header[0x38:0x3C])[0],
+        "show_command": struct.unpack("<I", header[0x3C:0x40])[0],
+        "hotkey": struct.unpack("<H", header[0x40:0x42])[0],
+    }
+
+
+def _extract_sqlite_schema(filepath: str) -> Dict[str, Any]:
+    schema_data: Dict[str, Any] = {}
+    try:
+        file_size = Path(filepath).stat().st_size
+    except Exception:
+        return schema_data
+    if file_size > 50 * 1024 * 1024:
+        return schema_data
+    try:
+        conn = sqlite3.connect(f"file:{filepath}?mode=ro", uri=True)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, type FROM sqlite_master WHERE type IN ('table','index')")
+        rows = cursor.fetchall()
+        conn.close()
+    except Exception:
+        return schema_data
+
+    tables = [name for name, kind in rows if kind == "table"]
+    indices = [name for name, kind in rows if kind == "index"]
+    lower_tables = {name.lower() for name in tables}
+    schema_data["table_count"] = len(tables)
+    schema_data["tables"] = tables[:50]
+    schema_data["index_count"] = len(indices)
+    schema_data["has_urls"] = "urls" in lower_tables
+    schema_data["has_visits"] = "visits" in lower_tables or "visit_history" in lower_tables
+    schema_data["has_cookies"] = "cookies" in lower_tables
+    schema_data["has_downloads"] = "downloads" in lower_tables
+    schema_data["has_moz_places"] = "moz_places" in lower_tables
+    schema_data["db_type_guess"] = _guess_browser_db_type(Path(filepath).name, lower_tables)
+    return schema_data
+
+
+def _guess_browser_db_type(filename: str, table_names: set) -> Optional[str]:
+    name = filename.lower()
+    if "history" in name or "places" in name or "visit" in name:
+        if "moz_places" in table_names:
+            return "firefox_places"
+        if "urls" in table_names:
+            return "chrome_history"
+    if "cookies" in name:
+        return "cookies_db"
+    if "login" in name:
+        return "login_db"
+    if "favicons" in name:
+        return "favicons_db"
+    return None
+
+
+def _calculate_entropy(data: bytes) -> Optional[float]:
+    if not data:
+        return None
+    counts = [0] * 256
+    for b in data:
+        counts[b] += 1
+    entropy = 0.0
+    length = len(data)
+    for count in counts:
+        if count == 0:
+            continue
+        p = count / length
+        entropy -= p * (p and __import__("math").log2(p) or 0)
+    return entropy
+
+
+def _parse_pe_sections(f, offset: int, count: int) -> Dict[str, Any]:
+    sections = []
+    section_names = []
+    entropies = []
+    if count <= 0:
+        return {"section_count": 0, "sections": [], "section_names": [], "section_entropies": []}
+    try:
+        f.seek(offset)
+        for _ in range(min(count, 96)):
+            header = f.read(40)
+            if len(header) < 40:
+                break
+            name = header[0:8].split(b"\x00", 1)[0].decode("latin1", errors="ignore")
+            virtual_size = struct.unpack("<I", header[8:12])[0]
+            virtual_address = struct.unpack("<I", header[12:16])[0]
+            raw_size = struct.unpack("<I", header[16:20])[0]
+            raw_ptr = struct.unpack("<I", header[20:24])[0]
+            characteristics = struct.unpack("<I", header[36:40])[0]
+            section = {
+                "name": name,
+                "virtual_size": virtual_size,
+                "virtual_address": virtual_address,
+                "raw_size": raw_size,
+                "raw_pointer": raw_ptr,
+                "characteristics": characteristics,
+            }
+            section_names.append(name)
+            try:
+                f.seek(raw_ptr)
+                sample = f.read(min(raw_size, 1024 * 1024)) if raw_size else b""
+                entropy = _calculate_entropy(sample)
+            except Exception:
+                entropy = None
+            entropies.append(entropy)
+            sections.append(section)
+            f.seek(offset + (len(sections) * 40))
+    except Exception:
+        return {"section_count": len(sections), "sections": sections, "section_names": section_names, "section_entropies": entropies}
+    return {"section_count": len(sections), "sections": sections, "section_names": section_names, "section_entropies": entropies}
+
+
+def _parse_pe_imports(f, optional_header: bytes, sections: list) -> Dict[str, Any]:
+    if not optional_header or len(optional_header) < 2:
+        return {}
+    magic = struct.unpack("<H", optional_header[0:2])[0]
+    data_dir_offset = 96 if magic == 0x10B else 112 if magic == 0x20B else None
+    if data_dir_offset is None or len(optional_header) < data_dir_offset + 16:
+        return {}
+    import_rva = struct.unpack("<I", optional_header[data_dir_offset + 8:data_dir_offset + 12])[0]
+    import_size = struct.unpack("<I", optional_header[data_dir_offset + 12:data_dir_offset + 16])[0]
+    if import_rva == 0:
+        return {"import_rva": 0, "import_size": import_size, "dll_count": 0, "dlls": []}
+    imports_offset = _rva_to_offset(import_rva, sections)
+    if imports_offset is None:
+        return {"import_rva": import_rva, "import_size": import_size, "dll_count": 0, "dlls": []}
+    dlls = []
+    try:
+        f.seek(imports_offset)
+        for _ in range(256):
+            desc = f.read(20)
+            if len(desc) < 20:
+                break
+            orig_first_thunk, _, _, name_rva, _ = struct.unpack("<IIIII", desc)
+            if orig_first_thunk == 0 and name_rva == 0:
+                break
+            name_offset = _rva_to_offset(name_rva, sections)
+            if name_offset is None:
+                continue
+            f_pos = f.tell()
+            f.seek(name_offset)
+            dll_name = _read_cstring(f, 260)
+            f.seek(f_pos)
+            if dll_name:
+                dlls.append(dll_name)
+    except Exception:
+        pass
+    return {
+        "import_rva": import_rva,
+        "import_size": import_size,
+        "dll_count": len(dlls),
+        "dlls": dlls[:50],
+    }
+
+
+def _rva_to_offset(rva: int, sections: list) -> Optional[int]:
+    for section in sections:
+        vaddr = section.get("virtual_address")
+        vsize = section.get("virtual_size") or 0
+        raw_ptr = section.get("raw_pointer")
+        raw_size = section.get("raw_size") or 0
+        if vaddr is None or raw_ptr is None:
+            continue
+        size = max(vsize, raw_size)
+        if vaddr <= rva < vaddr + size:
+            return raw_ptr + (rva - vaddr)
+    return None
+
+
+def _read_cstring(f, max_len: int) -> Optional[str]:
+    data = f.read(max_len)
+    if not data:
+        return None
+    end = data.find(b"\x00")
+    if end == -1:
+        end = len(data)
+    try:
+        return data[:end].decode("latin1", errors="ignore")
+    except Exception:
+        return None
+
+
 def get_forensic_digital_advanced_field_count() -> int:
     """Return the number of advanced digital forensic fields."""
-    signature_fields = 38
+    # Upper bound: keys this module may emit (placeholders included).
+    top_level = 1  # forensic_digital_advanced_detected
+
+    signature_fields = 40  # incl. size/extension/entropy additions
     executable_fields = 28
+    fs_fields = 22
+    windows_fields = 25
+    browser_fields = 28
+    network_fields = 32
+    malware_fields = 16
+    anti_forensic_fields = 18
+    encryption_fields = 17
+    timeline_fields = 18
+    cloud_fields = 18
 
-    # File system forensics fields
-    fs_fields = 14
-
-    # Windows artifacts fields
-    windows_fields = 18
-
-    # Browser forensics fields
-    browser_fields = 21
-
-    # Network forensics fields
-    network_fields = 25
-
-    # Malware analysis fields
-    malware_fields = 12
-
-    # Anti-forensic fields
-    anti_forensic_fields = 12
-
-    # Encryption analysis fields
-    encryption_fields = 14
-
-    # Timeline analysis fields
-    timeline_fields = 12
-
-    # Cloud forensics fields
-    cloud_fields = 12
-
-    return (signature_fields + executable_fields + fs_fields + windows_fields +
-            browser_fields + network_fields + malware_fields +
-            anti_forensic_fields + encryption_fields + timeline_fields +
-            cloud_fields)
+    return (
+        top_level
+        + signature_fields
+        + executable_fields
+        + fs_fields
+        + windows_fields
+        + browser_fields
+        + network_fields
+        + malware_fields
+        + anti_forensic_fields
+        + encryption_fields
+        + timeline_fields
+        + cloud_fields
+    )
 
 
 # Integration point

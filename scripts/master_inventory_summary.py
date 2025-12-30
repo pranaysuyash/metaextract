@@ -35,6 +35,14 @@ INVENTORY_DIRS = [
     ("scientific_inventory", "scientific_summary.json"),
     ("email_inventory", "email_summary.json"),
     ("archive_inventory", "archive_summary.json"),
+    ("3d_inventory", "3d_summary.json"),
+    ("messaging_inventory", "messaging_summary.json"),
+    ("blockchain_inventory", "blockchain_summary.json"),
+    ("code_inventory", "code_summary.json"),
+    ("gis_advanced_inventory", "gis_advanced_summary.json"),
+    ("ebook_inventory", "ebook_summary.json"),
+    ("aviation_inventory", "aviation_summary.json"),
+    ("financial_inventory", "financial_summary.json"),
 ]
 
 

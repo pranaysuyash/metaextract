@@ -3,12 +3,15 @@ import { Layout } from "@/components/layout";
 import { EnhancedUploadZone } from "@/components/enhanced-upload-zone";
 import { PRICING_TIERS, CREDIT_PACKS, CREDIT_EXPLANATION } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
-import { Database, Lock, Globe, Info, MoveRight, ScanLine, Terminal, Cpu, Share2, FileCode, ShieldAlert, Zap, CheckCircle2, Loader2, Coins } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Database, Lock, Globe, Info, MoveRight, ScanLine, Terminal, Cpu, Share2, FileCode, ShieldAlert, Zap, CheckCircle2, Loader2, Coins, User, LogIn, UserPlus } from "lucide-react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
 
 function getSessionId(): string {
   let sessionId = localStorage.getItem("metaextract_session_id");
@@ -45,6 +48,7 @@ export default function Home() {
   const [creditPackLoading, setCreditPackLoading] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const handleUploadResults = (results: any[]) => {
     if (results.length > 0) {
@@ -238,6 +242,118 @@ export default function Home() {
                 ></motion.div>
               </div>
             </motion.div>
+          </div>
+        </section>
+
+        {/* AUTHENTICATION STATUS SECTION */}
+        <section className="relative py-12 z-10">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <Card className="bg-[#1a1a2e] border-white/10 text-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Authentication Status
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  {isAuthenticated ? "You are logged in and can access all features" : "Login to access advanced features and save your work"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Checking authentication...</span>
+                  </div>
+                ) : isAuthenticated && user ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Welcome back, {user.username}!</p>
+                          <p className="text-sm text-slate-400">{user.email}</p>
+                        </div>
+                      </div>
+                      <Badge className={`${user.tier === 'professional' ? 'bg-blue-600' : user.tier === 'forensic' ? 'bg-purple-600' : user.tier === 'enterprise' ? 'bg-green-600' : 'bg-gray-600'} text-white`}>
+                        {user.tier.toUpperCase()}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => navigate('/dashboard')}
+                        className="bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Go to Dashboard
+                      </Button>
+                      <Button 
+                        onClick={() => navigate('/results')}
+                        variant="outline"
+                        className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                      >
+                        View Results
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <h4 className="font-medium mb-2">Test the Authentication System</h4>
+                      <p className="text-sm text-slate-400 mb-4">
+                        Use these test credentials to login and explore different subscription tiers:
+                      </p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <p className="text-xs font-mono text-blue-400 mb-1">PROFESSIONAL</p>
+                          <p className="text-xs font-mono">test@metaextract.com</p>
+                          <p className="text-xs font-mono">testpassword123</p>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <p className="text-xs font-mono text-purple-400 mb-1">FORENSIC</p>
+                          <p className="text-xs font-mono">forensic@metaextract.com</p>
+                          <p className="text-xs font-mono">forensicpassword123</p>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <p className="text-xs font-mono text-green-400 mb-1">ENTERPRISE</p>
+                          <p className="text-xs font-mono">admin@metaextract.com</p>
+                          <p className="text-xs font-mono">adminpassword123</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => {
+                          // Trigger login modal - this will be handled by the Layout component
+                          const loginButton = document.querySelector('[data-auth="login"]') as HTMLButtonElement;
+                          if (loginButton) loginButton.click();
+                        }}
+                        className="bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Sign In
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          // Trigger register modal
+                          const registerButton = document.querySelector('[data-auth="register"]') as HTMLButtonElement;
+                          if (registerButton) registerButton.click();
+                        }}
+                        variant="outline"
+                        className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Register
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </section>
 

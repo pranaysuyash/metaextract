@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation } from "react-router-dom";
 import { ShieldCheck, Menu, Cpu, Github, Twitter, User, LogOut, ChevronDown, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -8,7 +8,7 @@ import { AuthModal } from "@/components/auth-modal";
 import { useAuth } from "@/lib/auth";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const location = useLocation();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"login" | "register">("login");
   const { user, isAuthenticated, logout, isLoading } = useAuth();
@@ -47,7 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
+          <Link to="/">
             <div className="flex items-center gap-2 cursor-pointer group">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-md rounded-full group-hover:bg-primary/40 transition-all"></div>
@@ -113,12 +113,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   variant="ghost"
                   className="text-slate-200 hover:text-white hover:bg-white/10 font-semibold"
                   onClick={openLogin}
+                  data-auth="login"
                 >
                   Sign In
                 </Button>
                 <Button
                   className="bg-primary hover:bg-primary/90 text-black font-bold rounded px-6 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] tracking-tight"
                   onClick={openRegister}
+                  data-auth="register"
                 >
                   Get Started
                 </Button>
@@ -136,7 +138,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent className="bg-card border-l-white/10">
                 <div className="flex flex-col gap-4 mt-8">
-                  <Link href="/"><span className="text-lg font-medium text-white">Home</span></Link>
+                  <Link to="/"><span className="text-lg font-medium text-white">Home</span></Link>
                   <a href="#features" className="text-lg font-medium text-slate-300">Capabilities</a>
                   <a href="#pricing" className="text-lg font-medium text-slate-300">Pricing</a>
                   <a href="#api" className="text-lg font-medium text-slate-300">API</a>

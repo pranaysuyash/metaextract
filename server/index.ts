@@ -2,8 +2,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { registerAuthRoutes, authMiddleware } from "./auth";
+import { registerMockAuthRoutes, authMiddleware as mockAuthMiddleware } from "./auth-mock";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { db } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,7 +30,15 @@ app.use(
 app.use(express.urlencoded({ extended: false }));
 
 // Auth middleware - attaches user to request if authenticated
-app.use(authMiddleware);
+// Use mock auth if database is not available
+const isDatabaseAvailable = !!db;
+if (isDatabaseAvailable) {
+  app.use(authMiddleware);
+  log("Using database authentication system");
+} else {
+  app.use(mockAuthMiddleware);
+  log("⚠️  Database not available - using mock authentication system");
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -69,8 +79,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Register auth routes first
-  registerAuthRoutes(app);
+  // Register auth routes - use mock auth if database is not available
+  const isDatabaseAvailable = !!db;
+  if (isDatabaseAvailable) {
+    registerAuthRoutes(app);
+    log("Registered database authentication routes");
+  } else {
+    registerMockAuthRoutes(app);
+    log("⚠️  Registered mock authentication routes (development mode)");
+    log("📋 Test credentials available at /api/auth/dev/users");
+  }
   
   // Register main API routes
   await registerRoutes(httpServer, app);

@@ -58,6 +58,18 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - PDF with AcroForm fields (text, checkbox, choice) and annotations.
 - PDF with digital signature fields and signed revisions.
 
+## Emerging Technology Metadata
+- GLB with JSON chunk and mesh/material data.
+- GLTF with multiple scenes/nodes/materials.
+- USDZ package with internal assets.
+- QASM file with qreg/creg and gates.
+- URDF or SDF robot model with links/joints.
+- FASTA/DNA sequence file with headers.
+- TLE satellite element set (name + 2 lines).
+- IoT JSON device payload with sensors.
+- NFT/token JSON metadata with contract info.
+- Digital twin JSON with assets list and IDs.
+
 ## Forensics / Security
 - PNG/JPEG with C2PA (Content Credentials) manifest.
 - EXE/PE with Authenticode signature + version info.

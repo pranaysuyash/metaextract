@@ -1,12 +1,12 @@
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ArrowRight, Coins } from "lucide-react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CREDIT_PACKS } from "@/lib/mockData";
 
 export default function CreditsSuccess() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const [pack, setPack] = useState<string | null>(null);
   const [credits, setCredits] = useState<number>(0);
 
