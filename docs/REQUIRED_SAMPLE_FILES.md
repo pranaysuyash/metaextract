@@ -34,12 +34,17 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 
 ## Audio Metadata (Professional / Broadcast)
 - BWF WAV with bext + iXML chunks.
+- Broadcast WAV with CART chunk and post‑timers.
+- Broadcast WAV with axml metadata chunk.
 - AIFF/AIFC with COMM/NAME/ANNO/COMT chunks.
 - RF64 WAV with ds64 chunk and large data size.
+- WAV with LIST adtl (labl/ltxt/note) chunks.
 - MP3 with ID3v2.4 chapters (CHAP/CTOC).
 - MP3 with SYLT (synced lyrics), RVA2 (volume), PRIV, and PCST frames.
+- MP3 with ID3 advanced frames: COMR, GRID, SIGN, EQU2, MLLT, SEEK.
 - FLAC with PICTURE blocks and ReplayGain tags.
 - DSF/DSDIFF (DSD) audio with metadata blocks.
+- DSDIFF with PROP/CMPR/CHNL chunks and ID3 tag.
 
 ## Forensics / Security
 - PNG/JPEG with C2PA (Content Credentials) manifest.

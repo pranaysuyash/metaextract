@@ -162,10 +162,46 @@ except:
     DICOM_AVAILABLE = False
 
 try:
+    from medical_imaging_complete import get_medical_imaging_field_count
+    MEDICAL_IMAGING_AVAILABLE = True
+except:
+    MEDICAL_IMAGING_AVAILABLE = False
+
+try:
+    from scientific_formats_extended import get_scientific_formats_extended_field_count
+    SCIENTIFIC_FORMATS_AVAILABLE = True
+except:
+    SCIENTIFIC_FORMATS_AVAILABLE = False
+
+try:
+    from audio_id3_extended import get_audio_id3_extended_field_count
+    AUDIO_ID3_EXTENDED_AVAILABLE = True
+except:
+    AUDIO_ID3_EXTENDED_AVAILABLE = False
+
+try:
+    from video_professional_extended import get_video_professional_extended_field_count
+    VIDEO_PROFESSIONAL_EXTENDED_AVAILABLE = True
+except:
+    VIDEO_PROFESSIONAL_EXTENDED_AVAILABLE = False
+
+try:
+    from forensic_security_extended import get_forensic_security_extended_field_count
+    FORENSIC_SECURITY_EXTENDED_AVAILABLE = True
+except:
+    FORENSIC_SECURITY_EXTENDED_AVAILABLE = False
+
+try:
     from perceptual_comparison import get_perceptual_comparison_field_count
     PERCEPTUAL_COMP_AVAILABLE = True
 except:
     PERCEPTUAL_COMP_AVAILABLE = False
+
+try:
+    from id3_frames_complete import get_id3_frames_field_count
+    ID3_FRAMES_COMPLETE_AVAILABLE = True
+except:
+    ID3_FRAMES_COMPLETE_AVAILABLE = False
 
 total = 0
 fields = {}
@@ -399,8 +435,26 @@ if VIDEO_CODEC_AVAILABLE:
 if DICOM_AVAILABLE:
     fields3['DICOM Medical'] = get_dicom_field_count()
 
+if MEDICAL_IMAGING_AVAILABLE:
+    fields3['Medical Imaging (Complete)'] = get_medical_imaging_field_count()
+
+if SCIENTIFIC_FORMATS_AVAILABLE:
+    fields3['Scientific Formats (Extended)'] = get_scientific_formats_extended_field_count()
+
+if AUDIO_ID3_EXTENDED_AVAILABLE:
+    fields3['Audio ID3/Tags (Extended)'] = get_audio_id3_extended_field_count()
+
+if VIDEO_PROFESSIONAL_EXTENDED_AVAILABLE:
+    fields3['Video Professional (Extended)'] = get_video_professional_extended_field_count()
+
+if FORENSIC_SECURITY_EXTENDED_AVAILABLE:
+    fields3['Forensic/Security (Extended)'] = get_forensic_security_extended_field_count()
+
 if PERCEPTUAL_COMP_AVAILABLE:
     fields3['Perceptual Comparison'] = get_perceptual_comparison_field_count()
+
+if ID3_FRAMES_COMPLETE_AVAILABLE:
+    fields3['ID3/Audio Tags (Complete)'] = get_id3_frames_field_count()
 
 print()
 print('--- Specialized Modules ---')

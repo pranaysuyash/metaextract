@@ -232,6 +232,12 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
         "podcast": {},
         "involved_people": [],
         "musician_credits": [],
+        "commercial": {},
+        "group_registration": [],
+        "signature": {},
+        "seek_offset": None,
+        "equalization": [],
+        "mpeg_lookup_table": {},
         "other_frames": {},
     }
 
@@ -459,6 +465,84 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
             }
         elif frame_id_str == "PCNT":
             result["other_frames"]["PCNT"] = int.from_bytes(frame_data, "big")
+        elif frame_id_str == "SEEK":
+            if len(frame_data) >= 4:
+                result["seek_offset"] = struct.unpack(">I", frame_data[0:4])[0]
+        elif frame_id_str == "SIGN":
+            if frame_data:
+                result["signature"] = {
+                    "group_symbol": frame_data[0],
+                    "signature_length": max(0, len(frame_data) - 1),
+                }
+        elif frame_id_str == "GRID":
+            owner_bytes, rest = _split_terminated_bytes(frame_data, 0)
+            if rest:
+                result["group_registration"].append({
+                    "owner_id": owner_bytes.decode("latin1", errors="ignore"),
+                    "group_symbol": rest[0],
+                    "data_length": max(0, len(rest) - 1),
+                })
+        elif frame_id_str == "COMR":
+            if len(frame_data) >= 10:
+                encoding = frame_data[0]
+                rest = frame_data[1:]
+                price_bytes, rest = _split_terminated_bytes(rest, 0)
+                price = price_bytes.decode("latin1", errors="ignore")
+                valid_until = rest[:8].decode("latin1", errors="ignore") if len(rest) >= 8 else ""
+                rest = rest[8:] if len(rest) >= 8 else b""
+                contact_bytes, rest = _split_terminated_bytes(rest, 0)
+                contact_url = contact_bytes.decode("latin1", errors="ignore")
+                received_as = rest[0] if rest else None
+                rest = rest[1:] if rest else b""
+                seller_bytes, rest = _split_terminated_bytes(rest, encoding)
+                description_bytes, rest = _split_terminated_bytes(rest, encoding)
+                seller = _decode_id3_text(seller_bytes, encoding)
+                description = _decode_id3_text(description_bytes, encoding)
+                logo_mime_bytes, rest = _split_terminated_bytes(rest, 0)
+                logo_mime = logo_mime_bytes.decode("latin1", errors="ignore")
+                result["commercial"] = {
+                    "price": price,
+                    "valid_until": valid_until,
+                    "contact_url": contact_url,
+                    "received_as": received_as,
+                    "seller": seller,
+                    "description": description,
+                    "logo_mime": logo_mime,
+                    "logo_size": len(rest),
+                }
+        elif frame_id_str == "EQU2":
+            if len(frame_data) >= 2:
+                interpolation = frame_data[0]
+                identifier_bytes, rest = _split_terminated_bytes(frame_data[1:], 0)
+                identifier = identifier_bytes.decode("latin1", errors="ignore")
+                entries = []
+                pos = len(identifier_bytes) + 1
+                while pos + 4 <= len(frame_data):
+                    frequency = struct.unpack(">H", frame_data[pos:pos + 2])[0]
+                    adjustment = struct.unpack(">H", frame_data[pos + 2:pos + 4])[0]
+                    entries.append({
+                        "frequency": frequency,
+                        "adjustment": adjustment,
+                    })
+                    pos += 4
+                result["equalization"].append({
+                    "interpolation_method": interpolation,
+                    "identifier": identifier,
+                    "band_count": len(entries),
+                    "bands": entries[:20],
+                })
+        elif frame_id_str == "MLLT":
+            if len(frame_data) >= 6:
+                frames_between = struct.unpack(">H", frame_data[0:2])[0]
+                bytes_between = int.from_bytes(frame_data[2:5], "big")
+                ms_between = frame_data[5]
+                lookup_bytes = frame_data[6:]
+                result["mpeg_lookup_table"] = {
+                    "frames_between_ref": frames_between,
+                    "bytes_between_ref": bytes_between,
+                    "ms_between_ref": ms_between,
+                    "table_bytes": len(lookup_bytes),
+                }
         elif frame_id_str == "UFID":
             owner_end = frame_data.find(b"\x00")
             owner = frame_data[:owner_end].decode("latin1", errors="ignore") if owner_end >= 0 else ""
@@ -928,6 +1012,9 @@ def _parse_riff_chunks(filepath: str) -> Dict[str, Any]:
         "sampler": {},
         "bext": {},
         "ixml": {},
+        "cart": {},
+        "adtl": {},
+        "axml": {},
     }
     try:
         with open(filepath, "rb") as f:
@@ -963,6 +1050,9 @@ def _parse_riff_chunks(filepath: str) -> Dict[str, Any]:
                     if list_type == b"INFO":
                         info_data = f.read(list_data_size)
                         result["info"] = _parse_riff_info(info_data)
+                    elif list_type == b"adtl":
+                        adtl_data = f.read(list_data_size)
+                        result["adtl"] = _parse_adtl_list(adtl_data)
                     else:
                         f.seek(list_data_size, 1)
                 elif chunk_id == b"ds64":
@@ -974,6 +1064,12 @@ def _parse_riff_chunks(filepath: str) -> Dict[str, Any]:
                 elif chunk_id == b"iXML":
                     ixml_data = f.read(chunk_size)
                     result["ixml"] = _parse_ixml_chunk(ixml_data)
+                elif chunk_id == b"cart":
+                    cart_data = f.read(chunk_size)
+                    result["cart"] = _parse_cart_chunk(cart_data)
+                elif chunk_id == b"axml":
+                    axml_data = f.read(chunk_size)
+                    result["axml"] = _parse_axml_chunk(axml_data)
                 elif chunk_id == b"cue ":
                     cue_data = f.read(chunk_size)
                     result["cue_points"] = _parse_cue_chunk(cue_data)
@@ -1013,6 +1109,139 @@ def _parse_ds64_chunk(data: bytes) -> Dict[str, Any]:
         "table_length": table_length,
         "table": table,
     }
+
+
+def _parse_adtl_list(data: bytes) -> Dict[str, Any]:
+    result = {
+        "labels": [],
+        "notes": [],
+        "texts": [],
+    }
+    offset = 0
+    while offset + 8 <= len(data):
+        chunk_id = data[offset:offset + 4]
+        chunk_size = struct.unpack("<I", data[offset + 4:offset + 8])[0]
+        offset += 8
+        chunk_data = data[offset:offset + chunk_size]
+        offset += chunk_size
+        if chunk_id == b"labl":
+            if len(chunk_data) >= 4:
+                cue_id = struct.unpack("<I", chunk_data[0:4])[0]
+                text = chunk_data[4:].decode("latin1", errors="ignore").rstrip("\x00")
+                result["labels"].append({"cue_id": cue_id, "text": text})
+        elif chunk_id == b"note":
+            if len(chunk_data) >= 4:
+                cue_id = struct.unpack("<I", chunk_data[0:4])[0]
+                text = chunk_data[4:].decode("latin1", errors="ignore").rstrip("\x00")
+                result["notes"].append({"cue_id": cue_id, "text": text})
+        elif chunk_id == b"ltxt":
+            if len(chunk_data) >= 20:
+                cue_id = struct.unpack("<I", chunk_data[0:4])[0]
+                sample_length = struct.unpack("<I", chunk_data[4:8])[0]
+                purpose_id = chunk_data[8:12].decode("latin1", errors="ignore")
+                country = struct.unpack("<H", chunk_data[12:14])[0]
+                language = struct.unpack("<H", chunk_data[14:16])[0]
+                dialect = struct.unpack("<H", chunk_data[16:18])[0]
+                code_page = struct.unpack("<H", chunk_data[18:20])[0]
+                text = chunk_data[20:].decode("latin1", errors="ignore").rstrip("\x00")
+                result["texts"].append({
+                    "cue_id": cue_id,
+                    "sample_length": sample_length,
+                    "purpose_id": purpose_id,
+                    "country": country,
+                    "language": language,
+                    "dialect": dialect,
+                    "code_page": code_page,
+                    "text": text,
+                })
+        if chunk_size % 2 == 1:
+            offset += 1
+    return result
+
+
+def _parse_axml_chunk(data: bytes) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+    try:
+        xml_text = data.decode("utf-8", errors="ignore").strip()
+        result["raw"] = xml_text
+        try:
+            root = ET.fromstring(xml_text)
+            result["root_tag"] = root.tag
+            result["attribute_count"] = len(root.attrib)
+        except Exception:
+            result["parse_error"] = True
+    except Exception:
+        return result
+    return result
+
+
+def _parse_cart_chunk(data: bytes) -> Dict[str, Any]:
+    if len(data) < 2048:
+        return {}
+    offset = 0
+
+    def read_str(length: int) -> str:
+        nonlocal offset
+        value = data[offset:offset + length]
+        offset += length
+        return value.decode("latin1", errors="ignore").rstrip("\x00").strip()
+
+    def read_u32() -> int:
+        nonlocal offset
+        if offset + 4 > len(data):
+            offset = len(data)
+            return 0
+        value = struct.unpack("<I", data[offset:offset + 4])[0]
+        offset += 4
+        return value
+
+    def read_timer() -> Dict[str, Any]:
+        nonlocal offset
+        if offset + 8 > len(data):
+            offset = len(data)
+            return {}
+        usage = data[offset:offset + 4].decode("latin1", errors="ignore")
+        value = struct.unpack("<I", data[offset + 4:offset + 8])[0]
+        offset += 8
+        return {"usage": usage, "value": value}
+
+    result = {
+        "version": read_u32(),
+        "title": read_str(64),
+        "artist": read_str(64),
+        "cut_id": read_str(64),
+        "client_id": read_str(64),
+        "category": read_str(64),
+        "classification": read_str(64),
+        "out_cue": read_str(64),
+        "start_date": read_str(10),
+        "start_time": read_str(8),
+        "end_date": read_str(10),
+        "end_time": read_str(8),
+        "producer_app_id": read_str(64),
+        "producer_app_version": read_str(64),
+        "user_def": read_str(64),
+        "level_reference": read_u32(),
+        "post_timers": [],
+        "url": "",
+        "tag_text": "",
+    }
+
+    for _ in range(8):
+        timer = read_timer()
+        if timer:
+            result["post_timers"].append(timer)
+
+    if offset + 276 <= len(data):
+        offset += 276  # reserved
+
+    if offset + 1024 <= len(data):
+        result["url"] = read_str(1024)
+
+    if offset < len(data):
+        result["tag_text"] = data[offset:].decode("latin1", errors="ignore").rstrip("\x00").strip()
+
+    return result
 
 
 def _parse_extended80(data: bytes) -> Optional[float]:
@@ -1182,6 +1411,91 @@ def _parse_dsf_header(filepath: str) -> Dict[str, Any]:
                 "sample_count": struct.unpack("<Q", fmt_data[24:32])[0],
                 "block_size_per_channel": struct.unpack("<I", fmt_data[32:36])[0],
             }
+            if metadata_offset and metadata_offset < file_size:
+                f.seek(metadata_offset, 0)
+                id3_header = f.read(10)
+                if len(id3_header) == 10 and id3_header[0:3] == b"ID3":
+                    tag_size = _syncsafe_to_int(id3_header[6:10])
+                    max_size = 2 * 1024 * 1024
+                    read_size = min(tag_size, max_size)
+                    id3_data = id3_header + f.read(read_size)
+                    result["id3_present"] = True
+                    result["id3_tag_size"] = tag_size
+                    result["id3"] = _parse_id3v2_tag(id3_data)
+    except Exception:
+        return result
+    return result
+
+
+def _parse_dsdiff_header(filepath: str) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+    try:
+        with open(filepath, "rb") as f:
+            header = f.read(12)
+            if len(header) < 12 or header[0:4] != b"FRM8":
+                return result
+            form_size = struct.unpack(">Q", header[4:12])[0]
+            form_type = f.read(4)
+            if form_type not in [b"DSD ", b"DST "]:
+                return result
+            result["format"] = "DSDIFF"
+            result["form_type"] = form_type.decode("latin1", errors="ignore")
+            result["form_size"] = form_size
+
+            end_pos = min(Path(filepath).stat().st_size, form_size + 12)
+            while f.tell() + 12 <= end_pos:
+                chunk_id = f.read(4)
+                if len(chunk_id) < 4:
+                    break
+                chunk_size = struct.unpack(">Q", f.read(8))[0]
+                chunk_start = f.tell()
+                chunk_data = f.read(chunk_size)
+
+                if chunk_id == b"FVER" and len(chunk_data) >= 4:
+                    result["format_version"] = struct.unpack(">I", chunk_data[0:4])[0]
+                elif chunk_id == b"PROP" and len(chunk_data) >= 4:
+                    prop_type = chunk_data[0:4]
+                    result["prop_type"] = prop_type.decode("latin1", errors="ignore")
+                    prop_offset = 4
+                    while prop_offset + 12 <= len(chunk_data):
+                        sub_id = chunk_data[prop_offset:prop_offset + 4]
+                        sub_size = struct.unpack(">Q", chunk_data[prop_offset + 4:prop_offset + 12])[0]
+                        prop_offset += 12
+                        sub_data = chunk_data[prop_offset:prop_offset + sub_size]
+                        prop_offset += sub_size
+
+                        if sub_id == b"FS  " and len(sub_data) >= 4:
+                            result["sample_rate"] = struct.unpack(">I", sub_data[0:4])[0]
+                        elif sub_id == b"CHNL" and len(sub_data) >= 2:
+                            channel_count = struct.unpack(">H", sub_data[0:2])[0]
+                            result["channel_count"] = channel_count
+                            channel_ids = []
+                            pos = 2
+                            for _ in range(channel_count):
+                                if pos + 4 > len(sub_data):
+                                    break
+                                channel_ids.append(sub_data[pos:pos + 4].decode("latin1", errors="ignore"))
+                                pos += 4
+                            result["channel_ids"] = channel_ids
+                        elif sub_id == b"CMPR" and len(sub_data) >= 5:
+                            comp_id = sub_data[0:4].decode("latin1", errors="ignore")
+                            name_len = sub_data[4]
+                            name = sub_data[5:5 + name_len].decode("latin1", errors="ignore")
+                            result["compression_id"] = comp_id
+                            result["compression_name"] = name
+                        if sub_size % 2 == 1:
+                            prop_offset += 1
+                elif chunk_id in [b"DSD ", b"DST "]:
+                    result["audio_chunk_id"] = chunk_id.decode("latin1", errors="ignore")
+                    result["audio_chunk_size"] = chunk_size
+                elif chunk_id.strip() == b"ID3":
+                    result["id3_present"] = True
+                    result["id3_size"] = chunk_size
+
+                if chunk_size % 2 == 1:
+                    f.seek(1, 1)
+                if f.tell() <= chunk_start:
+                    break
     except Exception:
         return result
     return result
@@ -1678,10 +1992,7 @@ def extract_audio_codec_details(filepath: str) -> Dict[str, Any]:
         if signature == "dsf" or ext == ".dsf":
             result["dsd_details"] = _parse_dsf_header(filepath)
         if signature == "dsdiff" or ext in [".dff", ".dsd"]:
-            result["dsd_details"] = {
-                "format": "DSDIFF",
-                "note": "limited parsing",
-            }
+            result["dsd_details"] = _parse_dsdiff_header(filepath)
         if signature == "mp4" or ext in [".m4a", ".mp4", ".m4b"]:
             result["mp4_details"] = _parse_mp4_ilst(filepath)
         if signature == "asf":
@@ -2526,4 +2837,4 @@ def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
 
 def get_audio_codec_details_field_count() -> int:
     """Return estimated field count for audio codec details module."""
-    return 600  # Expanded Phase 2 target
+    return 740  # Expanded Phase 2 target

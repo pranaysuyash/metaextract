@@ -19,7 +19,12 @@ import re
 import struct
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
-import yaml
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +162,10 @@ def _is_autonomous_related_file(filepath: str, filename: str) -> bool:
 def _extract_yaml_autonomous_metadata(filepath: str) -> Dict[str, Any]:
     """Extract autonomous metadata from YAML configuration files."""
     yaml_data = {'autonomous_yaml_format_present': True}
+
+    if not YAML_AVAILABLE:
+        yaml_data['autonomous_yaml_library_unavailable'] = True
+        return yaml_data
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
