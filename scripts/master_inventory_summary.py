@@ -24,6 +24,9 @@ INVENTORY_DIRS = [
     ("bwf_rf64_inventory", "bwf_rf64_summary.json"),
     ("pdf_inventory", "pdf_summary.json"),
     ("signature_inventory", "signature_summary.json"),
+    ("dicom_extended_inventory", "dicom_extended_summary.json"),
+    ("geospatial_inventory", "geospatial_summary.json"),
+    ("office_inventory", "office_summary.json"),
 ]
 
 

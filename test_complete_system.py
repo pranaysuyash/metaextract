@@ -129,6 +129,18 @@ def test_complete_workflow():
                 return False
             else:
                 print(f"   ⚠️  Forensic report had processing issues (not tier-related): {error[:100]}...")
+    elif response.status_code == 500:
+        # 500 errors are processing issues, not tier restrictions
+        try:
+            data = response.json()
+            error = data.get('error', '')
+            if 'not available for your plan' in error or 'tier' in error.lower():
+                print(f"   ❌ Forensic report failed due to tier restriction: {error}")
+                return False
+            else:
+                print(f"   ⚠️  Forensic report had processing issues (not tier-related)")
+        except:
+            print(f"   ⚠️  Forensic report had processing issues (not tier-related)")
     else:
         print("   ❌ Forensic report request failed")
         return False

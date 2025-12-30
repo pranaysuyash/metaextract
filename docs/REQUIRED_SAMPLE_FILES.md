@@ -49,6 +49,9 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - DSF/DSDIFF (DSD) audio with metadata blocks.
 - DSDIFF with PROP/CMPR/CHNL chunks and ID3 tag.
 
+## Document Metadata (PDF/Office)
+- PDF with AcroForm fields (text, checkbox, choice) and annotations.
+
 ## Forensics / Security
 - PNG/JPEG with C2PA (Content Credentials) manifest.
 - EXE/PE with Authenticode signature + version info.
