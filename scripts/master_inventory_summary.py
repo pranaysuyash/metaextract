@@ -56,6 +56,12 @@ INVENTORY_DIRS = [
     ("radar_inventory", "radar_summary.json"),
     ("music_inventory", "music_summary.json"),
     ("automotive_inventory", "automotive_summary.json"),
+    ("aerospace_inventory", "aerospace_summary.json"),
+    ("agriculture_inventory", "agriculture_summary.json"),
+    ("nuclear_inventory", "nuclear_summary.json"),
+    ("oceanography_inventory", "oceanography_summary.json"),
+    ("defense_inventory", "defense_summary.json"),
+    ("robotics_inventory", "robotics_summary.json"),
 ]
 
 

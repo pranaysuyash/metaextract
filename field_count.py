@@ -457,6 +457,30 @@ except:
     SCIENTIFIC_DICOM_FITS_ULTIMATE_ADVANCED_EXTENSION_AVAILABLE = False
 
 try:
+    from engineering_cad_registry import get_engineering_cad_registry_field_count
+    ENGINEERING_CAD_REGISTRY_AVAILABLE = True
+except:
+    ENGINEERING_CAD_REGISTRY_AVAILABLE = False
+
+try:
+    from financial_fintech_registry import get_financial_fintech_registry_field_count
+    FINANCIAL_FINTECH_REGISTRY_AVAILABLE = True
+except:
+    FINANCIAL_FINTECH_REGISTRY_AVAILABLE = False
+
+try:
+    from gaming_asset_registry import get_gaming_asset_registry_field_count
+    GAMING_ASSET_REGISTRY_AVAILABLE = True
+except:
+    GAMING_ASSET_REGISTRY_AVAILABLE = False
+
+try:
+    from legal_compliance_registry import get_legal_compliance_registry_field_count
+    LEGAL_COMPLIANCE_REGISTRY_AVAILABLE = True
+except:
+    LEGAL_COMPLIANCE_REGISTRY_AVAILABLE = False
+
+try:
     from video_professional_ultimate_advanced_extension_ii import get_video_professional_ultimate_advanced_extension_ii_field_count
     VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_EXTENSION_II_AVAILABLE = True
 except:
@@ -1132,6 +1156,62 @@ if BROADCAST_STANDARDS_REGISTRY_AVAILABLE:
     print(f'{"Broadcast Standards Registry":30s}: {broadcast_std_count:>5} fields')
 else:
     print(f'{"Broadcast Standards Registry":30s}: {0:>5} fields (pending)')
+
+if ENGINEERING_CAD_REGISTRY_AVAILABLE:
+    eng_cad_count = get_engineering_cad_registry_field_count()
+    fields3['Engineering CAD Registry (BIM/IFC)'] = eng_cad_count
+    print(f'{"Engineering CAD Registry (BIM/IFC)":30s}: {eng_cad_count:>5} fields')
+else:
+    print(f'{"Engineering CAD Registry (BIM/IFC)":30s}: {0:>5} fields (pending)')
+
+if FINANCIAL_FINTECH_REGISTRY_AVAILABLE:
+    fin_count = get_financial_fintech_registry_field_count()
+    fields3['Financial/FinTech Registry (XBRL)'] = fin_count
+    print(f'{"Financial/FinTech Registry (XBRL)":30s}: {fin_count:>5} fields')
+else:
+    print(f'{"Financial/FinTech Registry (XBRL)":30s}: {0:>5} fields (pending)')
+
+if GAMING_ASSET_REGISTRY_AVAILABLE:
+    gaming_count = get_gaming_asset_registry_field_count()
+    fields3['Gaming Asset Registry (Unity/UE)'] = gaming_count
+    print(f'{"Gaming Asset Registry (Unity/UE)":30s}: {gaming_count:>5} fields')
+else:
+    print(f'{"Gaming Asset Registry (Unity/UE)":30s}: {0:>5} fields (pending)')
+
+if LEGAL_COMPLIANCE_REGISTRY_AVAILABLE:
+    legal_count = get_legal_compliance_registry_field_count()
+    fields3['Legal Compliance Registry (E-Discovery)'] = legal_count
+    print(f'{"Legal Compliance Registry":30s}: {legal_count:>5} fields')
+else:
+    print(f'{"Legal Compliance Registry":30s}: {0:>5} fields (pending)')
+
+if ENGINEERING_CAD_REGISTRY_AVAILABLE:
+    eng_cad_count = get_engineering_cad_registry_field_count()
+    fields3['Engineering CAD Registry (BIM/IFC)'] = eng_cad_count
+    print(f'{"Engineering CAD Registry (BIM/IFC)":30s}: {eng_cad_count:>5} fields')
+else:
+    print(f'{"Engineering CAD Registry (BIM/IFC)":30s}: {0:>5} fields (pending)')
+
+if FINANCIAL_FINTECH_REGISTRY_AVAILABLE:
+    fin_count = get_financial_fintech_registry_field_count()
+    fields3['Financial/FinTech Registry (XBRL)'] = fin_count
+    print(f'{"Financial/FinTech Registry (XBRL)":30s}: {fin_count:>5} fields')
+else:
+    print(f'{"Financial/FinTech Registry (XBRL)":30s}: {0:>5} fields (pending)')
+
+if GAMING_ASSET_REGISTRY_AVAILABLE:
+    gaming_count = get_gaming_asset_registry_field_count()
+    fields3['Gaming Asset Registry (Unity/UE)'] = gaming_count
+    print(f'{"Gaming Asset Registry (Unity/UE)":30s}: {gaming_count:>5} fields')
+else:
+    print(f'{"Gaming Asset Registry (Unity/UE)":30s}: {0:>5} fields (pending)')
+
+if LEGAL_COMPLIANCE_REGISTRY_AVAILABLE:
+    legal_count = get_legal_compliance_registry_field_count()
+    fields3['Legal Compliance Registry (E-Discovery)'] = legal_count
+    print(f'{"Legal Compliance Registry":30s}: {legal_count:>5} fields')
+else:
+    print(f'{"Legal Compliance Registry":30s}: {0:>5} fields (pending)')
 
 if AUDIO_ULTIMATE_ADVANCED_AVAILABLE:
     audio_ultimate_adv_count = get_audio_ultimate_advanced_field_count()
