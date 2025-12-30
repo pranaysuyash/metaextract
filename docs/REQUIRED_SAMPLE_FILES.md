@@ -42,6 +42,9 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - MP3 with ID3v2.4 chapters (CHAP/CTOC).
 - MP3 with SYLT (synced lyrics), RVA2 (volume), PRIV, and PCST frames.
 - MP3 with ID3 advanced frames: COMR, GRID, SIGN, EQU2, MLLT, SEEK.
+- MP4/M4A with iTunes tags: stik/hdvd/pcst/so*/tv*.
+- MP4/M4A with chpl chapter list atom.
+- APEv2 with binary cover art and external items.
 - FLAC with PICTURE blocks and ReplayGain tags.
 - DSF/DSDIFF (DSD) audio with metadata blocks.
 - DSDIFF with PROP/CMPR/CHNL chunks and ID3 tag.

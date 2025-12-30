@@ -21,6 +21,9 @@ INVENTORY_DIRS = [
     ("web_standards_inventory", "web_standards_inventory.json"),
     ("device_hardware_inventory", "device_hardware_inventory.json"),
     ("social_media_inventory", "social_media_summary.json"),
+    ("bwf_rf64_inventory", "bwf_rf64_summary.json"),
+    ("pdf_inventory", "pdf_summary.json"),
+    ("signature_inventory", "signature_summary.json"),
 ]
 
 
@@ -109,8 +112,9 @@ def main():
     all_categories = []
     for dir_name, inv in inventories.items():
         source = dir_name.replace("_inventory", "").replace("_comprehensive", "")
-        categories = inv.get("categories") or inv.get("by_category", {})
-        if categories:
+        categories = inv.get("categories", {})
+        
+        if isinstance(categories, dict):
             for cat_name, cat_data in categories.items():
                 if isinstance(cat_data, dict):
                     count = cat_data.get("count", cat_data.get("tags", cat_data.get("fields", 0)))
@@ -118,6 +122,8 @@ def main():
                         count = len(count)
                     if count > 0:
                         all_categories.append((f"{source}/{cat_name}", count))
+        elif isinstance(categories, int):
+            pass  # Skip if categories is just a count
 
     all_categories.sort(key=lambda x: x[1], reverse=True)
 

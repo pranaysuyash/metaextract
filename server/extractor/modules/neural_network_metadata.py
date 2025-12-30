@@ -18,7 +18,13 @@ import re
 import struct
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
-import h5py
+
+# Optional imports
+try:
+    import h5py
+    H5PY_AVAILABLE = True
+except ImportError:
+    H5PY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +154,10 @@ def _is_neural_network_related_file(filepath: str, filename: str) -> bool:
 def _extract_hdf5_nn_metadata(filepath: str) -> Dict[str, Any]:
     """Extract neural network metadata from HDF5 model files."""
     hdf5_data = {'nn_hdf5_format_present': True}
+
+    if not H5PY_AVAILABLE:
+        hdf5_data['nn_hdf5_requires_h5py'] = True
+        return hdf5_data
 
     try:
         with h5py.File(filepath, 'r') as f:

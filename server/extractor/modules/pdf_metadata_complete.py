@@ -96,6 +96,9 @@ def extract_pdf_metadata_complete(filepath: str) -> Dict[str, Any]:
             reader = PdfReader(filepath)
             result.update(_extract_xmp_metadata(reader))
             result.update(_extract_security_info(reader))
+            result.update(_extract_pypdf_annotations(reader))
+            result.update(_extract_pypdf_forms(reader))
+            result.update(_extract_pypdf_outlines(reader))
         else:
             result['pypdf_not_available'] = True
 
@@ -341,6 +344,93 @@ def _extract_security_info(reader) -> Dict[str, Any]:
     return security
 
 
+def _extract_pypdf_annotations(reader) -> Dict[str, Any]:
+    """Extract annotations using pypdf."""
+    if not PYPDF_AVAILABLE:
+        return {}
+    annotation_types: Dict[str, int] = {}
+    flags = {"hidden": 0, "invisible": 0, "print": 0}
+    total_annotations = 0
+    try:
+        for page in reader.pages:
+            annots = page.get("/Annots") or []
+            for annot_ref in annots:
+                try:
+                    annot = annot_ref.get_object()
+                except Exception:
+                    annot = annot_ref
+                subtype = annot.get("/Subtype")
+                subtype_name = str(subtype) if subtype is not None else "Unknown"
+                annotation_types[subtype_name] = annotation_types.get(subtype_name, 0) + 1
+                total_annotations += 1
+                annot_flags = annot.get("/F")
+                if isinstance(annot_flags, int):
+                    if annot_flags & 0x2:
+                        flags["hidden"] += 1
+                    if annot_flags & 0x1:
+                        flags["invisible"] += 1
+                    if annot_flags & 0x4:
+                        flags["print"] += 1
+    except Exception as e:
+        return {"pdf_annotations_error": str(e)}
+    return {
+        "pdf_total_annotations_pypdf": total_annotations,
+        "pdf_annotation_types_pypdf": annotation_types,
+        "pdf_has_annotations_pypdf": total_annotations > 0,
+        "pdf_annotation_flags_pypdf": flags,
+    }
+
+
+def _extract_pypdf_forms(reader) -> Dict[str, Any]:
+    """Extract form fields using pypdf."""
+    if not PYPDF_AVAILABLE:
+        return {}
+    try:
+        fields = reader.get_fields() or {}
+    except Exception as e:
+        return {"pdf_forms_error": str(e)}
+    field_names = list(fields.keys())
+    field_types: Dict[str, int] = {}
+    for field in fields.values():
+        field_type = field.get("/FT") if isinstance(field, dict) else None
+        field_type_name = str(field_type) if field_type is not None else "Unknown"
+        field_types[field_type_name] = field_types.get(field_type_name, 0) + 1
+    return {
+        "pdf_form_field_count_pypdf": len(field_names),
+        "pdf_form_fields_pypdf": field_names[:20],
+        "pdf_has_forms_pypdf": len(field_names) > 0,
+        "pdf_form_field_types_pypdf": field_types,
+    }
+
+
+def _extract_pypdf_outlines(reader) -> Dict[str, Any]:
+    """Extract outline/bookmark info using pypdf."""
+    if not PYPDF_AVAILABLE:
+        return {}
+    try:
+        outlines = reader.outline
+    except Exception:
+        try:
+            outlines = reader.outlines
+        except Exception as e:
+            return {"pdf_outline_error": str(e)}
+
+    def count_items(items) -> int:
+        total = 0
+        for item in items:
+            if isinstance(item, list):
+                total += count_items(item)
+            else:
+                total += 1
+        return total
+
+    outline_count = count_items(outlines) if outlines is not None else 0
+    return {
+        "pdf_outline_count_pypdf": outline_count,
+        "pdf_has_outlines_pypdf": outline_count > 0,
+    }
+
+
 # Integration point for metadata_engine.py
 def extract_pdf_complete(filepath: str) -> Dict[str, Any]:
     """Main entry point for PDF metadata extraction."""
@@ -360,7 +450,8 @@ def get_pdf_complete_field_count() -> int:
     accessibility_fields = 3  # from _extract_accessibility
     xmp_fields = 8  # approximate from _extract_xmp_metadata
     security_fields = 4  # from _extract_security_info
+    pypdf_fields = 10  # annotations + forms + outlines (pypdf)
 
     return basic_fields + page_layout_fields + annotation_fields + form_fields + \
            bookmark_fields + embedded_fields + signature_fields + accessibility_fields + \
-           xmp_fields + security_fields
+           xmp_fields + security_fields + pypdf_fields

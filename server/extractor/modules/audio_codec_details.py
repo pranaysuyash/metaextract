@@ -86,6 +86,9 @@ MP4_TAG_MAP = {
     b"\xa9wrt": "composer",
     b"\xa9too": "encoder",
     b"\xa9cpy": "copyright",
+    b"\xa9grp": "grouping",
+    b"\xa9enc": "encoded_by",
+    b"\xa9lyr": "lyrics",
     b"aART": "album_artist",
     b"trkn": "track_number",
     b"disk": "disc_number",
@@ -97,12 +100,22 @@ MP4_TAG_MAP = {
     b"covr": "cover_art",
     b"desc": "description",
     b"ldes": "long_description",
-    b"\xa9lyr": "lyrics",
+    b"stik": "media_type",
+    b"hdvd": "hd_video",
+    b"pcst": "podcast",
+    b"tvsn": "tv_season",
+    b"tves": "tv_episode",
+    b"tvsh": "tv_show",
+    b"tvnn": "tv_network",
+    b"purd": "purchase_date",
+    b"soar": "sort_artist",
+    b"soal": "sort_album",
+    b"sonm": "sort_title",
     b"----": "freeform",
 }
 
 MP4_CONTAINER_ATOMS = {
-    b"moov", b"trak", b"mdia", b"minf", b"stbl", b"udta", b"meta", b"ilst"
+    b"moov", b"trak", b"mdia", b"minf", b"stbl", b"udta", b"meta", b"ilst", b"chpl", b"chap"
 }
 
 RIFF_INFO_TAGS = {
@@ -238,6 +251,7 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
         "seek_offset": None,
         "equalization": [],
         "mpeg_lookup_table": {},
+        "audio_seek_points": {},
         "other_frames": {},
     }
 
@@ -473,6 +487,16 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
                 result["signature"] = {
                     "group_symbol": frame_data[0],
                     "signature_length": max(0, len(frame_data) - 1),
+                }
+        elif frame_id_str == "ASPI":
+            if len(frame_data) >= 8:
+                data_start = struct.unpack(">I", frame_data[0:4])[0]
+                data_length = struct.unpack(">I", frame_data[4:8])[0]
+                index_data = frame_data[8:]
+                result["audio_seek_points"] = {
+                    "data_start": data_start,
+                    "data_length": data_length,
+                    "index_bytes": len(index_data),
                 }
         elif frame_id_str == "GRID":
             owner_bytes, rest = _split_terminated_bytes(frame_data, 0)
@@ -789,12 +813,33 @@ def _parse_ape_tag_data(data: bytes) -> Dict[str, Any]:
         offset = key_end + 1
         value = data[offset:offset + value_size]
         offset += value_size
-        is_text = (item_flags & 0x00000006) == 0
-        result["items"][key] = {
-            "value": value.decode("utf-8", errors="ignore") if is_text else value.hex(),
-            "is_text": is_text,
+        item_type = (item_flags >> 1) & 0x3
+        type_map = {0: "text", 1: "binary", 2: "external", 3: "reserved"}
+        entry: Dict[str, Any] = {
             "flags": item_flags,
+            "type": type_map.get(item_type, "unknown"),
         }
+        if item_type == 0:
+            entry["value"] = value.decode("utf-8", errors="ignore")
+        elif item_type == 1:
+            description = ""
+            data_bytes = value
+            if key.lower().startswith("cover art"):
+                split = value.split(b"\x00", 1)
+                if len(split) == 2:
+                    description = split[0].decode("utf-8", errors="ignore")
+                    data_bytes = split[1]
+            entry.update({
+                "description": description,
+                "data_size": len(data_bytes),
+                "data_preview": data_bytes[:16].hex(),
+            })
+        elif item_type == 2:
+            entry["value"] = value.decode("utf-8", errors="ignore")
+        else:
+            entry["value"] = value.hex()
+
+        result["items"][key] = entry
     return result
 
 
@@ -1722,35 +1767,38 @@ def _iter_mp4_atoms(f, start: int, size: int, max_depth: int) -> List[Tuple[byte
 
 
 def _parse_mp4_ilst(filepath: str) -> Dict[str, Any]:
-    result: Dict[str, Any] = {"tags": {}, "raw_tags": {}, "tag_count": 0}
+    result: Dict[str, Any] = {"tags": {}, "raw_tags": {}, "tag_count": 0, "chapters": []}
     ilst_location = _find_mp4_ilst(filepath)
-    if not ilst_location:
-        return result
-    start, size = ilst_location
+    start = None
+    size = None
+    if ilst_location:
+        start, size = ilst_location
     try:
         with open(filepath, "rb") as f:
-            f.seek(start, 0)
-            end = start + size
-            while f.tell() + 8 <= end:
-                item_header = f.read(8)
-                if len(item_header) < 8:
-                    break
-                item_size = struct.unpack(">I", item_header[0:4])[0]
-                item_type = item_header[4:8]
-                if item_size < 8:
-                    break
-                item_start = f.tell()
-                item_end = item_start + (item_size - 8)
-                item_data = _parse_mp4_item(f, item_start, item_size - 8, item_type)
-                friendly = MP4_TAG_MAP.get(item_type, item_type.decode("latin1", errors="ignore"))
-                result["raw_tags"][item_type.decode("latin1", errors="ignore")] = item_data
-                if friendly == "freeform":
-                    for freeform_key, freeform_value in item_data.get("freeform", {}).items():
-                        result["tags"][freeform_key] = freeform_value
-                else:
-                    result["tags"][friendly] = item_data.get("value")
-                f.seek(item_end, 0)
-            result["tag_count"] = len(result["tags"])
+            if start is not None and size is not None:
+                f.seek(start, 0)
+                end = start + size
+                while f.tell() + 8 <= end:
+                    item_header = f.read(8)
+                    if len(item_header) < 8:
+                        break
+                    item_size = struct.unpack(">I", item_header[0:4])[0]
+                    item_type = item_header[4:8]
+                    if item_size < 8:
+                        break
+                    item_start = f.tell()
+                    item_end = item_start + (item_size - 8)
+                    item_data = _parse_mp4_item(f, item_start, item_size - 8, item_type)
+                    friendly = MP4_TAG_MAP.get(item_type, item_type.decode("latin1", errors="ignore"))
+                    result["raw_tags"][item_type.decode("latin1", errors="ignore")] = item_data
+                    if friendly == "freeform":
+                        for freeform_key, freeform_value in item_data.get("freeform", {}).items():
+                            result["tags"][freeform_key] = freeform_value
+                    else:
+                        result["tags"][friendly] = item_data.get("value")
+                    f.seek(item_end, 0)
+                result["tag_count"] = len(result["tags"])
+            result["chapters"] = _parse_mp4_chapter_list(f)
     except Exception as e:
         return result
     return result
@@ -1797,12 +1845,26 @@ def _parse_mp4_item(f, start: int, size: int, item_type: Optional[bytes] = None)
         payload = raw_payloads[0]
         if len(payload) >= 2:
             result["value"] = struct.unpack(">H", payload[0:2])[0]
-    elif item_type in [b"cpil", b"pgap"] and raw_payloads:
+    elif item_type in [b"cpil", b"pgap", b"pcst", b"hdvd"] and raw_payloads:
         result["value"] = bool(raw_payloads[0][0]) if raw_payloads[0] else None
     elif item_type == b"tmpo" and raw_payloads:
         payload = raw_payloads[0]
         if len(payload) >= 2:
             result["value"] = struct.unpack(">H", payload[0:2])[0]
+    elif item_type == b"stik" and raw_payloads:
+        media_code = raw_payloads[0][0] if raw_payloads[0] else 0
+        media_map = {
+            0: "movie",
+            1: "music",
+            2: "audiobook",
+            6: "music_video",
+            9: "movie",
+            10: "tv_show",
+            11: "booklet",
+            14: "ringtone",
+            21: "podcast",
+        }
+        result["value"] = {"code": media_code, "label": media_map.get(media_code, "unknown")}
     elif data_values:
         result["value"] = data_values[0] if len(data_values) == 1 else data_values
     if mean_value and name_value and data_values:
@@ -1827,6 +1889,37 @@ def _decode_mp4_data(data_type: int, data: bytes) -> Any:
     if len(data) == 4:
         return struct.unpack(">I", data)[0]
     return data.hex()
+
+
+def _parse_mp4_chapter_list(f) -> List[Dict[str, Any]]:
+    chapters = []
+    try:
+        atoms = _iter_mp4_atoms(f, 0, Path(f.name).stat().st_size, max_depth=3)
+        chpl_atoms = [a for a in atoms if a[0] == b"chpl"]
+        if not chpl_atoms:
+            return chapters
+        atom_type, start, size = chpl_atoms[0]
+        f.seek(start, 0)
+        payload = f.read(size)
+        if len(payload) < 8:
+            return chapters
+        entry_count = payload[4]
+        pos = 5
+        for _ in range(entry_count):
+            if pos + 9 > len(payload):
+                break
+            start_time = struct.unpack(">Q", payload[pos:pos + 8])[0]
+            title_len = payload[pos + 8]
+            pos += 9
+            title = payload[pos:pos + title_len].decode("utf-8", errors="ignore")
+            pos += title_len
+            chapters.append({
+                "start_time": start_time,
+                "title": title,
+            })
+        return chapters
+    except Exception:
+        return chapters
 
 
 def _parse_asf_header(filepath: str) -> Dict[str, Any]:
@@ -2837,4 +2930,4 @@ def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
 
 def get_audio_codec_details_field_count() -> int:
     """Return estimated field count for audio codec details module."""
-    return 740  # Expanded Phase 2 target
+    return 860  # Expanded Phase 2 target

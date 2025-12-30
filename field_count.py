@@ -203,6 +203,36 @@ try:
 except:
     ID3_FRAMES_COMPLETE_AVAILABLE = False
 
+try:
+    from geospatial_gis import get_geospatial_gis_field_count
+    GEOSPATIAL_GIS_AVAILABLE = True
+except:
+    GEOSPATIAL_GIS_AVAILABLE = False
+
+try:
+    from biometric_health import get_biometric_health_field_count
+    BIOMETRIC_HEALTH_AVAILABLE = True
+except:
+    BIOMETRIC_HEALTH_AVAILABLE = False
+
+try:
+    from scientific_dicom_extended import get_scientific_dicom_extended_field_count
+    SCIENTIFIC_DICOM_EXTENDED_AVAILABLE = True
+except:
+    SCIENTIFIC_DICOM_EXTENDED_AVAILABLE = False
+
+try:
+    from environmental_climate import get_environmental_climate_field_count
+    ENVIRONMENTAL_CLIMATE_AVAILABLE = True
+except:
+    ENVIRONMENTAL_CLIMATE_AVAILABLE = False
+
+try:
+    from materials_science import get_materials_science_field_count
+    MATERIALS_SCIENCE_AVAILABLE = True
+except:
+    MATERIALS_SCIENCE_AVAILABLE = False
+
 total = 0
 fields = {}
 
@@ -455,6 +485,21 @@ if PERCEPTUAL_COMP_AVAILABLE:
 
 if ID3_FRAMES_COMPLETE_AVAILABLE:
     fields3['ID3/Audio Tags (Complete)'] = get_id3_frames_field_count()
+
+if GEOSPATIAL_GIS_AVAILABLE:
+    fields3['Geospatial/GIS (Extended)'] = get_geospatial_gis_field_count()
+
+if BIOMETRIC_HEALTH_AVAILABLE:
+    fields3['Biometric/Health Records (Extended)'] = get_biometric_health_field_count()
+
+if SCIENTIFIC_DICOM_EXTENDED_AVAILABLE:
+    fields3['Scientific/DICOM (Extended)'] = get_scientific_dicom_extended_field_count()
+
+if ENVIRONMENTAL_CLIMATE_AVAILABLE:
+    fields3['Environmental/Climate (Extended)'] = get_environmental_climate_field_count()
+
+if MATERIALS_SCIENCE_AVAILABLE:
+    fields3['Materials Science (Extended)'] = get_materials_science_field_count()
 
 print()
 print('--- Specialized Modules ---')

@@ -20,8 +20,19 @@ import struct
 import os
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
-import h5py
-import numpy as np
+
+# Optional imports
+try:
+    import h5py
+    H5PY_AVAILABLE = True
+except ImportError:
+    H5PY_AVAILABLE = False
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +175,10 @@ def _extract_tensorflow_h5_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from TensorFlow HDF5 model."""
     tf_data = {'tensorflow_model_present': True}
 
+    if not H5PY_AVAILABLE:
+        tf_data['tensorflow_requires_h5py'] = True
+        return tf_data
+
     try:
         with h5py.File(filepath, 'r') as f:
             # Extract model configuration
@@ -198,7 +213,12 @@ def _extract_tensorflow_h5_metadata(filepath: str) -> Dict[str, Any]:
                     if 'kernel' in obj:
                         kernel_shape = obj['kernel'].shape
                         if len(kernel_shape) >= 2:
-                            params = np.prod(kernel_shape)
+                            if NUMPY_AVAILABLE:
+                                params = __import__('numpy').prod(kernel_shape)
+                            else:
+                                params = 1
+                                for dim in kernel_shape:
+                                    params *= dim
                             total_params += params
 
             f.visititems(count_layers)
@@ -375,6 +395,10 @@ def _analyze_model_architecture(filepath: str, model_type: Optional[str]) -> Dic
     """Analyze model architecture where possible."""
     arch_data = {}
 
+    if not H5PY_AVAILABLE and model_type == 'tensorflow_h5':
+        arch_data['model_architecture_requires_h5py'] = True
+        return arch_data
+
     try:
         if model_type == 'tensorflow_h5':
             # Additional TensorFlow analysis
@@ -405,7 +429,7 @@ def _extract_hdf5_dataset(dataset) -> Any:
             data = dataset[()]
             if isinstance(data, bytes):
                 return data.decode('utf-8', errors='ignore')
-            elif isinstance(data, np.ndarray) and data.dtype.kind in 'SU':
+            elif NUMPY_AVAILABLE and isinstance(data, __import__('numpy').ndarray) and data.dtype.kind in 'SU':
                 return data.tolist()
             else:
                 return data.tolist() if hasattr(data, 'tolist') else str(data)
