@@ -30,6 +30,11 @@ INVENTORY_DIRS = [
     ("forensic_inventory", "forensic_summary.json"),
     ("mobile_inventory", "mobile_summary.json"),
     ("font_inventory", "font_summary.json"),
+    ("database_inventory", "database_summary.json"),
+    ("containers_inventory", "containers_summary.json"),
+    ("scientific_inventory", "scientific_summary.json"),
+    ("email_inventory", "email_summary.json"),
+    ("archive_inventory", "archive_summary.json"),
 ]
 
 

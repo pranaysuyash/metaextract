@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Layout } from "@/components/layout";
-import { UploadZone } from "@/components/upload-zone";
+import { EnhancedUploadZone } from "@/components/enhanced-upload-zone";
 import { PRICING_TIERS, CREDIT_PACKS, CREDIT_EXPLANATION } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Database, Lock, Globe, Info, MoveRight, ScanLine, Terminal, Cpu, Share2, FileCode, ShieldAlert, Zap, CheckCircle2, Loader2, Coins } from "lucide-react";
@@ -8,6 +8,7 @@ import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 function getSessionId(): string {
   let sessionId = localStorage.getItem("metaextract_session_id");
@@ -43,6 +44,15 @@ export default function Home() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [creditPackLoading, setCreditPackLoading] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleUploadResults = (results: any[]) => {
+    if (results.length > 0) {
+      // Store the first result in session storage and navigate to results
+      sessionStorage.setItem('currentMetadata', JSON.stringify(results[0]));
+      navigate('/results');
+    }
+  };
 
   const handleCreditPurchase = async (packName: string) => {
     const packKey = packName.toLowerCase() as "single" | "batch" | "bulk";
@@ -80,7 +90,7 @@ export default function Home() {
 
   const handleCheckout = async (tier: string) => {
     if (tier === "free") {
-      document.getElementById("file-upload")?.click();
+      document.getElementById("enhanced-upload")?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
 
@@ -194,7 +204,7 @@ export default function Home() {
 
                 <div className="flex gap-4 items-center">
                   <Button
-                    onClick={() => document.getElementById("file-upload")?.click()}
+                    onClick={() => document.getElementById("enhanced-upload")?.scrollIntoView({ behavior: 'smooth' })}
                     className="h-14 px-8 bg-primary hover:bg-white text-black font-bold text-lg rounded shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all transform hover:-translate-y-1"
                   >
                     START EXTRACTION
@@ -213,8 +223,12 @@ export default function Home() {
               className="md:col-span-5 relative h-[500px] flex items-center justify-center"
             >
               <div className="absolute inset-0 border border-white/10 rounded-3xl bg-black/20 backdrop-blur-sm -rotate-6 z-0"></div>
-              <div className="relative z-10 w-full transform rotate-3 transition-transform hover:rotate-0 duration-500">
-                <UploadZone />
+              <div id="enhanced-upload" className="relative z-10 w-full transform rotate-3 transition-transform hover:rotate-0 duration-500">
+                <EnhancedUploadZone 
+                  onResults={handleUploadResults}
+                  tier="free"
+                  maxFiles={1}
+                />
 
                 {/* Decorative orbiting elements */}
                 <motion.div

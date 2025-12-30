@@ -306,6 +306,42 @@ try:
 except:
     AUDIO_METADATA_ADVANCED_AVAILABLE = False
 
+try:
+    from scientific_comprehensive_advanced import get_scientific_comprehensive_advanced_field_count
+    SCIENTIFIC_COMPREHENSIVE_ADVANCED_AVAILABLE = True
+except:
+    SCIENTIFIC_COMPREHENSIVE_ADVANCED_AVAILABLE = False
+
+try:
+    from forensic_security_comprehensive_advanced import get_forensic_security_comprehensive_advanced_field_count
+    FORENSIC_SECURITY_COMPREHENSIVE_ADVANCED_AVAILABLE = True
+except:
+    FORENSIC_SECURITY_COMPREHENSIVE_ADVANCED_AVAILABLE = False
+
+try:
+    from medical_healthcare_comprehensive_advanced import get_medical_healthcare_comprehensive_advanced_field_count
+    MEDICAL_HEALTHCARE_COMPREHENSIVE_ADVANCED_AVAILABLE = True
+except:
+    MEDICAL_HEALTHCARE_COMPREHENSIVE_ADVANCED_AVAILABLE = False
+
+try:
+    from environmental_climate_comprehensive_advanced import get_environmental_climate_comprehensive_advanced_field_count
+    ENVIRONMENTAL_CLIMATE_COMPREHENSIVE_ADVANCED_AVAILABLE = True
+except:
+    ENVIRONMENTAL_CLIMATE_COMPREHENSIVE_ADVANCED_AVAILABLE = False
+
+try:
+    from makernotes_ultimate_advanced import get_makernotes_ultimate_advanced_field_count
+    MAKERNOTES_ULTIMATE_ADVANCED_AVAILABLE = True
+except:
+    MAKERNOTES_ULTIMATE_ADVANCED_AVAILABLE = False
+
+try:
+    from video_professional_ultimate_advanced import get_video_professional_ultimate_advanced_field_count
+    VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_AVAILABLE = True
+except:
+    VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_AVAILABLE = False
+
 total = 0
 fields = {}
 
@@ -656,6 +692,48 @@ if AUDIO_METADATA_ADVANCED_AVAILABLE:
     print(f'{"Audio Metadata (Advanced)":30s}: {audio_metadata_adv_count:>5} fields')
 else:
     print(f'{"Audio Metadata (Advanced)":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_COMPREHENSIVE_ADVANCED_AVAILABLE:
+    scientific_comp_adv_count = get_scientific_comprehensive_advanced_field_count()
+    fields3['Scientific Comprehensive (Advanced)'] = scientific_comp_adv_count
+    print(f'{"Scientific Comprehensive (Advanced)":30s}: {scientific_comp_adv_count:>5} fields')
+else:
+    print(f'{"Scientific Comprehensive (Advanced)":30s}: {0:>5} fields (pending)')
+
+if FORENSIC_SECURITY_COMPREHENSIVE_ADVANCED_AVAILABLE:
+    forensic_sec_comp_adv_count = get_forensic_security_comprehensive_advanced_field_count()
+    fields3['Forensic Security Comprehensive (Advanced)'] = forensic_sec_comp_adv_count
+    print(f'{"Forensic Security Comprehensive (Advanced)":30s}: {forensic_sec_comp_adv_count:>5} fields')
+else:
+    print(f'{"Forensic Security Comprehensive (Advanced)":30s}: {0:>5} fields (pending)')
+
+if MEDICAL_HEALTHCARE_COMPREHENSIVE_ADVANCED_AVAILABLE:
+    medical_health_comp_adv_count = get_medical_healthcare_comprehensive_advanced_field_count()
+    fields3['Medical Healthcare Comprehensive (Advanced)'] = medical_health_comp_adv_count
+    print(f'{"Medical Healthcare Comprehensive (Advanced)":30s}: {medical_health_comp_adv_count:>5} fields')
+else:
+    print(f'{"Medical Healthcare Comprehensive (Advanced)":30s}: {0:>5} fields (pending)')
+
+if ENVIRONMENTAL_CLIMATE_COMPREHENSIVE_ADVANCED_AVAILABLE:
+    environmental_climate_comp_adv_count = get_environmental_climate_comprehensive_advanced_field_count()
+    fields3['Environmental Climate Comprehensive (Advanced)'] = environmental_climate_comp_adv_count
+    print(f'{"Environmental Climate Comprehensive (Advanced)":30s}: {environmental_climate_comp_adv_count:>5} fields')
+else:
+    print(f'{"Environmental Climate Comprehensive (Advanced)":30s}: {0:>5} fields (pending)')
+
+if MAKERNOTES_ULTIMATE_ADVANCED_AVAILABLE:
+    makernotes_ultimate_adv_count = get_makernotes_ultimate_advanced_field_count()
+    fields3['MakerNotes Ultimate (Advanced)'] = makernotes_ultimate_adv_count
+    print(f'{"MakerNotes Ultimate (Advanced)":30s}: {makernotes_ultimate_adv_count:>5} fields')
+else:
+    print(f'{"MakerNotes Ultimate (Advanced)":30s}: {0:>5} fields (pending)')
+
+if VIDEO_PROFESSIONAL_ULTIMATE_ADVANCED_AVAILABLE:
+    video_prof_ultimate_adv_count = get_video_professional_ultimate_advanced_field_count()
+    fields3['Video Professional Ultimate (Advanced)'] = video_prof_ultimate_adv_count
+    print(f'{"Video Professional Ultimate (Advanced)":30s}: {video_prof_ultimate_adv_count:>5} fields')
+else:
+    print(f'{"Video Professional Ultimate (Advanced)":30s}: {0:>5} fields (pending)')
 
 print()
 print('--- All Specialized Modules Summary ---')

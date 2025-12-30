@@ -61,6 +61,13 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 ## Forensics / Security
 - PNG/JPEG with C2PA (Content Credentials) manifest.
 - EXE/PE with Authenticode signature + version info.
+- Windows Prefetch `.pf` sample (SCCA signature).
+- Windows EVTX sample (ElfFile signature).
+- Windows Registry hive sample (regf header).
+- Windows LNK shortcut file (Shell Link header).
+- PCAP and PCAPNG captures with valid headers.
+- Browser SQLite DB (Chrome History / Firefox places.sqlite).
+- Apple plist (binary and XML) browser artifacts.
 
 ---
 Add new entries here whenever an implementation depends on real-world samples.

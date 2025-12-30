@@ -5,6 +5,9 @@ import { PaymentModal } from '@/components/payment-modal';
 import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
 import { MetadataComparisonDisplay } from '@/components/metadata-comparison-display';
 import { AdvancedResultsIntegration } from '@/components/advanced-results-integration';
+import { MetadataExplorer, convertMetadataToProcessedFile } from '@/components/metadata-explorer';
+import { UIAdaptationProvider, ContextBanner, ContextIndicator } from '@/components/ui-adaptation-controller';
+import { ErrorBoundary, MetadataErrorBoundary } from '@/components/error-boundary';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -162,6 +165,18 @@ export default function Results() {
   const [timelineResult, setTimelineResult] = useState<any>(null);
   const [forensicReport, setForensicReport] = useState<any>(null);
   const [isProcessingAdvanced, setIsProcessingAdvanced] = useState(false);
+
+  // Metadata explorer state
+  const [explorerViewMode, setExplorerViewMode] = useState<'simple' | 'advanced' | 'raw'>('advanced');
+  const [processedFiles, setProcessedFiles] = useState<any[]>([]);
+
+  // Initialize processed files for metadata explorer
+  useEffect(() => {
+    if (metadata) {
+      const processedFile = convertMetadataToProcessedFile(metadata, 'current-file');
+      setProcessedFiles([processedFile]);
+    }
+  }, [metadata]);
 
   const handleDownload = () => {
     if (isUnlocked) {
@@ -517,251 +532,273 @@ export default function Results() {
   );
 
   return (
-    <Layout>
-      <div className='relative min-h-[calc(100vh-64px)] overflow-hidden'>
-        <div className='absolute inset-0 z-0 pointer-events-none'>
-          <div className='absolute inset-0 bg-background/90 z-10'></div>
-          <img
-            src={generatedBackground}
-            alt='Background'
-            className='w-full h-full object-cover opacity-10 mix-blend-screen scale-110'
-          />
-        </div>
-
-        <div className='container mx-auto px-4 py-8 relative z-10 h-full flex flex-col'>
-          <div className='flex flex-col md:flex-row md:items-center justify-between mb-8 pb-6 border-b border-white/10 gap-4'>
-            <div className='flex items-center gap-4'>
-              <div className='w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center'>
-                <Cpu className='w-6 h-6 text-primary' />
-              </div>
-              <div>
-                <h1
-                  className='text-xl font-bold text-white font-mono tracking-tight'
-                  data-testid='text-filename'
-                >
-                  {metadata.filename}
-                </h1>
-                <div className='flex gap-4 text-xs text-slate-500 font-mono mt-1'>
-                  <span data-testid='text-filesize'>
-                    SIZE: {metadata.filesize}
-                  </span>
-                  <span data-testid='text-filetype'>
-                    TYPE: {metadata.filetype}
-                  </span>
-                  <span className='text-primary' data-testid='text-hash'>
-                    SHA256:{' '}
-                    {metadata.file_integrity?.sha256?.substring(0, 12) ||
-                      metadata.hash?.substring(0, 12)}
-                    ...
-                  </span>
-                </div>
-              </div>
+    <UIAdaptationProvider initialMetadata={metadata}>
+      <Layout>
+        <ErrorBoundary level="page">
+          <div className='relative min-h-[calc(100vh-64px)] overflow-hidden'>
+            <div className='absolute inset-0 z-0 pointer-events-none'>
+              <div className='absolute inset-0 bg-background/90 z-10'></div>
+              <img
+                src={generatedBackground}
+                alt='Background'
+                className='w-full h-full object-cover opacity-10 mix-blend-screen scale-110'
+              />
             </div>
 
-            <div className='flex gap-3'>
-              {isProcessingAdvanced && (
-                <div className='flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono'>
-                  <Zap className='w-4 h-4 animate-pulse' />
-                  PROCESSING_ADVANCED_ANALYSIS...
-                </div>
-              )}
-              <Button
-                onClick={handleDownload}
-                className={cn(
-                  'gap-2 font-mono text-xs tracking-wider',
-                  isUnlocked
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'bg-primary hover:bg-primary/90 text-black'
-                )}
-                data-testid='button-download'
-              >
-                {isUnlocked ? (
-                  <Download className='w-4 h-4' />
-                ) : (
-                  <Lock className='w-4 h-4' />
-                )}
-                {isUnlocked ? 'DOWNLOAD_REPORT' : 'UNLOCK_FULL_DATA'}
-              </Button>
-            </div>
-          </div>
-
-          <div className='flex-1 flex flex-col md:flex-row gap-8 min-h-0'>
-            <div className='w-full md:w-72 shrink-0 space-y-4 md:overflow-y-auto pr-2 custom-scrollbar'>
-              <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
-                <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
-                  Analysis Summary
-                </h3>
-                <div className='space-y-4'>
+            <div className='container mx-auto px-4 py-8 relative z-10 h-full flex flex-col'>
+              <div className='flex flex-col md:flex-row md:items-center justify-between mb-8 pb-6 border-b border-white/10 gap-4'>
+                <div className='flex items-center gap-4'>
+                  <div className='w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center'>
+                    <Cpu className='w-6 h-6 text-primary' />
+                  </div>
                   <div>
-                    <div className='text-[10px] text-slate-500 uppercase'>
-                      Total Fields
-                    </div>
-                    <div
-                      className='text-2xl font-mono text-primary font-bold'
-                      data-testid='text-total-fields'
+                    <h1
+                      className='text-xl font-bold text-white font-mono tracking-tight'
+                      data-testid='text-filename'
                     >
-                      {totalFields}
+                      {metadata.filename}
+                    </h1>
+                    <div className='flex gap-4 text-xs text-slate-500 font-mono mt-1'>
+                      <span data-testid='text-filesize'>
+                        SIZE: {metadata.filesize}
+                      </span>
+                      <span data-testid='text-filetype'>
+                        TYPE: {metadata.filetype}
+                      </span>
+                      <span className='text-primary' data-testid='text-hash'>
+                        SHA256:{' '}
+                        {metadata.file_integrity?.sha256?.substring(0, 12) ||
+                          metadata.hash?.substring(0, 12)}
+                        ...
+                      </span>
+                      <ContextIndicator />
                     </div>
                   </div>
-                  <div>
-                    <div className='text-[10px] text-slate-500 uppercase'>
-                      File Integrity
+                </div>
+
+                <div className='flex gap-3'>
+                  {isProcessingAdvanced && (
+                    <div className='flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono'>
+                      <Zap className='w-4 h-4 animate-pulse' />
+                      PROCESSING_ADVANCED_ANALYSIS...
                     </div>
-                    <div className='text-sm font-mono text-emerald-500 font-bold'>
-                      VERIFIED [MD5+SHA256]
-                    </div>
-                  </div>
-                  <div>
-                    <div className='text-[10px] text-slate-500 uppercase'>
-                      Location Data
-                    </div>
-                    <div className='text-sm font-mono text-white flex items-center gap-2'>
-                      <MapPin
-                        className={`w-3 h-3 ${hasGPS ? 'text-primary' : 'text-slate-600'
-                          }`}
-                      />
-                      {hasGPS ? 'Present' : 'Not Found'}
-                    </div>
-                  </div>
-                  {metadata.calculated && (
-                    <div>
-                      <div className='text-[10px] text-slate-500 uppercase'>
-                        Dimensions
+                  )}
+                  <Button
+                    onClick={handleDownload}
+                    className={cn(
+                      'gap-2 font-mono text-xs tracking-wider',
+                      isUnlocked
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : 'bg-primary hover:bg-primary/90 text-black'
+                    )}
+                    data-testid='button-download'
+                  >
+                    {isUnlocked ? (
+                      <Download className='w-4 h-4' />
+                    ) : (
+                      <Lock className='w-4 h-4' />
+                    )}
+                    {isUnlocked ? 'DOWNLOAD_REPORT' : 'UNLOCK_FULL_DATA'}
+                  </Button>
+                </div>
+              </div>
+
+              <ContextBanner />
+
+              <div className='flex-1 flex flex-col md:flex-row gap-8 min-h-0'>
+                <div className='w-full md:w-72 shrink-0 space-y-4 md:overflow-y-auto pr-2 custom-scrollbar'>
+                  <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
+                    <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
+                      Analysis Summary
+                    </h3>
+                    <div className='space-y-4'>
+                      <div>
+                        <div className='text-[10px] text-slate-500 uppercase'>
+                          Total Fields
+                        </div>
+                        <div
+                          className='text-2xl font-mono text-primary font-bold'
+                          data-testid='text-total-fields'
+                        >
+                          {totalFields}
+                        </div>
                       </div>
-                      <div className='text-sm font-mono text-white'>
-                        {metadata.calculated.megapixels
-                          ? `${metadata.calculated.megapixels} MP`
-                          : 'N/A'}
-                        {metadata.calculated.aspect_ratio &&
-                          ` (${metadata.calculated.aspect_ratio})`}
+                      <div>
+                        <div className='text-[10px] text-slate-500 uppercase'>
+                          File Integrity
+                        </div>
+                        <div className='text-sm font-mono text-emerald-500 font-bold'>
+                          VERIFIED [MD5+SHA256]
+                        </div>
+                      </div>
+                      <div>
+                        <div className='text-[10px] text-slate-500 uppercase'>
+                          Location Data
+                        </div>
+                        <div className='text-sm font-mono text-white flex items-center gap-2'>
+                          <MapPin
+                            className={`w-3 h-3 ${hasGPS ? 'text-primary' : 'text-slate-600'
+                              }`}
+                          />
+                          {hasGPS ? 'Present' : 'Not Found'}
+                        </div>
+                      </div>
+                      {metadata.calculated && (
+                        <div>
+                          <div className='text-[10px] text-slate-500 uppercase'>
+                            Dimensions
+                          </div>
+                          <div className='text-sm font-mono text-white'>
+                            {metadata.calculated.megapixels
+                              ? `${metadata.calculated.megapixels} MP`
+                              : 'N/A'}
+                            {metadata.calculated.aspect_ratio &&
+                              ` (${metadata.calculated.aspect_ratio})`}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <div className='text-[10px] text-slate-500 uppercase'>
+                          Advanced Analysis
+                        </div>
+                        <div className='text-sm font-mono text-white flex items-center gap-2'>
+                          <Eye
+                            className={`w-3 h-3 ${advancedAnalysis ? 'text-primary' : 'text-slate-600'
+                              }`}
+                          />
+                          {advancedAnalysis ? 'Available' : 'Not Run'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {hasGPS && metadata.gps?.google_maps_url && (
+                    <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
+                      <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
+                        GPS Location
+                      </h3>
+                      <div className='space-y-2 font-mono text-xs'>
+                        <div className='text-slate-400'>
+                          <span className='text-slate-600'>LAT:</span>{' '}
+                          {metadata.gps.latitude_decimal?.toFixed(6)}
+                        </div>
+                        <div className='text-slate-400'>
+                          <span className='text-slate-600'>LON:</span>{' '}
+                          {metadata.gps.longitude_decimal?.toFixed(6)}
+                        </div>
+                        <a
+                          href={metadata.gps.google_maps_url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mt-3'
+                          data-testid='link-google-maps'
+                        >
+                          <MapPin className='w-3 h-3' /> View on Maps{' '}
+                          <ExternalLink className='w-3 h-3' />
+                        </a>
                       </div>
                     </div>
                   )}
-                  <div>
-                    <div className='text-[10px] text-slate-500 uppercase'>
-                      Advanced Analysis
+
+                  <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
+                    <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
+                      File Preview
+                    </h3>
+                    <div className='aspect-square bg-black/50 rounded flex items-center justify-center border border-white/5 mb-2 relative overflow-hidden group'>
+                      <div className='absolute inset-0 bg-grid opacity-20'></div>
+                      <ImageIcon className='w-8 h-8 text-slate-600 group-hover:text-primary transition-colors' />
                     </div>
-                    <div className='text-sm font-mono text-white flex items-center gap-2'>
-                      <Eye
-                        className={`w-3 h-3 ${advancedAnalysis ? 'text-primary' : 'text-slate-600'
-                          }`}
-                      />
-                      {advancedAnalysis ? 'Available' : 'Not Run'}
+                    <div className='text-[10px] text-slate-500 text-center font-mono'>
+                      ZERO_DATA_RETENTION
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {hasGPS && metadata.gps?.google_maps_url && (
-                <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
-                  <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
-                    GPS Location
-                  </h3>
-                  <div className='space-y-2 font-mono text-xs'>
-                    <div className='text-slate-400'>
-                      <span className='text-slate-600'>LAT:</span>{' '}
-                      {metadata.gps.latitude_decimal?.toFixed(6)}
+                <div className='flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl'>
+                  <Tabs defaultValue='all' className='flex-1 flex flex-col'>
+                    <div className='flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4'>
+                      <TabsList className='bg-white/5 border border-white/5 h-9 w-full md:w-auto'>
+                        <TabsTrigger
+                          value='all'
+                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
+                          data-testid='tab-all'
+                        >
+                          ALL
+                          {metadata.metadata_comparison?.summary?.overall_status ===
+                            'suspicious' && (
+                              <div className='absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full'></div>
+                            )}
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value='explorer'
+                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
+                          data-testid='tab-explorer'
+                        >
+                          EXPLORER
+                          <div className='absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full'></div>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value='advanced'
+                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
+                          data-testid='tab-advanced'
+                        >
+                          ADVANCED
+                          {advancedAnalysis && (
+                            <div className='absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full'></div>
+                          )}
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value='forensic'
+                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
+                          data-testid='tab-forensic'
+                        >
+                          FORENSIC
+                          {metadata.metadata_comparison?.summary?.overall_status ===
+                            'suspicious' && (
+                              <div className='absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full'></div>
+                            )}
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value='technical'
+                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black'
+                          data-testid='tab-technical'
+                        >
+                          TECHNICAL
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value='raw'
+                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black'
+                          data-testid='tab-raw'
+                        >
+                          RAW
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <div className='relative w-64'>
+                        <Search className='absolute left-2.5 top-2.5 h-3 w-3 text-slate-500' />
+                        <input
+                          type='text'
+                          placeholder='FILTER_FIELDS...'
+                          className='w-full bg-black/40 border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-0 outline-none font-mono'
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          data-testid='input-search'
+                        />
+                      </div>
                     </div>
-                    <div className='text-slate-400'>
-                      <span className='text-slate-600'>LON:</span>{' '}
-                      {metadata.gps.longitude_decimal?.toFixed(6)}
-                    </div>
-                    <a
-                      href={metadata.gps.google_maps_url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mt-3'
-                      data-testid='link-google-maps'
-                    >
-                      <MapPin className='w-3 h-3' /> View on Maps{' '}
-                      <ExternalLink className='w-3 h-3' />
-                    </a>
-                  </div>
-                </div>
-              )}
 
-              <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
-                <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
-                  File Preview
-                </h3>
-                <div className='aspect-square bg-black/50 rounded flex items-center justify-center border border-white/5 mb-2 relative overflow-hidden group'>
-                  <div className='absolute inset-0 bg-grid opacity-20'></div>
-                  <ImageIcon className='w-8 h-8 text-slate-600 group-hover:text-primary transition-colors' />
-                </div>
-                <div className='text-[10px] text-slate-500 text-center font-mono'>
-                  ZERO_DATA_RETENTION
-                </div>
-              </div>
-            </div>
-
-            <div className='flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl'>
-              <Tabs defaultValue='all' className='flex-1 flex flex-col'>
-                <div className='flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4'>
-                  <TabsList className='bg-white/5 border border-white/5 h-9 w-full md:w-auto'>
-                    <TabsTrigger
-                      value='all'
-                      className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                      data-testid='tab-all'
-                    >
-                      ALL
-                      {metadata.metadata_comparison?.summary?.overall_status ===
-                        'suspicious' && (
-                          <div className='absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full'></div>
-                        )}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value='advanced'
-                      className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                      data-testid='tab-advanced'
-                    >
-                      ADVANCED
-                      {advancedAnalysis && (
-                        <div className='absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full'></div>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value='forensic'
-                      className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                      data-testid='tab-forensic'
-                    >
-                      FORENSIC
-                      {metadata.metadata_comparison?.summary?.overall_status ===
-                        'suspicious' && (
-                          <div className='absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full'></div>
-                        )}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value='technical'
-                      className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black'
-                      data-testid='tab-technical'
-                    >
-                      TECHNICAL
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value='raw'
-                      className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black'
-                      data-testid='tab-raw'
-                    >
-                      RAW
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <div className='relative w-64'>
-                    <Search className='absolute left-2.5 top-2.5 h-3 w-3 text-slate-500' />
-                    <input
-                      type='text'
-                      placeholder='FILTER_FIELDS...'
-                      className='w-full bg-black/40 border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-0 outline-none font-mono'
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      data-testid='input-search'
-                    />
-                  </div>
-                </div>
-
-                <div className='flex-1 overflow-hidden relative'>
-                  <ScrollArea className='h-full'>
-                    <div className='p-4 space-y-6'>
+                    <div className='flex-1 overflow-hidden relative'>
+                      <ScrollArea className='h-full'>
+                        <div className='p-4 space-y-6'>
+                          <TabsContent value='explorer' className='mt-0 h-[600px]'>
+                            <MetadataErrorBoundary>
+                              <MetadataExplorer
+                                files={processedFiles}
+                                viewMode={explorerViewMode}
+                                onViewModeChange={setExplorerViewMode}
+                              />
+                            </MetadataErrorBoundary>
+                          </TabsContent>
                       <TabsContent value='all' className='mt-0 space-y-6'>
                         {metadata.file_integrity && (
                           <section>
@@ -1551,6 +1588,8 @@ export default function Results() {
         onClose={() => setShowPayment(false)}
         onSuccess={onPaymentSuccess}
       />
+    </ErrorBoundary>
     </Layout>
+    </UIAdaptationProvider>
   );
 }

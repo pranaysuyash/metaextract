@@ -25,7 +25,6 @@ Covers:
 """
 
 import struct
-import hashlib
 import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
@@ -34,12 +33,32 @@ import os
 logger = logging.getLogger(__name__)
 
 
+def _read_header(filepath: str, size: int = 4096) -> bytes:
+    try:
+        with open(filepath, "rb") as f:
+            return f.read(size)
+    except Exception:
+        return b""
+
+
+def _bytes_to_printable(data: bytes) -> str:
+    return "".join(chr(b) if 32 <= b < 127 else "." for b in data)
+
+
 def extract_forensic_digital_advanced_metadata(filepath: str) -> Dict[str, Any]:
     """Extract advanced digital forensics and security metadata."""
     result = {}
 
     try:
         result['forensic_digital_advanced_detected'] = True
+
+        # File signature analysis
+        signature_data = _extract_file_signature_analysis(filepath)
+        result.update(signature_data)
+
+        # Executable metadata
+        executable_data = _extract_executable_metadata(filepath)
+        result.update(executable_data)
 
         # File system analysis
         fs_data = _extract_filesystem_forensics(filepath)
@@ -143,24 +162,274 @@ def _extract_filesystem_forensics(filepath: str) -> Dict[str, Any]:
     return fs_data
 
 
+def _extract_file_signature_analysis(filepath: str) -> Dict[str, Any]:
+    """Extract header signature and container indicators."""
+    signature_data: Dict[str, Any] = {}
+    header = _read_header(filepath, 4096)
+    if not header:
+        signature_data["forensic_file_signature_error"] = "header_unavailable"
+        return signature_data
+
+    head = header[:32]
+    signature_data["forensic_file_magic_hex"] = head.hex()
+    signature_data["forensic_file_magic_ascii"] = _bytes_to_printable(head)
+    signature_data["forensic_file_header_length"] = len(header)
+
+    printable = sum(1 for b in header if 32 <= b < 127 or b in (9, 10, 13))
+    signature_data["forensic_file_printable_ratio"] = round(printable / len(header), 4) if header else 0.0
+    signature_data["forensic_file_is_probably_text"] = signature_data["forensic_file_printable_ratio"] > 0.9
+
+    bom_type = None
+    if header.startswith(b"\xef\xbb\xbf"):
+        bom_type = "utf-8"
+    elif header.startswith(b"\xff\xfe"):
+        bom_type = "utf-16-le"
+    elif header.startswith(b"\xfe\xff"):
+        bom_type = "utf-16-be"
+    signature_data["forensic_file_contains_bom"] = bom_type is not None
+    signature_data["forensic_file_bom_type"] = bom_type
+
+    stripped = header.lstrip()
+    signature_data["forensic_file_contains_xml"] = stripped.startswith(b"<?xml")
+    signature_data["forensic_file_contains_json"] = stripped[:1] in [b"{", b"["]
+    signature_data["forensic_file_contains_plist"] = (
+        header.startswith(b"bplist00") or (b"<plist" in header and stripped.startswith(b"<?xml"))
+    )
+    signature_data["forensic_file_contains_ustar"] = len(header) >= 262 and header[257:262] == b"ustar"
+
+    pe = header.startswith(b"MZ")
+    elf = header.startswith(b"\x7fELF")
+    macho = header[:4] in [b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe"]
+    macho_fat = header[:4] in [b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"]
+    pdf = header.startswith(b"%PDF-")
+    zip_sig = header[:4] in [b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"]
+    rar_sig = header.startswith(b"Rar!\x1a\x07\x00") or header.startswith(b"Rar!\x1a\x07\x01\x00")
+    sevenz_sig = header.startswith(b"7z\xbc\xaf\x27\x1c")
+    gzip_sig = header.startswith(b"\x1f\x8b")
+    bzip2_sig = header.startswith(b"BZh")
+    xz_sig = header.startswith(b"\xfd7zXZ\x00")
+    ole_sig = header.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
+    sqlite_sig = header.startswith(b"SQLite format 3\x00")
+    evtx_sig = header.startswith(b"ElfFile")
+    regf_sig = header.startswith(b"regf")
+    prefetch_sig = len(header) >= 8 and header[4:8] == b"SCCA"
+    pcap_sig = header[:4] in [b"\xa1\xb2\xc3\xd4", b"\xd4\xc3\xb2\xa1", b"\xa1\xb2\x3c\x4d", b"\x4d\x3c\xb2\xa1"]
+    pcapng_sig = header.startswith(b"\x0a\x0d\x0d\x0a")
+    lnk_sig = header.startswith(
+        b"L\x00\x00\x00\x01\x14\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46"
+    )
+
+    signature_data.update({
+        "forensic_file_has_pe_header": pe,
+        "forensic_file_has_elf_header": elf,
+        "forensic_file_has_macho_header": macho,
+        "forensic_file_has_fat_macho_header": macho_fat,
+        "forensic_file_has_pdf_header": pdf,
+        "forensic_file_has_zip_header": zip_sig,
+        "forensic_file_has_rar_header": rar_sig,
+        "forensic_file_has_7z_header": sevenz_sig,
+        "forensic_file_has_gzip_header": gzip_sig,
+        "forensic_file_has_bzip2_header": bzip2_sig,
+        "forensic_file_has_xz_header": xz_sig,
+        "forensic_file_has_ole_header": ole_sig,
+        "forensic_file_has_sqlite_header": sqlite_sig,
+        "forensic_file_has_evtx_header": evtx_sig,
+        "forensic_file_has_registry_header": regf_sig,
+        "forensic_file_has_prefetch_header": prefetch_sig,
+        "forensic_file_has_pcap_header": pcap_sig,
+        "forensic_file_has_pcapng_header": pcapng_sig,
+        "forensic_file_has_link_header": lnk_sig,
+    })
+
+    matches = []
+    if pe:
+        matches.append("pe")
+    if elf:
+        matches.append("elf")
+    if macho or macho_fat:
+        matches.append("macho")
+    if pdf:
+        matches.append("pdf")
+    if zip_sig:
+        matches.append("zip")
+    if rar_sig:
+        matches.append("rar")
+    if sevenz_sig:
+        matches.append("7z")
+    if gzip_sig:
+        matches.append("gzip")
+    if bzip2_sig:
+        matches.append("bzip2")
+    if xz_sig:
+        matches.append("xz")
+    if ole_sig:
+        matches.append("ole")
+    if sqlite_sig:
+        matches.append("sqlite")
+    if evtx_sig:
+        matches.append("evtx")
+    if regf_sig:
+        matches.append("registry")
+    if prefetch_sig:
+        matches.append("prefetch")
+    if pcap_sig:
+        matches.append("pcap")
+    if pcapng_sig:
+        matches.append("pcapng")
+    if lnk_sig:
+        matches.append("lnk")
+
+    signature_data["forensic_file_type_guesses"] = matches
+    signature_data["forensic_file_signature_primary"] = matches[0] if matches else None
+    signature_data["forensic_file_is_executable"] = pe or elf or macho or macho_fat
+    signature_data["forensic_file_is_archive"] = zip_sig or rar_sig or sevenz_sig or gzip_sig or bzip2_sig or xz_sig
+    signature_data["forensic_file_is_document"] = pdf or ole_sig
+    signature_data["forensic_file_is_database"] = sqlite_sig
+    signature_data["forensic_file_is_compressed"] = gzip_sig or bzip2_sig or xz_sig
+
+    return signature_data
+
+
+def _extract_executable_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract basic executable header metadata."""
+    exe_data: Dict[str, Any] = {}
+    header = _read_header(filepath, 4096)
+    if not header:
+        return exe_data
+
+    if header.startswith(b"MZ"):
+        exe_data["forensic_executable_format"] = "PE"
+        try:
+            with open(filepath, "rb") as f:
+                f.seek(0x3C)
+                pe_offset_data = f.read(4)
+                if len(pe_offset_data) < 4:
+                    return exe_data
+                pe_offset = struct.unpack("<I", pe_offset_data)[0]
+                f.seek(pe_offset)
+                if f.read(4) != b"PE\x00\x00":
+                    return exe_data
+                coff = f.read(20)
+                if len(coff) < 20:
+                    return exe_data
+                machine, sections, timestamp, _, _, opt_size, characteristics = struct.unpack("<HHIIIHH", coff)
+                exe_data["forensic_pe_machine"] = machine
+                exe_data["forensic_pe_sections"] = sections
+                exe_data["forensic_pe_timestamp"] = timestamp
+                exe_data["forensic_pe_characteristics"] = characteristics
+                exe_data["forensic_pe_is_dll"] = bool(characteristics & 0x2000)
+                exe_data["forensic_pe_is_executable"] = bool(characteristics & 0x0002)
+                optional = f.read(opt_size)
+                if len(optional) >= 2:
+                    magic = struct.unpack("<H", optional[0:2])[0]
+                    exe_data["forensic_pe_optional_magic"] = magic
+                    if len(optional) >= 4:
+                        exe_data["forensic_pe_linker_version"] = f"{optional[2]}.{optional[3]}"
+                    if len(optional) >= 20:
+                        exe_data["forensic_pe_entrypoint"] = struct.unpack("<I", optional[16:20])[0]
+                    if magic == 0x10B and len(optional) >= 32:
+                        exe_data["forensic_pe_image_base"] = struct.unpack("<I", optional[28:32])[0]
+                        if len(optional) >= 72:
+                            exe_data["forensic_pe_subsystem"] = struct.unpack("<H", optional[68:70])[0]
+                            exe_data["forensic_pe_dll_characteristics"] = struct.unpack("<H", optional[70:72])[0]
+                    elif magic == 0x20B and len(optional) >= 36:
+                        exe_data["forensic_pe_image_base"] = struct.unpack("<Q", optional[24:32])[0]
+                        if len(optional) >= 92:
+                            exe_data["forensic_pe_subsystem"] = struct.unpack("<H", optional[88:90])[0]
+                            exe_data["forensic_pe_dll_characteristics"] = struct.unpack("<H", optional[90:92])[0]
+        except Exception:
+            return exe_data
+        return exe_data
+
+    if header.startswith(b"\x7fELF") and len(header) >= 18:
+        exe_data["forensic_executable_format"] = "ELF"
+        elf_class = header[4]
+        elf_data = header[5]
+        endian = "<" if elf_data == 1 else ">"
+        exe_data["forensic_elf_class"] = "64-bit" if elf_class == 2 else "32-bit"
+        exe_data["forensic_elf_endianness"] = "little" if endian == "<" else "big"
+        try:
+            if elf_class == 1 and len(header) >= 52:
+                e_type, e_machine = struct.unpack(endian + "HH", header[16:20])
+                e_entry = struct.unpack(endian + "I", header[24:28])[0]
+            elif elf_class == 2 and len(header) >= 64:
+                e_type, e_machine = struct.unpack(endian + "HH", header[16:20])
+                e_entry = struct.unpack(endian + "Q", header[24:32])[0]
+            else:
+                e_type, e_machine, e_entry = None, None, None
+            exe_data["forensic_elf_type"] = e_type
+            exe_data["forensic_elf_machine"] = e_machine
+            exe_data["forensic_elf_entrypoint"] = e_entry
+        except Exception:
+            return exe_data
+        return exe_data
+
+    macho_magics = {
+        b"\xfe\xed\xfa\xce": (">", False),
+        b"\xce\xfa\xed\xfe": ("<", False),
+        b"\xfe\xed\xfa\xcf": (">", True),
+        b"\xcf\xfa\xed\xfe": ("<", True),
+    }
+    if header[:4] in macho_magics:
+        endian, is_64 = macho_magics[header[:4]]
+        exe_data["forensic_executable_format"] = "Mach-O"
+        exe_data["forensic_macho_magic"] = header[:4].hex()
+        exe_data["forensic_macho_endianness"] = "little" if endian == "<" else "big"
+        exe_data["forensic_macho_is_64bit"] = is_64
+        try:
+            if len(header) >= 28:
+                cputype, cpusubtype, filetype, ncmds, sizeofcmds, flags = struct.unpack(
+                    endian + "IIIIII", header[4:28]
+                )
+                exe_data["forensic_macho_cpu_type"] = cputype
+                exe_data["forensic_macho_cpu_subtype"] = cpusubtype
+                exe_data["forensic_macho_file_type"] = filetype
+                exe_data["forensic_macho_ncmds"] = ncmds
+                exe_data["forensic_macho_flags"] = flags
+        except Exception:
+            return exe_data
+        return exe_data
+
+    if header[:4] in [b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"]:
+        exe_data["forensic_executable_format"] = "Mach-O Fat"
+        endian = ">" if header[:4] == b"\xca\xfe\xba\xbe" else "<"
+        exe_data["forensic_macho_fat_endianness"] = "big" if endian == ">" else "little"
+        if len(header) >= 8:
+            try:
+                exe_data["forensic_macho_fat_arch_count"] = struct.unpack(endian + "I", header[4:8])[0]
+            except Exception:
+                pass
+        return exe_data
+
+    return exe_data
+
+
 def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
     """Extract Windows forensic artifacts."""
     windows_data = {'forensic_windows_artifacts_detected': True}
 
     try:
         filename = Path(filepath).name.lower()
+        header = _read_header(filepath, 512)
+        regf_detected = header.startswith(b"regf")
+        evtx_detected = header.startswith(b"ElfFile")
+        prefetch_detected = len(header) >= 8 and header[4:8] == b"SCCA"
+        prefetch_version = struct.unpack("<I", header[0:4])[0] if prefetch_detected else None
+        lnk_detected = header.startswith(
+            b"L\x00\x00\x00\x01\x14\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46"
+        )
 
         # Registry hives
         registry_hives = ['ntuser.dat', 'sam', 'system', 'software', 'security', 'default']
-        windows_data['forensic_registry_hive'] = any(hive in filename for hive in registry_hives)
+        windows_data['forensic_registry_hive'] = any(hive in filename for hive in registry_hives) or regf_detected
 
         # Event logs
         event_logs = ['application.evtx', 'system.evtx', 'security.evtx', 'setup.evtx']
-        windows_data['forensic_windows_event_log'] = any(log in filename for log in event_logs)
+        windows_data['forensic_windows_event_log'] = any(log in filename for log in event_logs) or evtx_detected
 
         # Prefetch files
         prefetch_indicators = ['.pf', 'prefetch']
-        windows_data['forensic_prefetch_file'] = any(ind in filename for ind in prefetch_indicators)
+        windows_data['forensic_prefetch_file'] = any(ind in filename for ind in prefetch_indicators) or prefetch_detected
 
         # User profile artifacts
         profile_artifacts = ['ntuser.dat', 'usrclass.dat', 'recent', 'cookies']
@@ -185,11 +454,19 @@ def _extract_windows_artifacts(filepath: str) -> Dict[str, Any]:
             'forensic_windows_thumbnail_cache',
             'forensic_windows_amcache',
             'forensic_windows_srum',
+            'forensic_registry_hive_detected',
+            'forensic_evtx_detected',
+            'forensic_prefetch_version',
+            'forensic_shell_link_detected',
         ]
 
         for field in windows_artifacts_fields:
             windows_data[field] = None
 
+        windows_data['forensic_registry_hive_detected'] = regf_detected
+        windows_data['forensic_evtx_detected'] = evtx_detected
+        windows_data['forensic_prefetch_version'] = prefetch_version
+        windows_data['forensic_shell_link_detected'] = lnk_detected
         windows_data['forensic_windows_field_count'] = len(windows_artifacts_fields)
 
     except Exception as e:
@@ -204,6 +481,9 @@ def _extract_browser_forensics(filepath: str) -> Dict[str, Any]:
 
     try:
         filename = Path(filepath).name.lower()
+        header = _read_header(filepath, 512)
+        sqlite_header = _parse_sqlite_header(header)
+        plist_detected = header.startswith(b"bplist00") or (header.lstrip().startswith(b"<?xml") and b"<plist" in header)
 
         # Chrome artifacts
         chrome_artifacts = ['history', 'cookies', 'login data', 'web data', 'favicons']
@@ -238,11 +518,30 @@ def _extract_browser_forensics(filepath: str) -> Dict[str, Any]:
             'forensic_browser_indexeddb',
             'forensic_browser_service_workers',
             'forensic_browser_web_sql',
+            'forensic_browser_sqlite_detected',
+            'forensic_browser_sqlite_page_size',
+            'forensic_browser_sqlite_read_version',
+            'forensic_browser_sqlite_write_version',
+            'forensic_browser_sqlite_reserved_space',
+            'forensic_browser_sqlite_text_encoding',
+            'forensic_browser_sqlite_user_version',
+            'forensic_browser_sqlite_application_id',
+            'forensic_browser_plist_detected',
         ]
 
         for field in browser_forensic_fields:
             browser_data[field] = None
 
+        browser_data['forensic_browser_sqlite_detected'] = sqlite_header is not None
+        if sqlite_header:
+            browser_data['forensic_browser_sqlite_page_size'] = sqlite_header.get("page_size")
+            browser_data['forensic_browser_sqlite_read_version'] = sqlite_header.get("read_version")
+            browser_data['forensic_browser_sqlite_write_version'] = sqlite_header.get("write_version")
+            browser_data['forensic_browser_sqlite_reserved_space'] = sqlite_header.get("reserved_space")
+            browser_data['forensic_browser_sqlite_text_encoding'] = sqlite_header.get("text_encoding")
+            browser_data['forensic_browser_sqlite_user_version'] = sqlite_header.get("user_version")
+            browser_data['forensic_browser_sqlite_application_id'] = sqlite_header.get("application_id")
+        browser_data['forensic_browser_plist_detected'] = plist_detected
         browser_data['forensic_browser_field_count'] = len(browser_forensic_fields)
 
     except Exception as e:
@@ -257,10 +556,13 @@ def _extract_network_forensics(filepath: str) -> Dict[str, Any]:
 
     try:
         filename = Path(filepath).name.lower()
+        header = _read_header(filepath, 64)
+        pcap = _parse_pcap_header(header)
+        pcapng = _parse_pcapng_header(header)
 
         # PCAP files
         pcap_indicators = ['.pcap', '.pcapng', 'capture', 'packet']
-        network_data['forensic_pcap_file'] = any(ind in filename for ind in pcap_indicators)
+        network_data['forensic_pcap_file'] = any(ind in filename for ind in pcap_indicators) or bool(pcap) or bool(pcapng)
 
         # Firewall logs
         firewall_logs = ['firewall', 'iptables', 'pf', 'windows firewall']
@@ -291,11 +593,39 @@ def _extract_network_forensics(filepath: str) -> Dict[str, Any]:
             'forensic_network_ip_addresses',
             'forensic_network_domain_names',
             'forensic_network_geolocation_data',
+            'forensic_pcap_detected',
+            'forensic_pcapng_detected',
+            'forensic_pcap_version_major',
+            'forensic_pcap_version_minor',
+            'forensic_pcap_endianness',
+            'forensic_pcap_ts_resolution',
+            'forensic_pcap_snaplen',
+            'forensic_pcap_network',
+            'forensic_pcapng_endianness',
+            'forensic_pcapng_version_major',
+            'forensic_pcapng_version_minor',
+            'forensic_pcapng_section_length',
+            'forensic_pcapng_block_length',
         ]
 
         for field in network_forensic_fields:
             network_data[field] = None
 
+        network_data['forensic_pcap_detected'] = bool(pcap)
+        network_data['forensic_pcapng_detected'] = bool(pcapng)
+        if pcap:
+            network_data['forensic_pcap_version_major'] = pcap.get("version_major")
+            network_data['forensic_pcap_version_minor'] = pcap.get("version_minor")
+            network_data['forensic_pcap_endianness'] = pcap.get("endianness")
+            network_data['forensic_pcap_ts_resolution'] = pcap.get("ts_resolution")
+            network_data['forensic_pcap_snaplen'] = pcap.get("snaplen")
+            network_data['forensic_pcap_network'] = pcap.get("network")
+        if pcapng:
+            network_data['forensic_pcapng_endianness'] = pcapng.get("endianness")
+            network_data['forensic_pcapng_version_major'] = pcapng.get("version_major")
+            network_data['forensic_pcapng_version_minor'] = pcapng.get("version_minor")
+            network_data['forensic_pcapng_section_length'] = pcapng.get("section_length")
+            network_data['forensic_pcapng_block_length'] = pcapng.get("block_length")
         network_data['forensic_network_field_count'] = len(network_forensic_fields)
 
     except Exception as e:
@@ -423,8 +753,9 @@ def _extract_encryption_analysis(filepath: str) -> Dict[str, Any]:
     encryption_data = {'forensic_encryption_analysis_detected': True}
 
     try:
-        with open(filepath, 'rb') as f:
-            header = f.read(512)
+        header = _read_header(filepath, 512)
+        openssl_salted = header.startswith(b"Salted__")
+        pgp_ascii = b"-----BEGIN PGP" in header
 
         # Detect encryption algorithms
         encryption_signatures = {
@@ -459,11 +790,15 @@ def _extract_encryption_analysis(filepath: str) -> Dict[str, Any]:
             'forensic_encryption_certificate_used',
             'forensic_encryption_hardware_security',
             'forensic_encryption_weak_keys',
+            'forensic_encryption_openssl_salted',
+            'forensic_encryption_pgp_ascii',
         ]
 
         for field in encryption_analysis_fields:
             encryption_data[field] = None
 
+        encryption_data['forensic_encryption_openssl_salted'] = openssl_salted
+        encryption_data['forensic_encryption_pgp_ascii'] = pgp_ascii
         encryption_data['forensic_encryption_field_count'] = len(encryption_analysis_fields)
 
     except Exception as e:
@@ -560,19 +895,107 @@ def _extract_cloud_forensics(filepath: str) -> Dict[str, Any]:
     return cloud_data
 
 
+def _parse_sqlite_header(header: bytes) -> Optional[Dict[str, Any]]:
+    if not header.startswith(b"SQLite format 3\x00"):
+        return None
+    if len(header) < 100:
+        return None
+    page_size = struct.unpack(">H", header[16:18])[0]
+    if page_size == 1:
+        page_size = 65536
+    write_version = header[18]
+    read_version = header[19]
+    reserved_space = header[20]
+    text_encoding = struct.unpack(">I", header[56:60])[0]
+    user_version = struct.unpack(">I", header[60:64])[0]
+    application_id = struct.unpack(">I", header[68:72])[0]
+    schema_format = struct.unpack(">I", header[44:48])[0]
+    return {
+        "page_size": page_size,
+        "write_version": write_version,
+        "read_version": read_version,
+        "reserved_space": reserved_space,
+        "text_encoding": text_encoding,
+        "user_version": user_version,
+        "application_id": application_id,
+        "schema_format": schema_format,
+    }
+
+
+def _parse_pcap_header(header: bytes) -> Dict[str, Any]:
+    if len(header) < 24:
+        return {}
+    magic = struct.unpack(">I", header[0:4])[0]
+    if magic == 0xA1B2C3D4:
+        endian = "big"
+        ts = "microseconds"
+    elif magic == 0xD4C3B2A1:
+        endian = "little"
+        ts = "microseconds"
+    elif magic == 0xA1B23C4D:
+        endian = "big"
+        ts = "nanoseconds"
+    elif magic == 0x4D3CB2A1:
+        endian = "little"
+        ts = "nanoseconds"
+    else:
+        return {}
+    fmt = ">" if endian == "big" else "<"
+    version_major, version_minor = struct.unpack(fmt + "HH", header[4:8])
+    snaplen = struct.unpack(fmt + "I", header[16:20])[0]
+    network = struct.unpack(fmt + "I", header[20:24])[0]
+    return {
+        "magic": f"{magic:08x}",
+        "endianness": endian,
+        "ts_resolution": ts,
+        "version_major": version_major,
+        "version_minor": version_minor,
+        "snaplen": snaplen,
+        "network": network,
+    }
+
+
+def _parse_pcapng_header(header: bytes) -> Dict[str, Any]:
+    if len(header) < 28:
+        return {}
+    if header[0:4] != b"\x0a\x0d\x0d\x0a":
+        return {}
+    block_length = struct.unpack("<I", header[4:8])[0]
+    bom = header[8:12]
+    if bom == b"\x1a\x2b\x3c\x4d":
+        endian = "big"
+    elif bom == b"\x4d\x3c\x2b\x1a":
+        endian = "little"
+    else:
+        return {}
+    fmt = ">" if endian == "big" else "<"
+    version_major, version_minor = struct.unpack(fmt + "HH", header[12:16])
+    section_length = struct.unpack(fmt + "q", header[16:24])[0]
+    return {
+        "block_length": block_length,
+        "endianness": endian,
+        "version_major": version_major,
+        "version_minor": version_minor,
+        "section_length": section_length,
+    }
+
+
 def get_forensic_digital_advanced_field_count() -> int:
     """Return the number of advanced digital forensic fields."""
+    signature_fields = 38
+    executable_fields = 28
+
     # File system forensics fields
     fs_fields = 14
 
     # Windows artifacts fields
-    windows_fields = 14
+    windows_fields = 18
 
     # Browser forensics fields
-    browser_fields = 12
+    browser_fields = 21
 
     # Network forensics fields
-    network_fields = 12
+    network_fields = 25
 
     # Malware analysis fields
     malware_fields = 12
@@ -581,7 +1004,7 @@ def get_forensic_digital_advanced_field_count() -> int:
     anti_forensic_fields = 12
 
     # Encryption analysis fields
-    encryption_fields = 12
+    encryption_fields = 14
 
     # Timeline analysis fields
     timeline_fields = 12
@@ -589,12 +1012,10 @@ def get_forensic_digital_advanced_field_count() -> int:
     # Cloud forensics fields
     cloud_fields = 12
 
-    # Additional forensic fields
-    additional_fields = 20
-
-    return (fs_fields + windows_fields + browser_fields + network_fields +
-            malware_fields + anti_forensic_fields + encryption_fields +
-            timeline_fields + cloud_fields + additional_fields)
+    return (signature_fields + executable_fields + fs_fields + windows_fields +
+            browser_fields + network_fields + malware_fields +
+            anti_forensic_fields + encryption_fields + timeline_fields +
+            cloud_fields)
 
 
 # Integration point
