@@ -12,7 +12,8 @@ Phase 2 focuses on deep media extraction: video codec internals, container struc
 - H.264:
   - `extract_h264_deep_analysis()` produces detailed fields
   - `parse_h264_sps()` implemented with emulation prevention removal, start-code stripping, and extraction of profile/constraint/level
-  - Extended SPS heuristics for **chroma_format_idc** and **bit-depth** (heuristic byte extraction when available)
+  - Extended SPS parsing with **Exp-Golomb decoding** for seq_parameter_set_id, chroma_format_idc, bit_depth_luma/chroma, log2_max_frame_num_minus4, pic_order_cnt_type
+  - Robust BitReader class with EOF handling for bit-level parsing
 - HEVC:
   - `extract_hevc_deep_analysis()` remains with heuristics; added `parse_hevc_vps()` minimal VPS parser (profile/tier/level) as safe extraction
 - AV1:
@@ -33,13 +34,18 @@ Phase 2 focuses on deep media extraction: video codec internals, container struc
 - New unit tests:
   - `tests/test_phase2_video.py` (field counts, H.264 deep analysis)
   - `tests/test_phase2_video_sps.py` (SPS parsing)
-  - `tests/test_phase2_video_sps_extended.py` (chroma & bit depth heuristics)
+  - `tests/test_phase2_video_sps_extended.py` (chroma & bit depth Exp-Golomb parsing)
+  - `tests/test_phase2_video_sps_edges.py` (edge cases: large UE, chroma 0/3, varying bit depths)
+  - `tests/test_phase2_video_sps_fixtures.py` (binary fixture writing and parsing)
+  - `tests/test_phase2_video_real_fixtures.py` (real H.264 SPS samples: 1080p High, 4K Main10, Baseline)
   - `tests/test_phase2_hevc_vps.py` (HEVC VPS minimal parsing)
   - `tests/test_phase2_av1.py` (AV1 sequence header heuristics)
+  - `tests/test_phase2_hevc_av1_fixtures.py` (HEVC/AV1 binary fixture tests)
   - `tests/test_phase2_container.py` (MP4 atom parsing)
   - `tests/test_phase2_audio.py` (FLAC STREAMINFO parsing)
   - `tests/test_integration_containers_with_nal.py` (integration: write MP4 fixtures that contain H.264 SPS and HEVC VPS NALs and parse them)
-- Tests run successfully locally: `pytest` → all tests pass
+- Binary fixtures: `tests/fixtures/h264_sps_samples.py` with real SPS RBSP examples for regression testing
+- Tests run successfully locally: `pytest` → all tests pass (38 passed)
 
 ## CI
 

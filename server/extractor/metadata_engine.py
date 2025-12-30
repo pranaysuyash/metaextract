@@ -226,6 +226,16 @@ class TierConfig:
     container_details: bool = False
     audio_codec_details: bool = False
     scientific_details: bool = False
+    # Phase 3 toggles
+    pdf_complete: bool = False
+    office_documents: bool = False
+    web_social_metadata: bool = False
+    email_metadata: bool = False
+    # Phase 4 toggles
+    ai_ml_metadata: bool = False
+    blockchain_nft_metadata: bool = False
+    ar_vr_metadata: bool = False
+    iot_metadata: bool = False
 
 TIER_CONFIGS = {
     Tier.FREE: TierConfig(),
@@ -244,6 +254,16 @@ TIER_CONFIGS = {
         # Phase 2 capabilities enabled for Premium
         video_codec_details=True, container_details=True, audio_codec_details=True,
         scientific_details=True,
+        # Phase 3 capabilities
+        pdf_complete=True,
+        office_documents=True,
+        web_social_metadata=True,
+        email_metadata=True,
+        # Phase 4 capabilities
+        ai_ml_metadata=True,
+        blockchain_nft_metadata=True,
+        ar_vr_metadata=True,
+        iot_metadata=True,
     ),
     Tier.SUPER: TierConfig(
         file_hashes=True, filesystem_details=True, calculated_fields=True,
@@ -1559,8 +1579,119 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
     
     # PDF
     elif mime_type == "application/pdf" or ext == ".pdf":
-        if tier_config.pdf_details: result["pdf"] = extract_pdf_properties(filepath)
-        else: result["pdf"] = {"_locked": True}; result["locked_fields"].append("pdf")
+        if tier_config.pdf_details:
+            result["pdf"] = extract_pdf_properties(filepath)
+            # Phase 3: Complete PDF metadata extraction
+            if tier_config.pdf_complete:
+                try:
+                    from .modules.pdf_metadata_complete import extract_pdf_complete
+                    complete_pdf = extract_pdf_complete(filepath)
+                    if complete_pdf:
+                        result["pdf_complete"] = complete_pdf
+                except ImportError:
+                    pass  # Module not available
+        else:
+            result["pdf"] = {"_locked": True}
+            result["locked_fields"].append("pdf")
+    
+    # Office documents (OOXML, ODF, iWork)
+    elif ext in [".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp", ".pages", ".numbers", ".keynote"]:
+        if tier_config.office_documents:
+            try:
+                from .modules.office_documents import extract_office_complete
+                office_data = extract_office_complete(filepath)
+                if office_data:
+                    result["office"] = office_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["office"] = {"_locked": True}
+            result["locked_fields"].append("office")
+    
+    # Web and Social Media metadata (HTML, HTM)
+    elif ext in [".html", ".htm"]:
+        if tier_config.web_social_metadata:
+            try:
+                from .modules.web_social_metadata import extract_web_social_complete
+                web_social_data = extract_web_social_complete(filepath)
+                if web_social_data:
+                    result["web_social"] = web_social_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["web_social"] = {"_locked": True}
+            result["locked_fields"].append("web_social")
+    
+    # Email and Communication metadata (.eml, .msg, .mbox)
+    elif ext in [".eml", ".msg", ".mbox"]:
+        if tier_config.email_metadata:
+            try:
+                from .modules.email_metadata import extract_email_complete
+                email_data = extract_email_complete(filepath)
+                if email_data:
+                    result["email"] = email_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["email"] = {"_locked": True}
+            result["locked_fields"].append("email")
+    
+    # AI/ML Model metadata (various ML model formats)
+    elif ext in [".h5", ".pb", ".pth", ".pt", ".onnx", ".pkl", ".joblib", ".model", ".tflite", ".mlmodel", ".caffemodel"] or (ext in [".json", ".yaml", ".yml", ".cfg", ".ini"] and any(x in filepath.lower() for x in ["model", "config", "hyper", "param", "train"])):
+        if tier_config.ai_ml_metadata:
+            try:
+                from .modules.ai_ml_metadata import extract_ai_ml_complete
+                ai_ml_data = extract_ai_ml_complete(filepath)
+                if ai_ml_data:
+                    result["ai_ml"] = ai_ml_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["ai_ml"] = {"_locked": True}
+            result["locked_fields"].append("ai_ml")
+    
+    # Blockchain/NFT metadata (various crypto-related formats)
+    elif ext in [".abi", ".sol", ".vy", ".rs", ".keystore", ".tx", ".trx", ".blk"] or (ext in [".json", ".config", ".env"] and any(x in filepath.lower() for x in ["nft", "token", "contract", "wallet", "blockchain", "crypto"])):
+        if tier_config.blockchain_nft_metadata:
+            try:
+                from .modules.blockchain_nft_metadata import extract_blockchain_nft_complete
+                blockchain_data = extract_blockchain_nft_complete(filepath)
+                if blockchain_data:
+                    result["blockchain_nft"] = blockchain_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["blockchain_nft"] = {"_locked": True}
+            result["locked_fields"].append("blockchain_nft")
+    
+    # AR/VR content metadata (3D models, scenes, animations)
+    elif ext in [".obj", ".fbx", ".gltf", ".glb", ".dae", ".3ds", ".blend", ".usd", ".usda", ".usdc", ".usdz", ".x3d", ".wrl", ".scn", ".scene", ".unity", ".unreal"]:
+        if tier_config.ar_vr_metadata:
+            try:
+                from .modules.ar_vr_metadata import extract_ar_vr_complete
+                ar_vr_data = extract_ar_vr_complete(filepath)
+                if ar_vr_data:
+                    result["ar_vr"] = ar_vr_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["ar_vr"] = {"_locked": True}
+            result["locked_fields"].append("ar_vr")
+    
+    # IoT device metadata (device configs, sensor data, telemetry)
+    elif (ext in [".json", ".xml", ".yaml", ".yml", ".config", ".conf", ".ini", ".cfg", ".properties", ".env", ".csv", ".tsv", ".log", ".data"] and
+          any(x in filepath.lower() for x in ["iot", "device", "sensor", "firmware", "telemetry", "mqtt", "coap", "zigbee", "bluetooth", "wifi", "configuration", "config", "settings", "calibration"])):
+        if tier_config.iot_metadata:
+            try:
+                from .modules.iot_metadata import extract_iot_complete
+                iot_data = extract_iot_complete(filepath)
+                if iot_data:
+                    result["iot"] = iot_data
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["iot"] = {"_locked": True}
+            result["locked_fields"].append("iot")
     
     # SVG
     elif ext == ".svg": result["svg"] = extract_svg_properties(filepath)

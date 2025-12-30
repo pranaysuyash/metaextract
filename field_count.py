@@ -64,6 +64,55 @@ try:
 except:
     AUDIO_CODEC_DETAILS_AVAILABLE = False
 
+# Phase 3 modules - NEW
+try:
+    from pdf_metadata_complete import get_pdf_complete_field_count
+    PDF_COMPLETE_AVAILABLE = True
+except:
+    PDF_COMPLETE_AVAILABLE = False
+
+try:
+    from office_documents import get_office_field_count
+    OFFICE_DOCUMENTS_AVAILABLE = True
+except:
+    OFFICE_DOCUMENTS_AVAILABLE = False
+
+try:
+    from web_social_metadata import get_web_social_field_count
+    WEB_SOCIAL_AVAILABLE = True
+except:
+    WEB_SOCIAL_AVAILABLE = False
+
+try:
+    from email_metadata import get_email_field_count
+    EMAIL_AVAILABLE = True
+except:
+    EMAIL_AVAILABLE = False
+
+try:
+    from ai_ml_metadata import get_ai_ml_field_count
+    AI_ML_AVAILABLE = True
+except:
+    AI_ML_AVAILABLE = False
+
+try:
+    from blockchain_nft_metadata import get_blockchain_nft_field_count
+    BLOCKCHAIN_NFT_AVAILABLE = True
+except:
+    BLOCKCHAIN_NFT_AVAILABLE = False
+
+try:
+    from ar_vr_metadata import get_ar_vr_field_count
+    AR_VR_AVAILABLE = True
+except:
+    AR_VR_AVAILABLE = False
+
+try:
+    from iot_metadata import get_iot_field_count
+    IOT_AVAILABLE = True
+except:
+    IOT_AVAILABLE = False
+
 try:
     from temporal_astronomical import get_temporal_field_count
     TEMPORAL_AVAILABLE = True
@@ -187,6 +236,80 @@ else:
     print(f'{"Audio Codec Deep Analysis":30s}: {0:>5} fields (pending)')
 
 print(f'{"Phase 2 Total":30s}: {phase2_total:>5} fields')
+
+print()
+print('--- Phase 3 Documents & Web (NEW) ---')
+phase3_total = 0
+if PDF_COMPLETE_AVAILABLE:
+    pdf_complete_count = get_pdf_complete_field_count()
+    print(f'{"PDF Complete Metadata":30s}: {pdf_complete_count:>5} fields')
+    total += pdf_complete_count
+    phase3_total += pdf_complete_count
+else:
+    print(f'{"PDF Complete Metadata":30s}: {0:>5} fields (pending)')
+
+if OFFICE_DOCUMENTS_AVAILABLE:
+    office_count = get_office_field_count()
+    print(f'{"Office Documents":30s}: {office_count:>5} fields')
+    total += office_count
+    phase3_total += office_count
+else:
+    print(f'{"Office Documents":30s}: {0:>5} fields (pending)')
+
+if WEB_SOCIAL_AVAILABLE:
+    web_social_count = get_web_social_field_count()
+    print(f'{"Web & Social Metadata":30s}: {web_social_count:>5} fields')
+    total += web_social_count
+    phase3_total += web_social_count
+else:
+    print(f'{"Web & Social Metadata":30s}: {0:>5} fields (pending)')
+
+if EMAIL_AVAILABLE:
+    email_count = get_email_field_count()
+    print(f'{"Email & Communication":30s}: {email_count:>5} fields')
+    total += email_count
+    phase3_total += email_count
+else:
+    print(f'{"Email & Communication":30s}: {0:>5} fields (pending)')
+
+print(f'{"Phase 3 Total":30s}: {phase3_total:>5} fields')
+
+print()
+print('--- Phase 4 Emerging Features (NEW) ---')
+phase4_total = 0
+if AI_ML_AVAILABLE:
+    ai_ml_count = get_ai_ml_field_count()
+    print(f'{"AI/ML Model Metadata":30s}: {ai_ml_count:>5} fields')
+    total += ai_ml_count
+    phase4_total += ai_ml_count
+else:
+    print(f'{"AI/ML Model Metadata":30s}: {0:>5} fields (pending)')
+
+if BLOCKCHAIN_NFT_AVAILABLE:
+    blockchain_nft_count = get_blockchain_nft_field_count()
+    print(f'{"Blockchain/NFT Metadata":30s}: {blockchain_nft_count:>5} fields')
+    total += blockchain_nft_count
+    phase4_total += blockchain_nft_count
+else:
+    print(f'{"Blockchain/NFT Metadata":30s}: {0:>5} fields (pending)')
+
+if AR_VR_AVAILABLE:
+    ar_vr_count = get_ar_vr_field_count()
+    print(f'{"AR/VR Content Metadata":30s}: {ar_vr_count:>5} fields')
+    total += ar_vr_count
+    phase4_total += ar_vr_count
+else:
+    print(f'{"AR/VR Content Metadata":30s}: {0:>5} fields (pending)')
+
+if IOT_AVAILABLE:
+    iot_count = get_iot_field_count()
+    print(f'{"IoT Device Metadata":30s}: {iot_count:>5} fields')
+    total += iot_count
+    phase4_total += iot_count
+else:
+    print(f'{"IoT Device Metadata":30s}: {0:>5} fields (pending)')
+
+print(f'{"Phase 4 Total":30s}: {phase4_total:>5} fields')
 
 fields3 = {}
 fields3['Social Media'] = get_social_media_field_count()

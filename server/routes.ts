@@ -25,6 +25,7 @@ import {
   getRateLimits,
 } from '@shared/tierConfig';
 import { registerPaymentRoutes } from './payments';
+import { registerForensicRoutes } from './routes/forensic';
 import { type AuthRequest, getEffectiveTier } from './auth';
 
 // ============================================================================
@@ -986,8 +987,8 @@ export async function registerRoutes(
       const mimeType = req.file.mimetype || 'application/octet-stream';
       const tierConfig = getTierConfig(normalizedTier);
 
-      // Check if tier supports advanced analysis
-      if (normalizedTier === 'free') {
+      // Check if tier supports advanced analysis (disabled in dev)
+      if (process.env.NODE_ENV !== 'development' && normalizedTier === 'free') {
         return res.status(403).json({
           error: 'Advanced analysis not available for your plan',
           current_tier: normalizedTier,
@@ -1084,8 +1085,8 @@ export async function registerRoutes(
       const normalizedTier = normalizeTier(requestedTier);
       const pythonTier = toPythonTier(normalizedTier);
 
-      // Check tier supports comparison
-      if (!['professional', 'forensic', 'enterprise'].includes(normalizedTier)) {
+      // Check tier supports comparison (disabled in dev)
+      if (process.env.NODE_ENV !== 'development' && !['professional', 'forensic', 'enterprise'].includes(normalizedTier)) {
         return res.status(403).json({
           error: 'Metadata comparison requires Professional or higher tier',
           current_tier: normalizedTier,
@@ -1215,7 +1216,7 @@ export async function registerRoutes(
       const normalizedTier = normalizeTier(requestedTier);
       const pythonTier = toPythonTier(normalizedTier);
 
-      if (!['professional', 'forensic', 'enterprise'].includes(normalizedTier)) {
+      if (process.env.NODE_ENV !== 'development' && !['professional', 'forensic', 'enterprise'].includes(normalizedTier)) {
         return res.status(403).json({
           error: 'Timeline reconstruction requires Professional or higher tier',
           current_tier: normalizedTier,
@@ -2254,6 +2255,9 @@ print(json.dumps(report))
 
   // Register payment routes
   registerPaymentRoutes(app);
+
+  // Register forensic routes
+  registerForensicRoutes(app);
 
   return httpServer;
 }

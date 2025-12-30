@@ -2,12 +2,12 @@
 """Master inventory summary for MetaExtract 45K+ goal.
 
 This script combines all field inventories and shows total progress
-toward the 45,000+ field target.
+toward 45,000+ field target.
 """
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 
 INVENTORY_FILES = [
@@ -49,13 +49,18 @@ def summarize_video_codecs(inventory: Dict) -> Dict[str, int]:
     categories = inventory.get("categories", {})
 
     total = 0
-    for cat, data in categories.items():
-        if cat.startswith("Video Codec"):
-            total += data.get("tags", 0)
+    codec_categories = []
+
+    for key, value in categories.items():
+        if key.startswith("Video Codec") and isinstance(value, dict) and "tags" in value:
+            tag_count = value.get("tags", 0)
+            if isinstance(tag_count, int):
+                total += tag_count
+                codec_categories.append(key)
 
     return {
         "tags": total,
-        "categories": len([c for c in categories.keys() if c.startswith("Video Codec")]),
+        "categories": len(codec_categories),
     }
 
 
@@ -74,15 +79,9 @@ def summarize_audio_formats(inventory: Dict) -> Dict[str, int]:
     """Summarize audio format inventory."""
 
     totals = inventory.get("totals", {})
-    formats = inventory.get("formats", {})
-
-    total = 0
-    for fmt, data in formats.items():
-        total += data.get("field_count", 0)
-
     return {
-        "total_fields": total,
-        "total_formats": len(formats),
+        "total_fields": totals.get("total_fields", 0),
+        "total_formats": totals.get("total_formats", 0),
     }
 
 
@@ -94,19 +93,16 @@ def main():
     print("=" * 70)
     print()
 
-    # Load all inventories
     field_inv = load_inventory(INVENTORY_FILES[0])
     video_codec_inv = load_inventory(INVENTORY_FILES[1])
     id3_frames_inv = load_inventory(INVENTORY_FILES[2])
     audio_format_inv = load_inventory(INVENTORY_FILES[3])
 
-    # Summarize
     field_summary = summarize_field_inventory(field_inv)
     video_codec_summary = summarize_video_codecs(video_codec_inv)
     id3_summary = summarize_id3_frames(id3_frames_inv)
     audio_summary = summarize_audio_formats(audio_format_inv)
 
-    # Grand total
     grand_total = (
         field_summary["tags"] +
         video_codec_summary["tags"] +
@@ -114,46 +110,45 @@ def main():
         audio_summary["total_fields"]
     )
 
-    # 45K target
-    target_45k = 45000
-    coverage = (grand_total / target_45k) * 100
-    remaining = target_45k - grand_total
-
     print("FIELD INVENTORIES")
     print("-" * 70)
     print()
 
     print(f"ExifTool Field Inventory:")
     print(f"  Tags: {field_summary['tags']:,}")
-    print(f"  Categories: {field_summary['categories']}")
-    print()
+    print(f"  Categories: {field_summary['categories']:,}")
 
+    print()
     print(f"Video Codec Inventory:")
     print(f"  Tags: {video_codec_summary['tags']:,}")
-    print(f"  Categories: {video_codec_summary['categories']}")
-    print()
+    print(f"  Categories: {video_codec_summary['categories']:}")
 
+    print()
     print(f"ID3 Frame Inventory:")
     print(f"  Frames: {id3_summary['total_frames']:,}")
     print(f"  Versions: {id3_summary['total_versions']:,}")
-    print()
 
+    print()
     print(f"Audio Format Inventory:")
     print(f"  Fields: {audio_summary['total_fields']:,}")
-    print(f"  Formats: {audio_summary['total_formats']}")
-    print()
+    print(f"  Formats: {audio_summary['total_formats']:,}")
 
+    print()
     print("=" * 70)
     print("45K+ TARGET PROGRESS")
     print("=" * 70)
     print()
 
+    target_45k = 45000
+    coverage = (grand_total / target_45k) * 100
+    remaining = target_45k - grand_total
+
     print(f"Target fields: {target_45k:,}")
     print(f"Current total:  {grand_total:,}")
     print(f"Coverage: {coverage:.1f}%")
     print(f"Remaining: {remaining:,}")
-    print()
 
+    print()
     print("TOP GAP AREAS (fields needed)")
     print("-" * 70)
     print()
@@ -180,54 +175,13 @@ def main():
     print()
     print(f"Gap total: {gap_total:,}")
     print(f"Grand total with gaps: {grand_total + gap_total:,}")
-    print()
-
-    # Write summary
-    from datetime import datetime, timezone
-    summary = {
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "inventories": {
-            "field_inventory": {
-                "tags": field_summary["tags"],
-                "categories": field_summary["categories"],
-            },
-            "video_codecs": {
-                "tags": video_codec_summary["tags"],
-                "categories": video_codec_summary["categories"],
-            },
-            "id3_frames": {
-                "frames": id3_summary["total_frames"],
-                "versions": id3_summary["total_versions"],
-            },
-            "audio_formats": {
-                "fields": audio_summary["total_fields"],
-                "formats": audio_summary["total_formats"],
-            },
-        },
-        "totals": {
-            "current": grand_total,
-            "target_45k": target_45k,
-            "coverage_pct": coverage,
-            "remaining": remaining,
-        },
-        "gap_areas": [
-            {"area": area, "fields_needed": count} for area, count in gap_areas
-        ],
-    }
-
-    output_dir = Path("dist/inventory_summary")
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary_path = output_dir / "master_inventory_summary.json"
-    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
-    print(f"Wrote: {summary_path}")
 
     print()
     print("=" * 70)
     print("NEXT PRIORITIES")
     print("=" * 70)
     print()
-    print("1. Implement audio format extractors (APEv2, MP4 atoms, WAV/RIFF)")
+    print("1. Implement audio format extractors (APEv2, MP4 atoms, WAV/RIFF, AIFF, Opus, DSD, BWF)")
     print("2. Add FITS keyword inventory")
     print("3. Add file system metadata extraction")
     print("4. Implement network/communication header parsing")
@@ -235,7 +189,8 @@ def main():
     print("6. Add device/hardware fingerprint extraction")
     print("7. Build social media API extractors")
     print("8. Implement web standards parsing")
-    print()
+    print("9. Expand video codec depth extractors")
+    print("10. Expand ID3 frame registry (full ID3v2.4 list)")
 
 
 if __name__ == "__main__":
