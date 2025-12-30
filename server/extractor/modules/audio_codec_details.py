@@ -492,12 +492,31 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
             if len(frame_data) >= 8:
                 data_start = struct.unpack(">I", frame_data[0:4])[0]
                 data_length = struct.unpack(">I", frame_data[4:8])[0]
-                index_data = frame_data[8:]
-                result["audio_seek_points"] = {
-                    "data_start": data_start,
-                    "data_length": data_length,
-                    "index_bytes": len(index_data),
-                }
+                if len(frame_data) >= 11:
+                    point_count = struct.unpack(">H", frame_data[8:10])[0]
+                    bits_per_point = frame_data[10]
+                    bytes_per_point = (bits_per_point + 7) // 8 if bits_per_point else 0
+                    index_data = frame_data[11:]
+                    points = []
+                    if bytes_per_point > 0:
+                        for i in range(0, min(len(index_data), point_count * bytes_per_point), bytes_per_point):
+                            points.append(int.from_bytes(index_data[i:i + bytes_per_point], "big"))
+                    result["audio_seek_points"] = {
+                        "data_start": data_start,
+                        "data_length": data_length,
+                        "point_count": point_count,
+                        "bits_per_point": bits_per_point,
+                        "bytes_per_point": bytes_per_point,
+                        "index_bytes": len(index_data),
+                        "points_preview": points[:20],
+                    }
+                else:
+                    index_data = frame_data[8:]
+                    result["audio_seek_points"] = {
+                        "data_start": data_start,
+                        "data_length": data_length,
+                        "index_bytes": len(index_data),
+                    }
         elif frame_id_str == "GRID":
             owner_bytes, rest = _split_terminated_bytes(frame_data, 0)
             if rest:
@@ -540,10 +559,10 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
                 identifier_bytes, rest = _split_terminated_bytes(frame_data[1:], 0)
                 identifier = identifier_bytes.decode("latin1", errors="ignore")
                 entries = []
-                pos = len(identifier_bytes) + 1
+                pos = 1 + len(identifier_bytes) + 1
                 while pos + 4 <= len(frame_data):
                     frequency = struct.unpack(">H", frame_data[pos:pos + 2])[0]
-                    adjustment = struct.unpack(">H", frame_data[pos + 2:pos + 4])[0]
+                    adjustment = struct.unpack(">h", frame_data[pos + 2:pos + 4])[0]
                     entries.append({
                         "frequency": frequency,
                         "adjustment": adjustment,
@@ -553,7 +572,7 @@ def _parse_id3v2_tag(data: bytes) -> Dict[str, Any]:
                     "interpolation_method": interpolation,
                     "identifier": identifier,
                     "band_count": len(entries),
-                    "bands": entries[:20],
+                    "bands": entries[:50],
                 })
         elif frame_id_str == "MLLT":
             if len(frame_data) >= 6:
@@ -1767,7 +1786,13 @@ def _iter_mp4_atoms(f, start: int, size: int, max_depth: int) -> List[Tuple[byte
 
 
 def _parse_mp4_ilst(filepath: str) -> Dict[str, Any]:
-    result: Dict[str, Any] = {"tags": {}, "raw_tags": {}, "tag_count": 0, "chapters": []}
+    result: Dict[str, Any] = {
+        "tags": {},
+        "raw_tags": {},
+        "tag_count": 0,
+        "chapters": [],
+        "chapter_track_ids": [],
+    }
     ilst_location = _find_mp4_ilst(filepath)
     start = None
     size = None
@@ -1799,6 +1824,7 @@ def _parse_mp4_ilst(filepath: str) -> Dict[str, Any]:
                     f.seek(item_end, 0)
                 result["tag_count"] = len(result["tags"])
             result["chapters"] = _parse_mp4_chapter_list(f)
+            result["chapter_track_ids"] = _parse_mp4_chap_track_refs(f)
     except Exception as e:
         return result
     return result
@@ -1920,6 +1946,22 @@ def _parse_mp4_chapter_list(f) -> List[Dict[str, Any]]:
         return chapters
     except Exception:
         return chapters
+
+
+def _parse_mp4_chap_track_refs(f) -> List[int]:
+    track_ids: List[int] = []
+    try:
+        atoms = _iter_mp4_atoms(f, 0, Path(f.name).stat().st_size, max_depth=3)
+        chap_atoms = [a for a in atoms if a[0] == b"chap"]
+        for _, start, size in chap_atoms:
+            f.seek(start, 0)
+            payload = f.read(size)
+            for i in range(0, len(payload), 4):
+                if i + 4 <= len(payload):
+                    track_ids.append(struct.unpack(">I", payload[i:i + 4])[0])
+        return track_ids
+    except Exception:
+        return track_ids
 
 
 def _parse_asf_header(filepath: str) -> Dict[str, Any]:
@@ -2930,4 +2972,4 @@ def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
 
 def get_audio_codec_details_field_count() -> int:
     """Return estimated field count for audio codec details module."""
-    return 860  # Expanded Phase 2 target
+    return 930  # Expanded Phase 2 target

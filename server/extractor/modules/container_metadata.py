@@ -950,11 +950,139 @@ def _parse_mp4_child_atoms(data: bytes) -> Dict[str, Any]:
                 "seq_level_idx_0": seq_level_idx_0,
             }
         elif atom_type == b"esds":
-            children["esds"] = {"data_size": len(payload)}
+            children["esds"] = _parse_mp4_esds(payload)
+        elif atom_type == b"pasp" and len(payload) >= 8:
+            h_spacing = struct.unpack(">I", payload[0:4])[0]
+            v_spacing = struct.unpack(">I", payload[4:8])[0]
+            children["pasp"] = {
+                "h_spacing": h_spacing,
+                "v_spacing": v_spacing,
+                "pixel_aspect_ratio": (h_spacing / v_spacing) if v_spacing else None,
+            }
+        elif atom_type == b"clap" and len(payload) >= 32:
+            width_n = struct.unpack(">I", payload[0:4])[0]
+            width_d = struct.unpack(">I", payload[4:8])[0]
+            height_n = struct.unpack(">I", payload[8:12])[0]
+            height_d = struct.unpack(">I", payload[12:16])[0]
+            horiz_n = struct.unpack(">i", payload[16:20])[0]
+            horiz_d = struct.unpack(">i", payload[20:24])[0]
+            vert_n = struct.unpack(">i", payload[24:28])[0]
+            vert_d = struct.unpack(">i", payload[28:32])[0]
+            children["clap"] = {
+                "clean_width_n": width_n,
+                "clean_width_d": width_d,
+                "clean_height_n": height_n,
+                "clean_height_d": height_d,
+                "horiz_offset_n": horiz_n,
+                "horiz_offset_d": horiz_d,
+                "vert_offset_n": vert_n,
+                "vert_offset_d": vert_d,
+                "clean_width": (width_n / width_d) if width_d else None,
+                "clean_height": (height_n / height_d) if height_d else None,
+                "horiz_offset": (horiz_n / horiz_d) if horiz_d else None,
+                "vert_offset": (vert_n / vert_d) if vert_d else None,
+            }
+        elif atom_type == b"colr" and len(payload) >= 4:
+            color_type = payload[0:4].decode("latin1", errors="ignore")
+            colr: Dict[str, Any] = {"type": color_type}
+            if color_type in ["nclx", "nclc"] and len(payload) >= 10:
+                colr["primaries"] = struct.unpack(">H", payload[4:6])[0]
+                colr["transfer"] = struct.unpack(">H", payload[6:8])[0]
+                colr["matrix"] = struct.unpack(">H", payload[8:10])[0]
+                if len(payload) >= 11:
+                    colr["full_range_flag"] = bool(payload[10] & 0x80)
+            elif color_type in ["prof", "rICC"]:
+                colr["icc_profile_size"] = max(0, len(payload) - 4)
+            children["colr"] = colr
+        elif atom_type == b"fiel" and len(payload) >= 2:
+            children["fiel"] = {
+                "field_count": payload[0],
+                "field_order": payload[1],
+            }
+        elif atom_type == b"chan" and len(payload) >= 12:
+            layout_tag = struct.unpack(">I", payload[0:4])[0]
+            bitmap = struct.unpack(">I", payload[4:8])[0]
+            desc_count = struct.unpack(">I", payload[8:12])[0]
+            descriptions = []
+            desc_offset = 12
+            for _ in range(min(desc_count, 4)):
+                if desc_offset + 20 > len(payload):
+                    break
+                label = struct.unpack(">I", payload[desc_offset:desc_offset + 4])[0]
+                flags = struct.unpack(">I", payload[desc_offset + 4:desc_offset + 8])[0]
+                descriptions.append({"label": label, "flags": flags})
+                desc_offset += 20
+            children["chan"] = {
+                "layout_tag": layout_tag,
+                "channel_bitmap": bitmap,
+                "description_count": desc_count,
+                "descriptions": descriptions,
+            }
+        elif atom_type == b"st3d" and len(payload) >= 1:
+            children["st3d"] = {"stereo_mode": payload[0]}
+        elif atom_type == b"sv3d" and len(payload) >= 8:
+            children["sv3d"] = {"child_atoms": _parse_mp4_child_atoms(payload)}
+        elif atom_type == b"uuid" and len(payload) >= 16:
+            uuid_bytes = payload[0:16]
+            uuid_str = "-".join([
+                uuid_bytes[0:4].hex(),
+                uuid_bytes[4:6].hex(),
+                uuid_bytes[6:8].hex(),
+                uuid_bytes[8:10].hex(),
+                uuid_bytes[10:16].hex(),
+            ])
+            children["uuid"] = {"uuid": uuid_str, "payload_size": max(0, len(payload) - 16)}
         else:
             children[atom_name] = {"data_size": len(payload)}
         offset += atom_size
     return children
+
+
+def _parse_mp4_esds(payload: bytes) -> Dict[str, Any]:
+    result: Dict[str, Any] = {"data_size": len(payload)}
+    offset = 0
+    if len(payload) < 2:
+        return result
+    if payload[0] == 0x03:
+        offset = 1
+        desc_size, size_len = _read_mp4_descriptor_size(payload, offset)
+        offset += size_len
+        if offset + 2 <= len(payload):
+            result["es_id"] = struct.unpack(">H", payload[offset:offset + 2])[0]
+        offset += 3
+    while offset + 2 < len(payload):
+        tag = payload[offset]
+        offset += 1
+        size, size_len = _read_mp4_descriptor_size(payload, offset)
+        offset += size_len
+        if tag == 0x04 and offset + 13 <= len(payload):
+            result["object_type"] = payload[offset]
+            result["stream_type"] = (payload[offset + 1] >> 2) & 0x3F
+            result["buffer_size_db"] = int.from_bytes(payload[offset + 2:offset + 5], "big")
+            result["max_bitrate"] = struct.unpack(">I", payload[offset + 5:offset + 9])[0]
+            result["avg_bitrate"] = struct.unpack(">I", payload[offset + 9:offset + 13])[0]
+        elif tag == 0x05 and size >= 2 and offset + size <= len(payload):
+            asc = payload[offset:offset + size]
+            audio_obj = (asc[0] >> 3) & 0x1F
+            freq_idx = ((asc[0] & 0x07) << 1) | ((asc[1] >> 7) & 0x01)
+            channel_cfg = (asc[1] >> 3) & 0x0F
+            result["audio_object_type"] = audio_obj
+            result["audio_freq_index"] = freq_idx
+            result["audio_channel_config"] = channel_cfg
+        offset += size
+    return result
+
+
+def _read_mp4_descriptor_size(data: bytes, offset: int) -> Tuple[int, int]:
+    size = 0
+    count = 0
+    while offset + count < len(data):
+        byte = data[offset + count]
+        size = (size << 7) | (byte & 0x7F)
+        count += 1
+        if not (byte & 0x80) or count >= 4:
+            break
+    return size, count
 
 
 def parse_stts_atom(f, size: int) -> Dict[str, Any]:

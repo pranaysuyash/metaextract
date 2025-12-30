@@ -38,6 +38,8 @@ def test_id3_advanced_frames():
     equ2 = b"\x01" + b"eq\x00" + b"\x00\x64\x00\x0a"
     mllt = b"\x00\x10" + b"\x00\x00\x20" + b"\x01" + b"\x00\x00"
 
+    aspi = b"\x00\x00\x00\x01" + b"\x00\x00\x00\x02" + b"\x00\x01" + b"\x08" + b"\x05"
+
     frames = b"".join([
         _frame("SEEK", seek),
         _frame("SIGN", sign),
@@ -45,6 +47,7 @@ def test_id3_advanced_frames():
         _frame("COMR", comr),
         _frame("EQU2", equ2),
         _frame("MLLT", mllt),
+        _frame("ASPI", aspi),
     ])
     parsed = acd._parse_id3v2_tag(_tag(frames))
 
@@ -54,3 +57,4 @@ def test_id3_advanced_frames():
     assert parsed["commercial"]["price"] == "USD5.00"
     assert parsed["equalization"][0]["band_count"] == 1
     assert parsed["mpeg_lookup_table"]["frames_between_ref"] == 16
+    assert parsed["audio_seek_points"]["point_count"] == 1

@@ -210,6 +210,12 @@ except:
     GEOSPATIAL_GIS_AVAILABLE = False
 
 try:
+    from fits_complete import get_fits_complete_field_count
+    FITS_COMPLETE_AVAILABLE = True
+except:
+    FITS_COMPLETE_AVAILABLE = False
+
+try:
     from biometric_health import get_biometric_health_field_count
     BIOMETRIC_HEALTH_AVAILABLE = True
 except:
@@ -232,6 +238,55 @@ try:
     MATERIALS_SCIENCE_AVAILABLE = True
 except:
     MATERIALS_SCIENCE_AVAILABLE = False
+
+# Phase 4 modules - Advanced specialized domains
+try:
+    from makernotes_advanced import get_makernotes_advanced_field_count
+    MAKERNOTES_ADVANCED_AVAILABLE = True
+except:
+    MAKERNOTES_ADVANCED_AVAILABLE = False
+
+try:
+    from video_codec_advanced import get_video_codec_advanced_field_count
+    VIDEO_CODEC_ADVANCED_AVAILABLE = True
+except:
+    VIDEO_CODEC_ADVANCED_AVAILABLE = False
+
+try:
+    from pdf_metadata_advanced import get_pdf_metadata_advanced_field_count
+    PDF_METADATA_ADVANCED_AVAILABLE = True
+except:
+    PDF_METADATA_ADVANCED_AVAILABLE = False
+
+try:
+    from dicom_advanced import get_dicom_advanced_field_count
+    DICOM_ADVANCED_AVAILABLE = True
+except:
+    DICOM_ADVANCED_AVAILABLE = False
+
+try:
+    from forensic_security_advanced import get_forensic_security_advanced_field_count
+    FORENSIC_SECURITY_ADVANCED_AVAILABLE = True
+except:
+    FORENSIC_SECURITY_ADVANCED_AVAILABLE = False
+
+try:
+    from audio_id3_advanced import get_audio_id3_advanced_field_count
+    AUDIO_ID3_ADVANCED_AVAILABLE = True
+except:
+    AUDIO_ID3_ADVANCED_AVAILABLE = False
+
+try:
+    from scientific_advanced import get_scientific_advanced_field_count
+    SCIENTIFIC_ADVANCED_AVAILABLE = True
+except:
+    SCIENTIFIC_ADVANCED_AVAILABLE = False
+
+try:
+    from video_professional_advanced import get_video_professional_advanced_field_count
+    VIDEO_PROFESSIONAL_ADVANCED_AVAILABLE = True
+except:
+    VIDEO_PROFESSIONAL_ADVANCED_AVAILABLE = False
 
 total = 0
 fields = {}
@@ -498,11 +553,73 @@ if SCIENTIFIC_DICOM_EXTENDED_AVAILABLE:
 if ENVIRONMENTAL_CLIMATE_AVAILABLE:
     fields3['Environmental/Climate (Extended)'] = get_environmental_climate_field_count()
 
+if FITS_COMPLETE_AVAILABLE:
+    fields3['FITS Astronomy (Complete)'] = get_fits_complete_field_count()
+
 if MATERIALS_SCIENCE_AVAILABLE:
     fields3['Materials Science (Extended)'] = get_materials_science_field_count()
 
 print()
-print('--- Specialized Modules ---')
+print('--- Phase 4: Advanced Specialized Modules (NEW) ---')
+
+if MAKERNOTES_ADVANCED_AVAILABLE:
+    makernotes_adv_count = get_makernotes_advanced_field_count()
+    fields3['MakerNotes (Advanced Vendors)'] = makernotes_adv_count
+    print(f'{"MakerNotes (Advanced Vendors)":30s}: {makernotes_adv_count:>5} fields')
+else:
+    print(f'{"MakerNotes (Advanced Vendors)":30s}: {0:>5} fields (pending)')
+
+if VIDEO_CODEC_ADVANCED_AVAILABLE:
+    video_adv_count = get_video_codec_advanced_field_count()
+    fields3['Video Codec (Advanced)'] = video_adv_count
+    print(f'{"Video Codec (Advanced)":30s}: {video_adv_count:>5} fields')
+else:
+    print(f'{"Video Codec (Advanced)":30s}: {0:>5} fields (pending)')
+
+if PDF_METADATA_ADVANCED_AVAILABLE:
+    pdf_adv_count = get_pdf_metadata_advanced_field_count()
+    fields3['PDF Metadata (Advanced)'] = pdf_adv_count
+    print(f'{"PDF Metadata (Advanced)":30s}: {pdf_adv_count:>5} fields')
+else:
+    print(f'{"PDF Metadata (Advanced)":30s}: {0:>5} fields (pending)')
+
+if DICOM_ADVANCED_AVAILABLE:
+    dicom_adv_count = get_dicom_advanced_field_count()
+    fields3['DICOM (Advanced)'] = dicom_adv_count
+    print(f'{"DICOM (Advanced)":30s}: {dicom_adv_count:>5} fields')
+else:
+    print(f'{"DICOM (Advanced)":30s}: {0:>5} fields (pending)')
+
+if FORENSIC_SECURITY_ADVANCED_AVAILABLE:
+    forensic_adv_count = get_forensic_security_advanced_field_count()
+    fields3['Forensic/Security (Advanced)'] = forensic_adv_count
+    print(f'{"Forensic/Security (Advanced)":30s}: {forensic_adv_count:>5} fields')
+else:
+    print(f'{"Forensic/Security (Advanced)":30s}: {0:>5} fields (pending)')
+
+if AUDIO_ID3_ADVANCED_AVAILABLE:
+    audio_adv_count = get_audio_id3_advanced_field_count()
+    fields3['Audio ID3 (Advanced)'] = audio_adv_count
+    print(f'{"Audio ID3 (Advanced)":30s}: {audio_adv_count:>5} fields')
+else:
+    print(f'{"Audio ID3 (Advanced)":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_ADVANCED_AVAILABLE:
+    science_adv_count = get_scientific_advanced_field_count()
+    fields3['Scientific (Advanced)'] = science_adv_count
+    print(f'{"Scientific (Advanced)":30s}: {science_adv_count:>5} fields')
+else:
+    print(f'{"Scientific (Advanced)":30s}: {0:>5} fields (pending)')
+
+if VIDEO_PROFESSIONAL_ADVANCED_AVAILABLE:
+    video_prof_adv_count = get_video_professional_advanced_field_count()
+    fields3['Video Professional (Advanced)'] = video_prof_adv_count
+    print(f'{"Video Professional (Advanced)":30s}: {video_prof_adv_count:>5} fields')
+else:
+    print(f'{"Video Professional (Advanced)":30s}: {0:>5} fields (pending)')
+
+print()
+print('--- All Specialized Modules Summary ---')
 for name, count in fields3.items():
     print(f'{name:30s}: {count:>5} fields')
     total += count

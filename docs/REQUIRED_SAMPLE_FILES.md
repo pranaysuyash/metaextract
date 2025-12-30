@@ -10,6 +10,8 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 
 ## Video Container / Codec Edge Cases
 - MP4/MOV with timecode track (tmcd) and chapters.
+- MP4/MOV with `pasp` pixel aspect, `clap` clean aperture, and `colr` (nclx/ICC) boxes.
+- MP4/MOV with `chan` channel layout and `st3d`/`sv3d` stereo/360 metadata.
 - MKV with chapter tags + attachments (fonts/cover).
 - AVI with RIFF INFO tags (INAM/IART/etc) and ODML extension.
 - HDR10+ sample with dynamic metadata (SMPTE ST 2094-40 in HEVC).
@@ -42,8 +44,10 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - MP3 with ID3v2.4 chapters (CHAP/CTOC).
 - MP3 with SYLT (synced lyrics), RVA2 (volume), PRIV, and PCST frames.
 - MP3 with ID3 advanced frames: COMR, GRID, SIGN, EQU2, MLLT, SEEK.
+- MP3 with ID3 ASPI (audio seek point index).
 - MP4/M4A with iTunes tags: stik/hdvd/pcst/so*/tv*.
 - MP4/M4A with chpl chapter list atom.
+- MP4/M4A with chap track references.
 - APEv2 with binary cover art and external items.
 - FLAC with PICTURE blocks and ReplayGain tags.
 - DSF/DSDIFF (DSD) audio with metadata blocks.
@@ -51,6 +55,7 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 
 ## Document Metadata (PDF/Office)
 - PDF with AcroForm fields (text, checkbox, choice) and annotations.
+- PDF with digital signature fields and signed revisions.
 
 ## Forensics / Security
 - PNG/JPEG with C2PA (Content Credentials) manifest.

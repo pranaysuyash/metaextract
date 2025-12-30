@@ -27,6 +27,9 @@ INVENTORY_DIRS = [
     ("dicom_extended_inventory", "dicom_extended_summary.json"),
     ("geospatial_inventory", "geospatial_summary.json"),
     ("office_inventory", "office_summary.json"),
+    ("forensic_inventory", "forensic_summary.json"),
+    ("mobile_inventory", "mobile_summary.json"),
+    ("font_inventory", "font_summary.json"),
 ]
 
 

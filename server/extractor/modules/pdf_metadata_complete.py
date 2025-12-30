@@ -350,6 +350,7 @@ def _extract_pypdf_annotations(reader) -> Dict[str, Any]:
         return {}
     annotation_types: Dict[str, int] = {}
     flags = {"hidden": 0, "invisible": 0, "print": 0}
+    samples = []
     total_annotations = 0
     try:
         for page in reader.pages:
@@ -363,6 +364,13 @@ def _extract_pypdf_annotations(reader) -> Dict[str, Any]:
                 subtype_name = str(subtype) if subtype is not None else "Unknown"
                 annotation_types[subtype_name] = annotation_types.get(subtype_name, 0) + 1
                 total_annotations += 1
+                if len(samples) < 10:
+                    samples.append({
+                        "subtype": subtype_name,
+                        "contents": annot.get("/Contents"),
+                        "title": annot.get("/T"),
+                        "rect": annot.get("/Rect"),
+                    })
                 annot_flags = annot.get("/F")
                 if isinstance(annot_flags, int):
                     if annot_flags & 0x2:
@@ -378,6 +386,7 @@ def _extract_pypdf_annotations(reader) -> Dict[str, Any]:
         "pdf_annotation_types_pypdf": annotation_types,
         "pdf_has_annotations_pypdf": total_annotations > 0,
         "pdf_annotation_flags_pypdf": flags,
+        "pdf_annotation_samples_pypdf": samples,
     }
 
 
@@ -385,22 +394,127 @@ def _extract_pypdf_forms(reader) -> Dict[str, Any]:
     """Extract form fields using pypdf."""
     if not PYPDF_AVAILABLE:
         return {}
+    forms_error = None
     try:
         fields = reader.get_fields() or {}
     except Exception as e:
-        return {"pdf_forms_error": str(e)}
-    field_names = list(fields.keys())
+        forms_error = str(e)
+        fields = {}
+    field_names = []
     field_types: Dict[str, int] = {}
-    for field in fields.values():
+    field_details = []
+    signature_fields = 0
+
+    def normalize_name(name_obj, fallback: str) -> str:
+        if name_obj is None:
+            return fallback
+        return str(name_obj)
+
+    def add_field(name: str, field: dict) -> None:
+        nonlocal signature_fields
         field_type = field.get("/FT") if isinstance(field, dict) else None
         field_type_name = str(field_type) if field_type is not None else "Unknown"
         field_types[field_type_name] = field_types.get(field_type_name, 0) + 1
-    return {
+        if field_type_name == "/Sig":
+            signature_fields += 1
+        if len(field_details) < 20:
+            field_details.append({
+                "name": name,
+                "type": field_type_name,
+                "flags": field.get("/Ff") if isinstance(field, dict) else None,
+                "value": field.get("/V") if isinstance(field, dict) else None,
+                "default": field.get("/DV") if isinstance(field, dict) else None,
+            })
+
+    if fields:
+        field_names = list(fields.keys())
+        for name, field in fields.items():
+            if isinstance(field, dict):
+                add_field(name, field)
+    else:
+        # Fallback: traverse AcroForm fields if get_fields failed or returned empty.
+        acroform = None
+        try:
+            root = reader.trailer.get("/Root") if hasattr(reader, "trailer") else None
+            if isinstance(root, dict):
+                acroform = root.get("/AcroForm")
+        except Exception:
+            acroform = None
+        if hasattr(acroform, "get_object"):
+            try:
+                acroform = acroform.get_object()
+            except Exception:
+                acroform = None
+
+        def collect_field(field_obj, parent_name: str = "") -> None:
+            if hasattr(field_obj, "get_object"):
+                try:
+                    field_obj = field_obj.get_object()
+                except Exception:
+                    return
+            if not isinstance(field_obj, dict):
+                return
+            name = normalize_name(field_obj.get("/T"), "Field")
+            full_name = name if not parent_name else f"{parent_name}.{name}"
+            kids = field_obj.get("/Kids")
+            if kids is not None:
+                if hasattr(kids, "get_object"):
+                    try:
+                        kids = kids.get_object()
+                    except Exception:
+                        kids = []
+                for kid in kids or []:
+                    collect_field(kid, full_name)
+            if field_obj.get("/FT") or str(field_obj.get("/Subtype")) == "/Widget":
+                if full_name not in field_names:
+                    field_names.append(full_name)
+                add_field(full_name, field_obj)
+
+        if isinstance(acroform, dict):
+            fields_list = acroform.get("/Fields") or []
+            if hasattr(fields_list, "get_object"):
+                try:
+                    fields_list = fields_list.get_object()
+                except Exception:
+                    fields_list = []
+            for field_ref in fields_list:
+                collect_field(field_ref)
+
+        # Final fallback: detect widget annotations when AcroForm is missing.
+        if not field_names:
+            for page in reader.pages:
+                annots = page.get("/Annots") or []
+                if hasattr(annots, "get_object"):
+                    try:
+                        annots = annots.get_object()
+                    except Exception:
+                        annots = []
+                for annot_ref in annots:
+                    try:
+                        annot = annot_ref.get_object()
+                    except Exception:
+                        annot = annot_ref
+                    if not isinstance(annot, dict):
+                        continue
+                    subtype = annot.get("/Subtype")
+                    subtype_name = str(subtype) if subtype is not None else ""
+                    if subtype_name == "/Widget":
+                        name = normalize_name(annot.get("/T"), "Widget")
+                        if name not in field_names:
+                            field_names.append(name)
+                        add_field(name, annot)
+
+    result = {
         "pdf_form_field_count_pypdf": len(field_names),
         "pdf_form_fields_pypdf": field_names[:20],
         "pdf_has_forms_pypdf": len(field_names) > 0,
         "pdf_form_field_types_pypdf": field_types,
+        "pdf_form_field_details_pypdf": field_details,
+        "pdf_signature_field_count_pypdf": signature_fields,
     }
+    if forms_error:
+        result["pdf_forms_error"] = forms_error
+    return result
 
 
 def _extract_pypdf_outlines(reader) -> Dict[str, Any]:
@@ -450,7 +564,7 @@ def get_pdf_complete_field_count() -> int:
     accessibility_fields = 3  # from _extract_accessibility
     xmp_fields = 8  # approximate from _extract_xmp_metadata
     security_fields = 4  # from _extract_security_info
-    pypdf_fields = 10  # annotations + forms + outlines (pypdf)
+    pypdf_fields = 12  # annotations + forms + outlines (pypdf)
 
     return basic_fields + page_layout_fields + annotation_fields + form_fields + \
            bookmark_fields + embedded_fields + signature_fields + accessibility_fields + \
