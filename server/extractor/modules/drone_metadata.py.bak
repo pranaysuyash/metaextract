@@ -1,0 +1,341 @@
+"""
+Drone and Aerial Imaging Metadata
+DJI, Parrot, Skydio, and other drone manufacturers
+"""
+
+import math
+from typing import Dict, Any, Optional
+
+
+DJI_TAGS = {
+    # DJI Flight Data
+    "DJI_FlightPitchRotation": "dji_flight_pitch_rotation",
+    "DJI_FlightRollRotation": "dji_flight_roll_rotation",
+    "DJI_FlightYawRotation": "dji_flight_yaw_rotation",
+    "DJI_FlightXSpeed": "dji_flight_x_speed",
+    "DJI_FlightYSpeed": "dji_flight_y_speed",
+    "DJI_FlightZSpeed": "dji_flight_z_speed",
+    "DJI_FlightGPSLatitude": "dji_flight_gps_latitude",
+    "DJI_FlightGPSLongitude": "dji_flight_gps_longitude",
+    "DJI_FlightGPSAltitude": "dji_flight_gps_altitude",
+    "DJI_FlightHomeLatitude": "dji_flight_home_latitude",
+    "DJI_FlightHomeLongitude": "dji_flight_home_longitude",
+    "DJI_FlightHomeAltitude": "dji_flight_home_altitude",
+    "DJI_CameraOrientation": "dji_camera_orientation",
+    "DJI_FlyStatus": "dji_fly_status",
+    "DJI_ExceptionFlag": "dji_exception_flag",
+    "DJI_FlightMode": "dji_flight_mode",
+    "DJI_ATTIFlag": "dji_atti_flag",
+    "DJI_NavState": "dji_nav_state",
+    
+    # DJI Gimbal
+    "DJI_GimbalPitch": "dji_gimbal_pitch",
+    "DJI_GimbalRoll": "dji_gimbal_roll",
+    "DJI_GimbalYaw": "dji_gimbal_yaw",
+    "DJI_GimbalPitchSpeed": "dji_gimbal_pitch_speed",
+    "DJI_GimbalRollSpeed": "dji_gimbal_roll_speed",
+    "DJI_GimbalYawSpeed": "dji_gimbal_yaw_speed",
+    
+    # DJI Battery
+    "DJI_BatteryPercentage": "dji_battery_percentage",
+    "DJI_BatteryVoltage": "dji_battery_voltage",
+    "DJI_BatteryTemperature": "dji_battery_temperature",
+    "DJI_BatteryHealth": "dji_battery_health",
+    "DJI_BatteryCycles": "dji_battery_cycles",
+    
+    # DJI RC
+    "DJI_RCSignalStrength": "dji_rc_signal_strength",
+    "DJI_RCBattery": "dji_rc_battery",
+    
+    # DJI Image
+    "DJI_ImageType": "dji_image_type",
+    "DJI_ImageFormat": "dji_image_format",
+    "DJI_ImageWidth": "dji_image_width",
+    "DJI_ImageHeight": "dji_image_height",
+    "DJI_ImageQuality": "dji_image_quality",
+    "DJI_ISO": "dji_iso",
+    "DJI_ShutterSpeed": "dji_shutter_speed",
+    "DJI_Aperture": "dji_aperture",
+    "DJI_EV": "dji_ev",
+    "DJI_WB": "dji_white_balance",
+    
+    # DJI Video
+    "DJI_VideoFormat": "dji_video_format",
+    "DJI_VideoFrameRate": "dji_video_frame_rate",
+    "DJI_VideoBitrate": "dji_video_bitrate",
+    "DJI_VideoCodeID": "dji_video_codec",
+}
+
+PARROT_TAGS = {
+    "Parrot_Product": "parrot_product",
+    "Parrot_ProductID": "parrot_product_id",
+    "Parrot_FirmwareVersion": "parrot_firmware_version",
+    "Parrot_FlightDate": "parrot_flight_date",
+    "Parrot_FlightTime": "parrot_flight_time",
+    "Parrot_PictureTaken": "parrot_picture_taken",
+    "Parrot_GPSLatitude": "parrot_gps_latitude",
+    "Parrot_GPSLongitude": "parrot_gps_longitude",
+    "Parrot_GPSAltitude": "parrot_gps_altitude",
+    "Parrot_GPSAccuracy": "parrot_gps_accuracy",
+    "Parrot_HomeLatitude": "parrot_home_latitude",
+    "Parrot_HomeLongitude": "parrot_home_longitude",
+    "Parrot_GroundSpeed": "parrot_ground_speed",
+    "Parrot_AirSpeed": "parrot_air_speed",
+    "Parrot_ClimbRate": "parrot_climb_rate",
+    "Parrot_Heading": "parrot_heading",
+    "Parrot_TiltRoll": "parrot_tilt_roll",
+    "Parrot_TiltPitch": "parrot_tilt_pitch",
+    "Parrot_TiltYaw": "parrot_tilt_yaw",
+    "Parrot_CaptureTime": "parrot_capture_time",
+    "Parrot_ExposureTime": "parrot_exposure_time",
+    "Parrot_FNumber": "parrot_f_number",
+    "Parrot_ISO": "parrot_iso",
+    "Parrot_FocalLength": "parrot_focal_length",
+    "Parrot_WhiteBalance": "parrot_white_balance",
+}
+
+SKYDIO_TAGS = {
+    "Skydio_MediaVersion": "skydio_media_version",
+    "Skydio_DeviceID": "skydio_device_id",
+    "Skydio_Resolution": "skydio_resolution",
+    "Skydio_FrameRate": "skydio_frame_rate",
+    "Skydio_GPSEnabled": "skydio_gps_enabled",
+    "Skydio_GPSLatitude": "skydio_gps_latitude",
+    "Skydio_GPSLongitude": "skydio_gps_longitude",
+    "Skydio_GPSAltitude": "skydio_gps_altitude",
+    "Skydio_Speed": "skydio_speed",
+    "Skydio_SubjectTracking": "skydio_subject_tracking",
+    "Skydio_TrackingConfidence": "skydio_tracking_confidence",
+    "Skydio_KeyframeTime": "skydio_keyframe_time",
+    "Skydio_ExportMode": "skydio_export_mode",
+}
+
+DRONE_GENERIC_TAGS = {
+    "drone_make": "drone_make",
+    "drone_model": "drone_model",
+    "drone_serial_number": "drone_serial_number",
+    "flight_speed": "flight_speed",
+    "flight_altitude": "flight_altitude_agl",
+    "flight_pitch": "flight_pitch",
+    "flight_roll": "flight_roll",
+    "flight_yaw": "flight_yaw",
+    "gimbal_pitch": "gimbal_pitch",
+    "gimbal_roll": "gimbal_roll",
+    "gimbal_yaw": "gimbal_yaw",
+    "flight_mode": "flight_mode",
+    "rtk_enabled": "rtk_enabled",
+    "obstacle_avoidance_active": "obstacle_avoidance_active",
+    "battery_percentage": "battery_percentage",
+    "battery_temperature": "battery_temperature",
+    "signal_strength": "controller_signal_strength",
+    "satellite_count": "gps_satellite_count",
+}
+
+
+def extract_drone_metadata(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract drone/aerial imaging metadata.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with drone metadata organized by manufacturer
+    """
+    result = {
+        "drone": {
+            "dji": {},
+            "parrot": {},
+            "skydio": {},
+            "generic": {}
+        },
+        "detection": {
+            "is_drone_image": False,
+            "detected_manufacturers": [],
+            "confidence": 0.0
+        },
+        "flight_data": {},
+        "gimbal_data": {},
+        "battery_data": {},
+        "fields_extracted": 0
+    }
+    
+    try:
+        from .exif import extract_exif_metadata
+        exif_data = extract_exif_metadata(filepath)
+        
+        if not exif_data or "error" in exif_data:
+            return result
+        
+        all_tags = {}
+        for category in ["image", "photo", "gps", "interoperability"]:
+            if category in exif_data and isinstance(exif_data[category], dict):
+                all_tags.update(exif_data[category])
+        
+        detected_any = False
+        
+        for tag, value in all_tags.items():
+            tag_str = str(tag)
+            
+            if tag_str in DJI_TAGS:
+                key = DJI_TAGS[tag_str]
+                if "gimbal" in key or "pitch" in key or "roll" in key or "yaw" in key:
+                    result["gimbal_data"][key] = str(value)
+                elif "battery" in key or "voltage" in key:
+                    result["battery_data"][key] = str(value)
+                elif "flight" in key or "speed" in key or "gps" in key:
+                    result["flight_data"][key] = str(value)
+                else:
+                    result["drone"]["dji"][key] = str(value)
+                detected_any = True
+            
+            elif tag_str in PARROT_TAGS:
+                result["drone"]["parrot"][PARROT_TAGS[tag_str]] = str(value)
+                detected_any = True
+            
+            elif tag_str in SKYDIO_TAGS:
+                result["drone"]["skydio"][SKYDIO_TAGS[tag_str]] = str(value)
+                detected_any = True
+            
+            elif tag_str in DRONE_GENERIC_TAGS:
+                result["drone"]["generic"][DRONE_GENERIC_TAGS[tag_str]] = str(value)
+                detected_any = True
+        
+        if detected_any:
+            result["detection"]["is_drone_image"] = True
+            manufacturers = []
+            if result["drone"]["dji"]:
+                manufacturers.append("dji")
+            if result["drone"]["parrot"]:
+                manufacturers.append("parrot")
+            if result["drone"]["skydio"]:
+                manufacturers.append("skydio")
+            if result["drone"]["generic"]:
+                manufacturers.append("generic")
+            result["detection"]["detected_manufacturers"] = manufacturers
+            result["detection"]["confidence"] = min(1.0, len(manufacturers) / 2.0)
+        
+        total_fields = (
+            len(result["drone"]["dji"]) +
+            len(result["drone"]["parrot"]) +
+            len(result["drone"]["skydio"]) +
+            len(result["drone"]["generic"]) +
+            len(result["flight_data"]) +
+            len(result["gimbal_data"]) +
+            len(result["battery_data"])
+        )
+        result["fields_extracted"] = total_fields
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Failed to extract drone metadata: {str(e)}"}
+
+
+def calculate_flight_metrics(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Calculate derived flight metrics from drone metadata.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with calculated flight metrics
+    """
+    result = {
+        "distance_from_home": None,
+        "flight_direction": None,
+        "altitude_above_home": None,
+        "horizontal_speed": None,
+        "flight_status": "unknown"
+    }
+    
+    try:
+        drone_data = extract_drone_metadata(filepath)
+        
+        flight = drone_data.get("flight_data", {})
+        gps_data = drone_data.get("detection", {})
+        
+        drone_lat = None
+        drone_lon = None
+        drone_alt = None
+        home_lat = None
+        home_lon = None
+        home_alt = None
+        
+        for key, value in flight.items():
+            if "gps_latitude" in key and "home" not in key:
+                try:
+                    drone_lat = float(value)
+                except (ValueError, TypeError):
+                    pass
+            elif "gps_longitude" in key and "home" not in key:
+                try:
+                    drone_lon = float(value)
+                except (ValueError, TypeError):
+                    pass
+            elif "gps_altitude" in key and "home" not in key:
+                try:
+                    drone_alt = float(value)
+                except (ValueError, TypeError):
+                    pass
+            elif "home_latitude" in key:
+                try:
+                    home_lat = float(value)
+                except (ValueError, TypeError):
+                    pass
+            elif "home_longitude" in key:
+                try:
+                    home_lon = float(value)
+                except (ValueError, TypeError):
+                    pass
+            elif "home_altitude" in key:
+                try:
+                    home_alt = float(value)
+                except (ValueError, TypeError):
+                    pass
+        
+        if all(v is not None for v in [drone_lat, drone_lon, home_lat, home_lon]):
+            import math
+            lat_diff = drone_lat - home_lat
+            lon_diff = drone_lon - home_lon
+            distance = math.sqrt(lat_diff**2 + lon_diff**2) * 111320
+            result["distance_from_home"] = round(distance, 2)
+            
+            if lat_diff != 0 or lon_diff != 0:
+                direction = math.atan2(lon_diff, lat_diff) * 180 / math.pi
+                if direction < 0:
+                    direction += 360
+                result["flight_direction"] = round(direction, 2)
+        
+        if drone_alt is not None and home_alt is not None:
+            result["altitude_above_home"] = round(drone_alt - home_alt, 2)
+        
+        x_speed = flight.get("dji_flight_x_speed")
+        y_speed = flight.get("dji_flight_y_speed")
+        if x_speed is not None and y_speed is not None:
+            try:
+                h_speed = math.sqrt(float(x_speed)**2 + float(y_speed)**2)
+                result["horizontal_speed"] = round(h_speed, 2)
+            except (ValueError, TypeError):
+                pass
+        
+        if result["distance_from_home"] is not None:
+            if result["distance_from_home"] < 10:
+                result["flight_status"] = "hovering"
+            elif result["distance_from_home"] < 100:
+                result["flight_status"] = "near_home"
+            elif result["distance_from_home"] < 500:
+                result["flight_status"] = "mid_range"
+            else:
+                result["flight_status"] = "far_range"
+        
+        return result
+        
+    except Exception:
+        return result
+
+
+def get_drone_field_count() -> int:
+    """Return approximate number of drone fields."""
+    return 35

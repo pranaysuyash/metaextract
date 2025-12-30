@@ -1,0 +1,267 @@
+{
+  "extraction_info": {
+    "timestamp": "2025-12-30T14:08:52.494389",
+    "tier": "premium",
+    "engine_version": "3.0.0",
+    "exiftool_used": true,
+    "libraries": {
+      "pillow": false,
+      "exifread": false,
+      "ffmpeg": false,
+      "mutagen": false,
+      "pypdf": false,
+      "xattr": false,
+      "exiftool": true,
+      "iptcinfo3": false,
+      "xmp": false,
+      "imagehash": false
+    },
+    "fields_extracted": 170,
+    "locked_categories": 0
+  },
+  "file": {
+    "path": "/Users/pranay/Projects/metaextract/sample_with_meta.jpg",
+    "name": "sample_with_meta.jpg",
+    "extension": ".jpg",
+    "mime_type": "image/jpeg"
+  },
+  "summary": {
+    "filename": "sample_with_meta.jpg",
+    "filesize": "103.70 KB",
+    "filesize_bytes": 106185,
+    "filetype": "JPG",
+    "mime_type": "image/jpeg"
+  },
+  "locked_fields": [],
+  "thumbnail": null,
+  "perceptual_hashes": {
+    "available": false,
+    "reason": "pillow not installed"
+  },
+  "iptc_raw": {
+    "Keywords": "metaextract",
+    "City": "Mountain View",
+    "Headline": "IPTC Headline",
+    "ApplicationRecordVersion": 4
+  },
+  "xmp_raw": {
+    "XMP-x:XMPToolkit": "Image::ExifTool 13.44",
+    "XMP-dc:Creator": "MetaExtract",
+    "XMP-dc:Title": "MetaExtract Demo",
+    "XMP-photoshop:Headline": "Demo Headline"
+  },
+  "filesystem": {
+    "size_bytes": 106185,
+    "size_human": "103.70 KB",
+    "created": "2025-12-30T14:08:06.349663",
+    "modified": "2025-12-30T14:08:06.372095",
+    "accessed": "2025-12-30T14:08:07.631430",
+    "changed": "2025-12-30T14:08:06.380814",
+    "permissions_octal": "0o644",
+    "permissions_human": "-rw-r--r--",
+    "owner": "pranay",
+    "owner_uid": 501,
+    "group": "staff",
+    "group_gid": 20,
+    "inode": 191013701,
+    "device": 16777234,
+    "hard_links": 1,
+    "file_type": "regular",
+    "is_hidden": false
+  },
+  "hashes": {
+    "md5": "0324d293ef37da9acf811762d58accbd",
+    "sha256": "d716e25caf04d36b2435cfb5dbb84efc599e03ef9a8b90767f2ed442bf89796f",
+    "sha1": "c318a20cc9d6b8ad41de9526d950e1e610ec4dfd",
+    "crc32": "f806561e"
+  },
+  "extended_attributes": {
+    "available": false
+  },
+  "image": null,
+  "exif": {
+    "Make": "MetaCam",
+    "Model": "MetaCam 1",
+    "XResolution": 1,
+    "YResolution": 1,
+    "ResolutionUnit": 1,
+    "YCbCrPositioning": 1,
+    "ExifVersion": "0232",
+    "DateTimeOriginal": "2025:12:30 12:34:56",
+    "ComponentsConfiguration": "1 2 3 0",
+    "ColorSpace": 65535
+  },
+  "gps": {
+    "GPSVersionID": "2 3 0 0",
+    "GPSLatitude": 37.4219982999972,
+    "GPSLongitude": 122.084,
+    "GPSAltitude": 10
+  },
+  "composite": {
+    "ImageSize": "1280 720",
+    "Megapixels": 0.9216,
+    "GPSPosition": "37.4219982999972 122.084"
+  },
+  "exif_ifd": {
+    "ifd0": {
+      "Make": "MetaCam",
+      "Model": "MetaCam 1",
+      "XResolution": 1,
+      "YResolution": 1,
+      "ResolutionUnit": 1,
+      "YCbCrPositioning": 1
+    },
+    "exif": {
+      "ExifVersion": "0232",
+      "DateTimeOriginal": "2025:12:30 12:34:56",
+      "ComponentsConfiguration": "1 2 3 0",
+      "ColorSpace": 65535
+    },
+    "gps": {
+      "GPSVersionID": "2 3 0 0",
+      "GPSLatitude": 37.4219982999972,
+      "GPSLongitude": 122.084,
+      "GPSAltitude": 10
+    }
+  },
+  "image_container": {
+    "JFIFVersion": "1 1",
+    "ResolutionUnit": 0,
+    "XResolution": 1,
+    "YResolution": 1
+  },
+  "icc_profile": {
+    "ProfileDescription": "sRGB",
+    "RedMatrixColumn": "0.43607 0.22249 0.01392",
+    "GreenMatrixColumn": "0.38515 0.71687 0.09708",
+    "BlueMatrixColumn": "0.14307 0.06061 0.7141",
+    "MediaWhitePoint": "0.9642 1 0.82491",
+    "RedTRC": "Binary data (40 bytes)",
+    "GreenTRC": "Binary data (40 bytes)",
+    "BlueTRC": "Binary data (40 bytes)",
+    "ProfileCopyright": "Google Inc. 2016"
+  },
+  "iptc": {
+    "Keywords": "metaextract",
+    "City": "Mountain View",
+    "Headline": "IPTC Headline",
+    "ApplicationRecordVersion": 4
+  },
+  "xmp": {
+    "XMP-x:XMPToolkit": "Image::ExifTool 13.44",
+    "XMP-dc:Creator": "MetaExtract",
+    "XMP-dc:Title": "MetaExtract Demo",
+    "XMP-photoshop:Headline": "Demo Headline"
+  },
+  "xmp_namespaces": {
+    "dc": {
+      "Creator": "MetaExtract",
+      "Title": "MetaExtract Demo"
+    },
+    "photoshop": {
+      "Headline": "Demo Headline"
+    },
+    "other": {
+      "XMPToolkit": "Image::ExifTool 13.44"
+    }
+  },
+  "calculated": {
+    "file_age_days": 0,
+    "file_age_human": "just now",
+    "file_age": {
+      "days": 0,
+      "hours": 0,
+      "human_readable": "just now"
+    },
+    "time_since_modified": {
+      "days": 0,
+      "hours": 0,
+      "human_readable": "just now"
+    },
+    "time_since_accessed": {
+      "days": 0,
+      "hours": 0,
+      "human_readable": "just now"
+    }
+  },
+  "normalized": {
+    "camera_make": "Metacam",
+    "camera_model": "MetaCam 1",
+    "color_space": "Uncalibrated",
+    "headline": "IPTC Headline",
+    "keywords": "metaextract",
+    "location_city": "Mountain View",
+    "title": "MetaExtract Demo",
+    "creator": "MetaExtract",
+    "searchable_text": "Metacam MetaCam 1 MetaExtract MetaExtract Demo IPTC Headline metaextract Mountain View"
+  },
+  "forensic": {
+    "forensic": {
+      "digital_signatures": {},
+      "blockchain_nft": {},
+      "watermarking": {},
+      "c2pa": {},
+      "adobe_credentials": {},
+      "filesystem": {
+        "file_created": "2025-12-30T14:08:53.440396",
+        "file_modified": "2025-12-30T14:08:53.593579",
+        "file_accessed": "2025-12-30T14:08:55.590422",
+        "file_changed": "2025-12-30T14:08:53.610566",
+        "file_size": 106185,
+        "file_permissions": "644",
+        "file_owner": 501,
+        "file_group": 20,
+        "file_inode": 191014917,
+        "file_device": 16777234,
+        "file_hardlinks": 1
+      },
+      "device_hardware": {
+        "device_manufacturer": "MetaCam",
+        "device_model": "MetaCam 1"
+      },
+      "network_communication": {},
+      "email_communication": {}
+    },
+    "authentication": {
+      "is_authenticated": false,
+      "confidence_score": 0.0,
+      "issues": [
+        "No authentication metadata found"
+      ],
+      "security_flags": [
+        "unauthenticated_content"
+      ]
+    },
+    "provenance": {},
+    "integrity": {
+      "file_hash_md5": "0324d293ef37da9acf811762d58accbd",
+      "file_hash_sha1": "c318a20cc9d6b8ad41de9526d950e1e610ec4dfd",
+      "file_hash_sha256": "d716e25caf04d36b2435cfb5dbb84efc599e03ef9a8b90767f2ed442bf89796f",
+      "file_hash_sha512": "5685f91ca7d210426f0651d899b2ed2ab360a6886fe333ac27bf79a90b050f59555476948d23c8b8baf69aa6dcd12b4d01d0a830607475993f9d0588c69bba69",
+      "error": "'float' object has no attribute 'bit_length'"
+    },
+    "fields_extracted": 13
+  },
+  "burned_metadata": {
+    "has_burned_metadata": true,
+    "ocr_available": true,
+    "extracted_text": "{@ | METAEXTRACT Capabilities Pricing API Sign In\n\nExtract forensic\nmetadata\ncompetitors miss.\n\nCourts, journalists, and security teams trust MetaExtract to\nuncover 7,000+ hidden fields, detect manipulation, and\npreserve digital evidence. Select File\n\nna\n\nUpload Evidence\n\nDrag & drop media files here or brov\n\n\u00a9 Canon MakerNotes \u00a9 Sony Encrypted Data \u00a9 Photoshop History\n\nSTART EXTRACTION is Petia",
+    "parsed_data": {},
+    "confidence": "none"
+  },
+  "metadata_comparison": {
+    "has_both": false,
+    "has_embedded_only": false,
+    "has_burned_only": false,
+    "matches": [],
+    "discrepancies": [],
+    "warnings": [],
+    "summary": {
+      "embedded_metadata_present": false,
+      "burned_metadata_present": false,
+      "gps_comparison": "no_gps",
+      "timestamp_comparison": "no_timestamp",
+      "overall_status": "no_metadata"
+    }
+  }
+}

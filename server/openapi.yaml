@@ -1,0 +1,775 @@
+openapi: 3.1.0
+info:
+  title: MetaExtract API
+  description: |
+    MetaExtract is a comprehensive metadata extraction platform that extracts up to 45,000+
+    metadata fields from any file. This API provides endpoints for file analysis, forensic
+    investigation, and metadata management.
+
+    ## Features
+    - **Universal Metadata Extraction**: Extract metadata from images, videos, audio, documents, and scientific files
+    - **Forensic Analysis**: Steganography detection, manipulation detection, AI content detection
+    - **Timeline Reconstruction**: Chronological analysis of file events
+    - **Batch Processing**: Process multiple files simultaneously (Professional+ tiers)
+
+    ## Tiers
+    | Tier | Fields | Max Size | File Types |
+    |------|--------|----------|------------|
+    | Free | ~200 | 10MB | Images |
+    | Professional | ~1,000 | 100MB | Images + RAW |
+    | Forensic | ~15,000 | 500MB | All media |
+    | Enterprise | 45,000+ | 2GB | All files |
+
+  version: 2.0.0
+  contact:
+    name: MetaExtract Support
+    url: https://metaextract.io/support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /api
+    description: API Base URL
+
+tags:
+  - name: Extraction
+    description: Metadata extraction endpoints
+  - name: Forensic
+    description: Forensic analysis and investigation
+  - name: Metadata
+    description: Metadata search and management
+  - name: Tiers
+    description: Tier information and configuration
+  - name: Admin
+    description: Administrative and monitoring endpoints
+
+paths:
+  /extract:
+    post:
+      tags:
+        - Extraction
+      summary: Extract metadata from a file
+      description: |
+        Upload a file and extract comprehensive metadata. The depth of extraction
+        depends on your subscription tier.
+      operationId: extractMetadata
+      parameters:
+        - name: tier
+          in: query
+          description: Subscription tier (affects available fields)
+          schema:
+            type: string
+            enum: [free, professional, forensic, enterprise]
+            default: enterprise
+        - name: store
+          in: query
+          description: Store metadata in database for later retrieval
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to analyze
+      responses:
+        '200':
+          description: Successful extraction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataResponse'
+        '400':
+          description: No file uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: File type or size not allowed for tier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TierError'
+        '500':
+          description: Extraction failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /extract/batch:
+    post:
+      tags:
+        - Extraction
+      summary: Batch extract metadata from multiple files
+      description: |
+        Upload multiple files for batch processing. Requires Forensic or Enterprise tier.
+      operationId: batchExtract
+      parameters:
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [forensic, enterprise]
+            default: enterprise
+        - name: store
+          in: query
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 100
+      responses:
+        '200':
+          description: Batch processing complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResponse'
+        '403':
+          description: Batch processing not available for tier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TierError'
+
+  /extract/advanced:
+    post:
+      tags:
+        - Extraction
+        - Forensic
+      summary: Advanced extraction with forensic analysis
+      description: |
+        Extract metadata with additional forensic analysis including steganography detection,
+        manipulation detection, and AI content detection. Requires Forensic or Enterprise tier.
+      operationId: advancedExtract
+      parameters:
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [forensic, enterprise]
+            default: enterprise
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Advanced analysis complete
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/MetadataResponse'
+                  - type: object
+                    properties:
+                      advanced_analysis:
+                        $ref: '#/components/schemas/AdvancedAnalysis'
+
+  /forensic/capabilities:
+    get:
+      tags:
+        - Forensic
+      summary: Get forensic analysis capabilities
+      description: |
+        Returns available forensic analysis modules based on subscription tier.
+      operationId: getForensicCapabilities
+      parameters:
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [free, professional, forensic, enterprise]
+            default: enterprise
+      responses:
+        '200':
+          description: Capabilities list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForensicCapabilities'
+
+  /compare/batch:
+    post:
+      tags:
+        - Forensic
+      summary: Compare metadata across multiple files
+      description: |
+        Upload 2 or more files to compare their metadata. Identifies matching fields,
+        differences, and calculates similarity scores.
+      operationId: batchCompare
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  minItems: 2
+                  maxItems: 50
+      responses:
+        '200':
+          description: Comparison complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonResponse'
+
+  /timeline/reconstruct:
+    post:
+      tags:
+        - Forensic
+      summary: Reconstruct timeline from multiple files
+      description: |
+        Analyze multiple files to reconstruct a chronological timeline of events.
+        Identifies gaps and chain of custody issues.
+      operationId: reconstructTimeline
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 100
+      responses:
+        '200':
+          description: Timeline reconstructed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineResponse'
+
+  /forensic/report:
+    post:
+      tags:
+        - Forensic
+      summary: Generate comprehensive forensic report
+      description: |
+        Generate a professional forensic report including all analysis results,
+        conclusions, and recommendations. Enterprise tier only.
+      operationId: generateForensicReport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Forensic report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForensicReport'
+
+  /metadata/search:
+    get:
+      tags:
+        - Metadata
+      summary: Search stored metadata
+      operationId: searchMetadata
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+
+  /metadata/similar:
+    get:
+      tags:
+        - Metadata
+      summary: Find visually similar files
+      operationId: findSimilar
+      parameters:
+        - name: phash
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Perceptual hash to search for
+        - name: threshold
+          in: query
+          schema:
+            type: integer
+            default: 5
+            minimum: 0
+            maximum: 64
+          description: Hamming distance threshold
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Similar files found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+
+  /tiers:
+    get:
+      tags:
+        - Tiers
+      summary: Get all tier configurations
+      operationId: getTiers
+      responses:
+        '200':
+          description: Tier configurations
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/TierConfig'
+
+  /fields:
+    get:
+      tags:
+        - Tiers
+      summary: Get field information
+      description: |
+        Returns comprehensive information about available metadata fields,
+        organized by domain and tier.
+      operationId: getFields
+      responses:
+        '200':
+          description: Field information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldInfo'
+
+  /samples:
+    get:
+      tags:
+        - Tiers
+      summary: Get sample files for testing
+      operationId: getSamples
+      responses:
+        '200':
+          description: Sample files list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  samples:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SampleFile'
+
+  /health:
+    get:
+      tags:
+        - Admin
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: MetaExtract API
+                  version:
+                    type: string
+                    example: "2.0.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /performance/stats:
+    get:
+      tags:
+        - Admin
+      summary: Get performance statistics
+      operationId: getPerformanceStats
+      responses:
+        '200':
+          description: Performance statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cache:
+                    type: object
+                  server:
+                    type: object
+                    properties:
+                      uptime_seconds:
+                        type: number
+                      memory_usage:
+                        type: object
+
+components:
+  schemas:
+    MetadataResponse:
+      type: object
+      properties:
+        filename:
+          type: string
+        filesize:
+          type: string
+        filetype:
+          type: string
+        mime_type:
+          type: string
+        tier:
+          type: string
+        fields_extracted:
+          type: integer
+        fields_available:
+          type: integer
+        processing_ms:
+          type: number
+        file_integrity:
+          type: object
+        filesystem:
+          type: object
+        exif:
+          type: object
+        gps:
+          type: object
+          nullable: true
+        image:
+          type: object
+          nullable: true
+        video:
+          type: object
+          nullable: true
+        audio:
+          type: object
+          nullable: true
+        makernote:
+          type: object
+          nullable: true
+        iptc:
+          type: object
+          nullable: true
+        xmp:
+          type: object
+          nullable: true
+        locked_fields:
+          type: array
+          items:
+            type: string
+
+    BatchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        batch_id:
+          type: string
+          format: uuid
+        total_files:
+          type: integer
+        successful_files:
+          type: integer
+        processing_time_ms:
+          type: number
+        results:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/MetadataResponse'
+
+    AdvancedAnalysis:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        processing_time_ms:
+          type: number
+        modules_run:
+          type: array
+          items:
+            type: string
+        forensic_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        authenticity_assessment:
+          type: string
+          enum: [authentic, questionable, suspicious]
+
+    ForensicCapabilities:
+      type: object
+      properties:
+        tier:
+          type: string
+        advanced_analysis_available:
+          type: boolean
+        modules:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              available:
+                type: boolean
+              description:
+                type: string
+              methods:
+                type: array
+                items:
+                  type: string
+
+    ComparisonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        comparison_id:
+          type: string
+          format: uuid
+        files_compared:
+          type: integer
+        comparisons:
+          type: array
+          items:
+            type: object
+            properties:
+              file1:
+                type: string
+              file2:
+                type: string
+              similarity_score:
+                type: integer
+              matching_fields:
+                type: integer
+              different_fields:
+                type: integer
+
+    TimelineResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timeline_id:
+          type: string
+          format: uuid
+        files_analyzed:
+          type: integer
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+              event_type:
+                type: string
+              source:
+                type: string
+              file:
+                type: string
+        gaps:
+          type: array
+          items:
+            type: object
+        chain_of_custody_complete:
+          type: boolean
+
+    ForensicReport:
+      type: object
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        generated_at:
+          type: string
+          format: date-time
+        analyst:
+          type: string
+        case_summary:
+          type: object
+        files:
+          type: array
+          items:
+            type: object
+        conclusions:
+          type: object
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    TierConfig:
+      type: object
+      properties:
+        displayName:
+          type: string
+        priceLabel:
+          type: string
+        maxFileSizeMB:
+          type: integer
+        fieldsPerFile:
+          type: integer
+        features:
+          type: object
+
+    FieldInfo:
+      type: object
+      properties:
+        total_possible_fields:
+          type: string
+        comprehensive_engine_version:
+          type: string
+        tiers:
+          type: object
+        categories:
+          type: object
+        domains:
+          type: object
+
+    SampleFile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        filename:
+          type: string
+        description:
+          type: string
+        size:
+          type: string
+        type:
+          type: string
+        highlights:
+          type: array
+          items:
+            type: string
+        tier_required:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+    TierError:
+      type: object
+      properties:
+        error:
+          type: string
+        current_tier:
+          type: string
+        required_tier:
+          type: string
+        upgrade_message:
+          type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []

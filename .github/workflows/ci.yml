@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.11]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies (editable)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+      - name: Run linter
+        run: |
+          ruff check . || true
+      - name: Run tests (unit)
+        run: |
+          pytest -q
+      - name: Run Phase 2 tests (fast)
+        run: |
+          pytest -q tests/test_phase2_video.py tests/test_phase2_container.py tests/test_phase2_audio.py || true

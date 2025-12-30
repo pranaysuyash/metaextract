@@ -1,0 +1,253 @@
+{
+  "extraction_info": {
+    "timestamp": "2025-12-30T15:53:54.348893",
+    "tier": "premium",
+    "engine_version": "3.0.0",
+    "exiftool_used": true,
+    "libraries": {
+      "pillow": false,
+      "exifread": false,
+      "ffmpeg": false,
+      "mutagen": false,
+      "pypdf": false,
+      "xattr": false,
+      "exiftool": true,
+      "iptcinfo3": false,
+      "xmp": false,
+      "imagehash": false
+    },
+    "fields_extracted": 169,
+    "locked_categories": 0
+  },
+  "file": {
+    "path": "/Users/pranay/Projects/metaextract/dist/validation_test/test_rich_metadata.jpg",
+    "name": "test_rich_metadata.jpg",
+    "extension": ".jpg",
+    "mime_type": "image/jpeg"
+  },
+  "summary": {
+    "filename": "test_rich_metadata.jpg",
+    "filesize": "15.15 KB",
+    "filesize_bytes": 15513,
+    "filetype": "JPG",
+    "mime_type": "image/jpeg"
+  },
+  "locked_fields": [],
+  "thumbnail": null,
+  "perceptual_hashes": {
+    "available": false,
+    "reason": "pillow not installed"
+  },
+  "iptc_raw": {
+    "Keywords": "Test,Metadata,Validation",
+    "City": "San Francisco",
+    "Headline": "IPTC Headline",
+    "Caption-Abstract": "IPTC Description",
+    "ApplicationRecordVersion": 4
+  },
+  "xmp_raw": null,
+  "filesystem": {
+    "size_bytes": 15513,
+    "size_human": "15.15 KB",
+    "created": "2025-12-30T15:53:45.065109",
+    "modified": "2025-12-30T15:53:45.074733",
+    "accessed": "2025-12-30T15:53:47.213237",
+    "changed": "2025-12-30T15:53:45.078893",
+    "permissions_octal": "0o644",
+    "permissions_human": "-rw-r--r--",
+    "owner": "pranay",
+    "owner_uid": 501,
+    "group": "staff",
+    "group_gid": 20,
+    "inode": 191250804,
+    "device": 16777234,
+    "hard_links": 1,
+    "file_type": "regular",
+    "is_hidden": false
+  },
+  "hashes": {
+    "md5": "5ab4c3b4c007747f4a45b987f6bdfb65",
+    "sha256": "15bed54a7e199d7a4f8d5d388217eb84a8ba95cf4ee8cfba44f6a06f7370c532",
+    "sha1": "093caf7f21da838c03cb50fcf22c5b07e75cedf8",
+    "crc32": "85a0af0d"
+  },
+  "extended_attributes": {
+    "available": false
+  },
+  "image": null,
+  "exif": {
+    "Make": "TestCamera",
+    "Model": "TestModel v1.0",
+    "XResolution": 1,
+    "YResolution": 1,
+    "ResolutionUnit": 1,
+    "YCbCrPositioning": 1,
+    "ExposureTime": 0.008,
+    "FNumber": 2.8,
+    "ExifVersion": "0232",
+    "DateTimeOriginal": "2024:01:01 12:00:00",
+    "ComponentsConfiguration": "1 2 3 0",
+    "FocalLength": 50,
+    "ColorSpace": 65535
+  },
+  "gps": {
+    "GPSVersionID": "2 3 0 0",
+    "GPSLatitudeRef": "N",
+    "GPSLatitude": 37.7749,
+    "GPSLongitudeRef": "W",
+    "GPSLongitude": 122.4194,
+    "GPSAltitude": 10
+  },
+  "composite": {
+    "Aperture": 2.8,
+    "ImageSize": "800 600",
+    "Megapixels": 0.48,
+    "ShutterSpeed": 0.008,
+    "GPSLatitude": 37.7749,
+    "GPSLongitude": -122.4194,
+    "FocalLength35efl": 50,
+    "GPSPosition": "37.7749 -122.4194"
+  },
+  "exif_ifd": {
+    "ifd0": {
+      "Make": "TestCamera",
+      "Model": "TestModel v1.0",
+      "XResolution": 1,
+      "YResolution": 1,
+      "ResolutionUnit": 1,
+      "YCbCrPositioning": 1
+    },
+    "exif": {
+      "ExposureTime": 0.008,
+      "FNumber": 2.8,
+      "ExifVersion": "0232",
+      "DateTimeOriginal": "2024:01:01 12:00:00",
+      "ComponentsConfiguration": "1 2 3 0",
+      "FocalLength": 50,
+      "ColorSpace": 65535
+    },
+    "gps": {
+      "GPSVersionID": "2 3 0 0",
+      "GPSLatitudeRef": "N",
+      "GPSLatitude": 37.7749,
+      "GPSLongitudeRef": "W",
+      "GPSLongitude": 122.4194,
+      "GPSAltitude": 10
+    }
+  },
+  "image_container": {
+    "JFIFVersion": "1 1",
+    "ResolutionUnit": 0,
+    "XResolution": 1,
+    "YResolution": 1
+  },
+  "iptc": {
+    "Keywords": "Test,Metadata,Validation",
+    "City": "San Francisco",
+    "Headline": "IPTC Headline",
+    "Caption-Abstract": "IPTC Description",
+    "ApplicationRecordVersion": 4
+  },
+  "calculated": {
+    "file_age_days": 0,
+    "file_age_human": "just now",
+    "file_age": {
+      "days": 0,
+      "hours": 0,
+      "human_readable": "just now"
+    },
+    "time_since_modified": {
+      "days": 0,
+      "hours": 0,
+      "human_readable": "just now"
+    },
+    "time_since_accessed": {
+      "days": 0,
+      "hours": 0,
+      "human_readable": "just now"
+    }
+  },
+  "normalized": {
+    "camera_make": "Testcamera",
+    "camera_model": "TestModel v1.0",
+    "aperture": 2.8,
+    "shutter_speed": "1/125",
+    "shutter_speed_decimal": 0.008,
+    "focal_length": 50.0,
+    "color_space": "Uncalibrated",
+    "headline": "IPTC Headline",
+    "description": "IPTC Description",
+    "keywords": "Test, Metadata, Validation",
+    "location_city": "San Francisco",
+    "searchable_text": "Testcamera TestModel v1.0 IPTC Headline Test, Metadata, Validation San Francisco"
+  },
+  "forensic": {
+    "forensic": {
+      "digital_signatures": {},
+      "blockchain_nft": {},
+      "watermarking": {},
+      "c2pa": {},
+      "adobe_credentials": {},
+      "filesystem": {
+        "file_created": "2025-12-30T15:53:45.065109",
+        "file_modified": "2025-12-30T15:53:45.074733",
+        "file_accessed": "2025-12-30T15:53:47.213237",
+        "file_changed": "2025-12-30T15:53:45.078893",
+        "file_size": 15513,
+        "file_permissions": "644",
+        "file_owner": 501,
+        "file_group": 20,
+        "file_inode": 191250804,
+        "file_device": 16777234,
+        "file_hardlinks": 1
+      },
+      "device_hardware": {
+        "device_manufacturer": "TestCamera",
+        "device_model": "TestModel v1.0"
+      },
+      "network_communication": {},
+      "email_communication": {}
+    },
+    "authentication": {
+      "is_authenticated": false,
+      "confidence_score": 0.0,
+      "issues": [
+        "No authentication metadata found"
+      ],
+      "security_flags": [
+        "unauthenticated_content"
+      ]
+    },
+    "provenance": {},
+    "integrity": {
+      "file_hash_md5": "5ab4c3b4c007747f4a45b987f6bdfb65",
+      "file_hash_sha1": "093caf7f21da838c03cb50fcf22c5b07e75cedf8",
+      "file_hash_sha256": "15bed54a7e199d7a4f8d5d388217eb84a8ba95cf4ee8cfba44f6a06f7370c532",
+      "file_hash_sha512": "edac39db5bfc114f53b0d693b671a99ed3a2f40c1a00837c7b5f3dc582b00939bfb4127d28a06752a7f5e2065cd31ad47ab2de278e4ff6a66d483cbcb0432f66",
+      "error": "'float' object has no attribute 'bit_length'"
+    },
+    "fields_extracted": 13
+  },
+  "burned_metadata": {
+    "has_burned_metadata": true,
+    "ocr_available": true,
+    "extracted_text": "\u2018Test mage",
+    "parsed_data": {},
+    "confidence": "none"
+  },
+  "metadata_comparison": {
+    "has_both": false,
+    "has_embedded_only": false,
+    "has_burned_only": false,
+    "matches": [],
+    "discrepancies": [],
+    "warnings": [],
+    "summary": {
+      "embedded_metadata_present": false,
+      "burned_metadata_present": false,
+      "gps_comparison": "no_gps",
+      "timestamp_comparison": "no_timestamp",
+      "overall_status": "no_metadata"
+    }
+  }
+}

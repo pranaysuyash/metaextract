@@ -1,0 +1,352 @@
+"""
+360° Camera Metadata Extraction
+Ricoh Theta, Insta360, GoPro MAX, and other 360° cameras
+"""
+
+from typing import Dict, Any, Optional
+
+
+RICOH_THETA_TAGS = {
+    # Ricoh Theta specific 360° metadata
+    "RICOH_Theta_ImageType": "ricoh_theta_image_type",
+    "RICOH_Theta_Version": "ricoh_theta_version",
+    "RICOH_Theta_CaptureDate": "ricoh_theta_capture_date",
+    "RICOH_Theta_ExposureMode": "ricoh_theta_exposure_mode",
+    "RICOH_Theta_ExposureCompensation": "ricoh_theta_exposure_compensation",
+    "RICOH_Theta_ISOSpeedRatings": "ricoh_theta_iso_speed",
+    "RICOH_Theta_FNumber": "ricoh_theta_f_number",
+    "RICOH_Theta_FocalLength": "ricoh_theta_focal_length",
+    "RICOH_Theta_WhiteBalance": "ricoh_theta_white_balance",
+    "RICOH_Theta_Sharpness": "ricoh_theta_sharpness",
+    "RICOH_Theta_ColorSaturation": "ricoh_theta_color_saturation",
+    "RICOH_Theta_Contrast": "ricoh_theta_contrast",
+    "RICOH_Theta_AutoBracket": "ricoh_theta_auto_bracket",
+    "RICOH_Theta_DR补偿": "ricoh_theta_dr_compensation",
+    "RICOH_Theta_Rendering": "ricoh_theta_rendering",
+    "RICOH_Theta_Photosensitivity": "ricoh_theta_photosensitivity",
+    "RICOH_Theta_GeoLocationRecording": "ricoh_theta_geo_location_recording",
+    "RICOH_Theta_AirplaneMode": "ricoh_theta_airplane_mode",
+    "RICOH_Theta_SerialNumber": "ricoh_theta_serial_number",
+    "RICOH_Theta_FirmwareVersion": "ricoh_theta_firmware_version",
+}
+
+# XMP 360° fields (standard)
+XMP_360_TAGS = {
+    "Xmp.GPano.ProjectionType": "projection_type",
+    "Xmp.GPano.UsePanoramaViewer": "use_panorama_viewer",
+    "Xmp.GPano.CroppedAreaImageWidth": "cropped_area_image_width",
+    "Xmp.GPano.CroppedAreaImageHeight": "cropped_area_image_height",
+    "Xmp.GPano.CroppedAreaLeft": "cropped_area_left",
+    "Xmp.GPano.CroppedAreaTop": "cropped_area_top",
+    "Xmp.GPano.FullPanoWidthPixels": "full_pano_width_pixels",
+    "Xmp.GPano.FullPanoHeightPixels": "full_pano_height_pixels",
+    "Xmp.GPano.InitialViewHeadingDegrees": "initial_view_heading_degrees",
+    "Xmp.GPano.InitialViewPitchDegrees": "initial_view_pitch_degrees",
+    "Xmp.GPano.InitialViewRollDegrees": "initial_view_roll_degrees",
+    "Xmp.GPano.InitialHorizontalFOVDegrees": "initial_horizontal_fov_degrees",
+    "Xmp.GPano.CameraMotion": "camera_motion",
+    "Xmp.GPano.PoseRotation": "pose_rotation",
+    "Xmp.GPano.PoseTranslation": "pose_translation",
+    "Xmp.GPano.StitchingSoftware": "stitching_software",
+    "Xmp.GPano.StitchingVersion": "stitching_version",
+    "Xmp.GPano.BlendSoftware": "blend_software",
+    "Xmp.GPano.Projection": "projection",
+    "Xmp.GPano.Spherical": "spherical",
+    "Xmp.GPano.Stereo": "stereo",
+    "Xmp.GPano.ThreeDimensional": "three_dimensional",
+}
+
+INSTA360_TAGS = {
+    # Insta360 specific metadata
+    "Insta360_Version": "insta360_version",
+    "Insta360_DeviceModel": "insta360_device_model",
+    "Insta360_SerialNumber": "insta360_serial_number",
+    "Insta360_FirmwareVersion": "insta360_firmware_version",
+    "Insta360_CaptureMode": "insta360_capture_mode",
+    "Insta360_StitchingMode": "insta360_stitching_mode",
+    "Insta360_WindNoiseReduction": "insta360_wind_noise_reduction",
+    "Insta360_Timestamp": "insta360_timestamp",
+    "Insta360_WhiteBalance": "insta360_white_balance",
+    "Insta360_ExposureCompensation": "insta360_exposure_compensation",
+    "Insta360_ISOSpeedRatings": "insta360_iso_speed",
+    "Insta360_FlowStateStabilization": "insta360_flow_state_stabilization",
+    "Insta360_TimeShift": "insta360_time_shift",
+    "Insta360_StarLapse": "insta360_star_lapse",
+    "Insta360_DroneID": "insta360_drone_id",
+}
+
+GOPRO_MAX_TAGS = {
+    # GoPro MAX 360 specific
+    "GoPro_MAX_Version": "gopro_max_version",
+    "GoPro_MAX_DeviceName": "gopro_max_device_name",
+    "GoPro_MAX_FirmwareVersion": "gopro_max_firmware",
+    "GoPro_MAX_LensMode": "gopro_max_lens_mode",
+    "GoPro_MAX_StitchingMode": "gopro_max_stitching_mode",
+    "GoPro_MAX_360AudioMode": "gopro_max_360_audio_mode",
+    "GoPro_MAX_FlowState": "gopro_max_flow_state",
+    "GoPro_MAX_TimeWarpSpeed": "gopro_max_time_warp_speed",
+    "GoPro_MAX_HyperSmooth": "gopro_max_hyper_smooth",
+    "GoPro_MAX_HDRVideo": "gopro_max_hdr_video",
+    "GoPro_MAX_MaxLensState": "gopro_max_lens_state",
+}
+
+
+def _normalize_gpano_key(key: str) -> str:
+    key = str(key)
+    for prefix in ("Xmp.GPano.", "XMP-GPano:", "GPano:", "Xmp.GPano:", "Xmp:GPano:"):
+        if key.startswith(prefix):
+            key = key[len(prefix):]
+            break
+    return key.strip()
+
+
+def _extract_gpano_fields_from_xmp(xmp_data: Dict[str, Any]) -> Dict[str, Any]:
+    gpano_fields: Dict[str, Any] = {}
+    if not isinstance(xmp_data, dict):
+        return gpano_fields
+    for key, value in xmp_data.items():
+        normalized = _normalize_gpano_key(key)
+        if normalized:
+            gpano_fields[normalized] = value
+    return gpano_fields
+
+
+def extract_360_camera_metadata(
+    filepath: str,
+    exiftool_data: Optional[Dict[str, Any]] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Extract 360° camera metadata from images.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with 360° camera metadata
+    """
+    result = {
+        "camera_360": {
+            "ricoh_theta": {},
+            "insta360": {},
+            "gopro_max": {},
+            "standard_xmp": {}
+        },
+        "panorama_projection": {},
+        "detection": {
+            "is_360_image": False,
+            "detected_cameras": [],
+            "projection_type": None
+        },
+        "fields_extracted": 0
+    }
+    
+    try:
+        all_tags: Dict[str, Any] = {}
+
+        if exiftool_data and isinstance(exiftool_data, dict):
+            for section in ("exif", "composite", "image_container"):
+                data = exiftool_data.get(section, {})
+                if isinstance(data, dict):
+                    all_tags.update(data)
+            makernote = exiftool_data.get("makernote", {})
+            if isinstance(makernote, dict):
+                for vendor_fields in makernote.values():
+                    if isinstance(vendor_fields, dict):
+                        all_tags.update(vendor_fields)
+        else:
+            from .exif import extract_exif_metadata
+            exif_data = extract_exif_metadata(filepath)
+            if not exif_data or "error" in exif_data:
+                return result
+            for category in ["image", "photo", "gps", "interoperability"]:
+                if category in exif_data and isinstance(exif_data[category], dict):
+                    all_tags.update(exif_data[category])
+
+        detected_any = False
+
+        for tag, value in all_tags.items():
+            tag_str = str(tag)
+
+            if tag_str in RICOH_THETA_TAGS:
+                result["camera_360"]["ricoh_theta"][RICOH_THETA_TAGS[tag_str]] = str(value)
+                detected_any = True
+
+            elif tag_str in INSTA360_TAGS:
+                result["camera_360"]["insta360"][INSTA360_TAGS[tag_str]] = str(value)
+                detected_any = True
+
+            elif tag_str in GOPRO_MAX_TAGS:
+                result["camera_360"]["gopro_max"][GOPRO_MAX_TAGS[tag_str]] = str(value)
+                detected_any = True
+
+        gpano_result = parse_gpano_xmp(filepath, exiftool_data)
+        if gpano_result:
+            result["panorama_projection"] = gpano_result
+            result["camera_360"]["standard_xmp"] = {
+                k: v for k, v in gpano_result.items() if k != "is_valid_panorama"
+            }
+            if gpano_result.get("is_valid_panorama"):
+                result["detection"]["projection_type"] = gpano_result.get("projection_type")
+                result["detection"]["is_360_image"] = True
+                detected_any = True
+
+        result["detection"]["detected_cameras"] = [
+            cam for cam in ["ricoh_theta", "insta360", "gopro_max"]
+            if result["camera_360"][cam]
+        ]
+
+        if result["camera_360"]["ricoh_theta"] and not result["detection"]["projection_type"]:
+            result["detection"]["is_360_image"] = True
+            result["detection"]["projection_type"] = "equirectangular"
+
+        total_fields = (
+            len(result["camera_360"]["ricoh_theta"]) +
+            len(result["camera_360"]["insta360"]) +
+            len(result["camera_360"]["gopro_max"]) +
+            len(result["camera_360"]["standard_xmp"]) +
+            len(result["panorama_projection"])
+        )
+        result["fields_extracted"] = total_fields
+
+        return result
+
+    except Exception as e:
+        return {"error": f"Failed to extract 360 camera metadata: {str(e)}"}
+
+
+def parse_gpano_xmp(
+    filepath: str,
+    exiftool_data: Optional[Dict[str, Any]] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Parse Google Photo Sphere XMP metadata.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with GPano XMP data
+    """
+    result = {
+        "projection_type": None,
+        "cropped_area": {},
+        "full_pano_dimensions": {},
+        "initial_view": {},
+        "stitching": {},
+        "is_valid_panorama": False
+    }
+    
+    try:
+        gpano_fields: Dict[str, Any] = {}
+
+        if exiftool_data and isinstance(exiftool_data, dict):
+            namespaces = exiftool_data.get("xmp_namespaces", {})
+            if isinstance(namespaces, dict) and namespaces.get("gPano"):
+                gpano_fields = _extract_gpano_fields_from_xmp(namespaces.get("gPano", {}))
+            else:
+                xmp_raw = exiftool_data.get("xmp", {})
+                if isinstance(xmp_raw, dict):
+                    for key, value in xmp_raw.items():
+                        if str(key).startswith("XMP-GPano:"):
+                            gpano_fields[_normalize_gpano_key(key)] = value
+        else:
+            from .exif import extract_exif_metadata
+            exif_data = extract_exif_metadata(filepath)
+            if not exif_data or "error" in exif_data:
+                return result
+            photo = exif_data.get("photo", {})
+            for key, value in photo.items():
+                if str(key).startswith("Xmp.GPano."):
+                    gpano_fields[_normalize_gpano_key(key)] = value
+
+        if not gpano_fields:
+            return result
+
+        projection = gpano_fields.get("ProjectionType") or gpano_fields.get("Projection")
+        if projection:
+            result["projection_type"] = str(projection)
+            result["is_valid_panorama"] = True
+
+        for xmp_field, output_key in XMP_360_TAGS.items():
+            normalized = _normalize_gpano_key(xmp_field)
+            value = gpano_fields.get(normalized)
+            if value is None:
+                continue
+            if "CroppedArea" in xmp_field:
+                result["cropped_area"][output_key.replace("cropped_area_", "")] = str(value)
+            elif "FullPano" in xmp_field:
+                result["full_pano_dimensions"][output_key.replace("full_pano_", "").replace("_pixels", "")] = str(value)
+            elif "InitialView" in xmp_field:
+                result["initial_view"][output_key.replace("initial_view_", "").replace("_degrees", "")] = str(value)
+            elif "Stitching" in xmp_field or "Blend" in xmp_field:
+                result["stitching"][output_key.replace("stitching_", "").replace("blend_", "")] = str(value)
+            else:
+                result[output_key] = str(value)
+
+        return result
+
+    except Exception:
+        return result
+
+
+def detect_360_projection(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Detect and describe 360° projection type.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with projection detection results
+    """
+    result = {
+        "is_360": False,
+        "projection_type": None,
+        "aspect_ratio": None,
+        "frame_layout": None,
+        "recommendations": []
+    }
+    
+    try:
+        from PIL import Image
+        
+        with Image.open(filepath) as img:
+            width, height = img.size
+            aspect_ratio = width / height if height > 0 else 1.0
+            result["aspect_ratio"] = round(aspect_ratio, 4)
+            
+            if aspect_ratio >= 1.9:
+                result["projection_type"] = "equirectangular"
+                result["is_360"] = True
+                result["frame_layout"] = "single_frame"
+                result["recommendations"].append("Equirectangular projection - standard for 360° video/stills")
+            elif aspect_ratio >= 1.7:
+                result["projection_type"] = "cylindrical"
+                result["is_360"] = False
+                result["recommendations"].append("Cylindrical panorama - not full 360°")
+            elif aspect_ratio >= 0.5:
+                result["projection_type"] = "partial_panorama"
+                result["is_360"] = False
+                result["recommendations"].append("Partial panorama - check for crop areas")
+            else:
+                result["projection_type"] = "cubemap"
+                result["is_360"] = True
+                result["frame_layout"] = "cubemap_faces"
+                result["recommendations"].append("Cubemap projection - 6 separate face images")
+            
+            if width >= 7680:
+                result["recommendations"].append("High resolution - suitable for VR")
+            elif width >= 3840:
+                result["recommendations"].append("Standard 4K resolution for 360°")
+            else:
+                result["recommendations"].append("Lower resolution - may show pixelation in VR")
+        
+        return result
+        
+    except Exception:
+        return result
+
+
+def get_360_field_count() -> int:
+    """Return approximate number of 360° camera fields."""
+    return 25

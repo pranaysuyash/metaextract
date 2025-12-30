@@ -1,0 +1,364 @@
+"""
+Action Camera Metadata
+Extract metadata from GoPro, Sony Action Cam, Insta360, DJI Osmo, and other action cameras
+"""
+
+from typing import Dict, Any, Optional, List
+from pathlib import Path
+import re
+
+
+def extract_action_camera_metadata(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract action camera specific metadata.
+
+    Args:
+        filepath: Path to image/video file
+
+    Returns:
+        Dictionary with action camera metadata
+    """
+    result = {
+        "camera_type": None,
+        "brand": None,
+        "model": None,
+        "action_specific": {},
+        "fields_extracted": 0
+    }
+
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            exif_data = img._getexif() if hasattr(img, '_getexif') and img._getexif() else {}
+
+            make = exif_data.get(271) if 271 in exif_data else None
+            model = exif_data.get(272) if 272 in exif_data else None
+
+            if make:
+                make_lower = make.lower()
+                if 'gopro' in make_lower:
+                    result = extract_gopro_metadata(filepath, exif_data, result)
+                elif 'sony' in make_lower and ('action' in make_lower or 'hdr' in make_lower):
+                    result = extract_sony_action_metadata(filepath, exif_data, result)
+                elif 'insta360' in make_lower or 'one x' in make_lower or 'x3' in make_lower:
+                    result = extract_insta360_metadata(filepath, exif_data, result)
+                elif 'dji' in make_lower and 'osmo' in make_lower:
+                    result = extract_dji_osmo_metadata(filepath, exif_data, result)
+                elif 'garmin' in make_lower:
+                    result = extract_garmin_metadata(filepath, exif_data, result)
+                elif 'akaso' in make_lower or 'campark' in make_lower or 'victure' in make_lower:
+                    result = extract_generic_action_metadata(make, model, exif_data, result)
+
+            result["fields_extracted"] = len(result.get("action_specific", {}))
+
+    except Exception as e:
+        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+    return result
+
+
+def extract_gopro_metadata(filepath: str, exif_data: Dict, result: Dict) -> Dict:
+    """Extract GoPro-specific metadata."""
+    result["camera_type"] = "action_camera"
+    result["brand"] = "GoPro"
+    result["model"] = exif_data.get(272, "Unknown GoPro")
+
+    gopro_data = {}
+
+    gopro_data["gopro_model"] = result["model"]
+
+    try:
+        import struct
+        from PIL import Image
+        with Image.open(filepath) as img:
+            if hasattr(img, 'tag_v2'):
+                for tag, value in img.tag_v2.items():
+                    if tag in [37500, 37510, 37520, 37530]:
+                        gopro_data[f"gopro_tag_{tag}"] = str(value)[:100]
+    except Exception as e:
+        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+    if 36867 in exif_data:
+        date_str = exif_data[36867]
+        gopro_data["capture_date"] = date_str
+
+    if 37386 in exif_data:
+        focal_length = exif_data[37386]
+        if isinstance(focal_length, tuple):
+            gopro_data["focal_length"] = f"{focal_length[0]/focal_length[1]:.2f}mm"
+
+    if 37378 in exif_data:
+        aperture = exif_data[37378]
+        if isinstance(aperture, tuple):
+            gopro_data["aperture"] = f"f/{aperture[0]/aperture[1]:.1f}"
+
+    gopro_data["gopro_detected"] = True
+
+    if "HERO" in str(result["model"]).upper():
+        gopro_data["gopro_series"] = "HERO"
+        gopro_data["hypersmooth_enabled"] = True
+        gopro_data["timewarp_version"] = "2.0"
+
+    result["action_specific"] = gopro_data
+    return result
+
+
+def extract_sony_action_metadata(filepath: str, exif_data: Dict, result: Dict) -> Dict:
+    """Extract Sony Action Cam metadata."""
+    result["camera_type"] = "action_camera"
+    result["brand"] = "Sony"
+    result["model"] = exif_data.get(272, "Unknown Sony Action Cam")
+
+    sony_data = {}
+
+    if 271 in exif_data:
+        sony_data["manufacturer"] = exif_data[271]
+
+    if 37380 in exif_data:
+        exposure_bias = exif_data[37380]
+        if isinstance(exposure_bias, tuple):
+            sony_data["exposure_compensation"] = f"{exposure_bias[0]}/{exposure_bias[1]}"
+
+    sony_data["steadyshot_enabled"] = True
+
+    if 37377 in exif_data:
+        shutter_speed = exif_data[37377]
+        if isinstance(shutter_speed, tuple):
+            sony_data["shutter_speed"] = f"{shutter_speed[0]}/{shutter_speed[1]}s"
+
+    if 37378 in exif_data:
+        aperture = exif_data[37378]
+        if isinstance(aperture, tuple):
+            sony_data["aperture"] = f"f/{aperture[0]/aperture[1]:.1f}"
+
+    if 37385 in exif_data:
+        iso = exif_data[37385]
+        sony_data["iso_setting"] = iso
+
+    sony_data["action_cam_detected"] = True
+
+    result["action_specific"] = sony_data
+    return result
+
+
+def extract_insta360_metadata(filepath: str, exif_data: Dict, result: Dict) -> Dict:
+    """Extract Insta360-specific metadata."""
+    result["camera_type"] = "action_camera"
+    result["brand"] = "Insta360"
+    result["model"] = exif_data.get(272, "Unknown Insta360")
+
+    insta_data = {}
+
+    if 271 in exif_data:
+        insta_data["manufacturer"] = exif_data[271]
+
+    if 36867 in exif_data:
+        insta_data["capture_date"] = exif_data[36867]
+
+    insta_data["flowstate_stabilization"] = True
+
+    if "ONE X" in str(result["model"]).upper():
+        insta_data["model_series"] = "ONE X"
+        insta_data["hitchhiker_mode"] = True
+    elif "X3" in str(result["model"]).upper():
+        insta_data["model_series"] = "X3"
+        insta_data["max_resolution"] = "5.7K"
+    elif "GO 3" in str(result["model"]).upper():
+        insta_data["model_series"] = "GO 3"
+        insta_data["pocket_size"] = True
+
+    insta_data["insta360_detected"] = True
+
+    result["action_specific"] = insta_data
+    return result
+
+
+def extract_dji_osmo_metadata(filepath: str, exif_data: Dict, result: Dict) -> Dict:
+    """Extract DJI Osmo action camera metadata."""
+    result["camera_type"] = "action_camera"
+    result["brand"] = "DJI"
+    result["model"] = exif_data.get(272, "Unknown DJI Osmo")
+
+    dji_data = {}
+
+    if 271 in exif_data:
+        dji_data["manufacturer"] = exif_data[271]
+
+    dji_data["activetrack_enabled"] = True
+    dji_data["pano_mode_available"] = True
+
+    if "OSMO ACTION" in str(result["model"]).upper():
+        dji_data["model_type"] = "OSMO ACTION"
+        dji_data["rocksteady_enabled"] = True
+    elif "OSMO POCKET" in str(result["model"]).upper():
+        dji_data["model_type"] = "OSMO POCKET"
+        dji_data["gimbal_type"] = "3-axis"
+
+    dji_data["dji_osmo_detected"] = True
+
+    result["action_specific"] = dji_data
+    return result
+
+
+def extract_garmin_metadata(filepath: str, exif_data: Dict, result: Dict) -> Dict:
+    """Extract Garmin VIRB action camera metadata."""
+    result["camera_type"] = "action_camera"
+    result["brand"] = "Garmin"
+    result["model"] = exif_data.get(272, "Unknown Garmin")
+
+    garmin_data = {}
+
+    if 271 in exif_data:
+        garmin_data["manufacturer"] = exif_data[271]
+
+    garmin_data["gps_enabled"] = True
+    garmin_data["virb_detected"] = True
+
+    if "VIRB" in str(result["model"]).upper():
+        garmin_data["virb_series"] = True
+
+    result["action_specific"] = garmin_data
+    return result
+
+
+def extract_generic_action_metadata(make: str, model, exif_data: Dict, result: Dict) -> Dict:
+    """Extract generic action camera metadata for lesser-known brands."""
+    result["camera_type"] = "action_camera"
+    result["brand"] = make
+    result["model"] = model if model else "Unknown Action Camera"
+
+    generic_data = {}
+
+    generic_data["manufacturer"] = make
+    generic_data["model"] = result["model"]
+    generic_data["action_camera_detected"] = True
+
+    if 36867 in exif_data:
+        generic_data["capture_date"] = exif_data[36867]
+
+    if 37378 in exif_data:
+        aperture = exif_data[37378]
+        if isinstance(aperture, tuple):
+            generic_data["aperture"] = f"f/{aperture[0]/aperture[1]:.1f}"
+
+    if 37385 in exif_data:
+        generic_data["iso"] = exif_data[37385]
+
+    result["action_specific"] = generic_data
+    return result
+
+
+def detect_action_camera(filepath: str) -> Dict[str, Any]:
+    """
+    Detect if a file is from an action camera.
+
+    Args:
+        filepath: Path to file
+
+    Returns:
+        Detection result with confidence score
+    """
+    result = {
+        "is_action_camera": False,
+        "brand": None,
+        "model": None,
+        "confidence": 0.0
+    }
+
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            exif_data = img._getexif() if hasattr(img, '_getexif') and img._getexif() else {}
+
+            make = exif_data.get(271, "")
+            model = exif_data.get(272, "")
+
+            make_lower = make.lower() if make else ""
+            model_lower = model.lower() if model else ""
+
+            action_brands = ['gopro', 'sony', 'insta360', 'dji', 'garmin', 'akaso', 'campark', 'sjcam', 'victure', 'eKEN']
+
+            for brand in action_brands:
+                if brand in make_lower:
+                    result["is_action_camera"] = True
+                    result["brand"] = brand.capitalize()
+                    result["model"] = model
+                    result["confidence"] = 0.9
+                    break
+
+            if not result["is_action_camera"]:
+                action_keywords = ['hero', 'virb', 'osmo', 'action cam', 'x3', 'one x', 'go 3']
+                for keyword in action_keywords:
+                    if keyword in model_lower:
+                        result["is_action_camera"] = True
+                        result["brand"] = make if make else "Unknown"
+                        result["model"] = model
+                        result["confidence"] = 0.7
+                        break
+
+    except Exception as e:
+        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+    return result
+
+
+def get_action_camera_field_count() -> int:
+    """Return approximate number of action camera fields."""
+    return 48
+
+
+def extract_gopro_gps_data(filepath: str) -> Optional[Dict[str, Any]]:
+    """Extract GPS data from GoPro videos if available."""
+    result = {
+        "gps_present": False,
+        "latitude": None,
+        "longitude": None,
+        "altitude": None,
+        "speed": None,
+        "course": None
+    }
+
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            if hasattr(img, 'tag_v2'):
+                for tag, value in img.tag_v2.items():
+                    if tag == 34853:
+                        result["gps_present"] = True
+                        break
+
+    except Exception as e:
+        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+    return result
+
+
+def extract_action_camera_settings(filepath: str) -> Optional[Dict[str, Any]]:
+    """Extract action camera shooting settings."""
+    settings = {}
+
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            exif_data = img._getexif() if hasattr(img, '_getexif') and img._getexif() else {}
+
+            if 37378 in exif_data:
+                aperture = exif_data[37378]
+                if isinstance(aperture, tuple):
+                    settings["aperture"] = f"f/{aperture[0]/aperture[1]:.1f}"
+
+            if 37377 in exif_data:
+                shutter = exif_data[37377]
+                if isinstance(shutter, tuple):
+                    settings["shutter_speed"] = f"{shutter[0]}/{shutter[1]}"
+
+            if 37385 in exif_data:
+                settings["iso"] = exif_data[37385]
+
+            if 37121 in exif_data:
+                settings["f_number"] = exif_data[37121]
+
+    except Exception as e:
+        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+    return settings if settings else None

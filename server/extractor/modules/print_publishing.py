@@ -1,0 +1,374 @@
+"""
+Print and Publishing Metadata
+Extract IPTC, XMP, and workflow metadata for publishing and print industries
+"""
+
+from typing import Dict, Any, Optional, List
+from pathlib import Path
+from datetime import datetime
+
+
+def extract_print_publishing_metadata(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract print and publishing specific metadata.
+
+    Args:
+        filepath: Path to image/file
+
+    Returns:
+        Dictionary with print/publishing metadata
+    """
+    result = {
+        "publishing": {},
+        "print_specifications": {},
+        "workflow_status": {},
+        "rights_management": {},
+        "fields_extracted": 0
+    }
+
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            exif_data = img._getexif() if hasattr(img, '_getexif') and img._getexif() else {}
+
+            publishing_data = extract_publishing_metadata(exif_data)
+            print_data = extract_print_specs(exif_data, img)
+            workflow_data = extract_workflow_metadata(exif_data)
+            rights_data = extract_rights_metadata(exif_data)
+
+            result["publishing"] = publishing_data
+            result["print_specifications"] = print_data
+            result["workflow_status"] = workflow_data
+            result["rights_management"] = rights_data
+
+            total_fields = (len(publishing_data) + len(print_data) +
+                          len(workflow_data) + len(rights_data))
+            result["fields_extracted"] = total_fields
+
+    except Exception as e:
+        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+    return result
+
+
+def extract_publishing_metadata(exif_data: Dict) -> Dict:
+    """Extract publishing-related metadata."""
+    publishing = {}
+
+    iptc_fields = [
+        (222, "caption_abstract"),
+        (205, "headline"),
+        (116, "copyright_notice"),
+        (110, "credit"),
+        (85, "byline"),
+        (90, "city"),
+        (95, "province_state"),
+        (101, "country_name"),
+        (100, "country_code"),
+        (120, "source"),
+        (103, "release_date"),
+        (104, "release_time"),
+        (225, "object_name_reference"),
+        (210, "special_instructions"),
+        (215, "category"),
+        (221, "supplemental_categories"),
+        (122, "writer_editor"),
+        (40, "original_transmission_reference"),
+        (80, "program_name"),
+    ]
+
+    for tag, name in iptc_fields:
+        if tag in exif_data:
+            value = exif_data[tag]
+            publishing[name] = str(value) if value else None
+
+    if 36867 in exif_data:
+        publishing["date_created"] = exif_data[36867]
+    if 36868 in exif_data:
+        publishing["digital_creation_date"] = exif_data[36868]
+
+    if 315 in exif_data:
+        publishing["artist"] = exif_data[315]
+    if 33432 in exif_data:
+        publishing["copyright_owner"] = exif_data[33432]
+
+    publishing["has_publishing_metadata"] = len(publishing) > 0
+
+    return publishing
+
+
+def extract_print_specs(exif_data: Dict, img) -> Dict:
+    """Extract print specifications."""
+    print_specs = {}
+
+    if hasattr(img, 'width') and hasattr(img, 'height'):
+        print_specs["pixel_dimensions"] = {
+            "width": img.width,
+            "height": img.height,
+            "total_pixels": img.width * img.height
+        }
+
+    if img.mode:
+        print_specs["color_mode"] = img.mode
+
+    if hasattr(img, 'info'):
+        if 'dpi' in img.info:
+            print_specs["dpi"] = img.info['dpi']
+        if 'resolution' in img.info:
+            print_specs["resolution"] = img.info['resolution']
+
+    print_specs["physical_size_inches"] = calculate_print_size(img.width, img.height, 300)
+
+    if 282 in exif_data:
+        x_resolution = exif_data[282]
+        if isinstance(x_resolution, tuple):
+            print_specs["x_resolution"] = f"{x_resolution[0]}/{x_resolution[1]}"
+        else:
+            print_specs["x_resolution"] = x_resolution
+
+    if 283 in exif_data:
+        y_resolution = exif_data[283]
+        if isinstance(y_resolution, tuple):
+            print_specs["y_resolution"] = f"{y_resolution[0]}/{y_resolution[1]}"
+        else:
+            print_specs["y_resolution"] = y_resolution
+
+    print_specs["standard_print_sizes"] = get_standard_print_sizes(img.width, img.height)
+
+    return print_specs
+
+
+def extract_workflow_metadata(exif_data: Dict) -> Dict:
+    """Extract workflow status and processing metadata."""
+    workflow = {}
+
+    if 37570 in exif_data:
+        workflow["maker_note"] = str(exif_data[37570])[:100]
+
+    if 37500 in exif_data:
+        workflow["user_comment"] = str(exif_data[37500])
+
+    if 37121 in exif_data:
+        f_number = exif_data[37121]
+        if isinstance(f_number, tuple):
+            workflow["f_number"] = f"{f_number[0]}/{f_number[1]}"
+        else:
+            workflow["f_number"] = f_number
+
+    if 37377 in exif_data:
+        shutter = exif_data[37377]
+        if isinstance(shutter, tuple):
+            workflow["shutter_speed"] = f"{shutter[0]}/{shutter[1]}"
+        else:
+            workflow["shutter_speed"] = shutter
+
+    if 37385 in exif_data:
+        workflow["iso_speed"] = exif_data[37385]
+
+    if 37386 in exif_data:
+        focal = exif_data[37386]
+        if isinstance(focal, tuple):
+            workflow["focal_length"] = f"{focal[0]}/{focal[1]}"
+        else:
+            workflow["focal_length"] = focal
+
+    if 34855 in exif_data:
+        flash_value = exif_data[34855]
+        workflow["flash"] = interpret_flash_value(flash_value)
+
+    if 41986 in exif_data:
+        workflow["exposure_mode"] = interpret_exposure_mode(exif_data[41986])
+
+    if 41987 in exif_data:
+        workflow["white_balance"] = interpret_white_balance(exif_data[41987])
+
+    if 41989 in exif_data:
+        workflow["exposure_program"] = interpret_exposure_program(exif_data[41989])
+
+    workflow["workflow_processed"] = True
+
+    return workflow
+
+
+def extract_rights_metadata(exif_data: Dict) -> Dict:
+    """Extract rights management metadata."""
+    rights = {}
+
+    if 33432 in exif_data:
+        rights["copyright_notice"] = exif_data[33432]
+    if 315 in exif_data:
+        rights["artist"] = exif_data[315]
+
+    rights["usage_rights"] = "unknown"
+
+    if 50341 in exif_data:
+        rights["print_service_id"] = str(exif_data[50341])
+
+    if 50342 in exif_data:
+        rights["web_statement"] = str(exif_data[50342])
+
+    rights["has_rights_metadata"] = len([k for k in rights.keys() if k != "has_rights_metadata" and rights[k]]) > 0
+
+    return rights
+
+
+def calculate_print_size(width: int, height: int, dpi: int = 300) -> Dict[str, float]:
+    """Calculate print size in inches."""
+    width_in = width / dpi if dpi > 0 else 0
+    height_in = height / dpi if dpi > 0 else 0
+
+    return {
+        "width_inches": round(width_in, 2),
+        "height_inches": round(height_in, 2),
+        "diagonal_inches": round((width_in ** 2 + height_in ** 2) ** 0.5, 2)
+    }
+
+
+def get_standard_print_sizes(pixel_width: int, pixel_height: int) -> List[Dict[str, Any]]:
+    """Get list of standard print sizes the image can accommodate."""
+    standard_sizes = [
+        {"name": "4x6 in", "width_in": 4, "height_in": 6, "aspect": 0.667},
+        {"name": "5x7 in", "width_in": 5, "height_in": 7, "aspect": 0.714},
+        {"name": "8x10 in", "width_in": 8, "height_in": 10, "aspect": 0.8},
+        {"name": "8.5x11 in (Letter)", "width_in": 8.5, "height_in": 11, "aspect": 0.773},
+        {"name": "11x14 in", "width_in": 11, "height_in": 14, "aspect": 0.786},
+        {"name": "11x17 in (Tabloid)", "width_in": 11, "height_in": 17, "aspect": 0.647},
+        {"name": "12x18 in", "width_in": 12, "height_in": 18, "aspect": 0.667},
+        {"name": "16x20 in", "width_in": 16, "height_in": 20, "aspect": 0.8},
+        {"name": "18x24 in", "width_in": 18, "height_in": 24, "aspect": 0.75},
+        {"name": "24x36 in", "width_in": 24, "height_in": 36, "aspect": 0.667},
+    ]
+
+    aspect_ratio = pixel_width / pixel_height if pixel_height > 0 else 1.0
+
+    suitable = []
+    for size in standard_sizes:
+        size_aspect = size["aspect"]
+        aspect_diff = abs(aspect_ratio - size_aspect)
+
+        if aspect_diff < 0.15:
+            suitable.append({
+                "size_name": size["name"],
+                "fits": True,
+                "aspect_difference": round(aspect_diff, 3)
+            })
+        elif aspect_ratio > size_aspect:
+            suitable.append({
+                "size_name": size["name"],
+                "fits": "crop_required",
+                "aspect_difference": round(aspect_diff, 3)
+            })
+        else:
+            suitable.append({
+                "size_name": size["name"],
+                "fits": "letterbox_required",
+                "aspect_difference": round(aspect_diff, 3)
+            })
+
+    return suitable
+
+
+def interpret_flash_value(flash: int) -> str:
+    """Interpret EXIF flash value."""
+    flash_meanings = {
+        0: "No Flash",
+        1: "Fired",
+        5: "Fired, Return not detected",
+        7: "Fired, Return detected",
+        9: "On",
+        13: "On, Return not detected",
+        15: "On, Return detected",
+        16: "Off",
+        24: "Auto, Did not fire",
+        25: "Auto, Fired",
+        29: "Auto, Fired, Return not detected",
+        31: "Auto, Fired, Return detected",
+    }
+    return flash_meanings.get(flash, f"Unknown ({flash})")
+
+
+def interpret_exposure_mode(mode: int) -> str:
+    """Interpret EXIF exposure mode."""
+    modes = {
+        0: "Auto",
+        1: "Manual",
+        2: "Normal",
+        3: "Depth of Field",
+        4: "Action (High Speed)",
+        5: "Portrait",
+        6: "Landscape",
+        7: "Bulb",
+    }
+    return modes.get(mode, f"Unknown ({mode})")
+
+
+def interpret_white_balance(wb: int) -> str:
+    """Interpret EXIF white balance."""
+    wb_values = {
+        0: "Auto",
+        1: "Manual",
+    }
+    return wb_values.get(wb, f"Unknown ({wb})")
+
+
+def interpret_exposure_program(program: int) -> str:
+    """Interpret EXIF exposure program."""
+    programs = {
+        0: "Not Defined",
+        1: "Manual",
+        2: "Normal Program",
+        3: "Aperture Priority",
+        4: "Shutter Priority",
+        5: "Creative Program",
+        6: "Action Program",
+        7: "Portrait Mode",
+        8: "Landscape Mode",
+    }
+    return programs.get(program, f"Unknown ({program})")
+
+
+def get_print_publishing_field_count() -> int:
+    """Return approximate number of print/publishing fields."""
+    return 45
+
+
+def analyze_print_quality(metadata: Dict) -> Dict:
+    """Analyze metadata for print quality assessment."""
+    analysis = {
+        "print_ready": False,
+        "recommended_dpi": 300,
+        "max_print_size": None,
+        "issues": [],
+        "recommendations": []
+    }
+
+    print_specs = metadata.get("print_specifications", {})
+    pixel_dims = print_specs.get("pixel_dimensions", {})
+
+    if pixel_dims:
+        width = pixel_dims.get("width", 0)
+        height = pixel_dims.get("height", 0)
+
+        total_pixels = width * height
+
+        if total_pixels >= 6000 * 4000:
+            analysis["print_ready"] = True
+            analysis["max_print_size"] = "24x36 in or larger"
+            analysis["recommended_dpi"] = 300
+        elif total_pixels >= 3000 * 2000:
+            analysis["print_ready"] = True
+            analysis["max_print_size"] = "11x14 in"
+            analysis["recommended_dpi"] = 300
+        elif total_pixels >= 1500 * 1000:
+            analysis["print_ready"] = True
+            analysis["max_print_size"] = "5x7 in"
+            analysis["recommended_dpi"] = 300
+        else:
+            analysis["print_ready"] = False
+            analysis["issues"].append("Image resolution too low for quality printing")
+            analysis["recommendations"].append("Use for web or small prints only")
+
+    if print_specs.get("dpi"):
+        analysis["current_dpi"] = print_specs["dpi"]
+
+    return analysis

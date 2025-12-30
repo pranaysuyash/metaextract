@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaExtract Advanced Analysis Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .warning { color: #fbbf24; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .results {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 5px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 MetaExtract Advanced Analysis Test</h1>
+    
+    <div class="test-section">
+        <h2>📡 API Connectivity Test</h2>
+        <button onclick="testHealth()">Test Server Health</button>
+        <button onclick="testCapabilities()">Test Capabilities</button>
+        <div id="connectivity-results" class="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📁 File Upload Test</h2>
+        <input type="file" id="fileInput" accept="image/*,video/*,audio/*,.pdf">
+        <br>
+        <button onclick="testBasicExtraction()">Basic Extraction</button>
+        <button onclick="testAdvancedAnalysis()">Advanced Analysis</button>
+        <div id="upload-results" class="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔬 Batch Operations Test</h2>
+        <input type="file" id="batchFileInput" multiple accept="image/*,video/*,audio/*,.pdf">
+        <br>
+        <button onclick="testBatchComparison()">Batch Comparison</button>
+        <button onclick="testTimelineReconstruction()">Timeline Reconstruction</button>
+        <button onclick="testForensicReport()">Forensic Report</button>
+        <div id="batch-results" class="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Integration Status</h2>
+        <div id="integration-status">
+            <p class="warning">⏳ Run tests to check integration status</p>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:3000';
+        
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+            element.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        async function testHealth() {
+            log('connectivity-results', '🏥 Testing server health...', 'info');
+            try {
+                const response = await fetch(`${BASE_URL}/api/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    log('connectivity-results', `✅ Server healthy: ${data.service} v${data.version}`, 'success');
+                    return true;
+                } else {
+                    log('connectivity-results', `❌ Health check failed: ${response.status}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('connectivity-results', `❌ Health check error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testCapabilities() {
+            log('connectivity-results', '🔍 Testing forensic capabilities...', 'info');
+            try {
+                const response = await fetch(`${BASE_URL}/api/forensic/capabilities?tier=professional`);
+                if (response.ok) {
+                    const data = await response.json();
+                    log('connectivity-results', `✅ Capabilities loaded for tier: ${data.tier}`, 'success');
+                    log('connectivity-results', `📊 Advanced analysis available: ${data.advanced_analysis_available}`, 'info');
+                    
+                    const modules = data.modules || {};
+                    Object.entries(modules).forEach(([name, info]) => {
+                        const status = info.available ? '✅' : '❌';
+                        log('connectivity-results', `${status} ${name}: ${info.available}`, info.available ? 'success' : 'warning');
+                    });
+                    return true;
+                } else {
+                    log('connectivity-results', `❌ Capabilities failed: ${response.status}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('connectivity-results', `❌ Capabilities error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testBasicExtraction() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                log('upload-results', '❌ Please select a file first', 'error');
+                return;
+            }
+
+            log('upload-results', '📁 Testing basic extraction...', 'info');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/extract?tier=professional`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('upload-results', `✅ Basic extraction successful`, 'success');
+                    log('upload-results', `📊 Fields extracted: ${data.fields_extracted}`, 'info');
+                    log('upload-results', `📄 File: ${data.filename} (${data.filesize})`, 'info');
+                    log('upload-results', `⏱️ Processing time: ${data.processing_ms}ms`, 'info');
+                    return true;
+                } else {
+                    const errorData = await response.json();
+                    log('upload-results', `❌ Basic extraction failed: ${errorData.error}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('upload-results', `❌ Basic extraction error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testAdvancedAnalysis() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                log('upload-results', '❌ Please select a file first', 'error');
+                return;
+            }
+
+            log('upload-results', '🔬 Testing advanced analysis...', 'info');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/extract/advanced?tier=professional`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('upload-results', `✅ Advanced analysis successful`, 'success');
+                    
+                    const advanced = data.advanced_analysis || {};
+                    if (advanced.enabled) {
+                        log('upload-results', `🎯 Forensic score: ${advanced.forensic_score || 'N/A'}`, 'info');
+                        log('upload-results', `🔍 Authenticity: ${advanced.authenticity_assessment || 'N/A'}`, 'info');
+                        log('upload-results', `⏱️ Processing time: ${advanced.processing_time_ms || 0}ms`, 'info');
+                        
+                        const modules = advanced.modules_run || [];
+                        if (modules.length > 0) {
+                            log('upload-results', `🧪 Modules run: ${modules.join(', ')}`, 'success');
+                        } else {
+                            log('upload-results', `⚠️ No advanced modules run`, 'warning');
+                        }
+                    } else {
+                        log('upload-results', `⚠️ Advanced analysis not enabled`, 'warning');
+                    }
+                    return true;
+                } else {
+                    const errorData = await response.json();
+                    log('upload-results', `❌ Advanced analysis failed: ${errorData.error}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('upload-results', `❌ Advanced analysis error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testBatchComparison() {
+            const fileInput = document.getElementById('batchFileInput');
+            if (!fileInput.files || fileInput.files.length < 2) {
+                log('batch-results', '❌ Please select at least 2 files for comparison', 'error');
+                return;
+            }
+
+            log('batch-results', '🔄 Testing batch comparison...', 'info');
+            const formData = new FormData();
+            Array.from(fileInput.files).forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/compare/batch?tier=professional`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('batch-results', `✅ Batch comparison successful`, 'success');
+                    log('batch-results', `📊 Files compared: ${data.total_files}`, 'info');
+                    log('batch-results', `⏱️ Processing time: ${data.processing_time_ms}ms`, 'info');
+                    return true;
+                } else {
+                    const errorData = await response.json();
+                    log('batch-results', `❌ Batch comparison failed: ${errorData.error}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('batch-results', `❌ Batch comparison error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testTimelineReconstruction() {
+            const fileInput = document.getElementById('batchFileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                log('batch-results', '❌ Please select files for timeline reconstruction', 'error');
+                return;
+            }
+
+            log('batch-results', '⏰ Testing timeline reconstruction...', 'info');
+            const formData = new FormData();
+            Array.from(fileInput.files).forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/timeline/reconstruct?tier=professional`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('batch-results', `✅ Timeline reconstruction successful`, 'success');
+                    log('batch-results', `📊 Files analyzed: ${data.total_files}`, 'info');
+                    log('batch-results', `⏱️ Processing time: ${data.processing_time_ms}ms`, 'info');
+                    return true;
+                } else {
+                    const errorData = await response.json();
+                    log('batch-results', `❌ Timeline reconstruction failed: ${errorData.error}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('batch-results', `❌ Timeline reconstruction error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testForensicReport() {
+            const fileInput = document.getElementById('batchFileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                log('batch-results', '❌ Please select files for forensic report', 'error');
+                return;
+            }
+
+            log('batch-results', '📋 Testing forensic report generation...', 'info');
+            const formData = new FormData();
+            Array.from(fileInput.files).forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/forensic/report?tier=enterprise`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('batch-results', `✅ Forensic report generated`, 'success');
+                    log('batch-results', `📊 Report ID: ${data.report_id}`, 'info');
+                    log('batch-results', `⏱️ Processing time: ${data.processing_time_ms}ms`, 'info');
+                    return true;
+                } else {
+                    const errorData = await response.json();
+                    log('batch-results', `❌ Forensic report failed: ${errorData.error}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log('batch-results', `❌ Forensic report error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Auto-run connectivity tests on page load
+        window.addEventListener('load', async () => {
+            const healthOk = await testHealth();
+            const capabilitiesOk = await testCapabilities();
+            
+            const statusElement = document.getElementById('integration-status');
+            if (healthOk && capabilitiesOk) {
+                statusElement.innerHTML = '<p class="success">✅ Integration ready! Server is running and API endpoints are accessible.</p>';
+            } else {
+                statusElement.innerHTML = '<p class="error">❌ Integration issues detected. Check server status and API endpoints.</p>';
+            }
+        });
+    </script>
+</body>
+</html>

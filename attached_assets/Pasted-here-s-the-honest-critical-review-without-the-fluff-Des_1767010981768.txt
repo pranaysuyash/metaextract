@@ -1,0 +1,54 @@
+here's the honest critical review without the fluff:
+Design - MOSTLY FAILS
+The dark theme with tech aesthetic is executed poorly. The background blur is so heavy you can barely see anything. It's supposed to look premium but just looks like you're trying to hide a bad background. The color segment bars at the top serve zero functional purpose—they're decorative noise that doesn't communicate anything or guide the eye anywhere useful.
+The layout has no visual hierarchy. Your hero section dumps five different message concepts on users: "Non-Destructive Forensic Analysis," "DATA GHOSTS," 7,000+ fields, location history, device fingerprints. Pick one. People should know what this does in 3 seconds. Right now it takes longer to parse than it should.
+What's working: The pricing cards are actually clean and the grid layout makes comparison easy. That's genuinely good execution.
+UI - Has Critical Problems
+The file upload section is fine but buried. People don't know that's where they should start because there's no clear entry point. The navigation is invisible—the logo blends into the background, buttons don't have enough contrast.
+The "[ SELECT_FILE ]" button styling is actively bad. Those brackets scream "I'm trying to look technical/edgy" and it just looks amateurish. This isn't 1995 terminal UI cosplay—it's a SaaS tool. Make it look professional.
+Status indicators ("ONLINE," "LATENCY: 12ms") are misleading. These never change on a marketing page. Users will rightfully assume it's fake/theatrical. Either make them real or remove them.
+The biggest UI sin: There's no clear "Start Now" path. Do I upload a file first? Buy a plan? Sign in? The flow is ambiguous.
+Copywriting - Painfully Unclear
+This is where it really breaks down.
+"DATA GHOSTS" - This is terrible copy. What does this mean? Nobody knows. You're trying to be clever instead of clear. "Ghosts" suggests remnants or hidden things, but the user doesn't immediately grasp that's about metadata. A forensics audience understands this; a business buyer won't. It's self-indulgent writing.
+"Non-Destructive Forensic Analysis" - Okay but meaningless to 70% of your audience. They don't care about the method, they care about the outcome. What problem does this solve?
+Tier descriptions are weak:
+
+"Basic verification" - Verification of what?
+"Essential forensics" - This phrase says nothing
+"Professional grade" - Generic marketing speak
+
+"Zero-knowledge architecture" - You're using this phrase but most users won't understand it. And worse, you're not explaining why they should care. Does it mean privacy? Speed? Compliance? You're assuming audience knowledge that doesn't exist.
+"EphemeralCore" - This is a made-up name that adds nothing. Call it what it does. If files are deleted after processing, SAY THAT: "Files permanently deleted after analysis - no data retention."
+The pricing table is confusing:
+
+Free tier shows "$0/mo" instead of just "FREE"
+"API Overage: $0.05/req" is buried and unclear (is this per API call? That seems expensive but might be cheap depending on context)
+"5 Files / Day" vs "50 Files / Day" vs "Unlimited Files" vs "API Access (10k req)" - you're mixing different unit types which makes comparison harder
+
+What actually works:
+
+"Bypass standard EXIF viewers" - This is concrete and competitive
+"7,000+ hidden metadata fields" - Specific number, impressive, clear
+"Cryptographically shredded post-scan" - Jargon, but if this is real, it's a selling point
+
+What Will Actually Kill This
+
+Nobody understands the value proposition - Walk a non-technical person through this site. They won't know if this is for photographers, investigators, paranoid privacy advocates, or lawyers. That's a failure.
+The call-to-action is invisible - "Start Extraction" button exists but feels buried. It should be impossible to miss.
+Trust issues - "STATUS: ONLINE" is fake. Users notice fake things. Remove it or make it real. The app needs to feel trustworthy for forensics work.
+Price tiers don't make sense together - Why would someone pay $5/mo for 50 files when they can get unlimited for $29? The tiers have no logical progression. Either make Free smaller, make Starter more valuable, or adjust pricing.
+You're not selling benefits, you're listing features - "All 240+ Fields" means nothing. Why would I want 240 fields? What can I DO with them? Show use cases.
+
+The One Thing That's Actually Good
+The specificity of your technical capabilities is legit. "Canon MakerNotes, Sony Encrypted Data, Photoshop History logs" shows you actually know this space. If this is real functionality, that's your strongest differentiator. Lead with that. Stop being cute with "DATA GHOSTS" and show technical credibility instead.
+What Needs to Change (Priority Order)
+
+Rewrite the hero section - 1-2 sentences max. What problem do you solve? Who is it for? Example: "Extract forensic-grade metadata from any media file. Courts, journalists, and security teams trust MetaExtract to uncover manipulation and preserve evidence."
+Make "Start Extraction" impossible to miss - It should be above the fold, prominent, with high contrast.
+Remove fake status indicators - They damage trust.
+Fix pricing tier logic - Right now Free → Starter feels like a trap. Restructure so progression makes sense.
+Replace marketing fluff with specifics - Every feature description should answer "why would someone care?"
+Explain your differentiation - If you can extract data competitors can't, prove it. Show the comparison.
+
+This app has a real product underneath (that's the good news), but the marketing is getting in the way.

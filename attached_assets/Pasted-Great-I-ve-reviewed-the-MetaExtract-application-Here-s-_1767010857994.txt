@@ -1,0 +1,90 @@
+Great! I've reviewed the MetaExtract application. Here's my comprehensive feedback on the design, UI, and copies:
+Design & Visual Hierarchy
+Strengths:
+
+Dark, professional theme with a tech-forward aesthetic suits a forensic metadata tool
+Good use of color segmentation (the colored bars) adds visual interest and breaks up the dark layout
+Background blur creates depth and a premium feel
+Clear pricing tier differentiation with the prominent blue highlight on Premium
+
+Areas to Improve:
+
+The hero section feels text-heavy and technical without a clear focal point or compelling visual
+Navigation menu could be more prominent—the logo and nav items blend into the background
+The "DATA GHOSTS" heading feels a bit forced/gimmicky for a professional forensics tool
+Color contrast in the footer section could be stronger for readability
+
+UI & Usability
+Strengths:
+
+File upload section is clearly labeled and accessible
+Pricing cards are well-organized in a grid layout
+Button styling is consistent (though could use more visual hierarchy)
+Status indicators ("STATUS: ONLINE", "LATENCY: 12ms") add credibility
+
+Issues:
+
+The "[ SELECT_FILE ]" button has awkward bracket styling—feels retro but inconsistent with modern UX
+Pricing section needs better visual separation from other content
+The blue "Go Premium" button stands out nicely, but other CTAs could be more compelling
+Credits section ("ADHOC_CREDITS") feels disconnected and could be integrated better
+
+Copywriting & Messaging
+Strengths:
+
+Feature descriptions are detailed and specific (e.g., "Canon MakerNotes, Sony Encrypted Data, Photoshop History logs")
+Tier names are clear (Free, Starter, Premium, Super)
+Value propositions are concrete with features listed
+
+Issues to Address:
+
+"DATA GHOSTS" - While creative, it's unclear and may confuse users about what the product does
+"EphemeralCore" - Technical jargon that should be explained for non-experts
+"Zero-knowledge architecture" - Needs context; what does this mean for users?
+Pricing labels are vague:
+
+"$0/mo" for Free plan should say "FREE" instead of showing "$0"
+"Basic verification" needs elaboration
+"Essential forensics" is generic
+
+
+The tagline "Non-Destructive Forensic Analysis" is good but could be more benefit-focused (e.g., "Uncover hidden digital evidence without altering files")
+Inconsistent terminology: Uses both "Files" and "Requests" in different tiers, which may confuse users about pricing
+
+Key Recommendations
+
+Simplify the hero message - Replace "DATA GHOSTS" with a clear benefit statement. Something like: "Uncover 7,000+ hidden metadata fields your competitors miss"
+Clarify tier benefits:
+
+Add brief explanatory text for each tier
+Make it obvious what each upgrade includes (bullet points are good, but add context)
+Fix pricing display (remove "$0/mo" for Free tier)
+
+
+Improve button hierarchy:
+
+Make "Start Extraction" the primary CTA (it should be prominent in hero)
+Rethink "[ SELECT_FILE ]" styling to be more modern
+
+
+Add trust signals:
+
+"Secure Enclave Processing" is mentioned at footer—move it higher up
+Add compliance badges/icons near the top
+Consider adding "No data retention" messaging prominently
+
+
+Technical jargon cleanup:
+
+Keep the forensic terminology but add 1-2 line explanations
+Example: "Hex & Entropy Analysis - Detect manipulated files through binary-level inspection"
+
+
+Fix the credits section:
+
+Consider renaming "ADHOC_CREDITS" to "Pay-as-You-Go Credits"
+Show a clearer cost per analysis
+
+
+
+The product shows strong technical positioning but needs more accessible UX messaging for a broader audience. The professional tone is good, but clarity should come before creativity in this case.

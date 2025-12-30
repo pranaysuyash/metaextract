@@ -1,0 +1,225 @@
+"""
+Reverse Geocoding (GPS → Address)
+Uses OpenStreetMap Nominatim API (free, requires attribution)
+"""
+
+import json
+import time
+from typing import Dict, Any, Optional
+from datetime import timedelta
+from pathlib import Path
+
+
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+
+
+class GeocodeCache:
+    """Simple file-based cache for geocoding results."""
+    
+    def __init__(self, cache_dir: str = "/tmp/metaextract_geocache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_file = self.cache_dir / "geocode_cache.json"
+        self._load_cache()
+    
+    def _load_cache(self):
+        """Load cache from disk."""
+        self._cache = {}
+        if self.cache_file.exists():
+            try:
+                with open(self.cache_file, 'r') as f:
+                    self._cache = json.load(f)
+            except Exception as e:
+                self._cache = {}
+    
+    def _save_cache(self):
+        """Save cache to disk."""
+        try:
+            with open(self.cache_file, 'w') as f:
+                json.dump(self._cache, f)
+        except Exception as e:
+            pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+    
+    def get(self, lat: float, lon: float) -> Optional[Dict[str, Any]]:
+        """Get cached result."""
+        key = f"{lat:.6f},{lon:.6f}"
+        return self._cache.get(key)
+    
+    def set(self, lat: float, lon: float, data: Dict[str, Any]):
+        """Cache result."""
+        key = f"{lat:.6f},{lon:.6f}"
+        self._cache[key] = data
+        self._save_cache()
+
+
+# Global cache instance
+_geocode_cache = None
+
+
+def _get_cache() -> GeocodeCache:
+    """Get or create geocode cache."""
+    global _geocode_cache
+    if _geocode_cache is None:
+        _geocode_cache = GeocodeCache()
+    return _geocode_cache
+
+
+def reverse_geocode(latitude: float, longitude: float, api_key: Optional[str] = None, 
+                   use_cache: bool = True, cache_ttl_hours: int = 24) -> Dict[str, Any]:
+    """
+    Convert GPS coordinates to human-readable location using OpenStreetMap Nominatim.
+    
+    Args:
+        latitude: Latitude in decimal degrees
+        longitude: Longitude in decimal degrees
+        api_key: API key (not required for OSM)
+        use_cache: Whether to use cached results
+        cache_ttl_hours: Cache TTL in hours
+    
+    Returns:
+        Dictionary with location information
+    """
+    if not REQUESTS_AVAILABLE:
+        return {"error": "requests library not installed"}
+    
+    # Check cache
+    if use_cache:
+        cache = _get_cache()
+        cached = cache.get(latitude, longitude)
+        if cached:
+            cached['cache_hit'] = True
+            return cached
+    
+    try:
+        headers = {
+            "User-Agent": "MetaExtract/1.0 (https://github.com/pranaysuyash/metaextract)"
+        }
+        
+        params = {
+            "format": "json",
+            "lat": str(latitude),
+            "lon": str(longitude),
+            "accept-language": "en",
+            "zoom": 18  # Maximum detail
+        }
+        
+        response = requests.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            params=params,
+            headers=headers,
+            timeout=5
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        address = data.get("address", {})
+        
+        result = {
+            "cache_hit": False,
+            "latitude": latitude,
+            "longitude": longitude,
+            "formatted_address": data.get("display_name"),
+            "country": address.get("country"),
+            "country_code": address.get("country_code"),
+            "state": address.get("state"),
+            "county": address.get("county"),
+            "city": address.get("city") or address.get("town") or address.get("village"),
+            "suburb": address.get("suburb"),
+            "postcode": address.get("postcode"),
+            "road": address.get("road"),
+            "neighbourhood": address.get("neighbourhood"),
+            "house_number": address.get("house_number"),
+            "attribution": "© OpenStreetMap contributors (ODbL)",
+            "osm_type": data.get("osm_type"),
+            "osm_id": str(data.get("osm_id", ""))
+        }
+        
+        # Cache result
+        if use_cache:
+            cache = _get_cache()
+            cache.set(latitude, longitude, result)
+        
+        return result
+        
+    except requests.exceptions.Timeout:
+        return {
+            "cache_hit": False,
+            "latitude": latitude,
+            "longitude": longitude,
+            "error": "Request timeout"
+        }
+    except Exception as e:
+        return {
+            "cache_hit": False,
+            "latitude": latitude,
+            "longitude": longitude,
+            "error": str(e)
+        }
+
+
+def batch_reverse_geocode(coordinates: list, use_cache: bool = True) -> list:
+    """
+    Batch geocode multiple coordinates.
+    
+    Args:
+        coordinates: List of (latitude, longitude) tuples
+        use_cache: Whether to use cached results
+    
+    Returns:
+        List of geocoded results
+    """
+    results = []
+    
+    for lat, lon in coordinates:
+        result = reverse_geocode(lat, lon, use_cache=use_cache)
+        results.append(result)
+        # Rate limiting (1 request per second for Nominatim)
+        time.sleep(1.1)
+    
+    return results
+
+
+def geocode_from_exif(exif_data: Dict[str, Any], use_cache: bool = True) -> Dict[str, Any]:
+    """
+    Extract GPS from EXIF and geocode the location.
+    
+    Args:
+        exif_data: EXIF metadata dictionary
+        use_cache: Whether to use cached results
+    
+    Returns:
+        Geocoded location information
+    """
+    gps_data = exif_data.get('gps', {})
+    
+    lat = gps_data.get('latitude')
+    lon = gps_data.get('longitude')
+    
+    if lat is None or lon is None:
+        return {
+            "has_gps": False,
+            "geocoded": False,
+            "error": "No GPS coordinates in EXIF"
+        }
+    
+    geocoded = reverse_geocode(lat, lon, use_cache=use_cache)
+    
+    return {
+        "has_gps": True,
+        "geocoded": True,
+        "original_coordinates": {
+            "latitude": lat,
+            "longitude": lon,
+            "altitude": gps_data.get('altitude')
+        },
+        "location": geocoded
+    }
+
+
+def get_geocoding_field_count() -> int:
+    """Return approximate number of geocoding fields."""
+    return 15

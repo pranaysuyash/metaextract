@@ -1,0 +1,146 @@
+# MetaExtract Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ============================================================================
+# Core Libraries (Required)
+# ============================================================================
+
+# Image processing
+pillow>=10.0.0
+
+# Comprehensive EXIF extraction
+exifread>=3.0.0
+
+# Video processing (requires ffmpeg/ffprobe system binary)
+ffmpeg-python>=0.2.0
+
+# Audio processing
+mutagen>=1.47.0
+
+# PDF processing
+pypdf>=4.0.0
+
+# MIME type detection
+python-magic>=0.4.27
+
+# Performance and caching
+redis>=4.5.0
+psutil>=5.9.0
+
+# ============================================================================
+# Extended Libraries (Full Coverage)
+# ============================================================================
+
+# HEIC/HEIF support for Apple photos
+pillow-heif>=0.16.0
+
+# Extended attributes (macOS/Linux) - file tags, Spotlight metadata
+xattr>=1.1.0; sys_platform != 'win32'
+
+# Extended EXIF/IPTC/XMP support
+pyexiv2>=0.14.0
+iptcinfo3>=2.1.4
+python-xmp-toolkit>=2.0.1
+
+# Image quality analysis
+opencv-python>=4.8.1.78
+scikit-learn>=1.3.2
+numpy>=1.26.0
+
+# Perceptual hashing
+imagehash>=4.3.0
+
+# Astronomical calculations (golden hour, sun/moon position)
+ephem>=4.0.0
+
+# HTTP requests for geocoding APIs
+requests>=2.31.0
+
+# PSD layer extraction (requires libpng/libjpeg)
+psd-tools>=1.9.0
+
+# ============================================================================
+# COMPREHENSIVE METADATA ENGINES (45,000+ Fields Support)
+# ============================================================================
+
+# Medical Imaging (DICOM) - 4,600+ standardized fields
+pydicom>=2.4.4
+
+# Astronomical Data (FITS) - 3,000+ fields with WCS support
+astropy>=6.0.0
+
+# Geospatial Data (GeoTIFF, Shapefile, etc.) - Full CRS and projection metadata
+rasterio>=1.3.9
+fiona>=1.9.5
+geopandas>=0.14.0
+pyproj>=3.4.0
+
+# Scientific Data Formats (HDF5, NetCDF) - Unlimited metadata fields
+h5py>=3.10.0
+netCDF4>=1.6.5
+xarray>=2023.1.0
+
+# Advanced Image Analysis - Computational photography, HDR, steganography
+scikit-image>=0.20.0
+imageio>=2.25.0
+rawpy>=0.18.0
+
+# Microscopy and Scientific Imaging
+aicsimageio>=4.14.0
+tifffile>=2023.1.0
+
+# Advanced Audio Analysis - Spectral analysis, broadcast audio
+librosa>=0.10.1
+soundfile>=0.12.0
+pydub>=0.25.0
+
+# Document Processing - Office, HTML, Web metadata
+python-docx>=1.1.0
+openpyxl>=3.1.0
+beautifulsoup4>=4.12.3
+lxml>=4.9.0
+
+# Blockchain and Digital Provenance - NFT, C2PA, digital signatures
+web3>=6.15.1
+cryptography>=40.0.0
+
+# Video Analysis - Professional formats, HDR, broadcast standards
+imageio-ffmpeg>=0.4.8
+
+# Database and Structured Data
+sqlalchemy>=2.0.0
+pandas>=2.0.0
+
+# Machine Learning for Content Analysis
+tensorflow>=2.15.0; platform_machine != 'arm64'
+torch>=2.2.0; platform_machine != 'arm64'
+transformers>=4.38.0
+
+# Forensic Analysis
+pycryptodome>=3.17.0
+
+# ============================================================================
+# System Dependencies (Install separately)
+# ============================================================================
+#
+# FFmpeg/FFprobe (for video extraction):
+#   macOS:   brew install ffmpeg
+#   Ubuntu:  apt install ffmpeg
+#   Windows: https://ffmpeg.org/download.html
+#
+# ExifTool (REQUIRED for full 7000+ fields, parsed MakerNotes):
+#   macOS:   brew install exiftool
+#   Ubuntu:  apt install libimage-exiftool-perl
+#   Windows: https://exiftool.org/
+#
+# libmagic (for MIME detection):
+#   macOS:   brew install libmagic
+#   Ubuntu:  apt install libmagic1
+#   Windows: Included in python-magic-bin package
+#
+# libpng/libjpeg (for psd-tools):
+#   macOS:   brew install libpng libjpeg
+#   Ubuntu:  apt install libpng-dev libjpeg-dev
+#   Windows: Included in most Python distributions
+#
+# ============================================================================

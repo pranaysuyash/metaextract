@@ -1,0 +1,91 @@
+"""
+Helper functions for metadata processing
+"""
+import json
+from typing import Any, Dict
+
+def count_fields(metadata: Dict[str, Any]) -> int:
+    """
+    Count total number of extracted fields in metadata dictionary.
+    Counts leaf nodes (non-dict values) recursively.
+    
+    Args:
+        metadata: Metadata dictionary
+    
+    Returns:
+        Total field count
+    """
+    count = 0
+    
+    def count_recursive(obj: Any) -> int:
+        nonlocal count
+        if isinstance(obj, dict):
+            for value in obj.values():
+                if isinstance(value, (dict, list)):
+                    count_recursive(value)
+                else:
+                    count += 1
+        elif isinstance(obj, list):
+            for item in obj:
+                if isinstance(item, (dict, list)):
+                    count_recursive(item)
+                else:
+                    count += 1
+    
+    count_recursive(metadata)
+    return count
+
+def merge_metadata(*metadata_dicts: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merge multiple metadata dictionaries into one.
+    Later dictionaries override earlier ones for conflicting keys.
+    
+    Args:
+        *metadata_dicts: Variable number of metadata dictionaries to merge
+    
+    Returns:
+        Merged dictionary
+    """
+    result = {}
+    for md in metadata_dicts:
+        if isinstance(md, dict):
+            result = {**result, **md}
+    return result
+
+def sanitize_value(value: Any, max_length: int = 1000) -> Any:
+    """
+    Sanitize a metadata value to ensure it's JSON-serializable and not too long.
+    
+    Args:
+        value: Value to sanitize
+        max_length: Maximum string length
+    
+    Returns:
+        Sanitized value
+    """
+    if value is None:
+        return None
+    
+    if isinstance(value, (int, float, bool)):
+        return value
+    
+    if isinstance(value, str):
+        return value[:max_length]
+    
+    if isinstance(value, bytes):
+        try:
+            decoded = value.decode('utf-8', errors='ignore')
+            return decoded[:max_length]
+        except Exception as e:
+            return f"<bytes:{len(value)}>"
+    
+    if isinstance(value, (list, tuple)):
+        return [sanitize_value(v, max_length) for v in value]
+    
+    if isinstance(value, dict):
+        return {k: sanitize_value(v, max_length) for k, v in value.items()}
+    
+    try:
+        return str(value)[:max_length]
+    except Exception as e:
+        return "<unserializable>"

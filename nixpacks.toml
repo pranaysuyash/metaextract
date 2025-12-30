@@ -1,0 +1,23 @@
+# Railway Nixpacks configuration for MetaExtract
+providers = ["python", "node"]
+
+[phases.setup]
+# Install system dependencies including exiftool for 7000+ metadata fields
+aptPkgs = [
+    "ffmpeg",
+    "libmagic1",
+    "libimage-exiftool-perl",  # ExifTool for comprehensive metadata
+    "perl"
+]
+
+[phases.install]
+cmds = [
+    "npm ci",
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"

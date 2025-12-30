@@ -1,0 +1,351 @@
+"""
+ICC Color Profile Extraction
+Extract detailed ICC profile information from images
+"""
+
+from typing import Dict, Any, Optional, List
+
+import struct
+
+
+def _decode_signature(value: bytes) -> str:
+    try:
+        return value.decode("ascii", errors="replace").strip()
+    except Exception as e:
+        return ""
+
+
+def _decode_fixed_16_16(value: int) -> float:
+    if value >= 2**31:
+        value -= 2**32
+    return value / 65536.0
+
+
+def _decode_timestamp(data: bytes) -> Optional[str]:
+    if len(data) < 12:
+        return None
+    try:
+        year, month, day, hour, minute, second = struct.unpack(">6H", data[:12])
+        return f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}Z"
+    except Exception as e:
+        return None
+
+
+def _parse_icc_header(icc_data: bytes) -> Dict[str, Any]:
+    if len(icc_data) < 128:
+        return {"error": "ICC profile header too short"}
+
+    header = {}
+    header["profile_size"] = struct.unpack(">I", icc_data[0:4])[0]
+    header["preferred_cmm"] = _decode_signature(icc_data[4:8])
+    version_bytes = icc_data[8:12]
+    if len(version_bytes) == 4:
+        major = version_bytes[0]
+        minor = (version_bytes[1] >> 4) & 0x0F
+        bugfix = version_bytes[1] & 0x0F
+        header["profile_version"] = f"{major}.{minor}.{bugfix}"
+        header["profile_version_raw"] = version_bytes.hex()
+
+    header["device_class"] = _decode_signature(icc_data[12:16])
+    header["color_space"] = _decode_signature(icc_data[16:20])
+    header["pcs"] = _decode_signature(icc_data[20:24])
+    header["creation_date"] = _decode_timestamp(icc_data[24:36])
+    header["primary_platform"] = _decode_signature(icc_data[40:44])
+
+    profile_flags = struct.unpack(">I", icc_data[44:48])[0]
+    header["profile_flags_raw"] = f"0x{profile_flags:08x}"
+    header["is_embedded"] = bool(profile_flags & 0x1)
+    header["independent_profile"] = not bool(profile_flags & 0x2)
+
+    header["device_manufacturer"] = _decode_signature(icc_data[48:52])
+    header["device_model"] = _decode_signature(icc_data[52:56])
+
+    device_attributes = struct.unpack(">Q", icc_data[56:64])[0]
+    header["device_attributes_raw"] = f"0x{device_attributes:016x}"
+    header["reflective"] = not bool(device_attributes & 0x1)
+    header["glossy"] = not bool(device_attributes & 0x2)
+    header["positive"] = not bool(device_attributes & 0x4)
+    header["color"] = not bool(device_attributes & 0x8)
+
+    rendering_intent = struct.unpack(">I", icc_data[64:68])[0]
+    intents = {
+        0: "Perceptual",
+        1: "Relative Colorimetric",
+        2: "Saturation",
+        3: "Absolute Colorimetric",
+    }
+    header["rendering_intent"] = intents.get(rendering_intent, str(rendering_intent))
+
+    illuminant_raw = icc_data[68:80]
+    if len(illuminant_raw) == 12:
+        x, y, z = struct.unpack(">3i", illuminant_raw)
+        header["illuminant_xyz"] = [
+            round(_decode_fixed_16_16(x), 6),
+            round(_decode_fixed_16_16(y), 6),
+            round(_decode_fixed_16_16(z), 6),
+        ]
+
+    header["creator"] = _decode_signature(icc_data[80:84])
+    profile_id = icc_data[84:100]
+    if profile_id and any(b != 0 for b in profile_id):
+        header["profile_id"] = profile_id.hex()
+
+    return header
+
+
+def _parse_icc_tag_table(icc_data: bytes) -> Dict[str, Any]:
+    if len(icc_data) < 132:
+        return {"tag_count": 0, "tags": []}
+
+    tag_count = struct.unpack(">I", icc_data[128:132])[0]
+    tags: List[Dict[str, Any]] = []
+    offset = 132
+
+    for _ in range(tag_count):
+        if offset + 12 > len(icc_data):
+            break
+        signature = _decode_signature(icc_data[offset : offset + 4])
+        tag_offset = struct.unpack(">I", icc_data[offset + 4 : offset + 8])[0]
+        tag_size = struct.unpack(">I", icc_data[offset + 8 : offset + 12])[0]
+        tags.append({
+            "signature": signature,
+            "offset": tag_offset,
+            "size": tag_size,
+        })
+        offset += 12
+
+    return {"tag_count": tag_count, "tags": tags}
+
+
+def _parse_icc_tag_details(icc_data: bytes, tag_table: Dict[str, Any]) -> Dict[str, Any]:
+    details: Dict[str, Any] = {}
+    tags = tag_table.get("tags", [])
+    if not isinstance(tags, list):
+        return details
+
+    for tag in tags:
+        signature = tag.get("signature")
+        offset = tag.get("offset")
+        size = tag.get("size")
+        if not signature or not isinstance(offset, int) or not isinstance(size, int):
+            continue
+        if offset + size > len(icc_data) or size < 12:
+            continue
+        payload = icc_data[offset : offset + size]
+        tag_type = _decode_signature(payload[0:4])
+        tag_info: Dict[str, Any] = {"type": tag_type, "size": size}
+
+        def fixed_16_16_triplet(start: int) -> Optional[list]:
+            if start + 12 > len(payload):
+                return None
+            x, y, z = struct.unpack(">3i", payload[start : start + 12])
+            return [
+                round(_decode_fixed_16_16(x), 6),
+                round(_decode_fixed_16_16(y), 6),
+                round(_decode_fixed_16_16(z), 6),
+            ]
+
+        if tag_type == "desc":
+            if len(payload) >= 12:
+                ascii_len = struct.unpack(">I", payload[8:12])[0]
+                if ascii_len > 0:
+                    raw = payload[12 : 12 + max(0, ascii_len - 1)]
+                    tag_info["description"] = raw.decode("ascii", errors="replace").strip()
+        elif tag_type == "text":
+            raw = payload[8:]
+            tag_info["text"] = raw.decode("ascii", errors="replace").strip()
+        elif tag_type == "mluc":
+            if len(payload) >= 16:
+                record_count = struct.unpack(">I", payload[8:12])[0]
+                record_size = struct.unpack(">I", payload[12:16])[0]
+                texts = []
+                base = 16
+                for idx in range(record_count):
+                    rec_offset = base + idx * record_size
+                    if rec_offset + 12 > len(payload):
+                        continue
+                    lang = payload[rec_offset : rec_offset + 2].decode("ascii", errors="replace")
+                    country = payload[rec_offset + 2 : rec_offset + 4].decode("ascii", errors="replace")
+                    text_length = struct.unpack(">I", payload[rec_offset + 4 : rec_offset + 8])[0]
+                    text_offset = struct.unpack(">I", payload[rec_offset + 8 : rec_offset + 12])[0]
+                    text_end = text_offset + text_length
+                    if text_end > len(payload) or text_offset < 0:
+                        continue
+                    text_bytes = payload[text_offset:text_end]
+                    text = text_bytes.decode("utf-16-be", errors="replace").strip("\x00")
+                    texts.append({"lang": lang, "country": country, "text": text})
+                if texts:
+                    tag_info["localized_text"] = texts
+        elif tag_type == "XYZ ":
+            xyz = fixed_16_16_triplet(8)
+            if xyz:
+                tag_info["xyz"] = xyz
+        elif tag_type == "sig ":
+            if len(payload) >= 12:
+                tag_info["signature"] = _decode_signature(payload[8:12])
+        elif tag_type == "curv":
+            if len(payload) >= 12:
+                count = struct.unpack(">I", payload[8:12])[0]
+                tag_info["curve_point_count"] = count
+                if count == 1 and len(payload) >= 14:
+                    gamma = struct.unpack(">H", payload[12:14])[0] / 256.0
+                    tag_info["gamma"] = round(gamma, 4)
+                elif count > 1:
+                    max_points = min(count, 12)
+                    points = []
+                    for idx in range(max_points):
+                        start = 12 + idx * 2
+                        if start + 2 <= len(payload):
+                            points.append(struct.unpack(">H", payload[start:start + 2])[0])
+                    tag_info["curve_points_sample"] = points
+        elif tag_type == "para":
+            if len(payload) >= 16:
+                curve_type = struct.unpack(">H", payload[8:10])[0]
+                tag_info["param_curve_type"] = curve_type
+                params = []
+                cursor = 12
+                while cursor + 4 <= len(payload):
+                    params.append(round(_decode_fixed_16_16(struct.unpack(">i", payload[cursor:cursor + 4])[0]), 6))
+                    cursor += 4
+                if params:
+                    tag_info["param_curve_parameters"] = params
+        elif tag_type == "date":
+            tag_info["date_time"] = _decode_timestamp(payload[8:20])
+        else:
+            tag_info["parsed"] = False
+
+        details[signature] = tag_info
+
+    return details
+
+
+def extract_icc_profile_metadata(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract ICC color profile metadata from an image.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with ICC profile information
+    """
+    result = {
+        "has_icc_profile": False,
+        "profile_details": {},
+        "color_space_data": {},
+        "fields_extracted": 0
+    }
+    
+    try:
+        from PIL import Image
+        
+        with Image.open(filepath) as img:
+            if hasattr(img, 'info') and 'icc_profile' in img.info:
+                icc_data = img.info['icc_profile']
+                result["has_icc_profile"] = True
+                
+                if isinstance(icc_data, bytes):
+                    result["profile_details"]["size_bytes"] = len(icc_data)
+                    result["profile_details"]["header"] = _parse_icc_header(icc_data)
+                    tag_table = _parse_icc_tag_table(icc_data)
+                    result["profile_details"]["tag_table"] = tag_table
+                    result["profile_details"]["tag_details"] = _parse_icc_tag_details(icc_data, tag_table)
+                    
+                    try:
+                        from PIL import ImageCms
+                        
+                        profile = ImageCms.getOpenProfile(filepath)
+                        
+                        result["profile_details"]["profile_class"] = getattr(profile, 'profileClass', None)
+                        result["profile_details"]["color_space"] = getattr(profile, 'colorSpace', None)
+                        result["profile_details"]["pcs"] = getattr(profile, 'pcs', None)
+                        
+                        header = getattr(profile, 'headers', [{}])[0] if getattr(profile, 'headers', [{}]) else {}
+                        
+                        result["profile_details"]["manufacturer"] = header.get('manufacturer')
+                        result["profile_details"]["model"] = header.get('model')
+                        result["profile_details"]["description"] = header.get('description')
+                        result["profile_details"]["copyright"] = header.get('copyright')
+                        
+                        if hasattr(profile, 'tobytes'):
+                            result["profile_details"]["can_serialize"] = True
+                            
+                    except Exception as e:
+                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                
+                result["color_space_data"]["mode"] = img.mode
+                
+                if hasattr(img, 'getbands'):
+                    result["color_space_data"]["bands"] = list(img.getbands())
+                
+                result["color_space_data"]["bit_depth"] = img.mode.bit_length() if hasattr(img.mode, 'bit_length') else None
+            
+            else:
+                result["color_space_data"]["mode"] = getattr(img, 'mode', None)
+                result["color_space_data"]["bands"] = list(img.getbands()) if hasattr(img, 'getbands') else None
+        
+        total_fields = 1 + len(result["profile_details"]) + len(result["color_space_data"])
+        result["fields_extracted"] = total_fields
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Failed to extract ICC profile metadata: {str(e)}"}
+
+
+def get_icc_field_count() -> int:
+    """Return approximate number of ICC profile fields."""
+    return 30
+
+
+def analyze_color_accuracy(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Analyze color accuracy based on embedded profiles.
+    
+    Args:
+        filepath: Path to image file
+    
+    Returns:
+        Dictionary with color accuracy analysis
+    """
+    result = {
+        "color_space": None,
+        "color_depth": None,
+        "profile_match": "unknown",
+        "recommendations": []
+    }
+    
+    try:
+        from PIL import Image
+        
+        with Image.open(filepath) as img:
+            result["color_space"] = img.mode
+            
+            if img.mode == 'RGB':
+                result["color_depth"] = 8
+            elif img.mode == 'RGBA':
+                result["color_depth"] = 8
+            elif img.mode == 'RGBX':
+                result["color_depth"] = 8
+            elif '16' in img.mode:
+                result["color_depth"] = 16
+            else:
+                result["color_depth"] = 8
+            
+            if hasattr(img, 'info') and 'icc_profile' in img.info:
+                result["profile_match"] = "matched"
+                result["recommendations"].append("Embedded ICC profile found - colors are calibrated")
+            else:
+                result["profile_match"] = "uncalibrated"
+                result["recommendations"].append("No embedded ICC profile - colors may vary across devices")
+                
+                if img.mode in ['RGB', 'L']:
+                    result["recommendations"].append("Consider embedding sRGB or Adobe RGB profile")
+            
+            if img.mode not in ['RGB', 'RGBA', 'L', 'CMYK']:
+                result["recommendations"].append(f"Non-standard color mode ({img.mode}) may have limited compatibility")
+        
+        return result
+        
+    except Exception as e:
+        return result

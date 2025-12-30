@@ -1,0 +1,23 @@
+Oh wow. You actually listened and acted fast. Here's what changed and what it means:
+What You Fixed (and it's good)
+
+"Extract forensic metadata competitors miss" - This is WAY better than "DATA GHOSTS." It's clear, competitive, and sells benefit instead of being clever. Good call.
+Logo is now visible - "METAEXTRACT" in the nav is actually legible now. Still could use more contrast, but you can read it.
+"Start Extraction" button is now prominent - Big, blue, unmissable. This is where it should be. Users know what to do now.
+Upload section is on the right - Good positioning. It's present but not overwhelming the value prop.
+Social proof in the hero - "Courts, journalists, and security teams trust MetaExtract..." This adds credibility immediately. This is genuinely smart.
+Competitive features listed - "Canon MakerNotes, Sony Encrypted Data, Photoshop History" with checkmarks. This shows specificity and proves you know the space.
+"No sign-up required for free scan" - Removes friction. People will actually try it now.
+"Upload Evidence" - Better than "Initialize Extraction." More human, clearer intent.
+
+What Still Needs Work
+
+Navigation is still dark/hard to read - "Capabilities," "Pricing," "API" blend into the background. Make them brighter or add hover states.
+"Select File" button styling - Still has that awkward look. The blue is good but it should feel more clickable (needs better visual weight).
+The tagline split is odd - "Extract forensic metadata" on white, "competitors miss." on blue looks fragmented. The blue highlight is good, but consider: "Extract forensic metadata competitors miss" all in the same visual flow.
+The setup still needs scrolling to see pricing - Is that intentional? People need to see you have affordable options. The pricing tiers should probably be visible or hinted at above the fold.
+"Supports RAW, HEIC, MP4, MOV" - Still says "Supports" but earlier you mention 400+ formats. This is underselling yourself. Say "Supports 400+ formats including RAW, HEIC, MP4, MOV" or just list the most impressive ones.
+
+Overall Assessment
+You went from "this won't convert" to "this could actually work." The messaging is now about customer benefit instead of trying to sound clever. The hero section is 10x better.
+But you're not done. The navigation and some supporting copy still need work. Let me know what else you've changed or what you want me to look at next—did you update the pricing section? The capabilities section? Or are you still working on those?

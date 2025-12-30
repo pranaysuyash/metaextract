@@ -1,0 +1,271 @@
+"""
+Perceptual Hash Comparison Utilities
+Duplicate detection, similarity scoring, and image matching workflows
+"""
+
+from typing import Dict, Any, Optional, List, Tuple
+from pathlib import Path
+import json
+
+
+def compare_images_detailed(hash1: Dict[str, Any], hash2: Dict[str, Any]) -> Dict[str, Any]:
+    """Detailed comparison of two image fingerprints."""
+    result = {
+        "algorithm_comparisons": {},
+        "average_similarity": 0.0,
+        "is_duplicate": False,
+        "is_similar": False,
+        "is_exact_match": False,
+        "recommendation": "",
+        "differences": [],
+        "confidence": 0.0
+    }
+
+    algorithms = ["phash", "dhash", "ahash", "whash", "blockhash"]
+    similarities = []
+    exact_matches = 0
+
+    for algo in algorithms:
+        h1 = hash1.get(algo) or hash1.get(f"{algo}_hex")
+        h2 = hash2.get(algo) or hash2.get(f"{algo}_hex")
+
+        if h1 and h2:
+            try:
+                similarity = calculate_similarity(h1, h2, algo)
+                result["algorithm_comparisons"][algo] = {
+                    "similarity": similarity,
+                    "match": similarity >= 0.90,
+                    "h1": h1[:16] + "..." if len(h1) > 16 else h1,
+                    "h2": h2[:16] + "..." if len(h2) > 16 else h2
+                }
+                similarities.append(similarity)
+
+                if similarity >= 0.99:
+                    exact_matches += 1
+            except Exception as e:
+                result["algorithm_comparisons"][algo] = {"error": str(e)}
+
+    if similarities:
+        result["average_similarity"] = round(sum(similarities) / len(similarities), 4)
+
+        if result["average_similarity"] >= 0.95:
+            result["is_exact_match"] = True
+            result["is_duplicate"] = True
+            result["is_similar"] = True
+            result["recommendation"] = "EXACT DUPLICATE: Images are virtually identical"
+            result["confidence"] = 0.99
+        elif result["average_similarity"] >= 0.85:
+            result["is_duplicate"] = True
+            result["is_similar"] = True
+            result["recommendation"] = "NEAR DUPLICATE: Images are very similar (resized/cropped)"
+            result["confidence"] = 0.85
+        elif result["average_similarity"] >= 0.70:
+            result["is_similar"] = True
+            result["recommendation"] = "SIMILAR: Images share visual characteristics"
+            result["confidence"] = 0.70
+        else:
+            result["recommendation"] = "DIFFERENT: Images are visually distinct"
+            result["confidence"] = 0.95
+
+    return result
+
+
+def find_duplicates_in_collection(
+    fingerprints: List[Dict[str, Any]],
+    threshold: float = 0.85
+) -> List[Dict[str, Any]]:
+    """Find all duplicate groups in a collection of image fingerprints."""
+    result = {
+        "duplicate_groups": [],
+        "unique_images": [],
+        "total_duplicates": 0,
+        "statistics": {}
+    }
+
+    if not fingerprints:
+        return result
+
+    n = len(fingerprints)
+    visited = [False] * n
+    duplicate_count = 0
+
+    for i in range(n):
+        if visited[i]:
+            continue
+
+        group = [{"index": i, "fingerprint": fingerprints[i]}]
+        visited[i] = True
+
+        for j in range(i + 1, n):
+            if visited[j]:
+                continue
+
+            comparison = compare_images_detailed(fingerprints[i], fingerprints[j])
+            if comparison.get("average_similarity", 0) >= threshold:
+                group.append({"index": j, "fingerprint": fingerprints[j]})
+                visited[j] = True
+                duplicate_count += 1
+
+        if len(group) > 1:
+            result["duplicate_groups"].append(group)
+        else:
+            result["unique_images"].append(i)
+
+    result["total_duplicates"] = duplicate_count
+    result["statistics"] = {
+        "total_images": n,
+        "unique_count": len(result["unique_images"]),
+        "duplicate_group_count": len(result["duplicate_groups"]),
+        "average_duplicates_per_group": round(duplicate_count / max(1, len(result["duplicate_groups"])), 2)
+    }
+
+    return result
+
+
+def calculate_image_similarity_matrix(fingerprints: List[Dict[str, Any]]) -> List[List[float]]:
+    """Calculate pairwise similarity matrix for a collection of images."""
+    n = len(fingerprints)
+    matrix = [[0.0] * n for _ in range(n)]
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            comparison = compare_images_detailed(fingerprints[i], fingerprints[j])
+            similarity = comparison.get("average_similarity", 0.0)
+            matrix[i][j] = similarity
+            matrix[j][i] = similarity
+
+    for i in range(n):
+        matrix[i][i] = 1.0
+
+    return matrix
+
+
+def cluster_similar_images(
+    fingerprints: List[Dict[str, Any]],
+    similarity_threshold: float = 0.70
+) -> List[List[int]]:
+    """Cluster similar images using hierarchical clustering."""
+    from collections import defaultdict
+
+    if not fingerprints:
+        return []
+
+    matrix = calculate_image_similarity_matrix(fingerprints)
+    n = len(matrix)
+
+    clusters = []
+    assigned = [False] * n
+
+    for i in range(n):
+        if assigned[i]:
+            continue
+
+        cluster = [i]
+        assigned[i] = True
+
+        for j in range(i + 1, n):
+            if not assigned[j] and matrix[i][j] >= similarity_threshold:
+                cluster.append(j)
+                assigned[j] = True
+
+                for k in range(j + 1, n):
+                    if not assigned[k] and matrix[j][k] >= similarity_threshold:
+                        if k not in cluster:
+                            cluster.append(k)
+                            assigned[k] = True
+
+        if len(cluster) > 0:
+            clusters.append(cluster)
+
+    return clusters
+
+
+def find_nearest_matches(
+    query_fingerprint: Dict[str, Any],
+    database_fingerprints: List[Dict[str, Any]],
+    top_n: int = 5
+) -> List[Dict[str, Any]]:
+    """Find the N most similar images to the query."""
+    results: List[Dict[str, Any]] = []
+
+    for idx, db_fp in enumerate(database_fingerprints):
+        comparison = compare_images_detailed(query_fingerprint, db_fp)
+        results.append({
+            "index": idx,
+            "similarity": comparison.get("average_similarity", 0.0),
+            "is_duplicate": comparison.get("is_duplicate", False),
+            "comparison_details": comparison
+        })
+
+    results.sort(key=lambda x: x["similarity"], reverse=True)
+
+    return results[:top_n]
+
+
+def deduplication_workflow(
+    image_paths: List[str],
+    output_report: str = None
+) -> Dict[str, Any]:
+    """Complete deduplication workflow for a list of images."""
+    result = {
+        "input_count": len(image_paths),
+        "fingerprints": [],
+        "duplicate_groups": [],
+        "unique_images": [],
+        "statistics": {},
+        "report": None
+    }
+
+    try:
+        for img_path in image_paths:
+            try:
+                from .perceptual_hashes import extract_image_fingerprint
+                fp = extract_image_fingerprint(img_path)
+                if fp:
+                    result["fingerprints"].append({
+                        "path": img_path,
+                        "fingerprint": fp
+                    })
+            except Exception as e:
+                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+
+        fingerprints = [item["fingerprint"] for item in result["fingerprints"]]
+
+        dup_result = find_duplicates_in_collection(fingerprints, threshold=0.85)
+        result["duplicate_groups"] = dup_result["duplicate_groups"]
+        result["unique_images"] = dup_result["unique_images"]
+        result["statistics"] = dup_result["statistics"]
+
+        report_lines = [
+            "DEDUPLICATION REPORT",
+            "=" * 50,
+            f"Total images processed: {result['input_count']}",
+            f"Unique images: {result['statistics'].get('unique_count', 0)}",
+            f"Duplicate groups found: {result['statistics'].get('duplicate_group_count', 0)}",
+            f"Total duplicates: {result['statistics'].get('total_duplicates', 0)}",
+            "",
+            "DUPLICATE GROUPS:",
+        ]
+
+        for idx, group in enumerate(result["duplicate_groups"], 1):
+            group_paths = [result["fingerprints"][g["index"]]["path"] for g in group]
+            report_lines.append(f"\nGroup {idx} ({len(group)} images):")
+            for path in group_paths:
+                report_lines.append(f"  - {path}")
+
+        report_text = "\n".join(report_lines)
+        result["report"] = report_text
+
+        if output_report:
+            with open(output_report, 'w') as f:
+                f.write(report_text)
+
+    except Exception as e:
+        result["error"] = str(e)[:200]
+
+    return result
+
+
+def get_perceptual_comparison_field_count() -> int:
+    """Return number of comparison/matching fields."""
+    return 25

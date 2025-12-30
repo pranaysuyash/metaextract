@@ -1,0 +1,1795 @@
+#!/usr/bin/env python3
+"""
+Timeline Reconstruction Module for MetaExtract
+
+Reconstructs chronological timelines from metadata across multiple files:
+- Timestamp analysis and validation
+- Event sequence reconstruction
+- Gap detection and analysis
+- Timeline visualization data
+- Forensic timeline reports
+"""
+
+import json
+import logging
+from typing import Dict, Any, List, Optional, Tuple
+from pathlib import Path
+from datetime import datetime, timedelta
+import re
+
+logger = logging.getLogger("metaextract.timeline")
+
+class TimelineReconstructor:
+    """Advanced timeline reconstruction from metadata."""
+    
+    def __init__(self):
+        self.timestamp_fields = [
+            # EXIF timestamps
+            ("exif", "DateTime", "Image Modified"),
+            ("exif", "DateTimeOriginal", "Photo Taken"),
+            ("exif", "DateTimeDigitized", "Digitized"),
+            ("exif", "CreateDate", "Created"),
+            ("exif", "ModifyDate", "Modified"),
+            
+            # Filesystem timestamps
+            ("filesystem", "created", "File Created"),
+            ("filesystem", "modified", "File Modified"),
+            ("filesystem", "accessed", "File Accessed"),
+            
+            # GPS timestamps
+            ("gps", "GPSTimeStamp", "GPS Time"),
+            ("gps", "GPSDateStamp", "GPS Date"),
+            
+            # Video/Audio timestamps
+            ("video", "creation_time", "Video Created"),
+            ("audio", "creation_time", "Audio Created"),
+        ]
+    
+    def reconstruct_timeline(
+        self,
+        file_metadata_list: List[Dict[str, Any]],
+        analysis_mode: str = "comprehensive"
+    ) -> Dict[str, Any]:
+        """
+        Reconstruct timeline from multiple files' metadata.
+        
+        Args:
+            file_metadata_list: List of metadata dictionaries
+            analysis_mode: "comprehensive", "forensic", or "simple"
+            
+        Returns:
+            Timeline reconstruction results
+        """
+        try:
+            results = {
+                "timeline_info": {
+                    "timestamp": datetime.now().isoformat(),
+                    "files_analyzed": len(file_metadata_list),
+                    "analysis_mode": analysis_mode,
+                    "total_events": 0
+                },
+                "events": [],
+                "timeline_analysis": {},
+                "anomalies": [],
+                "patterns": {},
+                "forensic_insights": {},
+                "recommendations": []
+            }
+            
+            # Extract all timestamp events
+            all_events = []
+            for i, metadata in enumerate(file_metadata_list):
+                file_events = self._extract_file_events(metadata, i)
+                all_events.extend(file_events)
+            
+            # Sort events chronologically
+            valid_events = [e for e in all_events if e.get("parsed_datetime")]
+            valid_events.sort(key=lambda x: x["parsed_datetime"])
+            
+            results["events"] = valid_events
+            results["timeline_info"]["total_events"] = len(valid_events)
+            
+            if not valid_events:
+                results["error"] = "No valid timestamps found in any files"
+                return results
+            
+            # Perform timeline analysis
+            results["timeline_analysis"] = self._analyze_timeline(valid_events)
+            
+            # Detect anomalies
+            results["anomalies"] = self._detect_timeline_anomalies(valid_events)
+            
+            # Identify patterns
+            results["patterns"] = self._identify_timeline_patterns(valid_events)
+            
+            # Forensic analysis (if requested)
+            if analysis_mode in ["comprehensive", "forensic"]:
+                results["forensic_insights"] = self._perform_forensic_analysis(
+                    valid_events, file_metadata_list
+                )
+            
+            # Generate recommendations
+            results["recommendations"] = self._generate_timeline_recommendations(results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Timeline reconstruction failed: {e}")
+            return {"error": f"Timeline reconstruction failed: {str(e)}"}
+    
+    def analyze_single_file_timeline(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze timeline within a single file's metadata.
+        
+        Args:
+            metadata: Single file metadata dictionary
+            
+        Returns:
+            Single-file timeline analysis
+        """
+        try:
+            results = {
+                "file_timeline": {
+                    "timestamp": datetime.now().isoformat(),
+                    "analysis_type": "single_file"
+                },
+                "events": [],
+                "consistency_analysis": {},
+                "timestamp_validation": {},
+                "recommendations": []
+            }
+            
+            # Extract events from this file
+            events = self._extract_file_events(metadata, 0)
+            valid_events = [e for e in events if e.get("parsed_datetime")]
+            valid_events.sort(key=lambda x: x["parsed_datetime"])
+            
+            results["events"] = valid_events
+            
+            if len(valid_events) < 2:
+                results["note"] = "Insufficient timestamps for timeline analysis"
+                return results
+            
+            # Analyze consistency
+            results["consistency_analysis"] = self._analyze_single_file_consistency(valid_events)
+            
+            # Validate timestamps
+            results["timestamp_validation"] = self._validate_timestamps(valid_events)
+            
+            # Generate recommendations
+            results["recommendations"] = self._generate_single_file_recommendations(results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Single file timeline analysis failed: {e}")
+            return {"error": f"Single file timeline analysis failed: {str(e)}"}
+    
+    def create_forensic_timeline(
+        self,
+        file_metadata_list: List[Dict[str, Any]],
+        focus_period: Tuple[str, str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create forensic-grade timeline with detailed analysis.
+        
+        Args:
+            file_metadata_list: List of metadata dictionaries
+            focus_period: Optional (start_time, end_time) tuple to focus on
+            
+        Returns:
+            Forensic timeline report
+        """
+        try:
+            results = {
+                "forensic_timeline": {
+                    "timestamp": datetime.now().isoformat(),
+                    "files_analyzed": len(file_metadata_list),
+                    "focus_period": focus_period,
+                    "analysis_level": "forensic"
+                },
+                "chronological_events": [],
+                "evidence_chain": [],
+                "temporal_gaps": [],
+                "suspicious_patterns": [],
+                "metadata_integrity": {},
+                "expert_observations": [],
+                "legal_considerations": []
+            }
+            
+            # Extract and validate all events
+            all_events = []
+            for i, metadata in enumerate(file_metadata_list):
+                file_events = self._extract_file_events(metadata, i)
+                # Add forensic validation
+                for event in file_events:
+                    event["forensic_validation"] = self._validate_event_forensically(event, metadata)
+                all_events.extend(file_events)
+            
+            # Filter by focus period if specified
+            if focus_period:
+                all_events = self._filter_events_by_period(all_events, focus_period)
+            
+            # Sort and process events
+            valid_events = [e for e in all_events if e.get("parsed_datetime")]
+            valid_events.sort(key=lambda x: x["parsed_datetime"])
+            
+            results["chronological_events"] = valid_events
+            
+            # Build evidence chain
+            results["evidence_chain"] = self._build_evidence_chain(valid_events)
+            
+            # Identify temporal gaps
+            results["temporal_gaps"] = self._identify_temporal_gaps(valid_events)
+            
+            # Detect suspicious patterns
+            results["suspicious_patterns"] = self._detect_suspicious_patterns(valid_events)
+            
+            # Analyze metadata integrity
+            results["metadata_integrity"] = self._analyze_metadata_integrity(
+                valid_events, file_metadata_list
+            )
+            
+            # Generate expert observations
+            results["expert_observations"] = self._generate_expert_observations(results)
+            
+            # Legal considerations
+            results["legal_considerations"] = self._generate_legal_considerations(results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Forensic timeline creation failed: {e}")
+            return {"error": f"Forensic timeline creation failed: {str(e)}"}
+    
+    def _extract_file_events(self, metadata: Dict[str, Any], file_index: int) -> List[Dict[str, Any]]:
+        """Extract all timestamp events from a file's metadata."""
+        events = []
+        
+        try:
+            # Get file identifier
+            file_id = self._get_file_identifier(metadata, file_index)
+            
+            # Extract timestamps from all known fields
+            for section, field, description in self.timestamp_fields:
+                timestamp_value = self._extract_timestamp_value(metadata, section, field)
+                
+                if timestamp_value:
+                    event = {
+                        "file_index": file_index,
+                        "file_identifier": file_id,
+                        "event_type": description,
+                        "source_section": section,
+                        "source_field": field,
+                        "raw_timestamp": timestamp_value,
+                        "parsed_datetime": self._parse_timestamp(timestamp_value),
+                        "confidence": self._assess_timestamp_confidence(section, field, timestamp_value),
+                        "metadata_context": self._get_timestamp_context(metadata, section, field)
+                    }
+                    
+                    events.append(event)
+            
+            # Extract additional timestamps from custom fields
+            custom_events = self._extract_custom_timestamps(metadata, file_index, file_id)
+            events.extend(custom_events)
+            
+            return events
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract events from file {file_index}: {e}")
+            return []
+    
+    def _get_file_identifier(self, metadata: Dict[str, Any], file_index: int) -> str:
+        """Get a human-readable file identifier."""
+        try:
+            if "file" in metadata and "name" in metadata["file"]:
+                return metadata["file"]["name"]
+            elif "summary" in metadata and "filename" in metadata["summary"]:
+                return metadata["summary"]["filename"]
+            else:
+                return f"File_{file_index}"
+        except Exception as e:
+            return f"File_{file_index}"
+    
+    def _extract_timestamp_value(self, metadata: Dict[str, Any], section: str, field: str) -> Optional[str]:
+        """Extract timestamp value from specific metadata section and field."""
+        try:
+            if section in metadata and metadata[section]:
+                section_data = metadata[section]
+                
+                if isinstance(section_data, dict) and field in section_data:
+                    value = section_data[field]
+                    return str(value) if value is not None else None
+            
+            return None
+            
+        except Exception as e:
+            return None
+    
+    def _parse_timestamp(self, timestamp_str: str) -> Optional[datetime]:
+        """Parse timestamp string into datetime object."""
+        if not timestamp_str:
+            return None
+        
+        # Common timestamp formats
+        formats = [
+            "%Y:%m:%d %H:%M:%S",      # EXIF format
+            "%Y-%m-%d %H:%M:%S",      # ISO format
+            "%Y-%m-%dT%H:%M:%S",      # ISO T format
+            "%Y-%m-%dT%H:%M:%SZ",     # ISO Z format
+            "%Y-%m-%d",               # Date only
+            "%Y:%m:%d",               # EXIF date only
+            "%m/%d/%Y %H:%M:%S",      # US format
+            "%d/%m/%Y %H:%M:%S",      # European format
+        ]
+        
+        # Try each format
+        for fmt in formats:
+            try:
+                return datetime.strptime(timestamp_str.strip(), fmt)
+            except ValueError:
+                continue
+        
+        # Try parsing with regex for flexible formats
+        try:
+            # Extract numbers from timestamp
+            numbers = re.findall(r'\d+', timestamp_str)
+            if len(numbers) >= 3:
+                year = int(numbers[0]) if len(numbers[0]) == 4 else int(numbers[2])
+                month = int(numbers[1])
+                day = int(numbers[2]) if len(numbers[0]) == 4 else int(numbers[0])
+                
+                hour = int(numbers[3]) if len(numbers) > 3 else 0
+                minute = int(numbers[4]) if len(numbers) > 4 else 0
+                second = int(numbers[5]) if len(numbers) > 5 else 0
+                
+                return datetime(year, month, day, hour, minute, second)
+        except (ValueError, IndexError):
+            pass
+        
+        logger.warning(f"Could not parse timestamp: {timestamp_str}")
+        return None
+    
+    def _assess_timestamp_confidence(self, section: str, field: str, value: str) -> float:
+        """Assess confidence level of timestamp based on source and format."""
+        confidence = 0.5  # Base confidence
+        
+        # Higher confidence for certain sources
+        if section == "exif":
+            if field in ["DateTimeOriginal", "CreateDate"]:
+                confidence = 0.9  # High confidence for original timestamps
+            elif field in ["DateTime", "ModifyDate"]:
+                confidence = 0.7  # Medium confidence for modification timestamps
+        elif section == "gps":
+            confidence = 0.8  # GPS timestamps are usually reliable
+        elif section == "filesystem":
+            confidence = 0.6  # Filesystem timestamps can be modified
+        
+        # Adjust based on format quality
+        if self._parse_timestamp(value):
+            confidence += 0.1  # Bonus for parseable timestamps
+        
+        # Check for suspicious values
+        if self._is_suspicious_timestamp(value):
+            confidence -= 0.3
+        
+        return max(0.0, min(1.0, confidence))
+    
+    def _is_suspicious_timestamp(self, timestamp_str: str) -> bool:
+        """Check if timestamp appears suspicious."""
+        try:
+            parsed = self._parse_timestamp(timestamp_str)
+            if not parsed:
+                return True
+            
+            # Check for obviously wrong dates
+            current_year = datetime.now().year
+            if parsed.year < 1990 or parsed.year > current_year + 1:
+                return True
+            
+            # Check for default/placeholder dates
+            suspicious_dates = [
+                "1900:01:01",
+                "2000:01:01 00:00:00",
+                "1970:01:01 00:00:00"
+            ]
+            
+            if timestamp_str.strip() in suspicious_dates:
+                return True
+            
+            return False
+            
+        except Exception as e:
+            return True
+    
+    def _get_timestamp_context(self, metadata: Dict[str, Any], section: str, field: str) -> Dict[str, Any]:
+        """Get additional context for timestamp validation."""
+        context = {
+            "camera_make": None,
+            "camera_model": None,
+            "software": None,
+            "file_size": None
+        }
+        
+        try:
+            if "exif" in metadata and metadata["exif"]:
+                exif = metadata["exif"]
+                context["camera_make"] = exif.get("Make")
+                context["camera_model"] = exif.get("Model")
+                context["software"] = exif.get("Software")
+            
+            if "filesystem" in metadata and metadata["filesystem"]:
+                context["file_size"] = metadata["filesystem"].get("size_bytes")
+            
+            return context
+            
+        except Exception as e:
+            return context
+    
+    def _extract_custom_timestamps(self, metadata: Dict[str, Any], file_index: int, file_id: str) -> List[Dict[str, Any]]:
+        """Extract timestamps from custom or vendor-specific fields."""
+        custom_events = []
+        
+        try:
+            # Check MakerNote for vendor-specific timestamps
+            if "makernote" in metadata and metadata["makernote"]:
+                makernote = metadata["makernote"]
+                
+                # Common vendor timestamp fields
+                vendor_fields = [
+                    "InternalSerialNumber",
+                    "TimeStamp",
+                    "OriginalDateTime",
+                    "ShutterCount"
+                ]
+                
+                for field in vendor_fields:
+                    if field in makernote:
+                        value = str(makernote[field])
+                        parsed = self._parse_timestamp(value)
+                        
+                        if parsed:
+                            event = {
+                                "file_index": file_index,
+                                "file_identifier": file_id,
+                                "event_type": f"MakerNote {field}",
+                                "source_section": "makernote",
+                                "source_field": field,
+                                "raw_timestamp": value,
+                                "parsed_datetime": parsed,
+                                "confidence": 0.6,  # Medium confidence for vendor data
+                                "metadata_context": {"vendor_specific": True}
+                            }
+                            custom_events.append(event)
+            
+            # Check XMP for additional timestamps
+            if "xmp" in metadata and metadata["xmp"]:
+                xmp = metadata["xmp"]
+                
+                xmp_timestamp_fields = [
+                    "CreateDate",
+                    "ModifyDate",
+                    "MetadataDate",
+                    "HistoryWhen"
+                ]
+                
+                for field in xmp_timestamp_fields:
+                    if field in xmp:
+                        value = str(xmp[field])
+                        parsed = self._parse_timestamp(value)
+                        
+                        if parsed:
+                            event = {
+                                "file_index": file_index,
+                                "file_identifier": file_id,
+                                "event_type": f"XMP {field}",
+                                "source_section": "xmp",
+                                "source_field": field,
+                                "raw_timestamp": value,
+                                "parsed_datetime": parsed,
+                                "confidence": 0.7,
+                                "metadata_context": {"xmp_metadata": True}
+                            }
+                            custom_events.append(event)
+            
+            return custom_events
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract custom timestamps: {e}")
+            return []
+    
+    def _analyze_timeline(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze the overall timeline structure."""
+        try:
+            if not events:
+                return {"error": "No events to analyze"}
+            
+            analysis = {
+                "time_span": {},
+                "event_distribution": {},
+                "consistency_metrics": {},
+                "temporal_clusters": []
+            }
+            
+            # Calculate time span
+            earliest = min(events, key=lambda x: x["parsed_datetime"])
+            latest = max(events, key=lambda x: x["parsed_datetime"])
+            
+            time_span = latest["parsed_datetime"] - earliest["parsed_datetime"]
+            
+            analysis["time_span"] = {
+                "earliest_event": {
+                    "datetime": earliest["parsed_datetime"].isoformat(),
+                    "event_type": earliest["event_type"],
+                    "file": earliest["file_identifier"]
+                },
+                "latest_event": {
+                    "datetime": latest["parsed_datetime"].isoformat(),
+                    "event_type": latest["event_type"],
+                    "file": latest["file_identifier"]
+                },
+                "total_duration": str(time_span),
+                "duration_days": time_span.days,
+                "duration_hours": time_span.total_seconds() / 3600
+            }
+            
+            # Event distribution analysis
+            event_types = {}
+            file_distribution = {}
+            
+            for event in events:
+                event_type = event["event_type"]
+                file_id = event["file_identifier"]
+                
+                event_types[event_type] = event_types.get(event_type, 0) + 1
+                file_distribution[file_id] = file_distribution.get(file_id, 0) + 1
+            
+            analysis["event_distribution"] = {
+                "by_type": event_types,
+                "by_file": file_distribution,
+                "total_events": len(events),
+                "unique_files": len(file_distribution),
+                "avg_events_per_file": len(events) / len(file_distribution)
+            }
+            
+            # Consistency metrics
+            analysis["consistency_metrics"] = self._calculate_consistency_metrics(events)
+            
+            # Temporal clustering
+            analysis["temporal_clusters"] = self._identify_temporal_clusters(events)
+            
+            return analysis
+            
+        except Exception as e:
+            logger.warning(f"Timeline analysis failed: {e}")
+            return {"error": str(e)}
+    
+    def _calculate_consistency_metrics(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate metrics for timeline consistency."""
+        try:
+            metrics = {
+                "timestamp_consistency": 0.0,
+                "confidence_score": 0.0,
+                "suspicious_events": 0,
+                "validation_issues": []
+            }
+            
+            if not events:
+                return metrics
+            
+            # Calculate average confidence
+            confidences = [event["confidence"] for event in events]
+            metrics["confidence_score"] = sum(confidences) / len(confidences)
+            
+            # Check for timestamp consistency within files
+            file_events = {}
+            for event in events:
+                file_id = event["file_identifier"]
+                if file_id not in file_events:
+                    file_events[file_id] = []
+                file_events[file_id].append(event)
+            
+            consistency_scores = []
+            for file_id, file_event_list in file_events.items():
+                if len(file_event_list) > 1:
+                    file_consistency = self._check_file_timestamp_consistency(file_event_list)
+                    consistency_scores.append(file_consistency)
+                    
+                    if file_consistency < 0.7:
+                        metrics["validation_issues"].append(
+                            f"Timestamp inconsistency in {file_id}"
+                        )
+            
+            if consistency_scores:
+                metrics["timestamp_consistency"] = sum(consistency_scores) / len(consistency_scores)
+            
+            # Count suspicious events
+            metrics["suspicious_events"] = sum(
+                1 for event in events if event["confidence"] < 0.5
+            )
+            
+            return metrics
+            
+        except Exception as e:
+            logger.warning(f"Consistency metrics calculation failed: {e}")
+            return {"error": str(e)}
+    
+    def _check_file_timestamp_consistency(self, file_events: List[Dict[str, Any]]) -> float:
+        """Check consistency of timestamps within a single file."""
+        try:
+            if len(file_events) < 2:
+                return 1.0
+            
+            # Sort events by datetime
+            sorted_events = sorted(file_events, key=lambda x: x["parsed_datetime"])
+            
+            # Check logical order (creation should be before modification)
+            creation_events = [e for e in sorted_events if "Original" in e["event_type"] or "Created" in e["event_type"]]
+            modification_events = [e for e in sorted_events if "Modified" in e["event_type"]]
+            
+            consistency_score = 1.0
+            
+            # Creation should come before modification
+            if creation_events and modification_events:
+                latest_creation = max(creation_events, key=lambda x: x["parsed_datetime"])
+                earliest_modification = min(modification_events, key=lambda x: x["parsed_datetime"])
+                
+                if latest_creation["parsed_datetime"] > earliest_modification["parsed_datetime"]:
+                    consistency_score -= 0.3  # Logical inconsistency
+            
+            # Check for unreasonable time gaps
+            for i in range(1, len(sorted_events)):
+                time_diff = sorted_events[i]["parsed_datetime"] - sorted_events[i-1]["parsed_datetime"]
+                
+                # Very large gaps (>1 year) between related timestamps are suspicious
+                if time_diff.days > 365:
+                    consistency_score -= 0.2
+                
+                # Negative time differences are impossible
+                if time_diff.total_seconds() < 0:
+                    consistency_score -= 0.5
+            
+            return max(0.0, consistency_score)
+            
+        except Exception as e:
+            return 0.5  # Neutral score on error
+    
+    def _identify_temporal_clusters(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Identify clusters of events that occur close together in time."""
+        try:
+            if len(events) < 2:
+                return []
+            
+            clusters = []
+            current_cluster = [events[0]]
+            cluster_threshold = timedelta(hours=1)  # Events within 1 hour are clustered
+            
+            for i in range(1, len(events)):
+                time_diff = events[i]["parsed_datetime"] - events[i-1]["parsed_datetime"]
+                
+                if time_diff <= cluster_threshold:
+                    current_cluster.append(events[i])
+                else:
+                    # Finalize current cluster if it has multiple events
+                    if len(current_cluster) > 1:
+                        clusters.append(self._create_cluster_summary(current_cluster))
+                    
+                    # Start new cluster
+                    current_cluster = [events[i]]
+            
+            # Don't forget the last cluster
+            if len(current_cluster) > 1:
+                clusters.append(self._create_cluster_summary(current_cluster))
+            
+            return clusters
+            
+        except Exception as e:
+            logger.warning(f"Temporal clustering failed: {e}")
+            return []
+    
+    def _create_cluster_summary(self, cluster_events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create summary for a temporal cluster."""
+        try:
+            start_time = min(cluster_events, key=lambda x: x["parsed_datetime"])["parsed_datetime"]
+            end_time = max(cluster_events, key=lambda x: x["parsed_datetime"])["parsed_datetime"]
+            
+            files_involved = set(event["file_identifier"] for event in cluster_events)
+            event_types = set(event["event_type"] for event in cluster_events)
+            
+            return {
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "duration": str(end_time - start_time),
+                "event_count": len(cluster_events),
+                "files_involved": list(files_involved),
+                "event_types": list(event_types),
+                "avg_confidence": sum(e["confidence"] for e in cluster_events) / len(cluster_events)
+            }
+            
+        except Exception as e:
+            return {"error": "Failed to create cluster summary"}
+    
+    def _detect_timeline_anomalies(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Detect anomalies in the timeline."""
+        anomalies = []
+        
+        try:
+            # Check for impossible timestamps
+            current_year = datetime.now().year
+            
+            for event in events:
+                dt = event["parsed_datetime"]
+                
+                # Future timestamps
+                if dt.year > current_year:
+                    anomalies.append({
+                        "type": "future_timestamp",
+                        "severity": "high",
+                        "description": f"Timestamp in future: {dt.isoformat()}",
+                        "event": event,
+                        "recommendation": "Verify system clock settings when file was created"
+                    })
+                
+                # Very old timestamps (before digital photography era)
+                if dt.year < 1990:
+                    anomalies.append({
+                        "type": "anachronistic_timestamp",
+                        "severity": "medium",
+                        "description": f"Timestamp predates digital photography: {dt.isoformat()}",
+                        "event": event,
+                        "recommendation": "Check for clock reset or metadata corruption"
+                    })
+                
+                # Low confidence timestamps
+                if event["confidence"] < 0.3:
+                    anomalies.append({
+                        "type": "low_confidence_timestamp",
+                        "severity": "low",
+                        "description": f"Low confidence timestamp: {event['raw_timestamp']}",
+                        "event": event,
+                        "recommendation": "Verify timestamp accuracy through other sources"
+                    })
+            
+            # Check for large temporal gaps
+            if len(events) > 1:
+                for i in range(1, len(events)):
+                    time_gap = events[i]["parsed_datetime"] - events[i-1]["parsed_datetime"]
+                    
+                    # Gaps larger than 1 year between consecutive events
+                    if time_gap.days > 365:
+                        anomalies.append({
+                            "type": "large_temporal_gap",
+                            "severity": "medium",
+                            "description": f"Large gap of {time_gap.days} days between events",
+                            "events": [events[i-1], events[i]],
+                            "recommendation": "Investigate missing files or timeline gaps"
+                        })
+            
+            return anomalies
+            
+        except Exception as e:
+            logger.warning(f"Anomaly detection failed: {e}")
+            return []
+    
+    def _identify_timeline_patterns(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Identify patterns in the timeline."""
+        try:
+            patterns = {
+                "activity_periods": [],
+                "file_creation_patterns": {},
+                "modification_patterns": {},
+                "device_usage_patterns": {}
+            }
+            
+            # Identify periods of high activity
+            patterns["activity_periods"] = self._find_activity_periods(events)
+            
+            # Analyze file creation patterns
+            creation_events = [e for e in events if "Created" in e["event_type"] or "Original" in e["event_type"]]
+            patterns["file_creation_patterns"] = self._analyze_creation_patterns(creation_events)
+            
+            # Analyze modification patterns
+            modification_events = [e for e in events if "Modified" in e["event_type"]]
+            patterns["modification_patterns"] = self._analyze_modification_patterns(modification_events)
+            
+            # Analyze device usage patterns
+            patterns["device_usage_patterns"] = self._analyze_device_patterns(events)
+            
+            return patterns
+            
+        except Exception as e:
+            logger.warning(f"Pattern identification failed: {e}")
+            return {"error": str(e)}
+    
+    def _find_activity_periods(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Find periods of high activity."""
+        try:
+            if len(events) < 3:
+                return []
+            
+            # Group events by day
+            daily_events = {}
+            for event in events:
+                date_key = event["parsed_datetime"].date()
+                if date_key not in daily_events:
+                    daily_events[date_key] = []
+                daily_events[date_key].append(event)
+            
+            # Find days with high activity (more than average)
+            event_counts = [len(events) for events in daily_events.values()]
+            avg_events = sum(event_counts) / len(event_counts)
+            
+            high_activity_periods = []
+            for date, day_events in daily_events.items():
+                if len(day_events) > avg_events * 1.5:  # 50% above average
+                    high_activity_periods.append({
+                        "date": date.isoformat(),
+                        "event_count": len(day_events),
+                        "files_involved": len(set(e["file_identifier"] for e in day_events)),
+                        "activity_score": len(day_events) / avg_events
+                    })
+            
+            return sorted(high_activity_periods, key=lambda x: x["activity_score"], reverse=True)
+            
+        except Exception as e:
+            return []
+    
+    def _analyze_creation_patterns(self, creation_events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze file creation patterns."""
+        try:
+            if not creation_events:
+                return {"note": "No creation events found"}
+            
+            # Analyze time distribution
+            hours = [event["parsed_datetime"].hour for event in creation_events]
+            days_of_week = [event["parsed_datetime"].weekday() for event in creation_events]
+            
+            # Find most common creation times
+            hour_counts = {}
+            for hour in hours:
+                hour_counts[hour] = hour_counts.get(hour, 0) + 1
+            
+            day_counts = {}
+            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            for day in days_of_week:
+                day_name = day_names[day]
+                day_counts[day_name] = day_counts.get(day_name, 0) + 1
+            
+            return {
+                "total_creation_events": len(creation_events),
+                "most_active_hour": max(hour_counts.items(), key=lambda x: x[1]) if hour_counts else None,
+                "most_active_day": max(day_counts.items(), key=lambda x: x[1]) if day_counts else None,
+                "hour_distribution": hour_counts,
+                "day_distribution": day_counts
+            }
+            
+        except Exception as e:
+            return {"error": "Creation pattern analysis failed"}
+    
+    def _analyze_modification_patterns(self, modification_events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze file modification patterns."""
+        try:
+            if not modification_events:
+                return {"note": "No modification events found"}
+            
+            # Calculate time between creation and modification
+            file_modifications = {}
+            
+            for event in modification_events:
+                file_id = event["file_identifier"]
+                if file_id not in file_modifications:
+                    file_modifications[file_id] = []
+                file_modifications[file_id].append(event)
+            
+            modification_delays = []
+            for file_id, mod_events in file_modifications.items():
+                # This would need creation events to calculate delays properly
+                # For now, just count modifications per file
+                pass
+            
+            return {
+                "total_modification_events": len(modification_events),
+                "files_modified": len(file_modifications),
+                "avg_modifications_per_file": len(modification_events) / len(file_modifications) if file_modifications else 0
+            }
+            
+        except Exception as e:
+            return {"error": "Modification pattern analysis failed"}
+    
+    def _analyze_device_patterns(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze device usage patterns from metadata context."""
+        try:
+            device_activity = {}
+            
+            for event in events:
+                context = event.get("metadata_context", {})
+                camera_make = context.get("camera_make")
+                camera_model = context.get("camera_model")
+                
+                if camera_make or camera_model:
+                    device_key = f"{camera_make or 'Unknown'} {camera_model or 'Unknown'}".strip()
+                    
+                    if device_key not in device_activity:
+                        device_activity[device_key] = {
+                            "event_count": 0,
+                            "first_use": None,
+                            "last_use": None
+                        }
+                    
+                    device_activity[device_key]["event_count"] += 1
+                    
+                    event_time = event["parsed_datetime"]
+                    if not device_activity[device_key]["first_use"] or event_time < device_activity[device_key]["first_use"]:
+                        device_activity[device_key]["first_use"] = event_time
+                    
+                    if not device_activity[device_key]["last_use"] or event_time > device_activity[device_key]["last_use"]:
+                        device_activity[device_key]["last_use"] = event_time
+            
+            # Convert datetime objects to ISO strings for JSON serialization
+            for device_data in device_activity.values():
+                if device_data["first_use"]:
+                    device_data["first_use"] = device_data["first_use"].isoformat()
+                if device_data["last_use"]:
+                    device_data["last_use"] = device_data["last_use"].isoformat()
+            
+            return {
+                "devices_detected": len(device_activity),
+                "device_activity": device_activity,
+                "most_active_device": max(device_activity.items(), key=lambda x: x[1]["event_count"])[0] if device_activity else None
+            }
+            
+        except Exception as e:
+            return {"error": "Device pattern analysis failed"}
+    
+    def _perform_forensic_analysis(self, events: List[Dict[str, Any]], file_metadata_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Perform forensic-level analysis of the timeline."""
+        try:
+            forensic_analysis = {
+                "evidence_integrity": {},
+                "chain_of_custody": {},
+                "temporal_authenticity": {},
+                "metadata_correlation": {},
+                "expert_findings": []
+            }
+            
+            # Analyze evidence integrity
+            forensic_analysis["evidence_integrity"] = self._analyze_evidence_integrity(events)
+            
+            # Reconstruct chain of custody
+            forensic_analysis["chain_of_custody"] = self._reconstruct_chain_of_custody(events)
+            
+            # Assess temporal authenticity
+            forensic_analysis["temporal_authenticity"] = self._assess_temporal_authenticity(events)
+            
+            # Correlate metadata across files
+            forensic_analysis["metadata_correlation"] = self._correlate_metadata(file_metadata_list)
+            
+            # Generate expert findings
+            forensic_analysis["expert_findings"] = self._generate_expert_findings(forensic_analysis)
+            
+            return forensic_analysis
+            
+        except Exception as e:
+            logger.warning(f"Forensic analysis failed: {e}")
+            return {"error": str(e)}
+    
+    def _analyze_evidence_integrity(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze the integrity of timestamp evidence."""
+        try:
+            integrity_analysis = {
+                "overall_integrity_score": 0.0,
+                "high_confidence_events": 0,
+                "medium_confidence_events": 0,
+                "low_confidence_events": 0,
+                "integrity_issues": []
+            }
+            
+            for event in events:
+                confidence = event["confidence"]
+                
+                if confidence >= 0.8:
+                    integrity_analysis["high_confidence_events"] += 1
+                elif confidence >= 0.5:
+                    integrity_analysis["medium_confidence_events"] += 1
+                else:
+                    integrity_analysis["low_confidence_events"] += 1
+                    integrity_analysis["integrity_issues"].append({
+                        "event": event["event_type"],
+                        "file": event["file_identifier"],
+                        "confidence": confidence,
+                        "issue": "Low confidence timestamp"
+                    })
+            
+            total_events = len(events)
+            if total_events > 0:
+                high_conf_ratio = integrity_analysis["high_confidence_events"] / total_events
+                medium_conf_ratio = integrity_analysis["medium_confidence_events"] / total_events
+                
+                # Calculate overall integrity score
+                integrity_analysis["overall_integrity_score"] = (
+                    high_conf_ratio * 1.0 + medium_conf_ratio * 0.7
+                )
+            
+            return integrity_analysis
+            
+        except Exception as e:
+            return {"error": "Evidence integrity analysis failed"}
+    
+    def _reconstruct_chain_of_custody(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Reconstruct chain of custody from timeline events."""
+        try:
+            chain_analysis = {
+                "custody_events": [],
+                "custody_gaps": [],
+                "custody_integrity": "unknown"
+            }
+            
+            # Group events by file
+            file_events = {}
+            for event in events:
+                file_id = event["file_identifier"]
+                if file_id not in file_events:
+                    file_events[file_id] = []
+                file_events[file_id].append(event)
+            
+            # Analyze custody chain for each file
+            for file_id, file_event_list in file_events.items():
+                sorted_events = sorted(file_event_list, key=lambda x: x["parsed_datetime"])
+                
+                custody_chain = {
+                    "file": file_id,
+                    "events": [],
+                    "gaps": []
+                }
+                
+                for i, event in enumerate(sorted_events):
+                    custody_event = {
+                        "timestamp": event["parsed_datetime"].isoformat(),
+                        "event_type": event["event_type"],
+                        "confidence": event["confidence"],
+                        "source": f"{event['source_section']}.{event['source_field']}"
+                    }
+                    custody_chain["events"].append(custody_event)
+                    
+                    # Check for gaps between events
+                    if i > 0:
+                        time_gap = event["parsed_datetime"] - sorted_events[i-1]["parsed_datetime"]
+                        if time_gap.days > 30:  # Gap larger than 30 days
+                            custody_chain["gaps"].append({
+                                "start": sorted_events[i-1]["parsed_datetime"].isoformat(),
+                                "end": event["parsed_datetime"].isoformat(),
+                                "duration_days": time_gap.days,
+                                "significance": "high" if time_gap.days > 365 else "medium"
+                            })
+                
+                chain_analysis["custody_events"].append(custody_chain)
+            
+            # Assess overall custody integrity
+            total_gaps = sum(len(chain["gaps"]) for chain in chain_analysis["custody_events"])
+            if total_gaps == 0:
+                chain_analysis["custody_integrity"] = "high"
+            elif total_gaps <= 2:
+                chain_analysis["custody_integrity"] = "medium"
+            else:
+                chain_analysis["custody_integrity"] = "low"
+            
+            return chain_analysis
+            
+        except Exception as e:
+            return {"error": "Chain of custody reconstruction failed"}
+    
+    def _assess_temporal_authenticity(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Assess the authenticity of timestamps."""
+        try:
+            authenticity_assessment = {
+                "authenticity_score": 0.0,
+                "authentic_indicators": [],
+                "suspicious_indicators": [],
+                "tampering_likelihood": "low"
+            }
+            
+            # Check for signs of authentic timestamps
+            creation_events = [e for e in events if "Original" in e["event_type"] or "Created" in e["event_type"]]
+            modification_events = [e for e in events if "Modified" in e["event_type"]]
+            
+            authentic_score = 0.0
+            suspicious_score = 0.0
+            
+            # Authentic indicators
+            if creation_events:
+                # Consistent creation timestamps across EXIF fields
+                exif_creation_events = [e for e in creation_events if e["source_section"] == "exif"]
+                if len(exif_creation_events) > 1:
+                    time_diffs = []
+                    for i in range(1, len(exif_creation_events)):
+                        diff = abs((exif_creation_events[i]["parsed_datetime"] - 
+                                  exif_creation_events[i-1]["parsed_datetime"]).total_seconds())
+                        time_diffs.append(diff)
+                    
+                    if all(diff < 60 for diff in time_diffs):  # Within 1 minute
+                        authentic_score += 0.3
+                        authenticity_assessment["authentic_indicators"].append(
+                            "Consistent EXIF creation timestamps"
+                        )
+            
+            # Suspicious indicators
+            for event in events:
+                # Check for round number timestamps (often fake)
+                dt = event["parsed_datetime"]
+                if dt.second == 0 and dt.minute == 0:
+                    suspicious_score += 0.1
+                    authenticity_assessment["suspicious_indicators"].append(
+                        f"Round timestamp in {event['file_identifier']}: {dt.isoformat()}"
+                    )
+                
+                # Check for default/placeholder dates
+                if dt.year in [1900, 1970, 2000] and dt.month == 1 and dt.day == 1:
+                    suspicious_score += 0.2
+                    authenticity_assessment["suspicious_indicators"].append(
+                        f"Placeholder date in {event['file_identifier']}: {dt.isoformat()}"
+                    )
+            
+            # Calculate overall authenticity score
+            authenticity_assessment["authenticity_score"] = max(0.0, min(1.0, authentic_score - suspicious_score))
+            
+            # Determine tampering likelihood
+            if suspicious_score > 0.5:
+                authenticity_assessment["tampering_likelihood"] = "high"
+            elif suspicious_score > 0.2:
+                authenticity_assessment["tampering_likelihood"] = "medium"
+            else:
+                authenticity_assessment["tampering_likelihood"] = "low"
+            
+            return authenticity_assessment
+            
+        except Exception as e:
+            return {"error": "Temporal authenticity assessment failed"}
+    
+    def _correlate_metadata(self, file_metadata_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Correlate metadata across files for consistency analysis."""
+        try:
+            correlation_analysis = {
+                "device_consistency": {},
+                "software_consistency": {},
+                "temporal_consistency": {},
+                "correlation_score": 0.0
+            }
+            
+            # Analyze device consistency
+            devices = []
+            for metadata in file_metadata_list:
+                if "exif" in metadata and metadata["exif"]:
+                    exif = metadata["exif"]
+                    device = {
+                        "make": exif.get("Make"),
+                        "model": exif.get("Model"),
+                        "software": exif.get("Software")
+                    }
+                    devices.append(device)
+            
+            if devices:
+                unique_makes = set(d["make"] for d in devices if d["make"])
+                unique_models = set(d["model"] for d in devices if d["model"])
+                unique_software = set(d["software"] for d in devices if d["software"])
+                
+                correlation_analysis["device_consistency"] = {
+                    "unique_makes": len(unique_makes),
+                    "unique_models": len(unique_models),
+                    "unique_software": len(unique_software),
+                    "consistency_score": 1.0 / max(1, len(unique_makes) + len(unique_models))
+                }
+            
+            return correlation_analysis
+            
+        except Exception as e:
+            return {"error": "Metadata correlation failed"}
+    
+    def _generate_expert_findings(self, forensic_analysis: Dict[str, Any]) -> List[str]:
+        """Generate expert findings based on forensic analysis."""
+        findings = []
+        
+        try:
+            # Evidence integrity findings
+            integrity = forensic_analysis.get("evidence_integrity", {})
+            integrity_score = integrity.get("overall_integrity_score", 0.0)
+            
+            if integrity_score > 0.8:
+                findings.append("HIGH CONFIDENCE: Timestamp evidence shows strong integrity")
+            elif integrity_score > 0.5:
+                findings.append("MODERATE CONFIDENCE: Some timestamp evidence concerns noted")
+            else:
+                findings.append("LOW CONFIDENCE: Significant timestamp integrity issues detected")
+            
+            # Chain of custody findings
+            custody = forensic_analysis.get("chain_of_custody", {})
+            custody_integrity = custody.get("custody_integrity", "unknown")
+            
+            if custody_integrity == "high":
+                findings.append("Chain of custody appears intact with minimal gaps")
+            elif custody_integrity == "medium":
+                findings.append("Chain of custody has some gaps requiring investigation")
+            else:
+                findings.append("Chain of custody shows significant gaps or inconsistencies")
+            
+            # Temporal authenticity findings
+            authenticity = forensic_analysis.get("temporal_authenticity", {})
+            tampering_likelihood = authenticity.get("tampering_likelihood", "unknown")
+            
+            if tampering_likelihood == "high":
+                findings.append("HIGH RISK: Strong indicators of timestamp tampering detected")
+            elif tampering_likelihood == "medium":
+                findings.append("MEDIUM RISK: Some suspicious timestamp patterns found")
+            else:
+                findings.append("LOW RISK: Timestamps appear authentic")
+            
+            return findings
+            
+        except Exception as e:
+            return ["Error generating expert findings"]
+    
+    def _validate_event_forensically(self, event: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform forensic validation of a timestamp event."""
+        try:
+            validation = {
+                "validation_score": 0.0,
+                "validation_notes": [],
+                "forensic_flags": []
+            }
+            
+            # Check timestamp format consistency
+            raw_timestamp = event["raw_timestamp"]
+            if re.match(r'\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}', raw_timestamp):
+                validation["validation_score"] += 0.2
+                validation["validation_notes"].append("Standard EXIF timestamp format")
+            
+            # Check for metadata consistency
+            if event["source_section"] == "exif" and "exif" in metadata:
+                exif = metadata["exif"]
+                if "Make" in exif and "Model" in exif:
+                    validation["validation_score"] += 0.2
+                    validation["validation_notes"].append("Camera metadata present")
+            
+            # Check for suspicious patterns
+            parsed_dt = event["parsed_datetime"]
+            if parsed_dt and (parsed_dt.second == 0 and parsed_dt.minute == 0):
+                validation["forensic_flags"].append("Round timestamp - possible manipulation")
+                validation["validation_score"] -= 0.1
+            
+            return validation
+            
+        except Exception as e:
+            return {"validation_score": 0.0, "error": "Forensic validation failed"}
+    
+    def _filter_events_by_period(self, events: List[Dict[str, Any]], period: Tuple[str, str]) -> List[Dict[str, Any]]:
+        """Filter events by time period."""
+        try:
+            start_time = self._parse_timestamp(period[0])
+            end_time = self._parse_timestamp(period[1])
+            
+            if not start_time or not end_time:
+                return events  # Return all events if period parsing fails
+            
+            filtered_events = []
+            for event in events:
+                if event["parsed_datetime"]:
+                    event_time = event["parsed_datetime"]
+                    if start_time <= event_time <= end_time:
+                        filtered_events.append(event)
+            
+            return filtered_events
+            
+        except Exception as e:
+            return events
+    
+    def _build_evidence_chain(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Build evidence chain from chronological events."""
+        try:
+            evidence_chain = []
+            
+            for i, event in enumerate(events):
+                evidence_item = {
+                    "sequence_number": i + 1,
+                    "timestamp": event["parsed_datetime"].isoformat(),
+                    "event_description": event["event_type"],
+                    "file_involved": event["file_identifier"],
+                    "evidence_source": f"{event['source_section']}.{event['source_field']}",
+                    "confidence_level": event["confidence"],
+                    "forensic_validation": event.get("forensic_validation", {}),
+                    "chain_integrity": "verified" if event["confidence"] > 0.7 else "questionable"
+                }
+                evidence_chain.append(evidence_item)
+            
+            return evidence_chain
+            
+        except Exception as e:
+            return []
+    
+    def _identify_temporal_gaps(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Identify significant gaps in the timeline."""
+        try:
+            gaps = []
+            
+            if len(events) < 2:
+                return gaps
+            
+            for i in range(1, len(events)):
+                time_gap = events[i]["parsed_datetime"] - events[i-1]["parsed_datetime"]
+                
+                # Consider gaps larger than 24 hours as significant
+                if time_gap.total_seconds() > 86400:  # 24 hours
+                    gap_info = {
+                        "gap_start": events[i-1]["parsed_datetime"].isoformat(),
+                        "gap_end": events[i]["parsed_datetime"].isoformat(),
+                        "duration": str(time_gap),
+                        "duration_hours": time_gap.total_seconds() / 3600,
+                        "before_event": events[i-1]["event_type"],
+                        "after_event": events[i]["event_type"],
+                        "significance": self._assess_gap_significance(time_gap),
+                        "potential_causes": self._suggest_gap_causes(time_gap)
+                    }
+                    gaps.append(gap_info)
+            
+            return gaps
+            
+        except Exception as e:
+            return []
+    
+    def _assess_gap_significance(self, time_gap: timedelta) -> str:
+        """Assess the significance of a temporal gap."""
+        hours = time_gap.total_seconds() / 3600
+        
+        if hours > 8760:  # More than 1 year
+            return "critical"
+        elif hours > 720:  # More than 1 month
+            return "high"
+        elif hours > 168:  # More than 1 week
+            return "medium"
+        else:
+            return "low"
+    
+    def _suggest_gap_causes(self, time_gap: timedelta) -> List[str]:
+        """Suggest potential causes for temporal gaps."""
+        hours = time_gap.total_seconds() / 3600
+        causes = []
+        
+        if hours > 8760:  # More than 1 year
+            causes.extend([
+                "Device not in use for extended period",
+                "Missing files from timeline",
+                "Clock reset or battery replacement"
+            ])
+        elif hours > 720:  # More than 1 month
+            causes.extend([
+                "Vacation or travel period",
+                "Device storage or maintenance",
+                "Selective file deletion"
+            ])
+        elif hours > 24:  # More than 1 day
+            causes.extend([
+                "Normal usage gap",
+                "Weekend or holiday period",
+                "Device powered off"
+            ])
+        
+        return causes
+    
+    def _detect_suspicious_patterns(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Detect suspicious patterns in the timeline."""
+        try:
+            suspicious_patterns = []
+            
+            # Pattern 1: Too many events at exact same time
+            time_groups = {}
+            for event in events:
+                time_key = event["parsed_datetime"].replace(microsecond=0)
+                if time_key not in time_groups:
+                    time_groups[time_key] = []
+                time_groups[time_key].append(event)
+            
+            for time_key, time_events in time_groups.items():
+                if len(time_events) > 5:  # More than 5 events at same second
+                    suspicious_patterns.append({
+                        "pattern_type": "simultaneous_events",
+                        "description": f"{len(time_events)} events at exactly {time_key.isoformat()}",
+                        "suspicion_level": "medium",
+                        "events_involved": len(time_events),
+                        "recommendation": "Investigate for batch processing or timestamp manipulation"
+                    })
+            
+            # Pattern 2: Regular intervals (suggesting automated processing)
+            if len(events) > 3:
+                intervals = []
+                for i in range(1, len(events)):
+                    interval = (events[i]["parsed_datetime"] - events[i-1]["parsed_datetime"]).total_seconds()
+                    intervals.append(interval)
+                
+                # Check for very regular intervals
+                if len(set(intervals)) == 1 and intervals[0] > 0:
+                    suspicious_patterns.append({
+                        "pattern_type": "regular_intervals",
+                        "description": f"All events separated by exactly {intervals[0]} seconds",
+                        "suspicion_level": "high",
+                        "interval_seconds": intervals[0],
+                        "recommendation": "Investigate for automated timestamp generation"
+                    })
+            
+            return suspicious_patterns
+            
+        except Exception as e:
+            return []
+    
+    def _analyze_metadata_integrity(self, events: List[Dict[str, Any]], file_metadata_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze overall metadata integrity across the timeline."""
+        try:
+            integrity_analysis = {
+                "overall_score": 0.0,
+                "consistency_issues": [],
+                "validation_summary": {},
+                "integrity_recommendations": []
+            }
+            
+            # Calculate overall integrity score
+            confidence_scores = [event["confidence"] for event in events]
+            if confidence_scores:
+                integrity_analysis["overall_score"] = sum(confidence_scores) / len(confidence_scores)
+            
+            # Check for consistency issues
+            file_groups = {}
+            for event in events:
+                file_id = event["file_identifier"]
+                if file_id not in file_groups:
+                    file_groups[file_id] = []
+                file_groups[file_id].append(event)
+            
+            for file_id, file_events in file_groups.items():
+                if len(file_events) > 1:
+                    consistency_score = self._check_file_timestamp_consistency(file_events)
+                    if consistency_score < 0.7:
+                        integrity_analysis["consistency_issues"].append({
+                            "file": file_id,
+                            "consistency_score": consistency_score,
+                            "issue_type": "timestamp_inconsistency"
+                        })
+            
+            # Generate recommendations
+            if integrity_analysis["overall_score"] < 0.5:
+                integrity_analysis["integrity_recommendations"].append(
+                    "Consider additional verification methods due to low timestamp confidence"
+                )
+            
+            if len(integrity_analysis["consistency_issues"]) > 0:
+                integrity_analysis["integrity_recommendations"].append(
+                    "Investigate files with timestamp inconsistencies"
+                )
+            
+            return integrity_analysis
+            
+        except Exception as e:
+            return {"error": "Metadata integrity analysis failed"}
+    
+    def _generate_expert_observations(self, forensic_results: Dict[str, Any]) -> List[str]:
+        """Generate expert observations for forensic timeline."""
+        observations = []
+        
+        try:
+            # Timeline span observations
+            timeline_info = forensic_results.get("forensic_timeline", {})
+            files_analyzed = timeline_info.get("files_analyzed", 0)
+            
+            observations.append(f"Timeline reconstructed from {files_analyzed} digital files")
+            
+            # Event distribution observations
+            events = forensic_results.get("chronological_events", [])
+            if events:
+                time_span = events[-1]["parsed_datetime"] - events[0]["parsed_datetime"]
+                observations.append(f"Timeline spans {time_span.days} days from {events[0]['parsed_datetime'].date()} to {events[-1]['parsed_datetime'].date()}")
+            
+            # Gap analysis observations
+            gaps = forensic_results.get("temporal_gaps", [])
+            significant_gaps = [g for g in gaps if g.get("significance") in ["high", "critical"]]
+            
+            if significant_gaps:
+                observations.append(f"Identified {len(significant_gaps)} significant temporal gaps requiring investigation")
+            
+            # Suspicious pattern observations
+            suspicious = forensic_results.get("suspicious_patterns", [])
+            if suspicious:
+                observations.append(f"Detected {len(suspicious)} suspicious timestamp patterns")
+            
+            # Integrity observations
+            integrity = forensic_results.get("metadata_integrity", {})
+            overall_score = integrity.get("overall_score", 0.0)
+            
+            if overall_score > 0.8:
+                observations.append("Metadata integrity assessment: HIGH - timestamps appear reliable")
+            elif overall_score > 0.5:
+                observations.append("Metadata integrity assessment: MEDIUM - some concerns noted")
+            else:
+                observations.append("Metadata integrity assessment: LOW - significant reliability concerns")
+            
+            return observations
+            
+        except Exception as e:
+            return ["Error generating expert observations"]
+    
+    def _generate_legal_considerations(self, forensic_results: Dict[str, Any]) -> List[str]:
+        """Generate legal considerations for forensic timeline."""
+        considerations = []
+        
+        try:
+            # Evidence admissibility considerations
+            integrity = forensic_results.get("metadata_integrity", {})
+            overall_score = integrity.get("overall_score", 0.0)
+            
+            if overall_score > 0.8:
+                considerations.append("Timeline evidence meets high standards for legal admissibility")
+            elif overall_score > 0.5:
+                considerations.append("Timeline evidence may require additional corroboration for legal proceedings")
+            else:
+                considerations.append("Timeline evidence has significant reliability issues that may affect admissibility")
+            
+            # Chain of custody considerations
+            gaps = forensic_results.get("temporal_gaps", [])
+            critical_gaps = [g for g in gaps if g.get("significance") == "critical"]
+            
+            if critical_gaps:
+                considerations.append("Critical temporal gaps may raise questions about evidence continuity")
+            
+            # Tampering considerations
+            suspicious = forensic_results.get("suspicious_patterns", [])
+            high_suspicion = [s for s in suspicious if s.get("suspicion_level") == "high"]
+            
+            if high_suspicion:
+                considerations.append("Suspicious patterns detected - consider expert testimony on metadata integrity")
+            
+            # Documentation considerations
+            considerations.append("Maintain complete documentation of analysis methodology for court presentation")
+            considerations.append("Consider independent verification of findings by qualified digital forensics expert")
+            
+            return considerations
+            
+        except Exception as e:
+            return ["Error generating legal considerations"]
+    
+    def _analyze_single_file_consistency(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze consistency within a single file's timestamps."""
+        try:
+            return {
+                "consistency_score": self._check_file_timestamp_consistency(events),
+                "event_count": len(events),
+                "time_span": str(events[-1]["parsed_datetime"] - events[0]["parsed_datetime"]) if len(events) > 1 else "N/A",
+                "logical_order": self._check_logical_timestamp_order(events)
+            }
+        except Exception as e:
+            return {"error": "Single file consistency analysis failed"}
+    
+    def _check_logical_timestamp_order(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Check if timestamps follow logical order (creation before modification)."""
+        try:
+            creation_events = [e for e in events if "Original" in e["event_type"] or "Created" in e["event_type"]]
+            modification_events = [e for e in events if "Modified" in e["event_type"]]
+            
+            logical_order = {
+                "is_logical": True,
+                "violations": []
+            }
+            
+            if creation_events and modification_events:
+                latest_creation = max(creation_events, key=lambda x: x["parsed_datetime"])
+                earliest_modification = min(modification_events, key=lambda x: x["parsed_datetime"])
+                
+                if latest_creation["parsed_datetime"] > earliest_modification["parsed_datetime"]:
+                    logical_order["is_logical"] = False
+                    logical_order["violations"].append({
+                        "type": "creation_after_modification",
+                        "creation_time": latest_creation["parsed_datetime"].isoformat(),
+                        "modification_time": earliest_modification["parsed_datetime"].isoformat()
+                    })
+            
+            return logical_order
+            
+        except Exception as e:
+            return {"is_logical": True, "error": "Logical order check failed"}
+    
+    def _validate_timestamps(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Validate timestamps for accuracy and consistency."""
+        try:
+            validation = {
+                "valid_timestamps": 0,
+                "invalid_timestamps": 0,
+                "suspicious_timestamps": 0,
+                "validation_issues": []
+            }
+            
+            current_year = datetime.now().year
+            
+            for event in events:
+                dt = event["parsed_datetime"]
+                
+                if dt.year < 1990 or dt.year > current_year + 1:
+                    validation["invalid_timestamps"] += 1
+                    validation["validation_issues"].append({
+                        "event": event["event_type"],
+                        "timestamp": dt.isoformat(),
+                        "issue": "Timestamp outside reasonable range"
+                    })
+                elif event["confidence"] < 0.5:
+                    validation["suspicious_timestamps"] += 1
+                    validation["validation_issues"].append({
+                        "event": event["event_type"],
+                        "timestamp": dt.isoformat(),
+                        "issue": "Low confidence timestamp"
+                    })
+                else:
+                    validation["valid_timestamps"] += 1
+            
+            return validation
+            
+        except Exception as e:
+            return {"error": "Timestamp validation failed"}
+    
+    def _generate_timeline_recommendations(self, results: Dict[str, Any]) -> List[str]:
+        """Generate recommendations based on timeline analysis."""
+        recommendations = []
+        
+        try:
+            # Check for anomalies
+            anomalies = results.get("anomalies", [])
+            high_severity_anomalies = [a for a in anomalies if a.get("severity") == "high"]
+            
+            if high_severity_anomalies:
+                recommendations.append("URGENT: High-severity timestamp anomalies detected - investigate immediately")
+            
+            # Check timeline analysis
+            timeline_analysis = results.get("timeline_analysis", {})
+            consistency_metrics = timeline_analysis.get("consistency_metrics", {})
+            
+            if consistency_metrics.get("timestamp_consistency", 0) < 0.7:
+                recommendations.append("Timeline shows consistency issues - verify file authenticity")
+            
+            # Check for patterns
+            patterns = results.get("patterns", {})
+            activity_periods = patterns.get("activity_periods", [])
+            
+            if len(activity_periods) > 0:
+                recommendations.append("High activity periods identified - focus investigation on these timeframes")
+            
+            # General recommendations
+            recommendations.append("Cross-reference timeline with external evidence sources")
+            recommendations.append("Consider timezone differences when interpreting timestamps")
+            
+            return recommendations
+            
+        except Exception as e:
+            return ["Error generating timeline recommendations"]
+    
+    def _generate_single_file_recommendations(self, results: Dict[str, Any]) -> List[str]:
+        """Generate recommendations for single file timeline analysis."""
+        recommendations = []
+        
+        try:
+            consistency = results.get("consistency_analysis", {})
+            consistency_score = consistency.get("consistency_score", 0.0)
+            
+            if consistency_score < 0.5:
+                recommendations.append("Low timestamp consistency - investigate for potential tampering")
+            
+            validation = results.get("timestamp_validation", {})
+            invalid_count = validation.get("invalid_timestamps", 0)
+            
+            if invalid_count > 0:
+                recommendations.append("Invalid timestamps detected - verify file integrity")
+            
+            logical_order = consistency.get("logical_order", {})
+            if not logical_order.get("is_logical", True):
+                recommendations.append("Illogical timestamp order detected - check for metadata manipulation")
+            
+            return recommendations
+            
+        except Exception as e:
+            return ["Error generating single file recommendations"]
+
+# Global reconstructor instance
+_reconstructor = None
+
+def get_timeline_reconstructor() -> TimelineReconstructor:
+    """Get or create the global timeline reconstructor instance."""
+    global _reconstructor
+    if _reconstructor is None:
+        _reconstructor = TimelineReconstructor()
+    return _reconstructor
+
+def reconstruct_timeline(
+    file_metadata_list: List[Dict[str, Any]],
+    analysis_mode: str = "comprehensive"
+) -> Dict[str, Any]:
+    """
+    Reconstruct timeline from multiple files' metadata.
+    
+    Args:
+        file_metadata_list: List of metadata dictionaries
+        analysis_mode: "comprehensive", "forensic", or "simple"
+        
+    Returns:
+        Timeline reconstruction results
+    """
+    reconstructor = get_timeline_reconstructor()
+    return reconstructor.reconstruct_timeline(file_metadata_list, analysis_mode)
+
+def analyze_single_file_timeline(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze timeline within a single file's metadata.
+    
+    Args:
+        metadata: Single file metadata dictionary
+        
+    Returns:
+        Single-file timeline analysis
+    """
+    reconstructor = get_timeline_reconstructor()
+    return reconstructor.analyze_single_file_timeline(metadata)
+
+def create_forensic_timeline(
+    file_metadata_list: List[Dict[str, Any]],
+    focus_period: Tuple[str, str] = None
+) -> Dict[str, Any]:
+    """
+    Create forensic-grade timeline with detailed analysis.
+    
+    Args:
+        file_metadata_list: List of metadata dictionaries
+        focus_period: Optional (start_time, end_time) tuple to focus on
+        
+    Returns:
+        Forensic timeline report
+    """
+    reconstructor = get_timeline_reconstructor()
+    return reconstructor.create_forensic_timeline(file_metadata_list, focus_period)
+
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) < 2:
+        print("Usage: python timeline.py <metadata_file1> [metadata_file2] ... [--forensic] [--focus start_time end_time]")
+        sys.exit(1)
+    
+    # Parse arguments
+    metadata_files = []
+    forensic_mode = False
+    focus_period = None
+    
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+        
+        if arg == "--forensic":
+            forensic_mode = True
+        elif arg == "--focus" and i + 2 < len(sys.argv):
+            focus_period = (sys.argv[i + 1], sys.argv[i + 2])
+            i += 2
+        else:
+            metadata_files.append(arg)
+        
+        i += 1
+    
+    # Load metadata files
+    metadata_list = []
+    for filepath in metadata_files:
+        try:
+            with open(filepath, 'r') as f:
+                metadata = json.load(f)
+                metadata_list.append(metadata)
+        except Exception as e:
+            print(f"Error loading {filepath}: {e}")
+            sys.exit(1)
+    
+    print(f"Reconstructing timeline from {len(metadata_list)} files...")
+    
+    if forensic_mode:
+        result = create_forensic_timeline(metadata_list, focus_period)
+    elif len(metadata_list) == 1:
+        result = analyze_single_file_timeline(metadata_list[0])
+    else:
+        result = reconstruct_timeline(metadata_list, "comprehensive")
+    
+    print(json.dumps(result, indent=2, default=str))

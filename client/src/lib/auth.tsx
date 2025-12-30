@@ -1,0 +1,207 @@
+/**
+ * MetaExtract Auth Context
+ * 
+ * Provides authentication state and methods throughout the app.
+ */
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  tier: string;
+  subscriptionStatus: string | null;
+}
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check auth status on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch("/api/auth/me", {
+        credentials: "include",
+      });
+      const data = await response.json();
+      
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: data.error || "Login failed" 
+        };
+      }
+
+      setUser(data.user);
+      
+      // Store token in localStorage for API calls
+      if (data.token) {
+        localStorage.setItem("auth_token", data.token);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { 
+        success: false, 
+        error: "Network error. Please try again." 
+      };
+    }
+  };
+
+  const register = async (email: string, username: string, password: string) => {
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle validation errors
+        if (data.details) {
+          const firstError = Object.values(data.details).flat()[0];
+          return { 
+            success: false, 
+            error: firstError as string || data.error 
+          };
+        }
+        return { 
+          success: false, 
+          error: data.error || "Registration failed" 
+        };
+      }
+
+      setUser(data.user);
+      
+      if (data.token) {
+        localStorage.setItem("auth_token", data.token);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Register error:", error);
+      return { 
+        success: false, 
+        error: "Network error. Please try again." 
+      };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem("auth_token");
+    }
+  };
+
+  const refreshUser = useCallback(async () => {
+    await checkAuth();
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        register,
+        logout,
+        refreshUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
+
+/**
+ * Get the user's effective tier for feature gating
+ */
+export function useEffectiveTier(): string {
+  const { user, isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated || !user) {
+    return "enterprise";
+  }
+  
+  // Only count subscription as active if status is "active"
+  if (user.subscriptionStatus === "active") {
+    return user.tier;
+  }
+  
+  return "enterprise";
+}
+
+/**
+ * Check if user can access a specific tier's features
+ */
+export function useCanAccessTier(requiredTier: string): boolean {
+  const effectiveTier = useEffectiveTier();
+  
+  const tierOrder = ["free", "professional", "forensic", "enterprise"];
+  const currentIndex = tierOrder.indexOf(effectiveTier);
+  const requiredIndex = tierOrder.indexOf(requiredTier);
+  
+  return currentIndex >= requiredIndex;
+}
