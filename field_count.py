@@ -288,6 +288,24 @@ try:
 except:
     VIDEO_PROFESSIONAL_ADVANCED_AVAILABLE = False
 
+try:
+    from pdf_office_advanced import get_pdf_office_advanced_field_count
+    PDF_OFFICE_ADVANCED_AVAILABLE = True
+except:
+    PDF_OFFICE_ADVANCED_AVAILABLE = False
+
+try:
+    from forensic_digital_advanced import get_forensic_digital_advanced_field_count
+    FORENSIC_DIGITAL_ADVANCED_AVAILABLE = True
+except:
+    FORENSIC_DIGITAL_ADVANCED_AVAILABLE = False
+
+try:
+    from audio_metadata_advanced import get_audio_metadata_advanced_field_count
+    AUDIO_METADATA_ADVANCED_AVAILABLE = True
+except:
+    AUDIO_METADATA_ADVANCED_AVAILABLE = False
+
 total = 0
 fields = {}
 
@@ -617,6 +635,27 @@ if VIDEO_PROFESSIONAL_ADVANCED_AVAILABLE:
     print(f'{"Video Professional (Advanced)":30s}: {video_prof_adv_count:>5} fields')
 else:
     print(f'{"Video Professional (Advanced)":30s}: {0:>5} fields (pending)')
+
+if PDF_OFFICE_ADVANCED_AVAILABLE:
+    pdf_office_adv_count = get_pdf_office_advanced_field_count()
+    fields3['PDF/Office (Advanced)'] = pdf_office_adv_count
+    print(f'{"PDF/Office (Advanced)":30s}: {pdf_office_adv_count:>5} fields')
+else:
+    print(f'{"PDF/Office (Advanced)":30s}: {0:>5} fields (pending)')
+
+if FORENSIC_DIGITAL_ADVANCED_AVAILABLE:
+    forensic_digital_adv_count = get_forensic_digital_advanced_field_count()
+    fields3['Forensic Digital (Advanced)'] = forensic_digital_adv_count
+    print(f'{"Forensic Digital (Advanced)":30s}: {forensic_digital_adv_count:>5} fields')
+else:
+    print(f'{"Forensic Digital (Advanced)":30s}: {0:>5} fields (pending)')
+
+if AUDIO_METADATA_ADVANCED_AVAILABLE:
+    audio_metadata_adv_count = get_audio_metadata_advanced_field_count()
+    fields3['Audio Metadata (Advanced)'] = audio_metadata_adv_count
+    print(f'{"Audio Metadata (Advanced)":30s}: {audio_metadata_adv_count:>5} fields')
+else:
+    print(f'{"Audio Metadata (Advanced)":30s}: {0:>5} fields (pending)')
 
 print()
 print('--- All Specialized Modules Summary ---')

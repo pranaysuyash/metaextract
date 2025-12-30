@@ -1283,6 +1283,8 @@ def parse_mkv_ebml(filepath: str) -> Dict[str, Any]:
         "tracks": [],
         "tags": [],
         "chapters": [],
+        "attachments": [],
+        "seek_head": [],
         "cues_present": False,
         "total_elements": 0
     }
@@ -1393,6 +1395,8 @@ def _parse_mkv_segment(f, end: int) -> Dict[str, Any]:
         "tracks": [],
         "tags": [],
         "chapters": [],
+        "attachments": [],
+        "seek_head": [],
         "cues_present": False,
         "total_elements": 0,
     }
@@ -1416,6 +1420,12 @@ def _parse_mkv_segment(f, end: int) -> Dict[str, Any]:
         elif element_id == 0x1043A770:  # Chapters
             data = f.read(size)
             result["chapters"] = _parse_mkv_chapters(data)
+        elif element_id == 0x1941A469:  # Attachments
+            data = f.read(size)
+            result["attachments"] = _parse_mkv_attachments(data)
+        elif element_id == 0x114D9B74:  # SeekHead
+            data = f.read(size)
+            result["seek_head"] = _parse_mkv_seek_head(data)
         elif element_id == 0x1C53BB6B:  # Cues
             result["cues_present"] = True
             f.seek(size, 1)
@@ -1463,6 +1473,8 @@ def _parse_mkv_tracks(data: bytes) -> List[Dict[str, Any]]:
                 track_type_code = _ebml_uint(sub_data)
                 track["track_type_code"] = track_type_code
                 track["track_type"] = MKV_TRACK_TYPES.get(track_type_code, "unknown")
+            elif sub_id == 0x23E383:
+                track["default_duration"] = _ebml_uint(sub_data)
             elif sub_id == 0xB9:
                 track["flag_enabled"] = bool(_ebml_uint(sub_data))
             elif sub_id == 0x88:
@@ -1481,6 +1493,10 @@ def _parse_mkv_tracks(data: bytes) -> List[Dict[str, Any]]:
                 track["codec_name"] = sub_data.decode("utf-8", errors="ignore")
             elif sub_id == 0x63A2:
                 track["codec_private_size"] = len(sub_data)
+            elif sub_id == 0x56AA:
+                track["codec_delay"] = _ebml_uint(sub_data)
+            elif sub_id == 0x56BB:
+                track["seek_pre_roll"] = _ebml_uint(sub_data)
             elif sub_id == 0xE0:
                 track["video"] = _parse_mkv_video(sub_data)
             elif sub_id == 0xE1:
@@ -1496,6 +1512,8 @@ def _parse_mkv_video(data: bytes) -> Dict[str, Any]:
             video["pixel_width"] = _ebml_uint(element_data)
         elif element_id == 0xBA:
             video["pixel_height"] = _ebml_uint(element_data)
+        elif element_id == 0x9A:
+            video["flag_interlaced"] = bool(_ebml_uint(element_data))
         elif element_id == 0x54B0:
             video["display_width"] = _ebml_uint(element_data)
         elif element_id == 0x54BA:
@@ -1504,6 +1522,16 @@ def _parse_mkv_video(data: bytes) -> Dict[str, Any]:
             video["display_unit"] = _ebml_uint(element_data)
         elif element_id == 0x53B8:
             video["stereo_mode"] = _ebml_uint(element_data)
+        elif element_id == 0x54AA:
+            video["pixel_crop_bottom"] = _ebml_uint(element_data)
+        elif element_id == 0x54BB:
+            video["pixel_crop_top"] = _ebml_uint(element_data)
+        elif element_id == 0x54CC:
+            video["pixel_crop_left"] = _ebml_uint(element_data)
+        elif element_id == 0x54DD:
+            video["pixel_crop_right"] = _ebml_uint(element_data)
+        elif element_id == 0x55B0:
+            video["colour"] = _parse_mkv_colour(element_data)
     return video
 
 
@@ -1518,6 +1546,8 @@ def _parse_mkv_audio(data: bytes) -> Dict[str, Any]:
             audio["channels"] = _ebml_uint(element_data)
         elif element_id == 0x6264:
             audio["bit_depth"] = _ebml_uint(element_data)
+        elif element_id == 0x7D7B:
+            audio["channel_positions"] = element_data.hex()
     return audio
 
 
@@ -1537,8 +1567,14 @@ def _parse_mkv_tags(data: bytes) -> List[Dict[str, Any]]:
                         simple["value"] = simple_data.decode("utf-8", errors="ignore")
                     elif simple_id == 0x4485:
                         simple["binary"] = simple_data.hex()
+                    elif simple_id == 0x447A:
+                        simple["language"] = simple_data.decode("utf-8", errors="ignore")
+                    elif simple_id == 0x4484:
+                        simple["default"] = bool(_ebml_uint(simple_data))
                 if simple:
                     tag_entry.setdefault("simple_tags", []).append(simple)
+            elif tag_id == 0x63C0:
+                tag_entry["targets"] = _parse_mkv_tag_targets(tag_data)
         if tag_entry:
             tags.append(tag_entry)
     return tags
@@ -1554,10 +1590,16 @@ def _parse_mkv_chapters(data: bytes) -> List[Dict[str, Any]]:
                 continue
             chapter: Dict[str, Any] = {}
             for sub_id, sub_data in _iter_ebml_elements(chapter_data):
+                if sub_id == 0x73C4:
+                    chapter["chapter_uid"] = _ebml_uint(sub_data)
                 if sub_id == 0x91:
                     chapter["time_start"] = _ebml_uint(sub_data)
                 elif sub_id == 0x92:
                     chapter["time_end"] = _ebml_uint(sub_data)
+                elif sub_id == 0x98:
+                    chapter["flag_hidden"] = bool(_ebml_uint(sub_data))
+                elif sub_id == 0x4598:
+                    chapter["flag_enabled"] = bool(_ebml_uint(sub_data))
                 elif sub_id == 0x80:
                     for disp_id, disp_data in _iter_ebml_elements(sub_data):
                         if disp_id == 0x85:
@@ -1567,6 +1609,122 @@ def _parse_mkv_chapters(data: bytes) -> List[Dict[str, Any]]:
             if chapter:
                 chapters.append(chapter)
     return chapters
+
+
+def _parse_mkv_colour(data: bytes) -> Dict[str, Any]:
+    colour: Dict[str, Any] = {}
+    for element_id, element_data in _iter_ebml_elements(data):
+        if element_id == 0x55B1:
+            colour["matrix_coefficients"] = _ebml_uint(element_data)
+        elif element_id == 0x55B2:
+            colour["bits_per_channel"] = _ebml_uint(element_data)
+        elif element_id == 0x55B3:
+            colour["chroma_subsampling_horz"] = _ebml_uint(element_data)
+        elif element_id == 0x55B4:
+            colour["chroma_subsampling_vert"] = _ebml_uint(element_data)
+        elif element_id == 0x55B5:
+            colour["cb_subsampling_horz"] = _ebml_uint(element_data)
+        elif element_id == 0x55B6:
+            colour["cb_subsampling_vert"] = _ebml_uint(element_data)
+        elif element_id == 0x55B7:
+            colour["chroma_siting_horz"] = _ebml_uint(element_data)
+        elif element_id == 0x55B8:
+            colour["chroma_siting_vert"] = _ebml_uint(element_data)
+        elif element_id == 0x55B9:
+            colour["range"] = _ebml_uint(element_data)
+        elif element_id == 0x55BA:
+            colour["transfer_characteristics"] = _ebml_uint(element_data)
+        elif element_id == 0x55BB:
+            colour["primaries"] = _ebml_uint(element_data)
+        elif element_id == 0x55BC:
+            colour["max_cll"] = _ebml_uint(element_data)
+        elif element_id == 0x55BD:
+            colour["max_fall"] = _ebml_uint(element_data)
+        elif element_id == 0x55D0:
+            colour["mastering_metadata"] = _parse_mkv_mastering_metadata(element_data)
+    return colour
+
+
+def _parse_mkv_mastering_metadata(data: bytes) -> Dict[str, Any]:
+    mastering: Dict[str, Any] = {}
+    for element_id, element_data in _iter_ebml_elements(data):
+        if element_id == 0x55D1:
+            mastering["primary_r_x"] = _ebml_float(element_data)
+        elif element_id == 0x55D2:
+            mastering["primary_r_y"] = _ebml_float(element_data)
+        elif element_id == 0x55D3:
+            mastering["primary_g_x"] = _ebml_float(element_data)
+        elif element_id == 0x55D4:
+            mastering["primary_g_y"] = _ebml_float(element_data)
+        elif element_id == 0x55D5:
+            mastering["primary_b_x"] = _ebml_float(element_data)
+        elif element_id == 0x55D6:
+            mastering["primary_b_y"] = _ebml_float(element_data)
+        elif element_id == 0x55D7:
+            mastering["white_point_x"] = _ebml_float(element_data)
+        elif element_id == 0x55D8:
+            mastering["white_point_y"] = _ebml_float(element_data)
+        elif element_id == 0x55D9:
+            mastering["luminance_max"] = _ebml_float(element_data)
+        elif element_id == 0x55DA:
+            mastering["luminance_min"] = _ebml_float(element_data)
+    return mastering
+
+
+def _parse_mkv_tag_targets(data: bytes) -> Dict[str, Any]:
+    targets: Dict[str, Any] = {}
+    for element_id, element_data in _iter_ebml_elements(data):
+        if element_id == 0x68CA:
+            targets["target_type_value"] = _ebml_uint(element_data)
+        elif element_id == 0x63CA:
+            targets["target_type"] = element_data.decode("utf-8", errors="ignore")
+        elif element_id == 0x63C5:
+            targets["tag_track_uid"] = _ebml_uint(element_data)
+        elif element_id == 0x63C9:
+            targets["tag_chapter_uid"] = _ebml_uint(element_data)
+        elif element_id == 0x63C4:
+            targets["tag_attachment_uid"] = _ebml_uint(element_data)
+        elif element_id == 0x63C6:
+            targets["tag_edition_uid"] = _ebml_uint(element_data)
+    return targets
+
+
+def _parse_mkv_attachments(data: bytes) -> List[Dict[str, Any]]:
+    attachments: List[Dict[str, Any]] = []
+    for element_id, element_data in _iter_ebml_elements(data):
+        if element_id != 0x61A7:
+            continue
+        attachment: Dict[str, Any] = {}
+        for sub_id, sub_data in _iter_ebml_elements(element_data):
+            if sub_id == 0x466E:
+                attachment["file_name"] = sub_data.decode("utf-8", errors="ignore")
+            elif sub_id == 0x4660:
+                attachment["mime_type"] = sub_data.decode("utf-8", errors="ignore")
+            elif sub_id == 0x465C:
+                attachment["data_size"] = len(sub_data)
+            elif sub_id == 0x46AE:
+                attachment["file_uid"] = _ebml_uint(sub_data)
+            elif sub_id == 0x467E:
+                attachment["description"] = sub_data.decode("utf-8", errors="ignore")
+        if attachment:
+            attachments.append(attachment)
+    return attachments
+
+
+def _parse_mkv_seek_head(data: bytes) -> List[Dict[str, Any]]:
+    seeks: List[Dict[str, Any]] = []
+    for element_id, element_data in _iter_ebml_elements(data):
+        if element_id != 0x4DBB:
+            continue
+        seek_entry: Dict[str, Any] = {}
+        for sub_id, sub_data in _iter_ebml_elements(element_data):
+            if sub_id == 0x53AB:
+                seek_entry["seek_id"] = sub_data.hex()
+            elif sub_id == 0x53AC:
+                seek_entry["seek_position"] = _ebml_uint(sub_data)
+        if seek_entry:
+            seeks.append(seek_entry)
+    return seeks
 
 
 def parse_avi_chunks(filepath: str) -> Dict[str, Any]:
@@ -1796,4 +1954,4 @@ def _parse_avi_info(data: bytes) -> Dict[str, Any]:
 
 def get_container_metadata_field_count() -> int:
     """Return estimated field count for container metadata module."""
-    return 620  # Expanded Phase 2 target
+    return 700  # Expanded Phase 2 target

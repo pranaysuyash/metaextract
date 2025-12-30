@@ -13,6 +13,7 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - MP4/MOV with `pasp` pixel aspect, `clap` clean aperture, and `colr` (nclx/ICC) boxes.
 - MP4/MOV with `chan` channel layout and `st3d`/`sv3d` stereo/360 metadata.
 - MKV with chapter tags + attachments (fonts/cover).
+- MKV with HDR mastering metadata (Colour/MaxCLL/MaxFALL).
 - AVI with RIFF INFO tags (INAM/IART/etc) and ODML extension.
 - HDR10+ sample with dynamic metadata (SMPTE ST 2094-40 in HEVC).
 - Dolby Vision MP4/MOV with DV profile metadata.
