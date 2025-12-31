@@ -32,7 +32,12 @@ try:
     from .module_discovery import (
         discover_and_register_modules,
         get_extraction_function_safe,
-        get_module_discovery_stats
+        get_module_discovery_stats,
+        create_safe_execution_wrapper,
+        build_dependency_graph_global,
+        get_dependency_stats_global,
+        enable_hot_reloading_global,
+        get_hot_reload_stats_global
     )
     MODULE_DISCOVERY_AVAILABLE = True
 except ImportError:
@@ -60,7 +65,7 @@ import mimetypes
 import time
 import traceback
 
-# Import monitoring
+# Import monitoring and alerting
 try:
     from .monitoring import record_extraction_for_monitoring
     MONITORING_AVAILABLE = True
@@ -71,6 +76,29 @@ except ImportError:
                                        error_type: Optional[str] = None):
         pass
     MONITORING_AVAILABLE = False
+
+try:
+    from .alerting import get_alert_manager
+    ALERTING_AVAILABLE = True
+except ImportError:
+    # Create a dummy function if alerting is not available
+    def get_alert_manager():
+        class DummyAlertManager:
+            def record_extraction(self, *args, **kwargs):
+                pass
+        return DummyAlertManager()
+    ALERTING_AVAILABLE = False
+
+try:
+    from .analytics import record_extraction_for_analytics
+    ANALYTICS_AVAILABLE = True
+except ImportError:
+    # Create a dummy function if analytics is not available
+    def record_extraction_for_analytics(processing_time_ms: float, success: bool,
+                                      tier: str = "unknown", file_type: str = "unknown",
+                                      file_size: Optional[str] = None, error_type: Optional[str] = None):
+        pass
+    ANALYTICS_AVAILABLE = False
 
 # Import base engine
 if __name__ == "__main__":
@@ -386,14 +414,22 @@ except ImportError:
     analyze_steganography = None  # type: ignore[assignment]
 
 try:
+    from .utils.cache import get_cache
+except ImportError:
+    try:
+        from utils.cache import get_cache  # type: ignore
+    except ImportError:
+        get_cache = None  # type: ignore[assignment]
+
+try:
     import sys
     import os
     import importlib.util
-    
+
     # Import the emerging technology module directly by file path
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'emerging_technology_ultimate_advanced.py')
-    
+
     if os.path.exists(module_path):
         spec = importlib.util.spec_from_file_location("emerging_tech", module_path)
         if spec and spec.loader:
@@ -405,7 +441,7 @@ try:
             extract_emerging_technology_metadata = None
     else:
         extract_emerging_technology_metadata = None
-        
+
 except Exception as e:
     logger.warning(f"Could not import emerging technology module: {e}")
     extract_emerging_technology_metadata = None  # type: ignore[assignment]
@@ -1699,7 +1735,17 @@ class ComprehensiveMetadataExtractor:
             try:
                 self.module_registry = discover_and_register_modules()
                 self.module_discovery_stats = get_module_discovery_stats()
+                
+                # Build dependency graph
+                build_dependency_graph_global()
+                dependency_stats = get_dependency_stats_global()
+                
+                if dependency_stats["circular_dependencies"]:
+                    logger.warning(f"Circular dependencies detected: {dependency_stats['circular_dependencies']}")
+                
                 logger.info(f"Dynamic module discovery initialized: {self.module_discovery_stats['loaded_count']} modules loaded")
+                logger.info(f"Dependency analysis: {dependency_stats['total_modules_with_dependencies']} modules with dependencies")
+                
             except Exception as e:
                 logger.error(f"Failed to initialize module discovery: {e}")
                 MODULE_DISCOVERY_AVAILABLE = False
@@ -1717,39 +1763,27 @@ class ComprehensiveMetadataExtractor:
             return
             
         try:
-            # Get all available extraction functions
-            all_functions = get_all_available_extraction_functions()
-            
-            # Execute modules based on their categories and tier configuration
-            for module_name, functions in all_functions.items():
-                module_info = self.module_registry.get_module_info(module_name)
-                if not module_info or not module_info.get("enabled", True):
-                    continue
-                    
+            # Create a filter function for tier-based execution
+            def tier_filter(module_name: str, module_info: Dict[str, Any]) -> bool:
                 category = module_info.get("category", "general")
-                
-                # Determine if this module should be executed based on tier and category
-                should_execute = self._should_execute_module_category(category, tier_config)
-                
-                if should_execute:
-                    for function_name, extraction_func in functions.items():
-                        try:
-                            # Execute the function with safe error handling
-                            result = safe_extract_module(
-                                extraction_func, 
-                                filepath, 
-                                f"{module_name}_{function_name}"
-                            )
-                            
-                            if result:
-                                # Store the result in the base result
-                                result_key = f"{module_name}_{function_name}"
-                                base_result[result_key] = result
-                                logger.debug(f"Successfully executed dynamic module: {module_name}.{function_name}")
-                                
-                        except Exception as e:
-                            logger.warning(f"Error executing dynamic module {module_name}.{function_name}: {e}")
-                            
+                return self._should_execute_module_category(category, tier_config)
+            
+            # Create execution wrapper for safe_extract_module
+            execution_wrapper = create_safe_execution_wrapper(safe_extract_module)
+            
+            # Execute modules using parallel execution
+            results = self.module_registry.execute_modules_parallel(
+                filepath, 
+                execution_wrapper, 
+                tier_filter
+            )
+            
+            # Store results in base result
+            for result_key, result in results.items():
+                if result:
+                    base_result[result_key] = result
+                    logger.debug(f"Successfully executed dynamic module: {result_key}")
+            
         except Exception as e:
             logger.error(f"Error in dynamic module execution: {e}")
     
@@ -1830,6 +1864,18 @@ class ComprehensiveMetadataExtractor:
         if MODULE_DISCOVERY_AVAILABLE and self.module_discovery_stats:
             base_result["extraction_info"]["module_discovery"] = self.module_discovery_stats
             base_result["extraction_info"]["dynamic_modules_enabled"] = True
+            
+            # Add parallel execution statistics
+            parallel_stats = self.module_registry.get_parallel_execution_stats()
+            base_result["extraction_info"]["parallel_execution"] = parallel_stats
+            
+            # Add dependency statistics
+            dependency_stats = get_dependency_stats_global()
+            base_result["extraction_info"]["module_dependencies"] = dependency_stats
+            
+            # Add hot reloading statistics
+            hot_reload_stats = get_hot_reload_stats_global()
+            base_result["extraction_info"]["hot_reloading"] = hot_reload_stats
         else:
             base_result["extraction_info"]["dynamic_modules_enabled"] = False
         
@@ -2286,6 +2332,52 @@ class ComprehensiveMetadataExtractor:
                 "total_module_processing_time_ms": 0,
                 "overhead_time_ms": total_duration_ms
             }
+
+        # Record metrics for monitoring
+        if MONITORING_AVAILABLE:
+            success = "error" not in base_result
+            file_ext = Path(filepath).suffix.lower() if filepath else "unknown"
+            mime_type = base_result.get("file", {}).get("mime_type", "unknown")
+            file_type = mime_type or file_ext or "unknown"
+
+            error_type = None
+            if not success:
+                error_type = base_result.get("error_type", "UnknownError")
+
+            record_extraction_for_monitoring(
+                processing_time_ms=total_duration_ms,
+                success=success,
+                tier=tier,
+                file_type=file_type,
+                error_type=error_type
+            )
+
+        # Record metrics for analytics
+        if ANALYTICS_AVAILABLE:
+            success = "error" not in base_result
+            file_ext = Path(filepath).suffix.lower() if filepath else "unknown"
+            mime_type = base_result.get("file", {}).get("mime_type", "unknown")
+            file_type = mime_type or file_ext or "unknown"
+
+            error_type = None
+            if not success:
+                error_type = base_result.get("error_type", "UnknownError")
+
+            # Get file size if possible
+            file_size = None
+            try:
+                file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
+            except:
+                pass  # Ignore errors getting file size
+
+            record_extraction_for_analytics(
+                processing_time_ms=total_duration_ms,
+                success=success,
+                tier=tier,
+                file_type=file_type,
+                file_size=file_size,
+                error_type=error_type
+            )
 
         return base_result
 

@@ -216,7 +216,7 @@ from .workflow_dam import (
 )
 
 # Utility modules
-from .hashes import extract_file_hashes, extract_perceptual_hashes
+from .hashes import extract_file_hashes
 
 # Advanced modules
 from .ocr_burned_metadata import extract_burned_metadata

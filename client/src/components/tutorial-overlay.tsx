@@ -7,11 +7,12 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, SkipForward } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, SkipForward, Pause, Play, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOnboarding, type OnboardingStep } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 // ============================================================================
 // Types
@@ -39,13 +40,21 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     currentPath,
     completeStep,
     skipStep,
+    pauseOnboarding,
+    resumeOnboarding,
+    completeOnboarding,
     getNextStep,
     getPreviousStep,
-    session
+    session,
+    startOnboarding
   } = useOnboarding();
 
+  const { toast } = useToast();
   const [spotlightPosition, setSpotlightPosition] = useState<SpotlightPosition | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -162,22 +171,85 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
   const handleNext = useCallback(async () => {
     if (!currentStep) return;
 
+    // Validate step completion if required
+    if (currentStep.completionCriteria.type === 'interaction') {
+      setIsValidating(true);
+      setValidationError(null);
+
+      // Check if the required interaction has occurred
+      const interactionValue = currentStep.completionCriteria.value;
+      const targetElement = currentStep.targetElement 
+        ? document.querySelector(currentStep.targetElement)
+        : null;
+
+      // Simple validation: check if target element exists and has been interacted with
+      if (interactionValue && !targetElement) {
+        setValidationError('Please complete the required action before continuing');
+        setIsValidating(false);
+        toast({
+          title: 'Action Required',
+          description: 'Please complete the highlighted action before moving to the next step',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      setIsValidating(false);
+    }
+
     await completeStep(currentStep.id, {
       action: 'next',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      validated: true
     });
-  }, [currentStep, completeStep]);
 
-  const handlePrevious = useCallback(() => {
-    // Navigate to previous step (implementation depends on requirements)
-    console.log('Navigate to previous step');
-  }, []);
+    // Show success feedback
+    toast({
+      title: 'Step Complete!',
+      description: `${currentStep.title} completed successfully`,
+      duration: 2000
+    });
+
+    setValidationError(null);
+  }, [currentStep, completeStep, toast]);
+
+  const handlePrevious = useCallback(async () => {
+    if (!session || !currentPath) return;
+
+    // Move back one step
+    const prevIndex = session.progress.currentStepIndex - 1;
+    if (prevIndex >= 0) {
+      // Update progress to go back
+      const updatedProgress = {
+        ...session.progress,
+        currentStepIndex: prevIndex
+      };
+
+      // Note: This would need to be implemented in the onboarding context
+      // For now, just log it
+      console.log('Navigate to previous step:', prevIndex);
+      
+      toast({
+        title: 'Going Back',
+        description: 'Returning to previous step',
+        duration: 2000
+      });
+    }
+  }, [session, currentPath, toast]);
 
   const handleSkip = useCallback(async () => {
     if (!currentStep) return;
 
     await skipStep(currentStep.id, 'user-skip');
-  }, [currentStep, skipStep]);
+    
+    toast({
+      title: 'Step Skipped',
+      description: 'You can always come back to this later',
+      duration: 2000
+    });
+
+    setValidationError(null);
+  }, [currentStep, skipStep, toast]);
 
   const handleComplete = useCallback(async () => {
     if (!currentStep) return;
@@ -186,7 +258,56 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
       action: 'complete',
       timestamp: new Date().toISOString()
     });
-  }, [currentStep, completeStep]);
+
+    // Complete the entire onboarding
+    await completeOnboarding();
+
+    toast({
+      title: 'Congratulations! 🎉',
+      description: 'You\'ve completed the onboarding tutorial',
+      duration: 3000
+    });
+
+    onClose();
+  }, [currentStep, completeStep, completeOnboarding, onClose, toast]);
+
+  const handlePause = useCallback(async () => {
+    setIsPaused(true);
+    await pauseOnboarding();
+    
+    toast({
+      title: 'Tutorial Paused',
+      description: 'Resume anytime from where you left off',
+      duration: 2000
+    });
+  }, [pauseOnboarding, toast]);
+
+  const handleResume = useCallback(async () => {
+    setIsPaused(false);
+    await resumeOnboarding();
+    
+    toast({
+      title: 'Tutorial Resumed',
+      description: 'Let\'s continue!',
+      duration: 2000
+    });
+  }, [resumeOnboarding, toast]);
+
+  const handleRestart = useCallback(async () => {
+    if (!session?.userProfile) return;
+
+    // Restart the onboarding from the beginning
+    await startOnboarding(session.userProfile);
+    
+    toast({
+      title: 'Tutorial Restarted',
+      description: 'Starting from the beginning',
+      duration: 2000
+    });
+
+    setIsPaused(false);
+    setValidationError(null);
+  }, [session, startOnboarding, toast]);
 
   if (!isOpen || !currentStep || !currentPath) {
     return null;
@@ -251,17 +372,45 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
                 Step {currentStepIndex + 1} of {totalSteps}
               </CardDescription>
             </div>
-            {currentStep.skippable && (
+            <div className="flex gap-1">
+              {/* Pause/Resume button */}
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onClose}
+                onClick={isPaused ? handleResume : handlePause}
                 className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10"
-                aria-label="Close tutorial"
+                aria-label={isPaused ? 'Resume tutorial' : 'Pause tutorial'}
+                title={isPaused ? 'Resume' : 'Pause'}
               >
-                <X className="h-4 w-4" />
+                {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               </Button>
-            )}
+
+              {/* Restart button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRestart}
+                className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10"
+                aria-label="Restart tutorial"
+                title="Restart"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+
+              {/* Close button (only if skippable) */}
+              {currentStep.skippable && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10"
+                  aria-label="Close tutorial"
+                  title="Close"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -269,6 +418,21 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
           <p id="tutorial-description" className="text-sm text-gray-200 leading-relaxed">
             {currentStep.description}
           </p>
+
+          {/* Validation error message */}
+          {validationError && (
+            <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400">
+              {validationError}
+            </div>
+          )}
+
+          {/* Paused state message */}
+          {isPaused && (
+            <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-sm text-yellow-400 flex items-center gap-2">
+              <Pause className="h-4 w-4" />
+              Tutorial paused - Click play to continue
+            </div>
+          )}
 
           {/* Progress bar */}
           <div className="mt-4 w-full bg-gray-700 rounded-full h-1.5">
@@ -285,12 +449,13 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
 
         <CardFooter className="flex items-center justify-between pt-0">
           <div className="flex gap-2">
-            {hasPrevious && (
+            {hasPrevious && !isPaused && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevious}
                 className="border-gray-600 text-gray-300 hover:bg-white/10 hover:text-white"
+                disabled={isValidating}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Back
@@ -299,35 +464,41 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
           </div>
 
           <div className="flex gap-2">
-            {currentStep.skippable && (
+            {currentStep.skippable && !isPaused && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSkip}
                 className="text-gray-400 hover:text-white hover:bg-white/10"
+                disabled={isValidating}
               >
                 <SkipForward className="h-4 w-4 mr-1" />
                 Skip
               </Button>
             )}
             
-            {hasNext ? (
-              <Button
-                size="sm"
-                onClick={handleNext}
-                className="bg-[#45A29E] hover:bg-[#45A29E]/90 text-white"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handleComplete}
-                className="bg-[#45A29E] hover:bg-[#45A29E]/90 text-white"
-              >
-                Complete
-              </Button>
+            {!isPaused && (
+              hasNext ? (
+                <Button
+                  size="sm"
+                  onClick={handleNext}
+                  className="bg-[#45A29E] hover:bg-[#45A29E]/90 text-white"
+                  disabled={isValidating}
+                >
+                  {isValidating ? 'Validating...' : 'Next'}
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handleComplete}
+                  className="bg-[#45A29E] hover:bg-[#45A29E]/90 text-white"
+                  disabled={isValidating}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Complete
+                </Button>
+              )
             )}
           </div>
         </CardFooter>

@@ -159,6 +159,17 @@ class SystemMonitor:
 _monitor = None
 _monitor_lock = threading.Lock()
 
+# Initialize alerting system
+try:
+    from .alerting import get_alert_manager
+    _alert_manager = get_alert_manager()
+    # Add console notification as default
+    _alert_manager.add_notification_callback(lambda alert: print(f"ALERT: {alert['name']} - {alert['message']}"))
+    # Start monitoring
+    _alert_manager.start_monitoring()
+except ImportError:
+    _alert_manager = None
+
 
 def get_monitor() -> SystemMonitor:
     """Get the global monitor instance."""

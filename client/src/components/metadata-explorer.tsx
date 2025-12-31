@@ -53,6 +53,15 @@ import {
   Lock,
 } from 'lucide-react';
 import { getFieldExplanation, hasExplanation } from '@/utils/fieldExplanations';
+import {
+  METADATA_CATEGORIES,
+  getCategoryDefinition,
+  getDefaultExpandedCategories,
+  categorizeField,
+  groupFieldsByCategory
+} from '@/utils/metadataCategories';
+import { loadUserPreferences, saveUserPreferences } from '@/utils/userPreferences';
+import {  searchMetadata, type SearchOptions, type SearchResult } from '@/utils/metadataSearch';
 
 // ============================================================================
 // Types
@@ -307,7 +316,21 @@ function MetadataTree({
   selectedField: MetadataField | null;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
+  // Load user preferences for expanded categories
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(() => {
+    const prefs = loadUserPreferences();
+    return prefs.expandedCategories.length > 0
+      ? prefs.expandedCategories
+      : getDefaultExpandedCategories();
+  });
+
+  // Persist category expansion state
+  const handleCategoryExpand = useCallback((categories: string[]) => {
+    setExpandedCategories(categories);
+    const prefs = loadUserPreferences();
+    saveUserPreferences({ ...prefs, expandedCategories: categories });
+  }, []);
 
   // Filter categories based on view mode
   const visibleCategories = useMemo(() => {
@@ -373,7 +396,7 @@ function MetadataTree({
         <Accordion
           type="multiple"
           value={expandedCategories}
-          onValueChange={setExpandedCategories}
+          onValueChange={handleCategoryExpand}
           className="p-2"
         >
           {visibleCategories.map((category) => (
@@ -383,13 +406,23 @@ function MetadataTree({
               className="border-none"
             >
               <AccordionTrigger className="rounded-lg px-3 py-2 hover:bg-muted hover:no-underline">
-                <div className="flex items-center gap-2">
-                  {getCategoryIcon(category.name)}
-                  <span className="font-medium">{category.displayName}</span>
-                  <Badge variant="secondary" className="ml-auto">
-                    {category.fieldCount}
-                  </Badge>
-                  {category.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                <div className="flex flex-col items-start gap-1 flex-1">
+                  <div className="flex items-center gap-2 w-full">
+                    {getCategoryIcon(category.name)}
+                    <span className="font-medium">{category.displayName}</span>
+                    <Badge variant="secondary" className="ml-auto">
+                      {category.fieldCount}
+                    </Badge>
+                    {category.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                  </div>
+                  {(() => {
+                    const catDef = getCategoryDefinition(category.name);
+                    return catDef?.description && (
+                      <span className="text-xs text-muted-foreground">
+                        {catDef.description}
+                      </span>
+                    );
+                  })()}
                 </div>
               </AccordionTrigger>
               <AccordionContent>

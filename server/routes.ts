@@ -2364,14 +2364,195 @@ print(json.dumps(report))
     }
   });
 
+  // Monitoring and health endpoints
+  app.get('/api/monitoring/status', async (req, res) => {
+    try {
+      // Call the Python monitoring module
+      const { spawn } = require('child_process');
+      const path = require('path');
+      const currentDir = path.dirname(require.main ? require.main.filename : __filename);
+
+      const pythonScript = path.join(currentDir, 'extractor', 'monitoring.py');
+      const result = await new Promise<any>((resolve, reject) => {
+        const python = spawn('python3', [
+          '-c',
+          `
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname('${pythonScript}')))
+from monitoring import get_monitoring_data
+import json
+print(json.dumps(get_monitoring_data()))
+          `
+        ]);
+
+        let stdout = '';
+        let stderr = '';
+
+        python.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        python.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        python.on('close', (code) => {
+          if (code !== 0) {
+            console.error('Monitoring data error:', stderr);
+            reject(new Error('Failed to get monitoring data'));
+            return;
+          }
+          try {
+            resolve(JSON.parse(stdout));
+          } catch (e) {
+            reject(new Error('Failed to parse monitoring data'));
+          }
+        });
+
+        setTimeout(() => {
+          python.kill();
+          reject(new Error('Monitoring data request timed out'));
+        }, 10000);
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Monitoring status error:', error);
+      res.status(500).json({
+        error: 'Failed to get monitoring status',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  app.get('/api/monitoring/performance', async (req, res) => {
+    try {
+      // Call the Python monitoring module
+      const { spawn } = require('child_process');
+      const path = require('path');
+      const currentDir = path.dirname(require.main ? require.main.filename : __filename);
+
+      const pythonScript = path.join(currentDir, 'extractor', 'monitoring.py');
+      const result = await new Promise<any>((resolve, reject) => {
+        const python = spawn('python3', [
+          '-c',
+          `
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname('${pythonScript}')))
+from monitoring import get_performance_summary
+import json
+print(json.dumps(get_performance_summary()))
+          `
+        ]);
+
+        let stdout = '';
+        let stderr = '';
+
+        python.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        python.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        python.on('close', (code) => {
+          if (code !== 0) {
+            console.error('Performance data error:', stderr);
+            reject(new Error('Failed to get performance data'));
+            return;
+          }
+          try {
+            resolve(JSON.parse(stdout));
+          } catch (e) {
+            reject(new Error('Failed to parse performance data'));
+          }
+        });
+
+        setTimeout(() => {
+          python.kill();
+          reject(new Error('Performance data request timed out'));
+        }, 10000);
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Performance monitoring error:', error);
+      res.status(500).json({
+        error: 'Failed to get performance data',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  app.get('/api/monitoring/errors', async (req, res) => {
+    try {
+      // Call the Python monitoring module
+      const { spawn } = require('child_process');
+      const path = require('path');
+      const currentDir = path.dirname(require.main ? require.main.filename : __filename);
+
+      const pythonScript = path.join(currentDir, 'extractor', 'monitoring.py');
+      const result = await new Promise<any>((resolve, reject) => {
+        const python = spawn('python3', [
+          '-c',
+          `
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname('${pythonScript}')))
+from monitoring import get_error_summary
+import json
+print(json.dumps(get_error_summary()))
+          `
+        ]);
+
+        let stdout = '';
+        let stderr = '';
+
+        python.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        python.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        python.on('close', (code) => {
+          if (code !== 0) {
+            console.error('Error data error:', stderr);
+            reject(new Error('Failed to get error data'));
+            return;
+          }
+          try {
+            resolve(JSON.parse(stdout));
+          } catch (e) {
+            reject(new Error('Failed to parse error data'));
+          }
+        });
+
+        setTimeout(() => {
+          python.kill();
+          reject(new Error('Error data request timed out'));
+        }, 10000);
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error monitoring error:', error);
+      res.status(500).json({
+        error: 'Failed to get error data',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   // Register payment routes
   registerPaymentRoutes(app);
 
   // Register forensic routes
   registerForensicRoutes(app);
-
-  // Register onboarding routes
-  registerOnboardingRoutes(app);
 
   return httpServer;
 }

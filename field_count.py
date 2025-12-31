@@ -74,6 +74,18 @@ try:
 except:
     AUDIO_CODEC_DETAILS_AVAILABLE = False
 
+try:
+    from advanced_audio_ultimate import get_advanced_audio_ultimate_field_count
+    ADVANCED_AUDIO_ULTIMATE_AVAILABLE = True
+except:
+    ADVANCED_AUDIO_ULTIMATE_AVAILABLE = False
+
+try:
+    from advanced_audio_ultimate import get_advanced_audio_ultimate_field_count
+    ADVANCED_AUDIO_ULTIMATE_AVAILABLE = True
+except:
+    ADVANCED_AUDIO_ULTIMATE_AVAILABLE = False
+
 # Phase 3 modules - NEW
 try:
     from pdf_metadata_complete import get_pdf_complete_field_count
@@ -1582,6 +1594,28 @@ if AUDIO_CODEC_DETAILS_AVAILABLE:
     phase2_total += audio_codec_detail_count
 else:
     print(f'{"Audio Codec Deep Analysis":30s}: {0:>5} fields (pending)')
+
+if ADVANCED_AUDIO_ULTIMATE_AVAILABLE:
+    advanced_audio_count = get_advanced_audio_ultimate_field_count()
+    print(f'{"Advanced Audio Ultimate":30s}: {advanced_audio_count:>5} fields')
+    total += advanced_audio_count
+    phase2_total += advanced_audio_count
+else:
+    print(f'{"Advanced Audio Ultimate":30s}: {0:>5} fields (pending)')
+if ADVANCED_VIDEO_ULTIMATE_AVAILABLE:
+    advanced_video_count = get_advanced_video_ultimate_field_count()
+    print(f'{"Advanced Video Ultimate":30s}: {advanced_video_count:>5} fields')
+    total += advanced_video_count
+    phase2_total += advanced_video_count
+else:
+    print(f'{"Advanced Video Ultimate":30s}: {0:>5} fields (pending)')
+if DOCUMENT_METADATA_ULTIMATE_AVAILABLE:
+    document_count = get_document_metadata_ultimate_field_count()
+    print(f'{"Document Metadata Ultimate":30s}: {document_count:>5} fields')
+    total += document_count
+    phase3_total += document_count
+else:
+    print(f'{"Document Metadata Ultimate":30s}: {0:>5} fields (pending)')
 
 print(f'{"Phase 2 Total":30s}: {phase2_total:>5} fields')
 
@@ -3195,3 +3229,66 @@ print(f'  Scientific/DICOM/FITS:         ~8,000 fields → Need ~7,000 more')
 print(f'  Forensic/Security:             ~5,000 fields → Need ~4,700 more')
 print(f'  Emerging (AI/NFT/AR/IoT):      ~3,500 fields → Need ~3,000 more')
 print('=' * 70)
+
+# Master consolidation files - NEW
+try:
+    from audio_master import get_audio_master_field_count
+    AUDIO_MASTER_AVAILABLE = True
+except:
+    AUDIO_MASTER_AVAILABLE = False
+
+try:
+    from video_master import get_video_master_field_count
+    VIDEO_MASTER_AVAILABLE = True
+except:
+    VIDEO_MASTER_AVAILABLE = False
+
+try:
+    from document_master import get_document_master_field_count
+    DOCUMENT_MASTER_AVAILABLE = True
+except:
+    DOCUMENT_MASTER_AVAILABLE = False
+
+try:
+    from scientific_master import get_scientific_master_field_count
+    SCIENTIFIC_MASTER_AVAILABLE = True
+except:
+    SCIENTIFIC_MASTER_AVAILABLE = False
+
+print()
+print('--- Master Consolidation Files (NEW) ---')
+master_total = 0
+
+if AUDIO_MASTER_AVAILABLE:
+    audio_master_count = get_audio_master_field_count()
+    print(f'{"Audio Master":30s}: {audio_master_count:>5} fields')
+    total += audio_master_count
+    master_total += audio_master_count
+else:
+    print(f'{"Audio Master":30s}: {0:>5} fields (pending)')
+
+if VIDEO_MASTER_AVAILABLE:
+    video_master_count = get_video_master_field_count()
+    print(f'{"Video Master":30s}: {video_master_count:>5} fields')
+    total += video_master_count
+    master_total += video_master_count
+else:
+    print(f'{"Video Master":30s}: {0:>5} fields (pending)')
+
+if DOCUMENT_MASTER_AVAILABLE:
+    document_master_count = get_document_master_field_count()
+    print(f'{"Document Master":30s}: {document_master_count:>5} fields')
+    total += document_master_count
+    master_total += document_master_count
+else:
+    print(f'{"Document Master":30s}: {0:>5} fields (pending)')
+
+if SCIENTIFIC_MASTER_AVAILABLE:
+    scientific_master_count = get_scientific_master_field_count()
+    print(f'{"Scientific Master":30s}: {scientific_master_count:>5} fields')
+    total += scientific_master_count
+    master_total += scientific_master_count
+else:
+    print(f'{"Scientific Master":30s}: {0:>5} fields (pending)')
+
+print(f'{"Master Total":30s}: {master_total:>5} fields')

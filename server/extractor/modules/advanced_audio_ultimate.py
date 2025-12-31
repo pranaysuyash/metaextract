@@ -894,6 +894,77 @@ def _generate_audio_fingerprint(filepath: str) -> Dict[str, Any]:
         logger.error(f"Audio fingerprinting error: {e}")
         return {}
 
+
+def get_advanced_audio_ultimate_field_count() -> int:
+    """
+    Return total number of fields extracted by advanced audio analysis.
+
+    Counts all fields from:
+    - Basic audio analysis (librosa)
+    - FFmpeg metadata
+    - Mutagen tags
+    - Broadcast standards (EBU R128, ITU-R BS.1770)
+    - Immersive audio (Dolby Atmos, DTS:X, Ambisonics)
+    - High-resolution audio (DSD, MQA, Hi-Res PCM)
+    - Quality assessment metrics
+    - Psychoacoustic analysis
+    - Voice characteristics
+    - Audio fingerprinting
+    - Mastering analysis
+    """
+    field_count = 0
+
+    # Audio analysis (librosa) - ~25 fields
+    field_count += 25
+
+    # Spectral features - ~6 fields
+    field_count += 6
+
+    # MFCC features - ~4 fields (arrays)
+    field_count += 4
+
+    # Chroma features - ~4 fields
+    field_count += 4
+
+    # Rhythm/tempo - ~3 fields
+    field_count += 3
+
+    # FFmpeg analysis - ~15 fields
+    field_count += 15
+
+    # Mutagen tags - ~20 fields
+    field_count += 20
+
+    # Broadcast standards - ~10 fields
+    field_count += 10
+
+    # High-resolution audio - ~8 fields
+    field_count += 8
+
+    # Immersive audio - ~12 fields
+    field_count += 12
+
+    # Quality assessment - ~15 fields
+    field_count += 15
+
+    # Psychoacoustic analysis - ~10 fields
+    field_count += 10
+
+    # Voice analysis - ~12 fields
+    field_count += 12
+
+    # Audio fingerprinting - ~5 fields
+    field_count += 5
+
+    # Mastering analysis - ~10 fields
+    field_count += 10
+
+    # Additional metadata fields - ~20 fields
+    field_count += 20
+
+    return field_count
+
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:

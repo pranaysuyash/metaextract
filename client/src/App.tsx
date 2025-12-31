@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { OnboardingProvider } from "@/lib/onboarding";
+import { TutorialOverlay, useTutorialOverlay } from "@/components/tutorial-overlay";
 import { ContextAdapterProvider } from "@/context/ContextAdapter";
 import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
@@ -34,38 +35,45 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRouter() {
+  const { isOpen, close } = useTutorialOverlay();
+  
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="/results" element={<Results />} />
-        <Route 
-          path="/checkout/success" 
-          element={
-            <ProtectedRoute>
-              <CheckoutSuccess />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/credits/success" 
-          element={
-            <ProtectedRoute>
-              <CreditsSuccess />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/results" element={<Results />} />
+          <Route 
+            path="/checkout/success" 
+            element={
+              <ProtectedRoute>
+                <CheckoutSuccess />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/credits/success" 
+            element={
+              <ProtectedRoute>
+                <CreditsSuccess />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+      
+      {/* Tutorial Overlay */}
+      <TutorialOverlay isOpen={isOpen} onClose={close} />
+    </>
   );
 }
 
