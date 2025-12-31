@@ -406,7 +406,24 @@ export function toPythonTier(tier: string): PythonTierName {
 // Helper Functions
 // ============================================================================
 
+/**
+ * Get tier configuration with dev mode override capability.
+ * 
+ * In development mode (VITE_DEV_FULL_ACCESS=true), always returns enterprise config
+ * to provide full access to all features without payment barriers.
+ */
 export function getTierConfig(tier: string): TierConfig {
+  // Dev mode: Full access for development
+  // Check both import.meta.env (client) and process.env (server)
+  const isDevMode = 
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEV_FULL_ACCESS === 'true') ||
+    (typeof process !== 'undefined' && process.env?.VITE_DEV_FULL_ACCESS === 'true');
+  
+  if (isDevMode) {
+    console.log('[DEV MODE] Full access enabled - returning enterprise config');
+    return TIER_CONFIGS.enterprise;
+  }
+  
   const normalizedTier = normalizeTier(tier);
   return TIER_CONFIGS[normalizedTier] || TIER_CONFIGS.free;
 }
