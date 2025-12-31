@@ -368,7 +368,7 @@ export function ContextAdapterProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'simple' | 'advanced' | 'raw'>('simple');
 
-  const detectContext = useCallback((metadata: Record<string, any>, filename: string) => {
+  const detectContext = useCallback((metadata: Record<string, any>, _filename: string) => {
     setIsLoading(true);
     setError(null);
 

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, CheckCircle, XCircle, Eye, Shield, Clock, Fingerprint } from "lucide-react";
+import { AlertTriangle, CheckCircle, Eye, Shield, Clock, Fingerprint } from "lucide-react";
 
 interface AdvancedAnalysisResultsProps {
     steganography?: {
@@ -38,7 +38,6 @@ interface AdvancedAnalysisResultsProps {
 }
 
 function ConfidenceIndicator({ value, label }: { value: number; label?: string }) {
-    const color = value >= 80 ? "bg-red-500" : value >= 50 ? "bg-yellow-500" : "bg-green-500";
     return (
         <div className="space-y-1">
             {label && <span className="text-xs text-slate-400">{label}</span>}

@@ -29,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Search,
@@ -753,7 +753,7 @@ export function convertMetadataToProcessedFile(
       icon: getCategoryIcon(name),
       fields,
       fieldCount: fields.length,
-      locked: locked,
+      locked,
     });
   };
 

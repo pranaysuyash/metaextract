@@ -143,7 +143,7 @@ print(clear_cache_pattern('${pattern}'))
       res.json({
         success: true,
         cleared_entries: result,
-        pattern: pattern,
+        pattern,
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to clear cache' });

@@ -12,7 +12,6 @@ import {
   GitCompare,
   FileText,
   Upload,
-  AlertTriangle,
   CheckCircle,
   TrendingUp,
 } from 'lucide-react';

@@ -96,6 +96,7 @@ interface MetadataResponse {
   fields_returned: number;
   fields_available: number;
   file_integrity: { md5: string; sha256: string };
+  hash?: string;
   filesystem: Record<string, any>;
   calculated: Record<string, any>;
   gps: Record<string, any> | null;
@@ -492,13 +493,14 @@ export default function Results() {
         </span>
         <div className='flex items-center gap-2 justify-end min-w-0'>
           {isLocked && !isUnlocked ? (
-            <div
-              className='flex items-center gap-2 text-slate-600 select-none bg-black/40 px-2 py-0.5 rounded border border-white/5 cursor-pointer hover:border-primary/30 transition-colors shrink-0'
+            <button
+              type="button"
+              className='flex items-center gap-2 text-slate-600 select-none bg-black/40 px-2 py-0.5 rounded border border-white/5 cursor-pointer hover:border-primary/30 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50'
               onClick={() => setShowPayment(true)}
             >
               <span className='text-xs text-slate-500'>Upgrade to view</span>
               <Lock className='w-3 h-3 text-primary/60' />
-            </div>
+            </button>
           ) : (
             <>
               <span className='text-slate-200 text-right break-all selection:bg-primary/30 min-w-0'>
@@ -506,8 +508,9 @@ export default function Results() {
               </span>
               {copyable && !isLocked && (
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(stringValue, label)}
-                  className='opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded shrink-0'
+                  className='opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded shrink-0 focus:outline-none focus:ring-1 focus:ring-primary/50'
                   data-testid={`copy-${label
                     .toLowerCase()
                     .replace(/[^a-z0-9]/g, '-')}`}

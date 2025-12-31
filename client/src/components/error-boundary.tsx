@@ -8,14 +8,13 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  AlertTriangle, 
-  RefreshCw, 
-  Bug, 
-  FileX, 
+import {
+  AlertTriangle,
+  RefreshCw,
+  Bug,
+  FileX,
   Wifi,
-  Server,
-  Code
+  Server
 } from 'lucide-react';
 
 // ============================================================================
@@ -119,7 +118,7 @@ interface ErrorDisplayProps {
   onRetry: () => void;
 }
 
-function ErrorDisplay({ error, errorInfo, errorId, level, onRetry }: ErrorDisplayProps) {
+function ErrorDisplay({ error, errorInfo: _errorInfo, errorId, level, onRetry }: ErrorDisplayProps) {
   const getErrorType = (error: Error | null) => {
     if (!error) return 'unknown';
     
@@ -321,7 +320,7 @@ export function MetadataErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
       level="section"
-      onError={(error, errorInfo) => {
+      onError={(error, _errorInfo) => {
         console.error('Metadata processing error:', error);
       }}
       fallback={
@@ -342,7 +341,7 @@ export function AdvancedAnalysisErrorBoundary({ children }: { children: ReactNod
   return (
     <ErrorBoundary
       level="section"
-      onError={(error, errorInfo) => {
+      onError={(error, _errorInfo) => {
         console.error('Advanced analysis error:', error);
       }}
       fallback={
@@ -363,7 +362,7 @@ export function NetworkErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
       level="component"
-      onError={(error, errorInfo) => {
+      onError={(error, _errorInfo) => {
         if (error.message.includes('fetch') || error.message.includes('network')) {
           console.error('Network error:', error);
         }

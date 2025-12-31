@@ -7,13 +7,12 @@ import {
   Mountain,
   Compass,
   Camera,
-  AlertTriangle,
   ExternalLink,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface BurnedMetadataDisplayProps {
-  data?: {
+  burned_metadata?: {
     has_burned_metadata: boolean;
     confidence: 'none' | 'low' | 'medium' | 'high';
     parsed_data?: {
@@ -32,6 +31,7 @@ interface BurnedMetadataDisplayProps {
       camera_app?: string;
     };
   } | null;
+  isUnlocked?: boolean;
 }
 
 const confidenceColors = {
@@ -48,12 +48,12 @@ const confidenceBg = {
   none: 'bg-slate-500/10 border-slate-500/30',
 };
 
-export function BurnedMetadataDisplay({ data }: BurnedMetadataDisplayProps) {
-  if (!data?.has_burned_metadata || !data?.parsed_data) {
+export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplayProps) {
+  if (!burned_metadata?.has_burned_metadata || !burned_metadata?.parsed_data) {
     return null;
   }
 
-  const parsed = data.parsed_data;
+  const parsed = burned_metadata.parsed_data;
 
   return (
     <motion.section
@@ -66,11 +66,11 @@ export function BurnedMetadataDisplay({ data }: BurnedMetadataDisplayProps) {
           <Camera className='w-3 h-3' /> Burned-In Metadata (OCR)
           <span
             className={`text-[10px] font-normal ml-auto px-2 py-1 rounded border ${
-              confidenceBg[data.confidence]
+              confidenceBg[burned_metadata.confidence]
             }`}
           >
-            <span className={confidenceColors[data.confidence]}>
-              Confidence: {data.confidence.toUpperCase()}
+            <span className={confidenceColors[burned_metadata.confidence]}>
+              Confidence: {burned_metadata.confidence.toUpperCase()}
             </span>
           </span>
         </h4>
@@ -78,7 +78,7 @@ export function BurnedMetadataDisplay({ data }: BurnedMetadataDisplayProps) {
 
       <div
         className={`rounded-lg border mb-4 p-4 ${
-          confidenceBg[data.confidence]
+          confidenceBg[burned_metadata.confidence]
         }`}
       >
         <p className='text-xs text-slate-400 mb-3'>

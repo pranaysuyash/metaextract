@@ -8,7 +8,7 @@ import { AuthModal } from "@/components/auth-modal";
 import { useAuth } from "@/lib/auth";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
+  const _location = useLocation();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"login" | "register">("login");
   const { user, isAuthenticated, logout, isLoading } = useAuth();
@@ -211,28 +211,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             <div>
               <h4 className="font-mono font-semibold mb-4 text-white">Product</h4>
-              <ul className="space-y-2 text-sm text-slate-300 font-mono">
-                <li><a href="#" className="hover:text-primary transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">API Reference</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Status</a></li>
-              </ul>
+               <ul className="space-y-2 text-sm text-slate-300 font-mono">
+                 <li><a href="#features" className="hover:text-primary transition-colors">Features</a></li>
+                 <li><a href="#capabilities" className="hover:text-primary transition-colors">Capabilities</a></li>
+                 <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
+               </ul>
             </div>
 
             <div>
               <h4 className="font-mono font-semibold mb-4 text-white">Legal</h4>
-              <ul className="space-y-2 text-sm text-slate-300 font-mono">
-                <li><a href="#" className="hover:text-primary transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Terms & Conditions</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Payment & Refund Policy</a></li>
-              </ul>
+               <ul className="space-y-2 text-sm text-slate-300 font-mono">
+                 <li><a href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</a></li>
+                 <li><a href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</a></li>
+                 <li><a href="/refunds" className="hover:text-primary transition-colors">Payment & Refund Policy</a></li>
+               </ul>
             </div>
 
             <div>
               <h4 className="font-mono font-semibold mb-4 text-white">Connect</h4>
-              <div className="flex gap-4">
-                <a href="#" className="text-slate-400 hover:text-white transition-colors"><Github className="w-5 h-5" /></a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
-              </div>
+               <div className="flex gap-4">
+                 <a href="https://github.com/metaextract" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
+                   <Github className="w-5 h-5" />
+                 </a>
+                 <a href="https://x.com/metaextract" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="Twitter">
+                   <Twitter className="w-5 h-5" />
+                 </a>
+               </div>
             </div>
           </div>
 

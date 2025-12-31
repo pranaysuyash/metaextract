@@ -63,7 +63,7 @@ interface ComparisonViewProps {
 }
 
 export function ComparisonView({ comparisonResult }: ComparisonViewProps) {
-  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [selectedFields, _setSelectedFields] = useState<string[]>([]);
   const [showOnlyDifferences, setShowOnlyDifferences] = useState(false);
 
   const { comparison_result: result } = comparisonResult;

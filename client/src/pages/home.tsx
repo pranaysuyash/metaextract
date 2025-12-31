@@ -166,7 +166,7 @@ export default function Home() {
                 ease: "easeInOut"
               }}
             >
-              0x{Math.floor(Math.random() * 16777215).toString(16).toUpperCase()} // SEGMENT_{i}
+              {`0x${Math.floor(Math.random() * 16777215).toString(16).toUpperCase()}`} {/* SEGMENT_{i} */}
             </motion.div>
           ))}
         </div>
@@ -363,7 +363,7 @@ export default function Home() {
             <div className="flex items-end justify-between mb-8">
               <div>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter">CORE CAPABILITIES</h2>
-                <p className="font-mono text-slate-300 text-sm">SYSTEM_MODULES // V2.4</p>
+                <p className="font-mono text-slate-300 text-sm">{`SYSTEM_MODULES // V2.4`}</p>
               </div>
             </div>
 
@@ -474,7 +474,7 @@ export default function Home() {
             <div className="flex items-end justify-between mb-12">
               <div>
                 <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-2">ACCESS</h2>
-                <p className="font-mono text-primary text-sm">// SELECT_TIER</p>
+                <p className="font-mono text-primary text-sm">{`// SELECT_TIER`}</p>
               </div>
               <div className="hidden md:block w-1/3 h-px bg-white/20"></div>
             </div>
@@ -543,6 +543,7 @@ export default function Home() {
                     return (
                       <button
                         key={i}
+                        type="button"
                         onClick={() => handleCreditPurchase(pack.name)}
                         disabled={isLoading}
                         data-testid={`button-credits-${packKey}`}

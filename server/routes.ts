@@ -173,7 +173,7 @@ function transformMetadataForFrontend(
       raw.file?.mime_type ||
       raw.summary?.mime_type ||
       'application/octet-stream',
-    tier: tier,
+    tier,
     fields_extracted: raw.extraction_info?.fields_extracted || 0,
     fields_available: fieldsAvailable,
     processing_ms: raw.extraction_info?.processing_ms || 0,
@@ -1498,7 +1498,7 @@ print(clear_cache_pattern('${pattern}'))
       res.json({
         success: true,
         cleared_entries: result,
-        pattern: pattern,
+        pattern,
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to clear cache' });

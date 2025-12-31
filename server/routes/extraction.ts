@@ -187,7 +187,7 @@ function transformMetadataForFrontend(
       raw.file?.mime_type ||
       raw.summary?.mime_type ||
       'application/octet-stream',
-    tier: tier,
+    tier,
     fields_extracted: raw.extraction_info?.fields_extracted || 0,
     fields_available: fieldsAvailable,
     processing_ms: raw.extraction_info?.processing_ms || 0,
@@ -262,56 +262,87 @@ async function extractMetadataWithPython(
       args.push('--store');
     }
 
+    // Log the Python process startup
+    console.log(`Starting Python extraction process: python3 ${args.join(' ')}`);
+
     const python = spawn('python3', args);
 
     let stdout = '';
     let stderr = '';
 
     python.stdout.on('data', (data) => {
-      stdout += data.toString();
+      const dataStr = data.toString();
+      stdout += dataStr;
+      // Log large outputs in chunks to avoid overwhelming the console
+      if (dataStr.length > 1000) {
+        console.log(`Python stdout (partial): ${dataStr.substring(0, 1000)}...`);
+      }
     });
 
     python.stderr.on('data', (data) => {
-      stderr += data.toString();
+      const dataStr = data.toString();
+      stderr += dataStr;
+      // Log errors immediately
+      console.error(`Python stderr: ${dataStr}`);
     });
 
     python.on('close', (code) => {
+      console.log(`Python extraction process exited with code: ${code}`);
+
       if (code !== 0) {
-        console.error('Comprehensive Python extractor error:', stderr);
-        reject(
-          new Error(
-            `Comprehensive Python extractor failed: ${stderr || 'Unknown error'}`
-          )
-        );
+        const errorDetails = {
+          message: `Python extractor failed with code ${code}`,
+          stderr: stderr || 'No stderr output',
+          stdout: stdout || 'No stdout output',
+          command: `python3 ${args.join(' ')}`,
+          filePath,
+          tier
+        };
+
+        console.error('Python extraction error details:', errorDetails);
+        reject(new Error(`Python extractor failed: ${stderr || 'Unknown error'}`));
+        return;
+      }
+
+      if (!stdout) {
+        const error = 'Python extractor returned empty output';
+        console.error(error, { stderr, command: `python3 ${args.join(' ')}` });
+        reject(new Error(error));
         return;
       }
 
       try {
         const result = JSON.parse(stdout);
+        console.log(`Successfully parsed Python extraction result for ${path.basename(filePath)}, ${result.extraction_info?.fields_extracted || 0} fields extracted`);
         resolve(result);
-      } catch (e) {
-        console.error('Failed to parse comprehensive Python output:', e);
-        console.error('Raw output:', stdout.substring(0, 500));
-        reject(
-          new Error('Failed to parse comprehensive metadata extraction result')
-        );
+      } catch (parseError) {
+        console.error('Failed to parse Python extraction output:', parseError);
+        console.error('Raw stdout (first 1000 chars):', stdout.substring(0, 1000));
+        console.error('Raw stderr:', stderr.substring(0, 500));
+        reject(new Error(`Failed to parse metadata extraction result: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`));
       }
     });
 
     python.on('error', (err) => {
-      console.error('Failed to spawn comprehensive Python:', err);
-      reject(
-        new Error(
-          `Failed to start comprehensive Python extractor: ${err.message}`
-        )
-      );
+      console.error('Failed to spawn Python extraction process:', err);
+      reject(new Error(`Failed to start Python extractor: ${err.message}`));
     });
 
-    // Timeout after 180 seconds
-    setTimeout(() => {
-      python.kill();
-      reject(new Error('Comprehensive metadata extraction timed out'));
-    }, 180000);
+    // Set timeout with detailed logging
+    const timeoutMs = 180000; // 3 minutes
+    const timeoutId = setTimeout(() => {
+      console.warn(`Python extraction timeout after ${timeoutMs}ms for file: ${filePath}`);
+      if (!python.killed) {
+        python.kill();
+        console.log(`Killed Python process for file: ${filePath}`);
+      }
+      reject(new Error(`Metadata extraction timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    // Clear timeout on completion
+    python.on('close', () => {
+      clearTimeout(timeoutId);
+    });
   });
 }
 
@@ -804,6 +835,121 @@ export function registerExtractionRoutes(app: Express): void {
       });
     } finally {
       await cleanupTempFile(tempPath);
+    }
+  });
+
+  // Health check endpoint for Python extraction engine
+  app.get('/api/extract/health', async (_req, res) => {
+    try {
+      // Test the Python extraction engine by running a simple check
+      const pythonScript = path.join(
+        __dirname,
+        '..',
+        'extractor',
+        'comprehensive_metadata_engine.py'
+      );
+
+      // Create a temporary empty file to test with
+      const tempDir = '/tmp/metaextract';
+      await fs.mkdir(tempDir, { recursive: true });
+      const testFilePath = path.join(tempDir, 'health_check_test.txt');
+      await fs.writeFile(testFilePath, 'health check');
+
+      const { spawn } = require('child_process');
+      const args = [pythonScript, testFilePath, '--tier', 'free'];
+
+      const python = spawn('python3', args);
+
+      let stdout = '';
+      let stderr = '';
+
+      python.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      python.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      python.on('close', async (code) => {
+        // Clean up the test file
+        try {
+          await fs.unlink(testFilePath);
+        } catch (cleanupError) {
+          console.error('Failed to clean up health check test file:', cleanupError);
+        }
+
+        if (code === 0) {
+          try {
+            const result = JSON.parse(stdout);
+            res.json({
+              status: 'healthy',
+              python_engine: 'available',
+              engine_version: result.extraction_info?.engine_version || 'unknown',
+              timestamp: new Date().toISOString(),
+              message: 'Python extraction engine is responding correctly'
+            });
+          } catch (parseError) {
+            res.json({
+              status: 'healthy',
+              python_engine: 'available',
+              timestamp: new Date().toISOString(),
+              message: 'Python extraction engine is responding but output format may be unexpected',
+              warning: 'Could not parse Python output as JSON'
+            });
+          }
+        } else {
+          res.status(503).json({
+            status: 'unhealthy',
+            python_engine: 'unavailable',
+            error_code: code,
+            error_message: stderr || 'Unknown error',
+            timestamp: new Date().toISOString(),
+            message: 'Python extraction engine is not responding correctly'
+          });
+        }
+      });
+
+      python.on('error', async (err) => {
+        // Clean up the test file
+        try {
+          await fs.unlink(testFilePath);
+        } catch (cleanupError) {
+          console.error('Failed to clean up health check test file:', cleanupError);
+        }
+
+        res.status(503).json({
+          status: 'unhealthy',
+          python_engine: 'unavailable',
+          error: err.message,
+          timestamp: new Date().toISOString(),
+          message: 'Failed to start Python extraction engine'
+        });
+      });
+
+      // Set timeout for health check
+      setTimeout(() => {
+        if (!python.killed) {
+          python.kill();
+        }
+        // Clean up the test file
+        fs.unlink(testFilePath).catch(err => console.error('Failed to clean up health check test file:', err));
+
+        res.status(503).json({
+          status: 'timeout',
+          python_engine: 'unresponsive',
+          timestamp: new Date().toISOString(),
+          message: 'Python extraction engine did not respond within timeout period'
+        });
+      }, 10000); // 10 second timeout for health check
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(503).json({
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+        message: 'Health check failed with internal error'
+      });
     }
   });
 }

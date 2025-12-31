@@ -16,8 +16,7 @@ import {
   AlertCircle,
   Loader2,
   Zap,
-  Clock,
-  HardDrive
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -293,7 +292,7 @@ export function EnhancedUploadZone({
             ...fileState,
             status: result ? 'complete' : 'error',
             progress: 100,
-            result: result,
+            result,
             error: result ? undefined : 'Processing failed'
           };
         }));

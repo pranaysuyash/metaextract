@@ -212,7 +212,7 @@ function hasIndicator(metadata: Record<string, any>, indicator: string): boolean
   }
   
   // Field name search across all categories
-  for (const [category, data] of Object.entries(metadata)) {
+  for (const [_category, data] of Object.entries(metadata)) {
     if (typeof data === 'object' && data !== null) {
       if (Object.keys(data).some(key => 
         key.toLowerCase().includes(indicator.toLowerCase()) ||
@@ -271,7 +271,7 @@ function getPriorityFields(metadata: Record<string, any>, profile: ContextProfil
 /**
  * Gets context-specific important fields
  */
-function getContextSpecificFields(contextType: string, metadata: Record<string, any>): string[] {
+function getContextSpecificFields(contextType: string, _metadata: Record<string, any>): string[] {
   switch (contextType) {
     case 'photography':
       return ['Make', 'Model', 'LensModel', 'FocalLength', 'FNumber', 'ExposureTime', 'ISO', 'DateTimeOriginal'];
