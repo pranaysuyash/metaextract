@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # MetaExtract Comprehensive Engine Installation Script v4.0
-# Installs all dependencies for 45,000+ metadata field extraction
+# Installs all dependencies for comprehensive metadata field extraction
 
 set -e
 
 echo "🚀 MetaExtract Comprehensive Engine v4.0 Installation"
 echo "=================================================="
-echo "This will install dependencies for extracting 45,000+ metadata fields"
+echo "This will install dependencies for extracting comprehensive metadata fields"
 echo "across all domains: Medical, Astronomical, Geospatial, Scientific, etc."
 echo ""
 
@@ -469,7 +469,7 @@ main() {
     echo "=" * 60
     echo ""
     echo "📋 What's installed:"
-    echo "   • Comprehensive metadata engine (45,000+ fields)"
+    echo "   • Comprehensive metadata engine (extensive field coverage)"
     echo "   • Medical imaging support (DICOM)"
     echo "   • Astronomical data support (FITS)"
     echo "   • Geospatial analysis (GeoTIFF, Shapefile)"

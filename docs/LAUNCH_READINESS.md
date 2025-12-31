@@ -9,6 +9,7 @@ This doc is the launch checklist for MetaExtract. It focuses on **server‑enfor
 - Frontend upload is **hard‑capped at 100MB** (`client/src/components/upload-zone.tsx`) while backend multer allows **2GB**. This mismatch will confuse users and hide bugs.
 - Backend file-type gating is **MIME-based** (`req.file.mimetype`). Browsers often send `application/octet-stream`, so strict tiering can be bypassed or accidentally block legitimate files unless we add signature/extension validation.
 - Upload is **memory-based** (`multer.memoryStorage()`), which is risky for large files and DoS.
+- Trial enforcement currently uses an **in-memory email map** (process-local). It must move to DB for production durability.
 
 ## Launch Offer Decision (Recommended v1)
 
@@ -93,4 +94,3 @@ Either way you need:
 
 ## Known Doc/Config Inconsistencies
 - `server/openapi.yaml` says batch is “Professional+” in the top-level description, but the batch endpoint itself and code gate it to Forensic/Enterprise. Align docs and behavior.
-

@@ -24,13 +24,6 @@ except ImportError:
     IMAGEHASH_AVAILABLE = False
 
 
-def _safe_str(value: Any) -> str:
-    try:
-        return str(value)
-    except Exception as e:
-        return ""
-
-
 def extract_perceptual_hashes(filepath: str) -> Optional[Dict[str, Any]]:
     """
     Extract multiple perceptual hashes from an image for visual similarity detection.

@@ -11,6 +11,8 @@ import json
 import struct
 import re
 
+from .shared_utils import count_fields as _count_fields
+
 
 # H.264 Profile IDC Mappings
 H264_PROFILES = {
@@ -72,16 +74,6 @@ COLOR_PRIMARIES = {
 }
 
 
-def _count_fields(value: Any) -> int:
-    if value is None:
-        return 0
-    if isinstance(value, dict):
-        return sum(_count_fields(v) for v in value.values())
-    if isinstance(value, list):
-        return sum(_count_fields(v) for v in value)
-    return 1
-
-
 def _parse_fraction(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -102,6 +94,14 @@ def _parse_fraction(value: Any) -> Optional[float]:
         except Exception:
             return None
     return None
+
+
+def _remove_start_code(data: bytes) -> bytes:
+    if data.startswith(b"\x00\x00\x01"):
+        return data[3:]
+    if data.startswith(b"\x00\x00\x00\x01"):
+        return data[4:]
+    return data
 
 
 def _parse_mastering_display(sd: Dict[str, Any]) -> Dict[str, Any]:
@@ -457,14 +457,6 @@ def parse_h264_sps(nal_bytes: bytes) -> Dict[str, Any]:
     or a full NAL unit including the NAL header (0x67 ...). Returns an empty
     dict if parsing fails.
     """
-    def remove_start_code(b: bytes) -> bytes:
-        # remove 0x000001 / 0x00000001 prefix
-        if b.startswith(b"\x00\x00\x01"):
-            return b[3:]
-        if b.startswith(b"\x00\x00\x00\x01"):
-            return b[4:]
-        return b
-
     def remove_emulation_prevention(b: bytes) -> bytes:
         # remove 0x000003 emulation prevention bytes
         out = bytearray()
@@ -479,8 +471,8 @@ def parse_h264_sps(nal_bytes: bytes) -> Dict[str, Any]:
         return bytes(out)
 
     try:
-        b = nal_bytes if isinstance(nal_bytes, (bytes, bytearray)) else nal_bytes.encode('latin1')
-        b = remove_start_code(b)
+        b = nal_bytes if isinstance(nal_bytes, (bytes, bytearray)) else nal_bytes.encode("latin1")
+        b = _remove_start_code(b)
         # If first byte is NAL header (nal_unit_type in low 5 bits)
         first = b[0]
         nal_unit_type = first & 0x1F
@@ -603,16 +595,9 @@ def parse_hevc_vps(nal_bytes: bytes) -> Dict[str, Any]:
     Lightweight HEVC VPS parser. Extracts minimal profile/tier/level info.
     Accepts NAL units with start codes or NAL header. Returns empty dict on failure.
     """
-    def remove_start_code(b: bytes) -> bytes:
-        if b.startswith(b"\x00\x00\x01"):
-            return b[3:]
-        if b.startswith(b"\x00\x00\x00\x01"):
-            return b[4:]
-        return b
-
     try:
-        b = nal_bytes if isinstance(nal_bytes, (bytes, bytearray)) else nal_bytes.encode('latin1')
-        b = remove_start_code(b)
+        b = nal_bytes if isinstance(nal_bytes, (bytes, bytearray)) else nal_bytes.encode("latin1")
+        b = _remove_start_code(b)
         if len(b) < 3:
             return {}
         nal_unit_type = (b[0] >> 1) & 0x3F
@@ -645,7 +630,7 @@ def parse_av1_sequence_header(obu_bytes: bytes) -> Dict[str, Any]:
         return b
 
     try:
-        b = obu_bytes if isinstance(obu_bytes, (bytes, bytearray)) else obu_bytes.encode('latin1')
+        b = obu_bytes if isinstance(obu_bytes, (bytes, bytearray)) else obu_bytes.encode("latin1")
         b = remove_obu_header(b)
         if len(b) < 2:
             return {}
@@ -653,39 +638,6 @@ def parse_av1_sequence_header(obu_bytes: bytes) -> Dict[str, Any]:
         profile = b[0] & 0x03
         level = b[1]
         return {"profile": int(profile), "level": int(level)}
-    except Exception:
-        return {}
-
-    def remove_start_code(b: bytes) -> bytes:
-        if b.startswith(b"\x00\x00\x01"):
-            return b[3:]
-        if b.startswith(b"\x00\x00\x00\x01"):
-            return b[4:]
-        return b
-
-    try:
-        b = nal_bytes if isinstance(nal_bytes, (bytes, bytearray)) else nal_bytes.encode('latin1')
-        b = remove_start_code(b)
-        if len(b) < 4:
-            return {}
-        # If NAL header present, skip 2 bytes (for HEVC NAL header is 2 bytes)
-        # First byte: forbidden_zero_bit(1)|nal_unit_type(6)|nuh_layer_id(6?) etc — simplified
-        # Try to detect nal_unit_type in first byte (upper bits)
-        nal_unit_type = (b[0] >> 1) & 0x3F
-        payload = b
-        if nal_unit_type == 32 and len(b) > 2:
-            payload = b[2:]
-        if len(payload) < 3:
-            return {}
-        # Heuristic: first byte of payload contains general_profile_space and general_profile_idc
-        general_profile_idc = payload[0]
-        general_tier_flag = (payload[1] >> 7) & 0x01
-        general_level_idc = payload[3]
-        return {
-            "general_profile_idc": int(general_profile_idc),
-            "general_tier_flag": int(general_tier_flag),
-            "general_level_idc": int(general_level_idc)
-        }
     except Exception:
         return {}
 

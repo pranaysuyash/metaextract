@@ -18,6 +18,7 @@ import struct
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field, asdict
+import xml.etree.ElementTree as ET
 
 
 RIFF_CHUNKS = {
@@ -220,9 +221,16 @@ class BroadcastWavExtension:
             "originator_reference": self.originator_reference,
             "origination_date": self.origination_date,
             "origination_time": self.origination_time,
+            "time_reference_low": self.time_reference_low,
+            "time_reference_high": self.time_reference_high,
             "time_reference_samples": (self.time_reference_high << 32) | self.time_reference_low,
             "version": self.version,
             "umid": self.umid,
+            "loudness_value": self.loudness_value,
+            "loudness_range": self.loudness_range,
+            "max_true_peak_level": self.max_true_peak_level,
+            "max_momentary_loudness": self.maxMomentaryLoudness,
+            "max_short_term_loudness": self.maxShortTermLoudness,
             "coding_history": self.coding_history,
         }
 
@@ -335,6 +343,34 @@ def parse_info_list(data: bytes) -> Dict[str, str]:
     return info
 
 
+def _parse_xml_chunk(data: bytes, max_items: int = 200) -> Dict[str, str]:
+    """Parse XML chunk into flattened key/value pairs."""
+    try:
+        text = data.decode("utf-8", errors="ignore").strip("\x00").strip()
+        if not text:
+            return {}
+        root = ET.fromstring(text)
+    except Exception:
+        return {}
+
+    items: Dict[str, str] = {}
+
+    def _walk(elem: ET.Element, prefix: str) -> None:
+        nonlocal items
+        if len(items) >= max_items:
+            return
+        tag = elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
+        key = f"{prefix}.{tag}" if prefix else tag
+        text_value = (elem.text or "").strip()
+        if text_value and key not in items:
+            items[key] = text_value[:500]
+        for child in list(elem):
+            _walk(child, key)
+
+    _walk(root, "")
+    return items
+
+
 def parse_cue_points(data: bytes) -> List[Dict[str, Any]]:
     """Parse cue points chunk."""
     cues = []
@@ -388,6 +424,8 @@ def extract_wav_metadata(filepath: str) -> Dict[str, Any]:
         "format_chunk": None,
         "info_metadata": {},
         "broadcast_extension": None,
+        "ixml_metadata": {},
+        "axml_metadata": {},
         "cue_points": [],
         "fact_data": {},
         "errors": [],
@@ -440,6 +478,16 @@ def extract_wav_metadata(filepath: str) -> Dict[str, Any]:
                     bext = parse_broadcast_extension(chunk_data)
                     result["broadcast_extension"] = bext.to_dict()
                     result["chunks"]["broadcast_extension"] = result["broadcast_extension"]
+                    
+                elif chunk_id == b"iXML":
+                    ixml = _parse_xml_chunk(chunk_data)
+                    result["ixml_metadata"] = ixml
+                    result["chunks"]["ixml"] = {"count": len(ixml)}
+                    
+                elif chunk_id == b"axml":
+                    axml = _parse_xml_chunk(chunk_data)
+                    result["axml_metadata"] = axml
+                    result["chunks"]["axml"] = {"count": len(axml)}
                     
                 elif chunk_id == b"INFO":
                     info = parse_info_list(chunk_data)

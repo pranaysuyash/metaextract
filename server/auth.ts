@@ -15,6 +15,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { users, subscriptions } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { normalizeTier } from "@shared/tierConfig";
 
 // ============================================================================
 // Configuration
@@ -55,6 +56,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  tier: z.string().optional(),
 });
 
 // ============================================================================
@@ -275,7 +277,7 @@ export function registerAuthRoutes(app: Express) {
         });
       }
       
-      const { email, password } = validation.data;
+      const { email, password, tier } = validation.data;
       
       // Check if db is available
       if (!db) {
@@ -319,6 +321,21 @@ export function registerAuthRoutes(app: Express) {
         }
       }
       
+      // Optional tier override for testing
+      const allowTierOverride =
+        process.env.ALLOW_TIER_OVERRIDE === "true" ||
+        process.env.NODE_ENV === "development";
+
+      if (allowTierOverride && tier) {
+        const overrideTier = normalizeTier(tier);
+        currentTier = overrideTier;
+        subscriptionStatus = "active";
+        await db
+          .update(users)
+          .set({ tier: overrideTier, subscriptionStatus: "active" })
+          .where(eq(users.id, user.id));
+      }
+
       // Generate token
       const authUser: AuthUser = {
         id: user.id,

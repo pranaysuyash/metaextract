@@ -26,6 +26,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const parseJsonSafe = async (response: Response) => {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return null;
+  }
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,10 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch("/api/auth/me", {
         credentials: "include",
       });
-      const data = await response.json();
+      const data = await parseJsonSafe(response);
       
-      if (data.authenticated && data.user) {
-        setUser(data.user);
+      if (data && (data as any).authenticated && (data as any).user) {
+        setUser((data as any).user);
       } else {
         setUser(null);
       }
@@ -57,27 +69,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      const tierOverride = localStorage.getItem("metaextract_tier_override");
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(tierOverride ? { tier: tierOverride } : {}),
+        }),
       });
 
-      const data = await response.json();
+      const data = await parseJsonSafe(response);
 
       if (!response.ok) {
         return { 
           success: false, 
-          error: data.error || "Login failed" 
+          error: (data && (data as any).error) || "Login failed" 
         };
       }
 
-      setUser(data.user);
+      if (data && (data as any).user) {
+        setUser((data as any).user);
+      }
       
       // Store token in localStorage for API calls
-      if (data.token) {
-        localStorage.setItem("auth_token", data.token);
+      if (data && (data as any).token) {
+        localStorage.setItem("auth_token", (data as any).token);
       }
 
       return { success: true };
@@ -99,27 +118,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, username, password }),
       });
 
-      const data = await response.json();
+      const data = await parseJsonSafe(response);
 
       if (!response.ok) {
         // Handle validation errors
-        if (data.details) {
-          const firstError = Object.values(data.details).flat()[0];
+        if (data && (data as any).details) {
+          const firstError = Object.values((data as any).details).flat()[0];
           return { 
             success: false, 
-            error: firstError as string || data.error 
+            error: (firstError as string) || (data as any).error 
           };
         }
         return { 
           success: false, 
-          error: data.error || "Registration failed" 
+          error: (data && (data as any).error) || "Registration failed" 
         };
       }
 
-      setUser(data.user);
+      if (data && (data as any).user) {
+        setUser((data as any).user);
+      }
       
-      if (data.token) {
-        localStorage.setItem("auth_token", data.token);
+      if (data && (data as any).token) {
+        localStorage.setItem("auth_token", (data as any).token);
       }
 
       return { success: true };

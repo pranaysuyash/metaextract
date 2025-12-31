@@ -12,6 +12,8 @@ import json
 import hashlib
 import xml.etree.ElementTree as ET
 
+from .shared_utils import count_fields as _count_fields, decode_mp4_data as _decode_mp4_data
+
 
 # AAC Profiles
 AAC_PROFILES = {
@@ -160,16 +162,6 @@ def _read_file_tail(filepath: str, size: int = 256) -> bytes:
             return f.read(size)
     except Exception as e:
         return b""
-
-
-def _count_fields(value: Any) -> int:
-    if value is None:
-        return 0
-    if isinstance(value, dict):
-        return sum(_count_fields(v) for v in value.values())
-    if isinstance(value, list):
-        return sum(_count_fields(v) for v in value)
-    return 1
 
 
 def _syncsafe_to_int(data: bytes) -> int:
@@ -1899,24 +1891,6 @@ def _parse_mp4_item(f, start: int, size: int, item_type: Optional[bytes] = None)
     return result
 
 
-def _decode_mp4_data(data_type: int, data: bytes) -> Any:
-    if data_type == 1:
-        return data.decode("utf-8", errors="ignore")
-    if data_type in [13, 14]:
-        if data.startswith(b"\xff\xd8"):
-            mime = "image/jpeg"
-        elif data.startswith(b"\x89PNG"):
-            mime = "image/png"
-        else:
-            mime = "application/octet-stream"
-        return {"mime": mime, "size_bytes": len(data)}
-    if len(data) == 2:
-        return struct.unpack(">H", data)[0]
-    if len(data) == 4:
-        return struct.unpack(">I", data)[0]
-    return data.hex()
-
-
 def _parse_mp4_chapter_list(f) -> List[Dict[str, Any]]:
     chapters = []
     try:
@@ -2973,3 +2947,54 @@ def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
 def get_audio_codec_details_field_count() -> int:
     """Return estimated field count for audio codec details module."""
     return 930  # Expanded Phase 2 target
+
+
+def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
+    '''Extract detailed audio codec metadata from audio files'''
+    result = {
+        "codec_info": {},
+        "audio_parameters": {},
+        "stream_details": {},
+        "fields_extracted": 0,
+        "is_valid_audio": False
+    }
+
+    try:
+        from mutagen import File
+        audio_file = File(filepath)
+
+        if audio_file is None:
+            result["error"] = "Could not read audio file"
+            return result
+
+        result["is_valid_audio"] = True
+
+        # Extract codec information
+        if hasattr(audio_file, 'info'):
+            info = audio_file.info
+            result["codec_info"]["format"] = type(audio_file).__name__
+            result["codec_info"]["codec"] = getattr(info, 'codec', 'unknown')
+            result["codec_info"]["bitrate"] = getattr(info, 'bitrate', 0)
+            result["codec_info"]["sample_rate"] = getattr(info, 'sample_rate', 0)
+            result["codec_info"]["channels"] = getattr(info, 'channels', 0)
+            result["codec_info"]["length"] = getattr(info, 'length', 0)
+            result["codec_info"]["encoder_info"] = str(info)[:200]
+
+        # Extract stream details
+        if hasattr(audio_file, 'tags'):
+            result["stream_details"]["has_tags"] = True
+            result["stream_details"]["tag_count"] = len(audio_file.tags) if audio_file.tags else 0
+
+        # Map to registry fields
+        for key, value in result["codec_info"].items():
+            if value is not None:
+                result["audio_parameters"][f"audio_{key}"] = str(value)[:200]
+
+        result["fields_extracted"] = len(result["codec_info"]) + len(result["audio_parameters"])
+
+    except ImportError:
+        result["error"] = "Mutagen library not available"
+    except Exception as e:
+        result["error"] = f"Audio codec extraction failed: {str(e)[:200]}"
+
+    return result

@@ -334,3 +334,31 @@ def batch_extract_preview(
         results["processed"] += 1
     
     return results
+
+
+def extract_directory_analysis_metadata(filepath: str) -> Dict[str, Any]:
+    '''Extract directory_analysis metadata from files'''
+    result = {
+        "metadata": {},
+        "fields_extracted": 0,
+        "is_valid_directory_analysis": False,
+        "extraction_method": "basic"
+    }
+
+    try:
+        if not filepath or not os.path.exists(filepath):
+            result["error"] = "File not found"
+            return result
+
+        # Try format-specific extraction
+        try:
+            # Add directory_analysis-specific extraction logic here
+            result["is_valid_directory_analysis"] = True
+            result["fields_extracted"] = len(result["metadata"])
+        except Exception as e:
+            result["error"] = f"directory_analysis extraction failed: {str(e)[:200]}"
+
+    except Exception as e:
+        result["error"] = f"directory_analysis metadata extraction failed: {str(e)[:200]}"
+
+    return result

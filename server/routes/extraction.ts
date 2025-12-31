@@ -22,6 +22,7 @@ import {
   TIER_CONFIGS,
   normalizeTier,
   toPythonTier,
+  getCreditCost,
 } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
 
@@ -133,6 +134,29 @@ const upload = multer({
     fileSize: 2000 * 1024 * 1024, // 2GB max (enterprise/super tier)
   },
 });
+
+// ============================================================================
+// Trial Tracking (in-memory; replace with DB for production)
+// ============================================================================
+
+const trialUsageByEmail = new Map<string, { usedAt: number; ip?: string }>();
+
+function normalizeEmail(email: string | null | undefined): string | null {
+  if (!email || typeof email !== 'string') return null;
+  const trimmed = email.trim().toLowerCase();
+  return trimmed.length > 3 && trimmed.includes('@') ? trimmed : null;
+}
+
+function getSessionId(req: AuthRequest): string | null {
+  const bodySession =
+    typeof req.body?.session_id === 'string' ? req.body.session_id : null;
+  const querySession =
+    typeof req.query?.session_id === 'string' ? req.query.session_id : null;
+  const headerSession = typeof req.headers['x-session-id'] === 'string'
+    ? req.headers['x-session-id']
+    : null;
+  return bodySession || querySession || headerSession || null;
+}
 
 // ============================================================================
 // Helper Functions
@@ -310,6 +334,11 @@ export function registerExtractionRoutes(app: Express): void {
   app.post('/api/extract', upload.single('file'), async (req, res) => {
     const startTime = Date.now();
     let tempPath: string | null = null;
+    let sessionId: string | null = null;
+    let creditCost = 0;
+    let chargeCredits = false;
+    let trialEmail: string | null = null;
+    let creditBalanceId: string | null = null;
 
     try {
       if (!req.file) {
@@ -321,6 +350,9 @@ export function registerExtractionRoutes(app: Express): void {
       const pythonTier = toPythonTier(normalizedTier);
       const mimeType = req.file.mimetype || 'application/octet-stream';
       const tierConfig = getTierConfig(normalizedTier);
+      sessionId = getSessionId(req);
+      trialEmail = normalizeEmail(req.body?.trial_email);
+      creditCost = getCreditCost(mimeType);
 
       // Validate file type for tier
       if (!isFileTypeAllowed(normalizedTier, mimeType)) {
@@ -336,6 +368,30 @@ export function registerExtractionRoutes(app: Express): void {
             mimeType.split('/')[0]
           } files`,
         });
+      }
+
+      const hasTrialAvailable = !!trialEmail && !trialUsageByEmail.has(trialEmail);
+
+      if (!hasTrialAvailable) {
+        if (!sessionId) {
+          return res.status(402).json({
+            error: 'Payment required',
+            message: 'Purchase credits to unlock a full report.',
+            required_credits: creditCost,
+          });
+        }
+
+        const balance = await storage.getOrCreateCreditBalance(sessionId);
+        creditBalanceId = balance.id;
+        if (balance.credits < creditCost) {
+          return res.status(402).json({
+            error: 'Insufficient credits',
+            required: creditCost,
+            available: balance.credits,
+          });
+        }
+
+        chargeCredits = true;
       }
 
       // Validate file size for tier
@@ -375,6 +431,12 @@ export function registerExtractionRoutes(app: Express): void {
         req.file.originalname,
         normalizedTier
       );
+      metadata.access = {
+        trial_email_present: !!trialEmail,
+        trial_granted: hasTrialAvailable ? true : false,
+        credits_charged: chargeCredits ? creditCost : 0,
+        credits_required: creditCost,
+      };
 
       // Log analytics
       const fileExt =
@@ -395,7 +457,25 @@ export function registerExtractionRoutes(app: Express): void {
           ipAddress: req.ip || req.socket.remoteAddress || null,
           userAgent: req.headers['user-agent'] || null,
         })
-        .catch((err) => console.error('Failed to log usage:', err));
+          .catch((err) => console.error('Failed to log usage:', err));
+
+      if (chargeCredits && creditBalanceId) {
+        storage
+          .useCredits(
+            creditBalanceId,
+            creditCost,
+            `Extraction: ${fileExt}`,
+            mimeType
+          )
+          .catch((err) => console.error('Failed to use credits:', err));
+      }
+
+      if (hasTrialAvailable && trialEmail) {
+        trialUsageByEmail.set(trialEmail, {
+          usedAt: Date.now(),
+          ip: req.ip || req.socket.remoteAddress || undefined,
+        });
+      }
 
       res.json(metadata);
     } catch (error) {

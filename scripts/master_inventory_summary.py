@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Master inventory summary for MetaExtract 45K+ goal.
+"""Master inventory summary for MetaExtract field target goal (legacy 45K baseline).
 
 This script combines all field inventories and shows total progress
-toward the 45,000+ field target.
+toward the configured field target.
 """
 
 import json
@@ -62,6 +62,23 @@ INVENTORY_DIRS = [
     ("oceanography_inventory", "oceanography_summary.json"),
     ("defense_inventory", "defense_summary.json"),
     ("robotics_inventory", "robotics_summary.json"),
+    ("materials_inventory", "materials_summary.json"),
+    ("quantum_inventory", "quantum_summary.json"),
+    ("insurance_inventory", "insurance_summary.json"),
+    ("astronomy_inventory", "astronomy_summary.json"),
+    ("cybersecurity_inventory", "cybersecurity_summary.json"),
+    ("sports_inventory", "sports_summary.json"),
+    ("linguistics_inventory", "linguistics_summary.json"),
+    ("education_inventory", "education_summary.json"),
+    ("fashion_inventory", "fashion_summary.json"),
+    ("gis_mapping_inventory", "gis_mapping_summary.json"),
+    ("museum_inventory", "museum_summary.json"),
+    ("logistics_inventory", "logistics_summary.json"),
+    ("music_production_inventory", "music_production_summary.json"),
+    ("legal_inventory", "legal_summary.json"),
+    ("virtual_reality_inventory", "virtual_reality_summary.json"),
+    ("lidar_inventory", "lidar_summary.json"),
+    ("genealogy_inventory", "genealogy_summary.json"),
 ]
 
 
@@ -117,7 +134,7 @@ def main():
     # Calculate grand total
     grand_total = sum(count for _, count in totals_by_source.values())
 
-    # 45K target
+    # baseline target (legacy 45K); consider using configured goal
     target_45k = 45000
     coverage = (grand_total / target_45k) * 100
     remaining = target_45k - grand_total
@@ -131,7 +148,7 @@ def main():
 
     print()
     print("=" * 70)
-    print("45K+ TARGET PROGRESS")
+    print("TARGET PROGRESS (legacy 45K baseline)")
     print("=" * 70)
     print()
 

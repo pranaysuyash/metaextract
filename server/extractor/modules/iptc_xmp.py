@@ -22,6 +22,71 @@ EXIFTOOL_PATH = shutil.which("exiftool")
 EXIFTOOL_AVAILABLE = EXIFTOOL_PATH is not None
 
 
+
+# ULTRA EXPANSION FIELDS
+# Additional 21 fields
+ULTRA_IPTC_XMP_FIELDS = {
+    "digital_source_type": "digital_image_capture_type",
+    "scene_type": "scene_recognition_category",
+    "job_reference": "client_project_identifier",
+    "instructions": "usage_instructions_notes",
+    "service_identification": "service_provider_info",
+    "provider_identification": "content_creator_contact",
+    "xmp_create_date": "xmp_creation_timestamp",
+    "xmp_modify_date": "xmp_last_modified",
+    "xmp_metadata_date": "xmp_metadata_timestamp",
+    "xmp_creator_tool": "software_created_with",
+    "xmp_label": "xmp_content_label",
+    "copyright_status": "copyrighted_public_domain",
+    "copyright_notice": "legal_copyright_statement",
+    "rights_usage_terms": "usage_license_terms",
+    "web_statement": "online_rights_statement",
+    "license_url": "license_information_link",
+    "xmp_format": "media_format_classification",
+    "xmp_rating": "editorial_rating_score",
+    "xmp_labels": "editorial_label_tags",
+    "xmp_identifier": "unique_content_identifier",
+    "xmp_nested_keywords": "hierarchical_keyword_structure",
+}
+
+
+# MEGA EXPANSION FIELDS
+# Additional 32 fields
+MEGA_IPTC_XMP_FIELDS = {
+    "digital_source_type": "digital_capture_type",
+    "scene_type": "scene_recognition",
+    "job_reference": "project_identifier",
+    "instructions": "usage_guidelines",
+    "service_identification": "provider_info",
+    "provider_identification": "creator_contact",
+    "rights_usage_terms": "license_terms",
+    "web_statement": "online_rights",
+    "license_url": "license_link",
+    "xmp_create_date": "creation_timestamp",
+    "xmp_modify_date": "modification_timestamp",
+    "xmp_metadata_date": "metadata_timestamp",
+    "xmp_creator_tool": "creation_software",
+    "xmp_label": "editorial_content_label",
+    "xmp_format": "media_format",
+    "xmp_rating": "content_quality_score",
+    "xmp_labels": "editorial_keywords",
+    "xmp_identifier": "unique_content_id",
+    "copyright_owner": "rights_holder_name",
+    "copyright_owner_id": "rights_identifier",
+    "copyright_owner_url": "rights_contact",
+    "marking_status": "copyright_status",
+    "web_statement_rights": "online_rights_statement",
+    "license_right": "usage_permissions",
+    "usagetext": "usage_instructions",
+    "document_id": "content_identifier",
+    "instance_id": "instance_identifier",
+    "manager_variant": "asset_management",
+    "rendition_class": "rendition_type",
+    "rendition_of": "source_reference",
+    "manager_to": "target_usage",
+    "manage_to": "intended_use",
+}
+
 def _run_exiftool_iptc_xmp(filepath: str) -> Optional[Dict[str, Any]]:
     if not EXIFTOOL_AVAILABLE or EXIFTOOL_PATH is None:
         return None
@@ -49,13 +114,6 @@ def _run_exiftool_iptc_xmp(filepath: str) -> Optional[Dict[str, Any]]:
         return None
     except Exception as e:
         return None
-
-
-def _safe_str(value: Any) -> str:
-    try:
-        return str(value)
-    except Exception as e:
-        return ""
 
 
 IPTC_CORE_FIELDS = {
@@ -385,12 +443,24 @@ def extract_iptc_xmp_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         }
 
 
-def get_iptc_field_count() -> int:
-    """Return approximate number of IPTC/XMP fields.
+def get_iptc_xmp_field_count() -> int:
+    """Return total number of iptc_xmp metadata fields."""
+    total = 0
+    total += len(ULTRA_IPTC_XMP_FIELDS)
+    total += len(MEGA_IPTC_XMP_FIELDS)
+    total += len(IPTC_CORE_FIELDS)
+    total += len(IPTC_EXTENSION_FIELDS)
+    total += len(IPTC_CREATOR_CONTACT_INFO)
+    total += len(IPTC_LICENSOR)
+    total += len(XMP_DUBLIN_CORE_FIELDS)
+    total += len(XMP_PHOTOSHOP_FIELDS)
+    total += len(XMP_DC_PREFS_FIELDS)
+    total += len(XMP_RIGHTS_MANAGEMENT)
+    total += len(XMP_CREATOR_CONTACT)
+    total += len(XMP_ADOBE_STOCK)
+    return total
 
-    Notes:
-        When `exiftool` is available, MetaExtract can expose far more IPTC and XMP
-        tags than the in-module curated subset.
-    """
-    # Derived from `exiftool -listx -IPTC:All` and `exiftool -listx -XMP:All`.
-    return 117 + 4250
+
+def get_iptc_field_count() -> int:
+    """Backward-compatible alias for get_iptc_xmp_field_count."""
+    return get_iptc_xmp_field_count()

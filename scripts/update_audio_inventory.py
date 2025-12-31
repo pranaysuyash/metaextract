@@ -64,7 +64,7 @@ def generate_master_summary() -> None:
         },
         "totals": {
             "current": 0,
-            "target_45k": 45000,
+            "target_goal": 45000,
             "coverage_pct": 0.0,
             "gap_areas": [
                 ("Audio format specifics (APEv2, MP4 atoms, WAV/RIFF, AIFF, Opus, DSD, BWF)", 2315),
@@ -114,7 +114,8 @@ def generate_master_summary() -> None:
         current_total += audio_formats_inv["totals"]["total_fields"]
 
     summary["totals"]["current"] = current_total
-    summary["totals"]["target_45k"] = 45000
+    # Legacy 45k baseline (kept for backward compatibility) - prefer reading configured target
+    summary["totals"]["target_goal"] = 45000
     summary["totals"]["coverage_pct"] = (current_total / 45000) * 100
     summary["totals"]["remaining"] = 45000 - current_total
 

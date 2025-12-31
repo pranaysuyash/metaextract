@@ -1587,6 +1587,15 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
                 result["iptc"] = {"_locked": True}
                 result["xmp"] = {"_locked": True}
                 result["locked_fields"].extend(["iptc", "xmp"])
+
+        if tier_config.iptc_xmp:
+            try:
+                from .modules.iptc_newscodes_registry import extract_iptc_newscodes_registry_metadata
+                newscodes = extract_iptc_newscodes_registry_metadata(filepath)
+                if newscodes:
+                    result["iptc_newscodes_registry"] = newscodes
+            except ImportError:
+                pass  # Module not available
     
     # Video
     elif mime_type and mime_type.startswith("video"):
@@ -1686,7 +1695,17 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
         else:
             result["web_social"] = {"_locked": True}
             result["locked_fields"].append("web_social")
-    
+
+    # Fonts (TTF/OTF/WOFF)
+    elif ext in [".ttf", ".otf", ".ttc", ".woff", ".woff2"]:
+        try:
+            from .modules.fonts_complete_registry import extract_fonts_complete_registry_metadata
+            font_data = extract_fonts_complete_registry_metadata(filepath)
+            if font_data:
+                result["font"] = font_data
+        except ImportError:
+            pass  # Module not available
+
     # Email and Communication metadata (.eml, .msg, .mbox)
     elif ext in [".eml", ".msg", ".mbox"]:
         if tier_config.email_metadata:
@@ -1700,6 +1719,38 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
         else:
             result["email"] = {"_locked": True}
             result["locked_fields"].append("email")
+
+    # Geospatial metadata (GeoJSON, KML/KMZ, GML, Shapefile, GeoPackage)
+    elif ext in [".geojson", ".kml", ".kmz", ".gml", ".shp", ".shx", ".dbf", ".prj", ".cpg", ".gpkg"]:
+        if tier_config.scientific_details:
+            try:
+                from .modules.gis_geospatial_registry import extract_gis_geospatial_registry_metadata
+                geospatial_registry = extract_gis_geospatial_registry_metadata(filepath)
+                if geospatial_registry:
+                    result["geospatial_registry"] = geospatial_registry
+                    if geospatial_registry.get("metadata"):
+                        result["geospatial"] = geospatial_registry["metadata"]
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["geospatial"] = {"_locked": True}
+            result["locked_fields"].append("geospatial")
+
+    # Gaming asset metadata (glTF/GLB, Unity meta, FBX, Unreal assets)
+    elif ext in [".gltf", ".glb", ".meta", ".fbx", ".uasset", ".umap", ".unity", ".unitypackage"]:
+        if tier_config.scientific_details:
+            try:
+                from .modules.gaming_asset_registry import extract_gaming_asset_registry_metadata
+                gaming_registry = extract_gaming_asset_registry_metadata(filepath)
+                if gaming_registry:
+                    result["gaming_asset_registry"] = gaming_registry
+                    if gaming_registry.get("metadata"):
+                        result["gaming_assets"] = gaming_registry["metadata"]
+            except ImportError:
+                pass  # Module not available
+        else:
+            result["gaming_assets"] = {"_locked": True}
+            result["locked_fields"].append("gaming_assets")
     
     # AI/ML Model metadata (various ML model formats)
     elif ext in [".h5", ".pb", ".pth", ".pt", ".onnx", ".pkl", ".joblib", ".model", ".tflite", ".mlmodel", ".caffemodel"] or (ext in [".json", ".yaml", ".yml", ".cfg", ".ini"] and any(x in filepath.lower() for x in ["model", "config", "hyper", "param", "train"])):
@@ -1895,6 +1946,13 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
                 result["forensic"]["device_model"] = result["exif"].get("Model")
                 if tier_config.serial_numbers:
                     result["forensic"]["serial_number"] = result["exif"].get("SerialNumber")
+        try:
+            from .modules.cve_vulnerability_registry import extract_cve_vulnerability_registry_metadata
+            cve_registry = extract_cve_vulnerability_registry_metadata(filepath)
+            if cve_registry:
+                result["cve_registry"] = cve_registry
+        except ImportError:
+            pass  # Module not available
     else:
         result["forensic"] = {"_locked": True}
         result["locked_fields"].append("forensic")

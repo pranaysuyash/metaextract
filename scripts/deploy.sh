@@ -211,7 +211,7 @@ DODO_ENV=test
 
 # Node environment
 NODE_ENV=development
-PORT=5000
+PORT=3000
 EOF
             print_success "Created basic .env file"
         fi

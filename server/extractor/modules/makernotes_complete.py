@@ -5723,3 +5723,484 @@ def get_vendor_field_count(vendor: str) -> int:
     elif vendor_lower in ["ricoh", "r"]:
         return len(RICOH_TAGS)
     return 0
+
+
+def extract_makernotes_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract comprehensive MakerNote metadata from image files.
+
+    Args:
+        filepath: Path to the image file
+
+    Returns:
+        Dictionary containing extracted MakerNote metadata organized by vendor
+    """
+    result = {
+        "vendors_detected": [],
+        "canon": {},
+        "nikon": {},
+        "sony": {},
+        "fujifilm": {},
+        "olympus": {},
+        "panasonic": {},
+        "pentax": {},
+        "leica": {},
+        "sigma": {},
+        "hasselblad": {},
+        "phase_one": {},
+        "ricoh": {},
+        "fields_extracted": 0,
+        "is_valid_makernote": False
+    }
+
+    try:
+        # Try to extract EXIF data first to find MakerNote
+        try:
+            from PIL import Image
+            from PIL.ExifTags import TAGS, GPSTAGS
+
+            with Image.open(filepath) as img:
+                exif_data = img._getexif()
+                if exif_data:
+                    result["is_valid_makernote"] = True
+
+                    # Look for MakerNote tag (usually 37500)
+                    makernote_data = exif_data.get(37500)
+                    if makernote_data:
+                        # Detect vendor from Make tag (271)
+                        make = exif_data.get(271, "").lower()
+
+                        # Extract vendor-specific tags
+                        if "canon" in make:
+                            result["vendors_detected"].append("canon")
+                            result["canon"] = _extract_canon_makernote(exif_data)
+
+                        elif "nikon" in make:
+                            result["vendors_detected"].append("nikon")
+                            result["nikon"] = _extract_nikon_makernote(exif_data)
+
+                        elif "sony" in make:
+                            result["vendors_detected"].append("sony")
+                            result["sony"] = _extract_sony_makernote(exif_data)
+
+                        elif "fuji" in make or "fujifilm" in make:
+                            result["vendors_detected"].append("fujifilm")
+                            result["fujifilm"] = _extract_fujifilm_makernote(exif_data)
+
+                        elif "olympus" in make:
+                            result["vendors_detected"].append("olympus")
+                            result["olympus"] = _extract_olympus_makernote(exif_data)
+
+                        elif "panasonic" in make:
+                            result["vendors_detected"].append("panasonic")
+                            result["panasonic"] = _extract_panasonic_makernote(exif_data)
+
+                        elif "pentax" in make or "ricoh" in make:
+                            result["vendors_detected"].append("pentax")
+                            result["pentax"] = _extract_pentax_makernote(exif_data)
+
+                        elif "leica" in make:
+                            result["vendors_detected"].append("leica")
+                            result["leica"] = _extract_leica_makernote(exif_data)
+
+                        elif "sigma" in make:
+                            result["vendors_detected"].append("sigma")
+                            result["sigma"] = _extract_sigma_makernote(exif_data)
+
+                        elif "hasselblad" in make:
+                            result["vendors_detected"].append("hasselblad")
+                            result["hasselblad"] = _extract_hasselblad_makernote(exif_data)
+
+                        elif "phase" in make and "one" in make:
+                            result["vendors_detected"].append("phase_one")
+                            result["phase_one"] = _extract_phase_one_makernote(exif_data)
+
+        except ImportError:
+            result["error"] = "PIL not available for image processing"
+        except Exception as e:
+            result["error"] = f"EXIF extraction failed: {str(e)[:200]}"
+
+        # Count extracted fields
+        total_fields = (
+            len(result["canon"]) + len(result["nikon"]) + len(result["sony"]) +
+            len(result["fujifilm"]) + len(result["olympus"]) + len(result["panasonic"]) +
+            len(result["pentax"]) + len(result["leica"]) + len(result["sigma"]) +
+            len(result["hasselblad"]) + len(result["phase_one"]) + len(result["ricoh"])
+        )
+        result["fields_extracted"] = total_fields
+
+    except Exception as e:
+        result["error"] = f"Makernote extraction failed: {str(e)[:200]}"
+
+    return result
+
+
+def _extract_canon_makernote(exif_data: dict) -> dict:
+    """Extract Canon-specific MakerNote tags."""
+    result = {}
+    # Map common Canon tags to registry
+    for tag, value in exif_data.items():
+        if tag in CANON_TAGS:
+            result[CANON_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_nikon_makernote(exif_data: dict) -> dict:
+    """Extract Nikon-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in NIKON_TAGS:
+            result[NIKON_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_sony_makernote(exif_data: dict) -> dict:
+    """Extract Sony-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in SONY_TAGS:
+            result[SONY_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_fujifilm_makernote(exif_data: dict) -> dict:
+    """Extract Fujifilm-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in FUJIFILM_TAGS:
+            result[FUJIFILM_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_olympus_makernote(exif_data: dict) -> dict:
+    """Extract Olympus-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in OLYMPUS_TAGS:
+            result[OLYMPUS_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_panasonic_makernote(exif_data: dict) -> dict:
+    """Extract Panasonic-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in PANASONIC_TAGS:
+            result[PANASONIC_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_pentax_makernote(exif_data: dict) -> dict:
+    """Extract Pentax-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in PENTAX_TAGS:
+            result[PENTAX_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_leica_makernote(exif_data: dict) -> dict:
+    """Extract Leica-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in LEICA_TAGS:
+            result[LEICA_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_sigma_makernote(exif_data: dict) -> dict:
+    """Extract Sigma-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in SIGMA_TAGS:
+            result[SIGMA_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_hasselblad_makernote(exif_data: dict) -> dict:
+    """Extract Hasselblad-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in HASSELBLAD_TAGS:
+            result[HASSELBLAD_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+def _extract_phase_one_makernote(exif_data: dict) -> dict:
+    """Extract Phase One-specific MakerNote tags."""
+    result = {}
+    for tag, value in exif_data.items():
+        if tag in PHASE_ONE_TAGS:
+            result[PHASE_ONE_TAGS[tag]] = str(value)[:200]
+    return result
+
+
+# Extended Canon Camera Settings
+CANON_EXTENDED_SETTINGS = {
+    'CanonCS_ISOExpansion': 'canon_iso_expansion',
+    'CanonCS_ShotZoneAF': 'canon_shot_zone_af',
+    'CanonCS_ManualAFPointSelection': 'canon_manual_af_point_selection',
+    'CanonCS_ContinuousAF': 'canon_continuous_af',
+    'CanonCS_AFPoint Switching': 'canon_af_point_switching',
+    'CanonCS_AI Servo AFTrackingSensitivity': 'canon_ai_servo_tracking_sensitivity',
+    'CanonCS_AI Servo AFResponse': 'canon_ai_servo_response',
+    'CanonCS_AI Servo FirstImagePriority': 'canon_ai_servo_first_image_priority',
+    'CanonCS_AI Servo SecondImagePriority': 'canon_ai_servo_second_image_priority',
+    'CanonCS_USBDescription': 'canon_usb_description',
+    'CanonCS_RemoteTimeout': 'canon_remote_timeout',
+    'CanonCS_SelfTimerSound': 'canon_self_timer_sound',
+    'CanonCS_CustomSettingsAvailable': 'canon_custom_settings_available',
+    'CanonCS_CustomSetting1': 'canon_custom_setting_1',
+    'CanonCS_CustomSetting2': 'canon_custom_setting_2',
+    'CanonCS_CustomSetting3': 'canon_custom_setting_3',
+    'CanonCS_CustomSetting4': 'canon_custom_setting_4',
+    'CanonCS_CustomSetting5': 'canon_custom_setting_5',
+    'CanonCS_CustomSetting6': 'canon_custom_setting_6',
+    'CanonCS_AFMicroadjustment': 'canon_af_microadjustment',
+    'CanonCS_AFMicroadjustmentAll': 'canon_af_microadjustment_all',
+    'CanonCS_AFMicroadjustmentSame': 'canon_af_microadjustment_same',
+    'CanonCS_ExposureCompensationSteps': 'canon_exposure_compensation_steps',
+    'CanonCS_AEBAutoCancel': 'canon_aeb_auto_cancel',
+    'CanonCS_AEBAutoRotate': 'canon_aeb_auto_rotate',
+    'CanonCS_ISOAuto': 'canon_iso_auto',
+    'CanonCS_ISOAutoMin': 'canon_iso_auto_min',
+    'CanonCS_ISOAutoMax': 'canon_iso_auto_max',
+    'CanonCS_BaseISO': 'canon_base_iso',
+    'CanonCS_MeasuredEV': 'canon_measured_ev',
+    'CanonCS_WhiteBalanceValue': 'canon_white_balance_value',
+    'CanonCS_WhiteBalanceRed': 'canon_white_balance_red',
+    'CanonCS_WhiteBalanceBlue': 'canon_white_balance_blue',
+    'CanonCS_ColorTemperature': 'canon_color_temperature',
+    'CanonCS_PictureStyle': 'canon_picture_style',
+    'CanonCS_PictureStyleUserDef1': 'canon_picture_style_user_def_1',
+    'CanonCS_PictureStyleUserDef2': 'canon_picture_style_user_def_2',
+    'CanonCS_PictureStyleUserDef3': 'canon_picture_style_user_def_3',
+    'CanonCS_PictureStylePC1': 'canon_picture_style_pc_1',
+    'CanonCS_PictureStylePC2': 'canon_picture_style_pc_2',
+    'CanonCS_PictureStylePC3': 'canon_picture_style_pc_3',
+    'CanonCS_LensConstruction': 'canon_lens_construction',
+    'CanonCS_LensFocalLength': 'canon_lens_focal_length',
+    'CanonCS_LensFocalLength35mmEq': 'canon_lens_focal_length_35mm_eq',
+    'CanonCS_LensZoomPosition': 'canon_lens_zoom_position',
+    'CanonCS_FirmwareVersion': 'canon_firmware_version',
+    'CanonCS_CameraOwnerName': 'canon_camera_owner_name',
+    'CanonCS_CameraSerialNumber': 'canon_camera_serial_number',
+    'CanonCS_CameraUniqueID': 'canon_camera_unique_id',
+    'CanonCS_ImageUniqueID': 'canon_image_unique_id',
+}
+
+# Extended Nikon Camera Settings
+NIKON_EXTENDED_SETTINGS = {
+    'NikonCS_ExposureTime': 'nikon_exposure_time',
+    'NikonCS_FNumber': 'nikon_f_number',
+    'NikonCS_ExposureCompensation': 'nikon_exposure_compensation',
+    'NikonCS_MaxAperture': 'nikon_max_aperture',
+    'NikonCS_MinAperture': 'nikon_min_aperture',
+    'NikonCS_MeteringMode': 'nikon_metering_mode',
+    'NikonCS_AFMode': 'nikon_af_mode',
+    'NikonCS_AFFocusPosition': 'nikon_af_focus_position',
+    'NikonCS_AFPointSelected': 'nikon_af_point_selected',
+    'NikonCS_AFPointsUsed': 'nikon_af_points_used',
+    'NikonCS_FlashMode': 'nikon_flash_mode',
+    'NikonCS_FlashExposureComp': 'nikon_flash_exposure_comp',
+    'NikonCS_FlashBracketComp': 'nikon_flash_bracket_comp',
+    'NikonCS_FlashExposureComp3': 'nikon_flash_exposure_comp_3',
+    'NikonCS_FocusDistance': 'nikon_focus_distance',
+    'NikonCS_DigitalZoom': 'nikon_digital_zoom',
+    'NikonCS_ISO': 'nikon_iso',
+    'NikonCS_ISOSetting': 'nikon_iso_setting',
+    'NikonCS_ISOExpansion': 'nikon_iso_expansion',
+    'NikonCS_ISO2': 'nikon_iso_2',
+    'NikonCS_ISO2Setting': 'nikon_iso_2_setting',
+    'NikonCS_VignetteControl': 'nikon_vignette_control',
+    'NikonCS_ActiveDLighting': 'nikon_active_d_lighting',
+    'NikonCS_ActiveDLighting2': 'nikon_active_d_lighting_2',
+    'NikonCS_PictureControl': 'nikon_picture_control',
+    'NikonCS_PictureControl2': 'nikon_picture_control_2',
+    'NikonCS_HighISONoiseReduction': 'nikon_high_iso_noise_reduction',
+    'NikonCS_LongExposureNoiseReduction': 'nikon_long_exposure_noise_reduction',
+    'NikonCS_ElectronicFrontCurtainShutter': 'nikon_electronic_front_curtain_shutter',
+    'NikonCS_FocusTrackingLockOn': 'nikon_focus_tracking_lock_on',
+    'NikonCS_AFAreaMode': 'nikon_af_area_mode',
+    'NikonCS_AFAreaMode2': 'nikon_af_area_mode_2',
+    'NikonCS_AFPointMode': 'nikon_af_point_mode',
+    'NikonCS_AFPointIllumination': 'nikon_af_point_illumination',
+    'NikonCS_FocusPointBrightness': 'nikon_focus_point_brightness',
+    'NikonCS_BuiltInAFassist': 'nikon_built_in_af_assist',
+    'NikonCS_AFOnButton': 'nikon_af_on_button',
+    'NikonCS_FnButtonFunction': 'nikon_fn_button_function',
+    'NikonCS_PreviewButtonFunction': 'nikon_preview_button_function',
+    'NikonCS_CommandDialsFunction': 'nikon_command_dials_function',
+    'NikonCS_ShutterSpeedButton': 'nikon_shutter_speed_button',
+    'NikonCS_ControlRingFunction': 'nikon_control_ring_function',
+    'NikonCS_MetadataMode': 'nikon_metadata_mode',
+    'NikonCS_CameraOwnerName': 'nikon_camera_owner_name',
+    'NikonCS_CameraSerialNumber': 'nikon_camera_serial_number',
+    'NikonCS_ColorSpace': 'nikon_color_space',
+    'NikonCS_ActiveDLighting': 'nikon_active_d_lighting',
+}
+
+# Extended Sony Camera Settings
+SONY_EXTENDED_SETTINGS = {
+    'SonyCS_FocusMode': 'sony_focus_mode',
+    'SonyCS_AFMode': 'sony_af_mode',
+    'SonyCS_AFAreaMode': 'sony_af_area_mode',
+    'SonyCS_FocusPosition': 'sony_focus_position',
+    'SonyCS_ExposureCompensation': 'sony_exposure_compensation',
+    'SonyCS_ISO': 'sony_iso',
+    'SonyCS_ISOSetting': 'sony_iso_setting',
+    'SonyCS_ISOExpansion': 'sony_iso_expansion',
+    'SonyCS_MeteringMode': 'sony_metering_mode',
+    'SonyCS_WhiteBalance': 'sony_white_balance',
+    'SonyCS_WhiteBalanceMode': 'sony_white_balance_mode',
+    'SonyCS_ColorTemperature': 'sony_color_temperature',
+    'SonyCS_ColorTemperatureSetting': 'sony_color_temperature_setting',
+    'SonyCS_CustomWB_R': 'sony_custom_wb_r',
+    'SonyCS_CustomWB_G': 'sony_custom_wb_g',
+    'SonyCS_CustomWB_B': 'sony_custom_wb_b',
+    'SonyCS_PictureEffect': 'sony_picture_effect',
+    'SonyCS_PictureProfile': 'sony_picture_profile',
+    'SonyCS_PictureProfile1': 'sony_picture_profile_1',
+    'SonyCS_PictureProfile2': 'sony_picture_profile_2',
+    'SonyCS_PictureProfile3': 'sony_picture_profile_3',
+    'SonyCS_PictureProfile4': 'sony_picture_profile_4',
+    'SonyCS_PictureProfile5': 'sony_picture_profile_5',
+    'SonyCS_PictureProfile6': 'sony_picture_profile_6',
+    'SonyCS_PictureProfile7': 'sony_picture_profile_7',
+    'SonyCS_PictureProfile8': 'sony_picture_profile_8',
+    'SonyCS_PictureProfileOff': 'sony_picture_profile_off',
+    'SonyCS_Gamma': 'sony_gamma',
+    'SonyCS_BlackLevel': 'sony_black_level',
+    'SonyCS_BlackGamma': 'sony_black_gamma',
+    'SonyCS_Knee': 'sony_knee',
+    'SonyCS_Slope': 'sony_slope',
+    'SonyCS_ClearImageZoom': 'sony_clear_image_zoom',
+    'SonyCS_DigitalZoom': 'sony_digital_zoom',
+    'SonyCS_ZoomSetting': 'sony_zoom_setting',
+    'SonyCS_ImageSize': 'sony_image_size',
+    'SonyCS_AspectRatio': 'sony_aspect_ratio',
+    'SonyCS_Quality': 'sony_quality',
+    'SonyCS_RAWFormat': 'sony_raw_format',
+    'SonyCS_RAWSettings': 'sony_raw_settings',
+    'SonyCS_NoiseReduction': 'sony_noise_reduction',
+    'SonyCS_DynamicRangeOptimizer': 'sony_dynamic_range_optimizer',
+    'SonyCS_HighISONoiseReduction': 'sony_high_iso_noise_reduction',
+    'SonyCS_LongExposureNoiseReduction': 'sony_long_exposure_noise_reduction',
+    'SonyCS_AutoHDR': 'sony_auto_hdr',
+    'SonyCS_FocusAssist': 'sony_focus_assist',
+    'SonyCS_FocusPeaking': 'sony_focus_peaking',
+    'SonyCS_ZebraSetting': 'sony_zebra_setting',
+    'SonyCS_ZebraLevel': 'sony_zebra_level',
+    'SonyCS_TimeCode': 'sony_time_code',
+    'SonyCS_UserBit': 'sony_user_bit',
+    'SonyCS_FirmwareVersion': 'sony_firmware_version',
+    'SonyCS_LensType': 'sony_lens_type',
+    'SonyCS_LensSerialNumber': 'sony_lens_serial_number',
+    'SonyCS_LensModel': 'sony_lens_model',
+    'SonyCS_LensFirmware': 'sony_lens_firmware',
+}
+
+# Extended Fujifilm Camera Settings
+FUJIFILM_EXTENDED_SETTINGS = {
+    'FujiCS_FocusMode': 'fuji_focus_mode',
+    'FujiCS_AFMode': 'fuji_af_mode',
+    'FujiCS_FocusPixel': 'fuji_focus_pixel',
+    'FujiCS_QuickAF': 'fuji_quick_af',
+    'FujiCS_FocusPoint': 'fuji_focus_point',
+    'FujiCS_AFIlluminator': 'fuji_af_illuminator',
+    'FujiCS_FaceDetection': 'fuji_face_detection',
+    'FujiCS_FaceDetectionOn': 'fuji_face_detection_on',
+    'FujiCS_FaceRecEd': 'fuji_face_rec_ed',
+    'FujiCS_FaceRecResult': 'fuji_face_rec_result',
+    'FujiCS_ExposureCompensation': 'fuji_exposure_compensation',
+    'FujiCS_ISO': 'fuji_iso',
+    'FujiCS_ISOSetting': 'fuji_iso_setting',
+    'FujiCS_ISODynamicRange': 'fuji_iso_dynamic_range',
+    'FujiCS_WhiteBalance': 'fuji_white_balance',
+    'FujiCS_WhiteBalanceFineTune': 'fuji_white_balance_fine_tune',
+    'FujiCS_WhiteBalanceKelvin': 'fuji_white_balance_kelvin',
+    'FujiCS_ColorTemperature': 'fuji_color_temperature',
+    'FujiCS_Color': 'fuji_color',
+    'FujiCS_Sharpness': 'fuji_sharpness',
+    'FujiCS_SharpnessSetting': 'fuji_sharpness_setting',
+    'FujiCS_Contrast': 'fuji_contrast',
+    'FujiCS_ContrastSetting': 'fuji_contrast_setting',
+    'FujiCS_NoiseReduction': 'fuji_noise_reduction',
+    'FujiCS_FilmMode': 'fuji_film_mode',
+    'FujiCS_FilmSimulation': 'fuji_film_simulation',
+    'FujiCS_FilmSimulation2': 'fuji_film_simulation_2',
+    'FujiCS_DynamicRange': 'fuji_dynamic_range',
+    'FujiCS_DynamicRangeSetting': 'fuji_dynamic_range_setting',
+    'FujiCS_GrainEffect': 'fuji_grain_effect',
+    'FujiCS_ColorChromeEffect': 'fuji_color_chrome_effect',
+    'FujiCS_LensModulationOptimizer': 'fuji_lens_modulation_optimizer',
+    'FujiCS_ColorSpace': 'fuji_color_space',
+    'FujiCS_BlurWarning': 'fuji_blur_warning',
+    'FujiCS_FocusWarning': 'fuji_focus_warning',
+    'FujiCS_ExposureWarning': 'fuji_exposure_warning',
+    'FujiCS_FlashConversion': 'fuji_flash_conversion',
+    'FujiCS_EngineFirmwareVersion': 'fuji_engine_firmware_version',
+    'FujiCS_ControllerFirmwareVersion': 'fuji_controller_firmware_version',
+    'FujiCS_ControllerFirmwareVersion2': 'fuji_controller_firmware_version_2',
+    'FujiCS_LensFirmwareVersion': 'fuji_lens_firmware_version',
+}
+
+# Extended Olympus Camera Settings
+OLYMPUS_EXTENDED_SETTINGS = {
+    'OlympusCS_FocusMode': 'olympus_focus_mode',
+    'OlympusCS_AFMode': 'olympus_af_mode',
+    'OlympusCS_AFPoint': 'olympus_af_point',
+    'OlympusCS_AFPointSelected': 'olympus_af_point_selected',
+    'OlympusCS_AFIlluminator': 'olympus_af_illuminator',
+    'OlympusCS_FaceDetection': 'olympus_face_detection',
+    'OlympusCS_EyeDetection': 'olympus_eye_detection',
+    'OlympusCS_ArtFilter': 'olympus_art_filter',
+    'OlympusCS_ArtFilterEffect': 'olympus_art_filter_effect',
+    'OlympusCS_PictureMode': 'olympus_picture_mode',
+    'OlympusCS_PictureMode2': 'olympus_picture_mode_2',
+    'OlympusCS_PictureMode3': 'olympus_picture_mode_3',
+    'OlympusCS_ExposureCompensation': 'olympus_exposure_compensation',
+    'OlympusCS_ISO': 'olympus_iso',
+    'OlympusCS_ISOSetting': 'olympus_iso_setting',
+    'OlympusCS_WhiteBalance': 'olympus_white_balance',
+    'OlympusCS_WhiteBalanceMode': 'olympus_white_balance_mode',
+    'OlympusCS_WhiteBalanceKelvin': 'olympus_white_balance_kelvin',
+    'OlympusCS_CustomWB_R': 'olympus_custom_wb_r',
+    'OlympusCS_CustomWB_G': 'olympus_custom_wb_g',
+    'OlympusCS_CustomWB_B': 'olympus_custom_wb_b',
+    'OlympusCS_ColorSpace': 'olympus_color_space',
+    'OlympusCS_NoiseFilter': 'olympus_noise_filter',
+    'OlympusCS_NoiseReduction': 'olympus_noise_reduction',
+    'OlympusCS_Gradation': 'olympus_gradation',
+    'OlympusCS_GradationAuto': 'olympus_gradation_auto',
+    'OlympusCS_Sharpness': 'olympus_sharpness',
+    'OlympusCS_SharpnessSetting': 'olympus_sharpness_setting',
+    'OlympusCS_Contrast': 'olympus_contrast',
+    'OlympusCS_ContrastSetting': 'olympus_contrast_setting',
+    'OlympusCS_Saturation': 'olympus_saturation',
+    'OlympusCS_SaturationSetting': 'olympus_saturation_setting',
+    'OlympusCS_Tone': 'olympus_tone',
+    'OlympusCS_ToneSetting': 'olympus_tone_setting',
+    'OlympusCS_ColorCreatorEffect': 'olympus_color_creator_effect',
+    'OlympusCS_MonochromeProfile': 'olympus_monochrome_profile',
+    'OlympusCS_MonochromeProfileTone': 'olympus_monochrome_profile_tone',
+    'OlympusCS_FlashMode': 'olympus_flash_mode',
+    'OlympusCS_FlashExternal': 'olympus_flash_external',
+    'OlympusCS_FlashIntensity': 'olympus_flash_intensity',
+    'OlympusCS_FlashCompensation': 'olympus_flash_compensation',
+    'OlympusCS_RemoteFlash': 'olympus_remote_flash',
+    'OlympusCS_FirmwareVersion': 'olympus_firmware_version',
+    'OlympusCS_LensSerialNumber': 'olympus_lens_serial_number',
+    'OlympusCS_LensModel': 'olympus_lens_model',
+    'OlympusCS_LensFirmware': 'olympus_lens_firmware',
+}
+
+
+def get_makernotes_complete_extended_field_count() -> int:
+    """Return the total count of MakerNotes fields including extensions."""
+    base_count = get_makernote_field_count()
+    extended_count = (
+        len(CANON_EXTENDED_SETTINGS) + len(NIKON_EXTENDED_SETTINGS) +
+        len(SONY_EXTENDED_SETTINGS) + len(FUJIFILM_EXTENDED_SETTINGS) +
+        len(OLYMPUS_EXTENDED_SETTINGS)
+    )
+    return base_count + extended_count

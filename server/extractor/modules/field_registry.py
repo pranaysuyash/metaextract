@@ -1,7 +1,7 @@
 """
 Comprehensive Metadata Field Registry
 
-This module provides a centralized registry of all 45,000+ metadata fields
+This module provides a centralized registry of the comprehensive set of metadata fields (configurable goal)
 supported by MetaExtract, organized by domain and standard.
 
 The registry includes:

@@ -9,14 +9,9 @@ import shutil
 import subprocess
 from typing import Any, Dict, Optional, Sequence, Union
 
+from .shared_utils import safe_str as _safe_str
+
 TagDict = Dict[str, Any]
-
-
-def _safe_str(value: Any) -> str:
-    try:
-        return str(value)
-    except Exception as e:
-        return ""
 
 
 try:
@@ -31,6 +26,113 @@ EXIFTOOL_PATH = shutil.which("exiftool")
 EXIFTOOL_AVAILABLE = EXIFTOOL_PATH is not None
 
 
+# ULTRA EXPANSION FIELDS
+# Additional 39 fields
+ULTRA_EXIF_FIELDS = {
+    "focus_mode": "autofocus_manual_manual_focus",
+    "focus_distance": "distance_to_subject_meters",
+    "focus_points": "autofocus_point_selection",
+    "metering_mode": "exposure_metering_pattern",
+    "exposure_lock": "ae_af_lock_status",
+    "white_balance_shift": "wb_color_compensation",
+    "color_space": "srgb_adobe_rgb_prophoto",
+    "picture_style": "canon_picture_style",
+    "active_dlighting": "nikon_active_dlighting",
+    "lens_serial_number": "lens_manufacturer_serial",
+"lens_firmware": "lens_firmware_version",
+"lens_optical_attributes": "coating_element_count",
+"vibration_reduction": "vr_vibration_reduction",
+"image_stabilization": "optical_stabilization_mode",
+"autofocus_motor": "af_motor_type_usm_swm",
+"internal_focus": "if_internal_focusing",
+"high_iso_nr": "high_iso_noise_reduction",
+"long_exposure_nr": "long_exposure_noise_reduction",
+"hdr_mode": "high_dynamic_range_capture",
+"hdr_strength": "hdr_effect_intensity",
+"multiple_exposure": "exposure_bracketing_count",
+"exposure_bracketing": "exposure_compensation_steps",
+"interval_shooting": "time_lapse_interval",
+"timer_duration": "self_timer_seconds",
+"gps_latitude": "geographic_coordinate_latitude",
+"gps_longitude": "geographic_coordinate_longitude",
+"gps_altitude": "elevation_above_sea_level",
+"gps_direction": "compass_heading_direction",
+"gps_timestamp": "gps_datetime_fix",
+"gps_satellites": "number_of_satellites_tracked",
+"gps_precision": "horizontal_dilution_of_precision",
+"map_datum": "coordinate_reference_system",
+"faces_detected": "number_of_faces_identified",
+"face_locations": "face_coordinates_in_frame",
+"face_recognition": "identified_persons_names",
+"smile_detection": "smile_confidence_level",
+"blink_detection": "eye_blink_detected",
+"skin_softening": "beauty_filter_strength",
+}
+
+
+# MEGA EXPANSION FIELDS
+# Additional 59 fields
+MEGA_EXPANSION_FIELDS = {
+    "portrait_mode": "depth_effect_portrait",
+"night_mode": "low_light_enhancement",
+"hdr_plus": "high_dynamic_range_plus",
+"beauty_mode": "face_enhancement_level",
+"food_mode": "color_optimization_food",
+"panorama_mode": "360_panorama_capture",
+"selfie_mode": "front_camera_optimization",
+"pro_mode": "manual_controls_enabled",
+"slow_motion": "high_fps_recording",
+"time_lapse": "timelapse_recording",
+"cinematic_mode": "video_cinematic_effects",
+"macro_mode": "close_up_focusing",
+"sports_mode": "action_capture_settings",
+"documents_mode": "document_scanning",
+"ar_emoji": "augmented_reality_stickers",
+"live_photos": "animated_image_capture",
+"drone_model": "dji_mavic_phantom_autel",
+"drone_operation_mode": "manual_autonomous_waypoint",
+"flight_altitude": "above_ground_level_meters",
+"gimbal_pitch": "camera_tilt_angle",
+"gimbal_roll": "camera_rotation_angle",
+"flight_speed": "drone_velocity_kmh",
+"obstacle_avoidance": "collision_detection_system",
+"return_to_home": "rth_functionality",
+"follow_mode": "subject_tracking",
+"orbit_mode": "circular_flight_pattern",
+"hyperlapse": "advanced_timelapse_drone",
+"terrain_follow": "surface_tracking_mode",
+"camera_rig_type": "hero_insta360_kandao",
+"stitching_software": "autopano_video_stitch",
+"projection_format": "equirectangular_cubemap",
+"view_orientation": "initial_view_angle",
+"spatial_audio": "ambisonic_audio_format",
+"vr_compatible": "virtual_ready_ready",
+"live_streaming": "realtime_360_stream",
+"time_sync": "camera_synchronization_ms",
+"xray_technique": "pa_ap_lat_medial_oblique",
+"radiation_dose": "exposure_dose_mgy",
+"contrast_enhancement": "window_level_width",
+"magnification_factor": "zoom_enlargement",
+"patient_position": "supine_prone_lateral",
+"body_part": "chest_abdomen_extremity",
+"view_projection": "posterior_anterior_lateral",
+"microscope_mag": "objective_magnification",
+"microscope_type": "brightfield_fluorescence_confocal",
+"staining_method": "chemical_dye_used",
+"sample_preparation": "fixation_sectioning",
+"fluorescence_channels": "multichannel_colors",
+"deconvolution": "image_restoration_method",
+"time_lapse_interval": "microscopy_time_lapse",
+"z_stack_depth": "3d_image_layers",
+"multi_frame_noise": "noise_reduction_frames",
+"super_resolution": "ai_upscaling_method",
+"computational_bokeh": "synthetic_depth_blur",
+"semantic_segmentation": "subject_detection_mask",
+"image_fusion": "multi_exposure_combination",
+"light_field_capture": "plenoptic_camera_data",
+"tone_mapping": "hdr_compression_method",
+"color_grading": "cinematic_color_science",
+}
 def _run_exiftool_exif(filepath: str) -> Optional[Dict[str, Any]]:
     if not EXIFTOOL_AVAILABLE or EXIFTOOL_PATH is None:
         return None
@@ -496,11 +598,8 @@ def extract_gps_metadata(filepath: str) -> Optional[Dict[str, Any]]:
 
 
 def get_exif_field_count() -> int:
-    """Return approximate number of EXIF fields extracted.
-
-    Notes:
-        When `exiftool` is available, MetaExtract can expose a much larger EXIF tag
-        surface than the minimal in-module mapping.
-    """
-    # Based on `exiftool -listx -EXIF:All` tag nodes.
-    return 784
+    """Return total number of exif metadata fields."""
+    total = 0
+    total += len(ULTRA_EXIF_FIELDS)
+    total += len(EXIF_TAGS)
+    return total

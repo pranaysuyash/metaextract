@@ -105,7 +105,7 @@ def main():
     print()
 
     print("=" * 70)
-    print("45K+ SPEC TARGETS (for comparison):")
+    print("Legacy 45K baseline spec targets (for comparison):")
     print("=" * 70)
     print()
     spec_targets = {
@@ -120,7 +120,7 @@ def main():
         "DICOM": 8000,
     }
     spec_total = sum(spec_targets.values())
-    print(f"45K+ Spec total: {spec_total:,}")
+    print(f"Legacy 45K spec total: {spec_total:,}")
 
     print()
     print(f"{'Category':<30} {'Spec':>10} {'Actual':>10} {'Coverage':>10}")

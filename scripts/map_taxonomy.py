@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Map generated field inventories to 45K+ Ultimate Metadata Universe taxonomy."""
+"""Map generated field inventories to the ultimate metadata universe taxonomy (legacy 45K baseline reference)."""
 
 import json
 import sys
@@ -16,7 +16,7 @@ def load_inventory(path: Path) -> Dict[str, Any]:
 
 
 def map_to_taxonomy(inventory: Dict[str, Any]) -> Dict[str, Any]:
-    """Map inventory categories to 45K+ taxonomy domains."""
+    """Map inventory categories to ultimate taxonomy domains (legacy 45K baseline reference)."""
 
     by_category = inventory.get("by_category", {})
 
@@ -212,7 +212,7 @@ def generate_report(taxonomy: Dict[str, Any], inventory: Dict[str, Any]) -> str:
 
     lines = []
     lines.append("=" * 70)
-    lines.append("METADATA FIELD INVENTORY - 45K+ ULTIMATE MAPPING")
+    lines.append("METADATA FIELD INVENTORY - ultimate mapping (legacy 45K baseline)")
     lines.append("=" * 70)
     lines.append("")
 

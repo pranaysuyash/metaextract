@@ -139,6 +139,12 @@ interface MetadataResponse {
   burned_metadata?: BurnedMetadata | null;
   metadata_comparison?: MetadataComparison | null;
   locked_fields: string[];
+  access?: {
+    trial_email_present?: boolean;
+    trial_granted?: boolean;
+    credits_charged?: number;
+    credits_required?: number;
+  };
 }
 
 export default function Results() {
@@ -175,6 +181,16 @@ export default function Results() {
     if (metadata) {
       const processedFile = convertMetadataToProcessedFile(metadata, 'current-file');
       setProcessedFiles([processedFile]);
+    }
+  }, [metadata]);
+
+  useEffect(() => {
+    const access = metadata?.access;
+    if (!access) return;
+    const unlocked =
+      access.trial_granted || (access.credits_charged ?? 0) > 0;
+    if (unlocked) {
+      setIsUnlocked(true);
     }
   }, [metadata]);
 

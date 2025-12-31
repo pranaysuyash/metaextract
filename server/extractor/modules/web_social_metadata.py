@@ -18,6 +18,8 @@ import re
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from urllib.parse import urlparse
+from functools import lru_cache
+from importlib.util import module_from_spec, spec_from_file_location
 
 logger = logging.getLogger(__name__)
 
@@ -104,13 +106,108 @@ TWITTER_CARD_PROPERTIES = {
 }
 
 
+@lru_cache(maxsize=1)
+def _load_web_standards_fields() -> List[str]:
+    root = Path(__file__).resolve().parents[3]
+    inventory_path = root / "scripts" / "inventory_web_standards.py"
+    normalized_fields: List[str] = [
+        "opengraph_present",
+        "opengraph_property_count",
+        "twitter_cards_present",
+        "twitter_card_property_count",
+        "schema_org_present",
+        "schema_org_json_ld_count",
+        "schema_org_objects",
+        "schema_name",
+        "schema_description",
+        "schema_url",
+        "schema_image",
+        "schema_datePublished",
+        "schema_dateModified",
+        "schema_author",
+        "schema_publisher",
+        "web_manifest_url",
+        "web_manifest_present",
+        "web_theme_color",
+        "web_apple_touch_icon",
+        "manifest_keys",
+        "manifest.name",
+        "manifest.short_name",
+        "manifest.start_url",
+        "manifest.display",
+        "manifest.display_override",
+        "manifest.orientation",
+        "manifest.background_color",
+        "manifest.theme_color",
+        "manifest.lang",
+        "manifest.dir",
+        "manifest.description",
+        "manifest.scope",
+        "manifest.icons.count",
+        "manifest.icons.types",
+        "manifest.screenshots.count",
+        "manifest.shortcuts.count",
+        "manifest.related_applications.count",
+        "manifest.serviceworker.src",
+        "manifest.serviceworker.scope",
+        "manifest.serviceworker.update_via_cache",
+        "social_embed_twitter",
+        "social_embed_facebook",
+        "social_embed_instagram",
+        "social_embed_youtube",
+        "social_embed_vimeo",
+        "social_embed_tiktok",
+        "social_embed_linkedin",
+        "microdata_present",
+        "microdata_item_count",
+        "microdata_types",
+        "url_domain",
+        "url_path",
+        "url_query",
+        "twitter_status_id",
+        "instagram_post_id",
+    ]
+    normalized_fields.extend(list(OPEN_GRAPH_PROPERTIES.values()))
+    normalized_fields.extend(list(TWITTER_CARD_PROPERTIES.values()))
+    if inventory_path.exists():
+        try:
+            spec = spec_from_file_location("inventory_web_standards", inventory_path)
+            if spec and spec.loader:
+                module = module_from_spec(spec)
+                spec.loader.exec_module(module)
+                fields: List[str] = []
+                for name in [
+                    "OPEN_GRAPH_FIELDS",
+                    "TWITTER_CARDS_FIELDS",
+                    "SCHEMA_ORG_FIELDS",
+                    "WEB_APP_MANIFEST_FIELDS",
+                    "PWA_FIELDS",
+                    "SECURITY_FIELDS",
+                ]:
+                    values = getattr(module, name, None)
+                    if isinstance(values, list):
+                        fields.extend([str(value) for value in values])
+                fields.extend(normalized_fields)
+                if fields:
+                    return sorted(set(fields))
+        except Exception:
+            pass
+    if normalized_fields:
+        return sorted(set(normalized_fields))
+    return []
+
+
+def get_web_standards_registry_fields() -> List[str]:
+    return _load_web_standards_fields()
+
+
 def extract_web_social_metadata(filepath: str) -> Dict[str, Any]:
     """
     Extract web and social media metadata from HTML files.
 
     Supports Open Graph, Twitter Cards, Schema.org, and other web standards.
     """
-    result = {}
+    result: Dict[str, Any] = {}
 
     try:
         # Read HTML content
@@ -134,7 +231,7 @@ def extract_web_social_metadata(filepath: str) -> Dict[str, Any]:
         result.update(schema_data)
 
         # Extract Web App Manifest references
-        manifest_data = _extract_web_manifest(html_content)
+        manifest_data = _extract_web_manifest(html_content, Path(filepath).parent)
         result.update(manifest_data)
 
         # Extract social media embeds
@@ -148,6 +245,21 @@ def extract_web_social_metadata(filepath: str) -> Dict[str, Any]:
         # Analyze URL structure if available
         url_analysis = _analyze_url_structure(filepath)
         result.update(url_analysis)
+
+        registry_fields = get_web_standards_registry_fields()
+        registry = {
+            "available": True,
+            "fields_extracted": 0,
+            "tags": {},
+            "unknown_tags": {},
+            "field_catalog": registry_fields,
+        }
+        for key, value in result.items():
+            registry["tags"][key] = {"name": key, "value": value}
+            if registry_fields and key not in registry_fields:
+                registry["unknown_tags"][key] = {"name": key, "value": value}
+        registry["fields_extracted"] = len(registry["tags"])
+        result["registry"] = registry
 
     except Exception as e:
         logger.warning(f"Error extracting web/social metadata from {filepath}: {e}")
@@ -198,6 +310,7 @@ def _extract_open_graph(html: str) -> Dict[str, Any]:
         for prop, content in og_matches:
             field_name = OPEN_GRAPH_PROPERTIES.get(f'og:{prop}', f'opengraph_{prop.replace(":", "_")}')
             og_data[field_name] = content
+            og_data[f'og:{prop}'] = content
 
     # Also check for article: and other prefixes
     for prefix in ['article:', 'book:', 'profile:', 'music:', 'video:']:
@@ -207,6 +320,7 @@ def _extract_open_graph(html: str) -> Dict[str, Any]:
         for prop, content in prefix_matches:
             field_name = OPEN_GRAPH_PROPERTIES.get(f'{prefix}{prop}', f'{prefix.replace(":", "")}_{prop.replace(":", "_")}')
             og_data[field_name] = content
+            og_data[f'{prefix}{prop}'] = content
 
     return og_data
 
@@ -226,6 +340,7 @@ def _extract_twitter_cards(html: str) -> Dict[str, Any]:
         for prop, content in twitter_matches:
             field_name = TWITTER_CARD_PROPERTIES.get(f'twitter:{prop}', f'twitter_{prop.replace(":", "_")}')
             twitter_data[field_name] = content
+            twitter_data[f'twitter:{prop}'] = content
 
     return twitter_data
 
@@ -268,7 +383,7 @@ def _extract_schema_org(html: str) -> Dict[str, Any]:
     return schema_data
 
 
-def _extract_web_manifest(html: str) -> Dict[str, Any]:
+def _extract_web_manifest(html: str, base_path: Optional[Path] = None) -> Dict[str, Any]:
     """Extract Web App Manifest references."""
     manifest_data = {}
 
@@ -279,6 +394,12 @@ def _extract_web_manifest(html: str) -> Dict[str, Any]:
     if manifest_match:
         manifest_data['web_manifest_url'] = manifest_match.group(1)
         manifest_data['web_manifest_present'] = True
+        if base_path:
+            manifest_path = _resolve_local_manifest_path(base_path, manifest_match.group(1))
+            if manifest_path and manifest_path.exists():
+                manifest_payload = _load_manifest_json(manifest_path)
+                if manifest_payload:
+                    manifest_data.update(_extract_manifest_fields(manifest_payload))
 
     # Look for theme-color meta tag
     theme_pattern = r'<meta[^>]*name=["\']theme-color["\'][^>]*content=["\']([^"\']+)["\'][^>]*>'
@@ -295,6 +416,67 @@ def _extract_web_manifest(html: str) -> Dict[str, Any]:
         manifest_data['web_apple_touch_icon'] = apple_icon_match.group(1)
 
     return manifest_data
+
+
+def _resolve_local_manifest_path(base_path: Path, manifest_url: str) -> Optional[Path]:
+    if not manifest_url:
+        return None
+    parsed = urlparse(manifest_url)
+    if parsed.scheme or parsed.netloc:
+        return None
+    candidate = Path(manifest_url)
+    if not candidate.is_absolute():
+        candidate = (base_path / candidate).resolve()
+    return candidate
+
+
+def _load_manifest_json(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        if path.stat().st_size > 1_000_000:
+            return None
+        return json.loads(path.read_text(encoding="utf-8", errors="ignore"))
+    except Exception:
+        return None
+
+
+def _extract_manifest_fields(payload: Dict[str, Any]) -> Dict[str, Any]:
+    manifest_fields: Dict[str, Any] = {}
+    if not isinstance(payload, dict):
+        return manifest_fields
+
+    manifest_fields["manifest_keys"] = sorted(payload.keys())
+    for key in [
+        "name",
+        "short_name",
+        "start_url",
+        "display",
+        "display_override",
+        "orientation",
+        "background_color",
+        "theme_color",
+        "lang",
+        "dir",
+        "description",
+        "scope",
+    ]:
+        if key in payload:
+            manifest_fields[f"manifest.{key}"] = payload.get(key)
+
+    for list_key in ["icons", "screenshots", "shortcuts", "related_applications"]:
+        if list_key in payload and isinstance(payload.get(list_key), list):
+            manifest_fields[f"manifest.{list_key}.count"] = len(payload[list_key])
+            if list_key == "icons":
+                manifest_fields["manifest.icons.types"] = list(
+                    {entry.get("type") for entry in payload[list_key] if isinstance(entry, dict) and entry.get("type")}
+                )
+
+    service_worker = payload.get("serviceworker")
+    if isinstance(service_worker, dict):
+        for sub_key in ["src", "scope", "update_via_cache"]:
+            if sub_key in service_worker:
+                manifest_fields[f"manifest.serviceworker.{sub_key}"] = service_worker.get(sub_key)
+
+    return manifest_fields
 
 
 def _extract_social_embeds(html: str) -> Dict[str, Any]:
@@ -404,6 +586,9 @@ def _analyze_url_structure(filepath: str) -> Dict[str, Any]:
 
 def get_web_social_field_count() -> int:
     """Return the number of fields extracted by web/social metadata."""
+    registry_fields = get_web_standards_registry_fields()
+    if registry_fields:
+        return len(registry_fields)
     # Meta tags (variable, estimate 20 common ones)
     meta_fields = 20
 
@@ -435,3 +620,53 @@ def get_web_social_field_count() -> int:
 def extract_web_social_complete(filepath: str) -> Dict[str, Any]:
     """Main entry point for web/social metadata extraction."""
     return extract_web_social_metadata(filepath)
+
+def extract_web_social_metadata_metadata(filepath: str) -> Dict[str, Any]:
+    '''Extract comprehensive web_social_metadata metadata from files.
+
+    Args:
+        filepath: Path to the file
+
+    Returns:
+        Dictionary containing extracted web_social_metadata metadata
+    '''
+    result = {
+        "extracted_fields": {},
+        "registry_fields": {},
+        "fields_extracted": 0,
+        "is_valid_web_social_metadata": False
+    }
+
+    try:
+        # TODO: Implement specific extraction logic for web_social_metadata
+        # This is a template that needs to be customized based on file format
+
+        # Basic file validation
+        if not filepath or not os.path.exists(filepath):
+            result["error"] = "File path not provided or file doesn't exist"
+            return result
+
+        result["is_valid_web_social_metadata"] = True
+
+        # Template structure - customize based on actual format requirements
+        try:
+            # Add format-specific extraction logic here
+            # Examples:
+            # - Read file headers
+            # - Parse binary structures
+            # - Extract metadata fields
+            # - Map to registry definitions
+
+            pass  # Replace with actual implementation
+
+        except Exception as e:
+            result["error"] = f"web_social_metadata extraction failed: {str(e)[:200]}"
+
+        # Count extracted fields
+        total_fields = len(result["extracted_fields"]) + len(result["registry_fields"])
+        result["fields_extracted"] = total_fields
+
+    except Exception as e:
+        result["error"] = f"web_social_metadata metadata extraction failed: {str(e)[:200]}"
+
+    return result

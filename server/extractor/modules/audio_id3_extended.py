@@ -573,4 +573,16 @@ def get_audio_id3_extended_field_count() -> int:
 # Integration point
 def extract_audio_id3_complete(filepath: str) -> Dict[str, Any]:
     """Main entry point for audio ID3 extended extraction."""
-    return extract_audio_id3_extended_metadata(filepath)
+    result = extract_audio_id3_extended_metadata(filepath)
+    try:
+        from .audio_id3_complete_registry import extract as extract_id3_registry
+        registry_result = extract_id3_registry(filepath)
+        registry_data = registry_result.pop("registry", None)
+        for key, value in registry_result.items():
+            if value is not None or key not in result:
+                result[key] = value
+        if registry_data:
+            result["registry"] = registry_data
+    except Exception:
+        pass
+    return result

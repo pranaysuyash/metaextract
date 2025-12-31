@@ -6,7 +6,14 @@ CLI utilities for metadata_db (search, history, stats, favorites, similar).
 import argparse
 import json
 import sys
+import os
 from typing import List, Optional
+
+# Ensure extractor package path is resolvable when running as script
+# (makes imports work whether invoked as module or script)
+_this_dir = os.path.dirname(__file__)
+if _this_dir not in sys.path:
+    sys.path.insert(0, _this_dir)
 
 try:
     from .modules.metadata_db import (
@@ -19,6 +26,7 @@ try:
         get_file_id_by_path,
     )
 except ImportError:
+    # Fallback to absolute-style import when run as a script
     from modules.metadata_db import (  # type: ignore
         search_metadata_query,
         get_version_history,

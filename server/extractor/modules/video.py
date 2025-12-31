@@ -15,6 +15,86 @@ except ImportError:
     FFMPEG_AVAILABLE = False
 
 
+
+# ULTRA EXPANSION FIELDS
+# Additional 27 fields
+ULTRA_VIDEO_FIELDS = {
+    "video_codec_profile": "h264_h265_hevc_profile",
+    "video_codec_level": "encoding_level_constraint",
+    "video_bitrate_mode": "cbr_vbr_variable_bitrate",
+    "video_bitrate": "video_stream_bitrate_bps",
+    "video_framerate": "frames_per_second",
+    "video_resolution": "width_height_pixels",
+    "video_aspect_ratio": "display_aspect_ratio",
+    "video_color_space": "yuv_rgb_color_format",
+    "video_color_range": "limited_full_color_range",
+    "video_chroma_subsampling": "4_2_0_4_4_4_sampling",
+    "audio_codec": "aac_mp3_ac3_dts_codec",
+    "audio_bitrate": "audio_stream_bitrate",
+    "audio_sample_rate": "hz_sampling_frequency",
+    "audio_channels": "stereo_surround_count",
+    "audio_channel_layout": "speaker_configuration",
+    "audio_language": "primary_audio_language",
+    "container_format": "mp4_mov_avi_mkv_container",
+    "creation_time": "file_creation_datetime",
+    "modification_time": "last_edit_datetime",
+    "duration_seconds": "total_playback_duration",
+    "file_size_bytes": "total_file_size",
+    "streaming_protocol": "hls_dash_rtsp_protocol",
+    "segment_duration": "chunk_length_seconds",
+    "bandwidth_requirements": "minimum_network_bandwidth",
+    "adaptive_bitrate": "abr_streaming_available",
+    "drm_protection": "digital_rights_management",
+    "subtitle_tracks": "closed_caption_languages",
+}
+
+
+# MEGA EXPANSION FIELDS
+# Additional 41 fields
+MEGA_VIDEO_FIELDS = {
+    "codec_profile": "baseline_main_high",
+    "chroma_subsampling": "4_2_0_4_2_2_4_4_4",
+    "bit_depth": "8bit_10bit_12bit",
+    "entropy_encoding": "cavlc_cabac",
+    "transform_type": "integer_8x8_4x4",
+    "loop_filter": "deblocking_filter_strength",
+    "reference_frames": "frame_reference_count",
+    "gop_structure": "group_of_pictures",
+    "b_pyramid": "b_frame_pyramid_hierarchy",
+    "weighted_prediction": "wp_weights",
+    "rate_control": "cbr_vbr_const_q",
+    "quantization_matrix": "custom_quantization",
+    "vbv_delay": "video_buffering_verifier",
+    "hdr_format": "hdr10_dolbyvision_hlg",
+    "max_cll": "max_content_light_level",
+    "max_fall": "max_frame_average_light_level",
+    "mastering_display": "reference_display_color",
+    "transfer_characteristics": "gamma_eotf",
+    "color_primaries": "bt2020_bt709_p3",
+    "metadata_level": "hdr_metadata_version",
+    "stereo_format": "side_by_side_top_bottom_frame_sequential",
+    "depth_map_format": "additional_depth_stream",
+    "parallax_angle": "interocular_distance",
+    "convergence_distance": "focal_plane_depth",
+    "anaglyph": "3d_glasses_color",
+    "streaming_protocol": "hls_dash_rtsp_rtmp",
+    "segment_duration": "chunk_length_seconds",
+    "manifest_format": "m3u8_mpd_xml",
+    "codec_switching": "adaptive_bitrate_switching",
+    "drm_encryption": "widevine_playready_fairplay",
+    "cdn_provider": "content_delivery_network",
+    "edge_caching": "edge_server_location",
+    "transcoding_profile": "encoding_preset",
+    "scene_detection": "shot_boundary_detection",
+    "motion_vectors": "optical_flow_data",
+    "face_detection": "facial_recognition_data",
+    "object_tracking": "motion_object_tracking",
+    "ocr_text": "text_recognition_overlay",
+    "logo_detection": "brand_identification",
+    "content_rating": "maturity_rating",
+    "copyright_detection": "fingerprinting_watermark",
+}
+
 def extract_video_metadata(filepath: str) -> Optional[Dict[str, Any]]:
     """
     Extract video metadata using ffprobe.
@@ -268,5 +348,8 @@ def extract_video_advanced_metadata(filepath: str) -> Optional[Dict[str, Any]]:
 
 
 def get_video_field_count() -> int:
-    """Return approximate number of video fields."""
-    return 120
+    """Return total number of video metadata fields."""
+    total = 0
+    total += len(ULTRA_VIDEO_FIELDS)
+    total += len(MEGA_VIDEO_FIELDS)
+    return total

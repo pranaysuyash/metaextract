@@ -1,8 +1,8 @@
-# MetaExtract: 45k Universe Roadmap (Phase-Based Strategy)
+# MetaExtract: Comprehensive Universe Roadmap (Phase-Based Strategy)
 
 ## Overview
 
-The technical universe of metadata contains **45,000+ possible fields** across all standards, formats, and domains. This roadmap provides a **phased, practical strategy** to scale MetaExtract toward a competitive 10,000-15,000 field extraction engine while maintaining:
+The technical universe of metadata encompasses a **comprehensive set of fields (on the order of tens of thousands)** across all standards, formats, and domains. This roadmap provides a **phased, practical strategy** to scale MetaExtract toward a competitive 10,000-15,000 field extraction engine while maintaining:
 
 - **Performance**: Sub-second analysis of critical fields
 - **Safety**: Allowlisting, PII/PHI redaction, no sensitive data retention
@@ -428,9 +428,9 @@ To begin Phase 2 immediately:
 
 ## Conclusion
 
-MetaExtract's path to 45,000 fields is not a single engineering effort but a **strategic, phased roadmap** balancing:
+MetaExtract's path to comprehensive field coverage is not a single engineering effort but a **strategic, phased roadmap** balancing:
 
-- **Practical field coverage** (10,000-15,000 vs. theoretical 45,000)
+- **Practical field coverage** (10,000-15,000 vs. theoretical tens of thousands)
 - **Performance and safety** (allowlists, redaction, timeouts)
 - **Forensic reliability** (court-admissible, reproducible)
 - **User experience** (clear output, confidence scores, warnings)

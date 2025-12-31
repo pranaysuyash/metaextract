@@ -676,3 +676,636 @@ def get_id3_frames_field_count() -> int:
         len(SYLT_CONTENT_TYPES) +
         len(RVA2_CHANNEL_TYPES)
     )
+
+
+def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract comprehensive ID3 frame metadata from audio files.
+
+    Args:
+        filepath: Path to the audio file
+
+    Returns:
+        Dictionary containing extracted ID3 frame metadata
+    """
+    result = {
+        "id3v2_text_frames": {},
+        "id3v2_url_frames": {},
+        "id3v2_other_frames": {},
+        "vorbis_comments": {},
+        "ape_tags": {},
+        "mp4_tags": {},
+        "picture_info": {},
+        "fields_extracted": 0,
+        "is_valid_audio": False,
+        "audio_format": None
+    }
+
+    try:
+        from mutagen import File
+        from mutagen.id3 import ID3, ID3NoHeaderError
+        from mutagen.mp4 import MP4
+        from mutagen.flac import FLAC
+        from mutagen.apev2 import APEv2File
+    except Exception:
+        result["error"] = "mutagen not available"
+        return result
+
+    def _normalize_value(value: Any) -> Any:
+        if isinstance(value, list):
+            return [str(v) for v in value]
+        return str(value)
+
+    try:
+        audio_file = File(filepath)
+        if audio_file is None:
+            result["error"] = "Could not read audio file"
+            return result
+
+        result["is_valid_audio"] = True
+        result["audio_format"] = type(audio_file).__name__
+
+        # ID3 tags
+        id3_tags = None
+        try:
+            id3_tags = ID3(filepath)
+        except ID3NoHeaderError:
+            id3_tags = None
+        except Exception:
+            id3_tags = None
+
+        if id3_tags is not None:
+            for frame_id in id3_tags.keys():
+                frames = id3_tags.getall(frame_id)
+                values = []
+                for frame in frames:
+                    if frame_id == "APIC":
+                        pic = {
+                            "mime": getattr(frame, "mime", None),
+                            "type": getattr(frame, "type", None),
+                            "description": getattr(frame, "desc", None),
+                            "size_bytes": len(getattr(frame, "data", b"") or b""),
+                        }
+                        result["picture_info"].setdefault("apic", []).append(pic)
+                        values.append(pic)
+                    elif hasattr(frame, "text"):
+                        values.extend([str(v) for v in frame.text])
+                    elif hasattr(frame, "url"):
+                        values.append(frame.url)
+                    else:
+                        values.append(str(frame))
+                value = values if len(values) > 1 else (values[0] if values else "")
+                if frame_id in ID3V2_TEXT_FRAMES:
+                    result["id3v2_text_frames"][ID3V2_TEXT_FRAMES[frame_id]] = value
+                elif frame_id in ID3V2_URL_FRAMES:
+                    result["id3v2_url_frames"][ID3V2_URL_FRAMES[frame_id]] = value
+                else:
+                    result["id3v2_other_frames"][ID3V2_OTHER_FRAMES.get(frame_id, frame_id)] = value
+
+        # Vorbis (FLAC/OGG)
+        if isinstance(audio_file, FLAC) or audio_file.__class__.__name__.lower().startswith("ogg"):
+            tags = getattr(audio_file, "tags", None)
+            if tags:
+                for key, val in tags.items():
+                    lookup_key = key.upper()
+                    field = VORBIS_COMMENT_FIELDS.get(lookup_key, key)
+                    result["vorbis_comments"][field] = _normalize_value(val)
+
+        # APE
+        if isinstance(audio_file, APEv2File):
+            tags = getattr(audio_file, "tags", None)
+            if tags:
+                for key, val in tags.items():
+                    field = APE_TAG_FIELDS.get(key, key)
+                    result["ape_tags"][field] = _normalize_value(val)
+
+        # MP4 tags
+        if isinstance(audio_file, MP4):
+            tags = getattr(audio_file, "tags", None)
+            if tags:
+                for key, val in tags.items():
+                    field = MP4_TAG_FIELDS.get(key, key)
+                    result["mp4_tags"][field] = _normalize_value(val)
+
+        result["fields_extracted"] = (
+            len(result["id3v2_text_frames"]) +
+            len(result["id3v2_url_frames"]) +
+            len(result["id3v2_other_frames"]) +
+            len(result["vorbis_comments"]) +
+            len(result["ape_tags"]) +
+            len(result["mp4_tags"]) +
+            len(result["picture_info"])
+        )
+        return result
+    except Exception as e:
+        result["error"] = str(e)[:200]
+        return result
+
+            result["is_valid_audio"] = True
+            result["audio_format"] = type(audio_file).__name__
+
+            # Extract ID3v2 frames
+            if hasattr(audio_file, 'tags') and audio_file.tags:
+                try:
+                    # Try ID3 frames
+                    if isinstance(audio_file, ID3) or (hasattr(audio_file, 'tags') and any(isinstance(t, ID3) for t in [audio_file.tags] if not isinstance(audio_file.tags, dict))):
+                        try:
+                            id3_tags = ID3(filepath)
+                            for frame in id3_tags.values():
+                                frame_id = frame.FrameID
+                                frame_name = ID3V2_TEXT_FRAMES.get(frame_id) or ID3V2_URL_FRAMES.get(frame_id) or ID3V2_OTHER_FRAMES.get(frame_id)
+
+                                if frame_name:
+                                    # Extract frame value
+                                    try:
+                                        value = str(frame)
+                                        result["id3v2_text_frames"][frame_name] = value[:200]
+                                    except Exception:
+                                        result["id3v2_other_frames"][frame_name] = "present"
+                        except Exception as e:
+                            result["id3_error"] = str(e)[:100]
+
+                    # Try Vorbis comments (FLAC, OGG)
+                    if isinstance(audio_file, FLAC):
+                        for comment_name, comment_value in (audio_file.tags or {}).items():
+                            field_name = VORBIS_COMMENT_FIELDS.get(comment_name, comment_name.lower())
+                            result["vorbis_comments"][field_name] = str(comment_value)[:200]
+
+                    # Try MP4 tags (M4A)
+                    if isinstance(audio_file, MP4):
+                        for key, value in (audio_file.tags or {}).items():
+                            field_name = MP4_TAG_FIELDS.get(key, key.lower())
+                            result["mp4_tags"][field_name] = str(value)[:200]
+
+                    # Try APEv2 tags
+                    try:
+                        ape_file = APEv2File(filepath)
+                        if ape_file.tags:
+                            for tag_name, tag_value in ape_file.tags.items():
+                                field_name = APE_TAG_FIELDS.get(tag_name, tag_name.lower())
+                                result["ape_tags"][field_name] = str(tag_value)[:200]
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Extract general metadata
+            if hasattr(audio_file, 'info'):
+                info = audio_file.info
+                if hasattr(info, 'length'):
+                    result["duration"] = info.length
+                if hasattr(info, 'bitrate'):
+                    result["bitrate"] = info.bitrate
+                if hasattr(info, 'sample_rate'):
+                    result["sample_rate"] = info.sample_rate
+
+            # Count total fields extracted
+            total_fields = (
+                len(result["id3v2_text_frames"]) +
+                len(result["id3v2_url_frames"]) +
+                len(result["id3v2_other_frames"]) +
+                len(result["vorbis_comments"]) +
+                len(result["ape_tags"]) +
+                len(result["mp4_tags"]) +
+                len(result.get("picture_info", {}))
+            )
+            result["fields_extracted"] = total_fields
+
+        except ImportError:
+            result["error"] = "Mutagen library not available"
+            return result
+    except Exception as e:
+        result["error"] = f"ID3 frames extraction failed: {str(e)[:200]}"
+        return result
+
+    return result
+
+
+# Extended Audio Tags - Streaming Services
+AUDIO_STREAMING_TAGS = {
+    # Spotify
+    "TXXX:Spotify Id": "spotify_track_id",
+    "TXXX:Spotify Artist Id": "spotify_artist_id",
+    "TXXX:Spotify Album Id": "spotify_album_id",
+    "TXXX:Spotify URI": "spotify_uri",
+    "TXXX:Spotify Preview URL": "spotify_preview_url",
+    "TXXX:Spotify Track Duration": "spotify_track_duration",
+    "TXXX:Spotify Popularity": "spotify_popularity",
+    # Apple Music
+    "TXXX:Apple Music Id": "apple_music_id",
+    "TXXX:iTunes Store Id": "itunes_store_id",
+    "TXXX:iTunes Album Id": "itunes_album_id",
+    "TXXX:iTunes Artist Id": "itunes_artist_id",
+    # Deezer
+    "TXXX:Deezer Id": "deezer_id",
+    "TXXX:Deezer Artist Id": "deezer_artist_id",
+    "TXXX:Deezer Album Id": "deezer_album_id",
+    "TXXX:Deezer Link": "deezer_link",
+    # Tidal
+    "TXXX:Tidal Id": "tidal_id",
+    "TXXX:Tidal Track Id": "tidal_track_id",
+    "TXXX:Tidal Album Id": "tidal_album_id",
+    "TXXX:Tidal Artist Id": "tidal_artist_id",
+    # YouTube
+    "TXXX:YouTube Id": "youtube_id",
+    "TXXX:YouTube Video Id": "youtube_video_id",
+    "TXXX:YouTube Channel Id": "youtube_channel_id",
+    "TXXX:YouTube Category": "youtube_category",
+    "TXXX:YouTube Tags": "youtube_tags",
+    # SoundCloud
+    "TXXX:SoundCloud Id": "soundcloud_id",
+    "TXXX:SoundCloud Link": "soundcloud_link",
+    "TXXX:SoundCloud Username": "soundcloud_username",
+    # Bandcamp
+    "TXXX:Bandcamp Id": "bandcamp_id",
+    "TXXX:Bandcamp Link": "bandcamp_link",
+    "TXXX:Bandcamp Album Id": "bandcamp_album_id",
+    # Napster
+    "TXXX:Napster Id": "napster_id",
+    "TXXX:Napster Artist Id": "napster_artist_id",
+    # Amazon Music
+    "TXXX:Amazon Music Id": "amazon_music_id",
+    "TXXX:Amazon Album Id": "amazon_album_id",
+}
+
+# DJ/Production Software Tags
+DJ_PRODUCTION_TAGS = {
+    # Serato
+    "TXXX:Serato Id": "serato_id",
+    "TXXX:Serato Crate": "serato_crate",
+    "TXXX:Serato Bpm": "serato_bpm",
+    "TXXX:Serato Key": "serato_key",
+    "TXXX:Serato End": "serato_end",
+    "TXXX:Serato Start": "serato_start",
+    "TXXX:Serato Comments": "serato_comments",
+    "TXXX:Serato Rating": "serato_rating",
+    "TXXX:Serato Beatport Id": "serato_beatport_id",
+    "TXXX:Serato Discogs Id": "serato_discogs_id",
+    # Traktor
+    "TXXX:Traktor Id": "traktor_id",
+    "TXXX:Traktor Cue": "traktor_cue",
+    "TXXX:Traktor Loop": "traktor_loop",
+    "TXXX:Traktor Grid": "traktor_grid",
+    "TXXX:Traktor Bpm": "traktor_bpm",
+    "TXXX:Traktor Comment": "traktor_comment",
+    # Rekordbox
+    "TXXX:Rekordbox Id": "rekordbox_id",
+    "TXXX:Rekordbox Cue": "rekordbox_cue",
+    "TXXX:Rekordbox Loop": "rekordbox_loop",
+    "TXXX:Rekordbox Bpm": "rekordbox_bpm",
+    "TXXX:Rekordbox Comment": "rekordbox_comment",
+    "TXXX:Rekordbox Position": "rekordbox_position",
+    # Virtual DJ
+    "TXXX:VirtualDJ Id": "virtual_dj_id",
+    "TXXX:VirtualDJ Cue": "virtual_dj_cue",
+    "TXXX:VirtualDJ Loop": "virtual_dj_loop",
+    "TXXX:VirtualDJ Bpm": "virtual_dj_bpm",
+    # Engine DJ
+    "TXXX:Engine DJ Id": "engine_dj_id",
+    "TXXX:Engine DJ Hotcue": "engine_dj_hotcue",
+    "TXXX:Engine DJ Memory Cue": "engine_dj_memory_cue",
+    "TXXX:Engine DJ Loop": "engine_dj_loop",
+    # Mixxx
+    "TXXX:Mixxx Cue": "mixxx_cue",
+    "TXXX:Mixxx Hotcue": "mixxx_hotcue",
+    "TXXX:Mixxx Bpm": "mixxx_bpm",
+    "TXXX:Mixxx Comment": "mixxx_comment",
+    # Ableton Live
+    "TXXX:Ableton Live Cue": "ableton_cue",
+    "TXXX:Ableton Loop": "ableton_loop",
+    "TXXX:Ableton Warped": "ableton_warped",
+    "TXXX:Ableton Clip Name": "ableton_clip_name",
+    "TXXX:Ableton Scene": "ableton_scene",
+    # FL Studio
+    "TXXX:FL Studio Channel": "fl_studio_channel",
+    "TXXX:FL Studio插 Note": "fl_studio_note",
+    "TXXX:FL Studio Effect": "fl_studio_effect",
+    # Logic Pro
+    "TXXX:Logic Pro Region": "logic_pro_region",
+    "TXXX:Logic Pro Take": "logic_pro_take",
+    "TXXX:Logic Pro Cycle": "logic_pro_cycle",
+    # Pro Tools
+    "TXXX:ProTools Region": "pro_tools_region",
+    "TXXX:ProTools Clip": "pro_tools_clip",
+    "TXXX:ProTools Session": "pro_tools_session",
+}
+
+# Radio Broadcast Tags
+RADIO_BROADCAST_TAGS = {
+    # RDS (Radio Data System)
+    "TXXX:RDS PS": "rds_program_service_name",
+    "TXXX:RDS PI": "rds_program_identification",
+    "TXXX:RDS PTY": "rds_program_type",
+    "TXXX:RDS TP": "rds_traffic_program",
+    "TXXX:RDS TA": "rds_traffic_announcement",
+    "TXXX:RDS MS": "rds_music_speech",
+    "TXXX:RDS CT": "rds_ct",
+    "TXXX:RDS RT": "rds_radiotext",
+    "TXXX:RDS RT Plus": "rds_radiotext_plus",
+    "TXXX:RDS EON": "rds_eon",
+    "TXXX:RDS PIN": "rds_pin",
+    "TXXX:RDS PTYN": "rds_program_type_name",
+    # HD Radio
+    "TXXX:HD Radio Id": "hd_radio_id",
+    "TXXX:HD Radio Artist": "hd_radio_artist",
+    "TXXX:HD Radio Title": "hd_radio_title",
+    "TXXX:HD Radio Album": "hd_radio_album",
+    "TXXX:HD Radio Genre": "hd_radio_genre",
+    # DAB/DAB+
+    "TXXX:DAB Service Id": "dab_service_id",
+    "TXXX:DAB Ensemble": "dab_ensemble",
+    "TXXX:DAB Component": "dab_component",
+    "TXXX:DAB Flags": "dab_flags",
+    # Sirius XM
+    "TXXX:SiriusXM Channel Id": "siriusxm_channel_id",
+    "TXXX:SiriusXM Channel Name": "siriusxm_channel_name",
+    "TXXX:SiriusXM Artist": "siriusxm_artist",
+    "TXXX:SiriusXM Title": "siriusxm_title",
+}
+
+# Classical Music Extensions
+CLASSICAL_MUSIC_TAGS = {
+    "TXXX:Classical Catalog": "classical_catalog",
+    "TXXX:Classical Work": "classical_work",
+    "TXXX:Classical Movement": "classical_movement",
+    "TXXX:Classical Movement Number": "classical_movement_number",
+    "TXXX:Classical Movement Total": "classical_movement_total",
+    "TXXX:Classical Opuse": "classical_opus",
+    "TXXX:Classical Catalog Number": "classical_catalog_number",
+    "TXXX:Classical Title": "classical_title",
+    "TXXX:Classical Nickname": "classical_nickname",
+    "TXXX:Classical Key": "classical_key",
+    "TXXX:Classical Year Composed": "classical_year_composed",
+    "TXXX:Classical Date Composed": "classical_date_composed",
+    "TXXX:Classical First Performance": "classical_first_performance",
+    "TXXX:Classical First Recording": "classical_first_recording",
+    "TXXX:Classical Soloists": "classical_soloists",
+    "TXXX:Classical Ensemble": "classical_ensemble",
+    "TXXX:Classical Conductor": "classical_conductor",
+    "TXXX:Classical Orchestra": "classical_orchestra",
+    "TXXX:Classical Choir": "classical_choir",
+    "TXXX:Classical Producer": "classical_producer",
+    "TXXX:Classical Engineer": "classical_engineer",
+    "TXXX:Classical Recording Location": "classical_recording_location",
+    "TXXX:Classical Recording Date": "classical_recording_date",
+    "TXXX:Classical Release Date": "classical_release_date",
+    "TXXX:Classical Label": "classical_label",
+    "TXXX:Classical Format": "classical_format",
+    "TXXX:Classical Notes": "classical_notes",
+    "TXXX:Classical Librettist": "classical_librettist",
+    "TXXX:Classical Lyricist": "classical_lyricist",
+    "TXXX:Classical_arranger": "classical_arranger",
+}
+
+# Podcast Extensions
+PODCAST_TAGS = {
+    "TXXX:Podcast URL": "podcast_url",
+    "TXXX:Podcast Feed URL": "podcast_feed_url",
+    "TXXX:Podcast GUID": "podcast_guid",
+    "TXXX:Podcast Episode GUID": "podcast_episode_guid",
+    "TXXX:Podcast Episode Type": "podcast_episode_type",
+    "TXXX:Podcast Episode Season": "podcast_episode_season",
+    "TXXX:Podcast Episode Episode": "podcast_episode_number",
+    "TXXX:Podcast Episode Title": "podcast_episode_title",
+    "TXXX:Podcast Episode Description": "podcast_episode_description",
+    "TXXX:Podcast Episode Summary": "podcast_episode_summary",
+    "TXXX:Podcast Episode Duration": "podcast_episode_duration",
+    "TXXX:Podcast Episode Explicit": "podcast_episode_explicit",
+    "TXXX:Podcast Episode Block": "podcast_episode_block",
+    "TXXX:Podcast Channel Title": "podcast_channel_title",
+    "TXXX:Podcast Channel Author": "podcast_channel_author",
+    "TXXX:Podcast Channel Description": "podcast_channel_description",
+    "TXXX:Podcast Channel URL": "podcast_channel_url",
+    "TXXX:Podcast Channel Feed": "podcast_channel_feed",
+    "TXXX:Podcast Channel Image": "podcast_channel_image",
+    "TXXX:Podcast Channel Category": "podcast_channel_category",
+    "TXXX:Podcast Channel Owner": "podcast_channel_owner",
+    "TXXX:Podcast Channel Owner Email": "podcast_channel_owner_email",
+    "TXXX:Podcast Copyright": "podcast_copyright",
+    "TXXX:Podcast Publication Date": "podcast_publication_date",
+    "TXXX:Podcast Keywords": "podcast_keywords",
+    "TXXX:Podcast Type": "podcast_type",
+    "TXXX:Podcast Complete": "podcast_complete",
+    "TXXX:Podcast Live": "podcast_live",
+}
+
+# Audio Fingerprinting and Analysis
+AUDIO_FINGERPRINT_TAGS = {
+    # Acoustid
+    "TXXX:Acoustid Id": "acoustid_id",
+    "TXXX:Acoustid Fingerprint": "acoustid_fingerprint",
+    "TXXX:Acoustid Duration": "acoustid_duration",
+    "TXXX:Acoustid Score": "acoustid_score",
+    "TXXX:Acoustid Match Type": "acoustid_match_type",
+    # Chromaprint
+    "TXXX:Chromaprint": "chromaprint",
+    "TXXX:Chromaprint Algorithm": "chromaprint_algorithm",
+    "TXXX:Chromaprint Version": "chromaprint_version",
+    # Echo Nest
+    "TXXX:Echo Nest Id": "echo_nest_id",
+    "TXXX:Echo Nest Analysis URL": "echo_nest_analysis_url",
+    # AudD
+    "TXXX:AudD Id": "audd_id",
+    "TXXX:AudD Match": "audd_match",
+    # Shazam
+    "TXXX:Shazam Id": "shazam_id",
+    "TXXX:Shazam Signature": "shazam_signature",
+    # AudioDB
+    "TXXX:AudioDB Id": "audiodb_id",
+    "TXXX:AudioDB Track Id": "audiodb_track_id",
+    # Last.fm
+    "TXXX:Last.fm Id": "lastfm_id",
+    "TXXX:Last.fm URL": "lastfm_url",
+    "TXXX:Last.fm Playcount": "lastfm_playcount",
+    "TXXX:Last.fm Listener Count": "lastfm_listener_count",
+}
+
+# Audio Analysis Tags (Loudness, Dynamic Range, etc.)
+AUDIO_ANALYSIS_TAGS = {
+    # ReplayGain (extended)
+    "TXXX:REPLAYGAIN_TRACK_MINMAX": "replaygain_track_minmax",
+    "TXXX:REPLAYGAIN_TRACK_RANGE": "replaygain_track_range",
+    "TXXX:REPLAYGAIN_ALBUM_MINMAX": "replaygain_album_minmax",
+    "TXXX:REPLAYGAIN_ALBUM_RANGE": "replaygain_album_range",
+    "TXXX:REPLAYGAIN_TRACK_PEAK_DB": "replaygain_track_peak_db",
+    "TXXX:REPLAYGAIN_ALBUM_PEAK_DB": "replaygain_album_peak_db",
+    # EBU R128
+    "TXXX:REPLAYGAIN_TRACK_GAIN_DB": "replaygain_track_gain_db",
+    "TXXX:REPLAYGAIN_ALBUM_GAIN_DB": "replaygain_album_gain_db",
+    "TXXX:REPLAYGAIN_REFERENCE_LOUDNESS_DB": "replaygain_reference_loudness_db",
+    # Dynamic Range
+    "TXXX:DYNAMIC_RANGE": "dynamic_range",
+    "TXXX:DYNAMIC_RANGE_COMPRESSION": "dynamic_range_compression",
+    "TXXX:PEAK_AMPLITUDE": "peak_amplitude",
+    "TXXX:PEAK_LEVEL": "peak_level",
+    "TXXX:RMS_AMPLITUDE": "rms_amplitude",
+    "TXXX:RMS_LEVEL": "rms_level",
+    # Frequency Analysis
+    "TXXX:LOW_FREQUENCY": "low_frequency",
+    "TXXX:HIGH_FREQUENCY": "high_frequency",
+    "TXXX:CENTER_FREQUENCY": "center_frequency",
+    "TXXX:BANDWIDTH": "bandwidth",
+    # Spectral Analysis
+    "TXXX:SPECTRAL_CENTROID": "spectral_centroid",
+    "TXXX:SPECTRAL_FLUX": "spectral_flux",
+    "TXXX:SPECTRAL_ROLLOFF": "spectral_rolloff",
+    "TXXX:SPECTRAL_FLATNESS": "spectral_flatness",
+    # Rhythm Analysis
+    "TXXX:BPM": "bpm_detected",
+    "TXXX:BPM CONFIDENCE": "bpm_confidence",
+    "TXXX:BPM QUALITY": "bpm_quality",
+    "TXXX:BEAT STRENGTH": "beat_strength",
+    "TXXX:CLARITY": "clarity",
+    "TXXX:DANCEABILITY": "danceability",
+    "TXXX:TEMPO STABILITY": "tempo_stability",
+    "TXXX:TEMPO CONFIDENCE": "tempo_confidence",
+    # Key Detection
+    "TXXX:KEY DETECTION": "key_detection",
+    "TXXX:KEY CONFIDENCE": "key_confidence",
+    "TXXX:KEY QUALITY": "key_quality",
+    # Timbre
+    "TXXX:BRIGHTNESS": "brightness",
+    "TXXX:DARKNESS": "darkness",
+    "TXXX:WARMTH": "warmth",
+    "TXXX:COLDNESS": "coldness",
+    "TXXX:HARSHNESS": "harshness",
+    "TXXX:ROUGHNESS": "roughness",
+}
+
+# Lossless Audio Extensions
+LOSSLESS_AUDIO_TAGS = {
+    # FLAC specific
+    "TXXX:FLAC Cue Sheet": "flac_cue_sheet",
+    "TXXX:FLAC Cue Sheet Checksum": "flac_cue_sheet_checksum",
+    "TXXX:FLAC Matroska Cue Sheet": "flac_matroska_cue_sheet",
+    "TXXX:FLAC Seektable": "flac_seektable",
+    "TXXX:FLAC Vendor": "flac_vendor",
+    # WAV/AIFF specific
+    "TXXX:WAV Cue Sheet": "wav_cue_sheet",
+    "TXXX:WAV Label": "wav_label",
+    "TXXX:WAV Note": "wav_note",
+    "TXXX:WAV.ds64": "wav_ds64",
+    "TXXX:AIFF Chunk": "aiff_chunk",
+    # DSD specific
+    "TXXX:DSD Bit Depth": "dsd_bit_depth",
+    "TXXX:DSD Sample Rate": "dsd_sample_rate",
+    "TXXX:DSD Channels": "dsd_channels",
+    "TXXX:DSD Type": "dsd_type",
+    "TXXX:DSD Encoding": "dsd_encoding",
+    # PCM specific
+    "TXXX:PCM Bits Per Sample": "pcm_bits_per_sample",
+    "TXXX:PCM Sample Rate": "pcm_sample_rate",
+    "TXXX:PCM Channels": "pcm_channels",
+    "TXXX:PCM Byte Order": "pcm_byte_order",
+    "TXXX:PCM Alignment": "pcm_alignment",
+}
+
+# Spatial/3D Audio Tags
+SPATIAL_AUDIO_TAGS = {
+    # Dolby Atmos
+    "TXXX:Dolby Atmos": "dolby_atmos",
+    "TXXX:Dolby Atmos Objects": "dolby_atmos_objects",
+    "TXXX:Dolby Atmos Version": "dolby_atmos_version",
+    # DTS:X
+    "TXXX:DTS:X": "dts_x",
+    "TXXX:DTS:X Objects": "dts_x_objects",
+    # Sony 360 Reality Audio
+    "TXXX:Sony 360 Reality Audio": "sony_360_reality_audio",
+    "TXXX:Sony 360 Objects": "sony_360_objects",
+    # Ambisonics
+    "TXXX:Ambisonics Format": "ambisonics_format",
+    "TXXX:Ambisonics Order": "ambisonics_order",
+    "TXXX:Ambisonics Type": "ambisonics_type",
+    "TXXX:Ambisonics Channel Count": "ambisonics_channel_count",
+    "TXXX:Ambisonics Reference Level": "ambisonics_reference_level",
+    # Binaural
+    "TXXX:Binaural": "binaural",
+    "TXXX:Binaural Type": "binaural_type",
+    # Headphone
+    "TXXX:Headphone Optimized": "headphone_optimized",
+    "TXXX:Headphone Profile": "headphone_profile",
+}
+
+# Audio Restoration Tags
+AUDIO_RESTORATION_TAGS = {
+    "TXXX:Declicked": "declicked",
+    "TXXX:Declick Strength": "declick_strength",
+    "TXXX:Decracked": "decracked",
+    "TXXX:Decrack Strength": "decrack_strength",
+    "TXXX:Dereduced": "dereduced",
+    "TXXX:Dereduce Strength": "dereduce_strength",
+    "TXXX:Dehummed": "dehummed",
+    "TXXX:Dehum Strength": "dehum_strength",
+    "TXXX:Denoised": "denoised",
+    "TXXX:Denoise Strength": "denoise_strength",
+    "TXXX:Denoise Type": "denoise_type",
+    "TXXX:Dereverberated": "dereverberated",
+    "TXXX:Dereverb Strength": "dereverb_strength",
+    "TXXX:Dereverb Type": "dereverb_type",
+    "TXXX:Level Corrected": "level_corrected",
+    "TXXX:Level Correction Amount": "level_correction_amount",
+    "TXXX:EQ Applied": "eq_applied",
+    "TXXX:EQ Type": "eq_type",
+    "TXXX:Normalization Applied": "normalization_applied",
+    "TXXX:Normalization Peak": "normalization_peak",
+    "TXXX:Mastered For": "mastered_for",
+    "TXXX:Mastering Engineer": "mastering_engineer",
+    "TXXX:Mastering Studio": "mastering_studio",
+    "TXXX:Mastering Date": "mastering_date",
+}
+
+
+def get_all_audio_extension_tags() -> Dict[str, str]:
+    """Return all extended audio tag mappings."""
+    all_tags = {}
+    all_tags.update(AUDIO_STREAMING_TAGS)
+    all_tags.update(DJ_PRODUCTION_TAGS)
+    all_tags.update(RADIO_BROADCAST_TAGS)
+    all_tags.update(CLASSICAL_MUSIC_TAGS)
+    all_tags.update(PODCAST_TAGS)
+    all_tags.update(AUDIO_FINGERPRINT_TAGS)
+    all_tags.update(AUDIO_ANALYSIS_TAGS)
+    all_tags.update(LOSSLESS_AUDIO_TAGS)
+    all_tags.update(SPATIAL_AUDIO_TAGS)
+    all_tags.update(AUDIO_RESTORATION_TAGS)
+    return all_tags
+
+
+def get_id3_frames_extended_field_count() -> int:
+    """Return total number of ID3 frames including extended mappings."""
+    base_count = get_id3_frames_field_count()
+    extended_count = len(get_all_audio_extension_tags())
+    return base_count + extended_count
+
+
+def get_all_audio_extension_tags() -> Dict[str, str]:
+    """Return all extended audio tag mappings."""
+    all_tags = {}
+    try:
+        all_tags.update(AUDIO_STREAMING_TAGS)
+    except NameError:
+        pass
+    try:
+        all_tags.update(DJ_PRODUCTION_TAGS)
+    except NameError:
+        pass
+    try:
+        all_tags.update(PODCAST_TAGS)
+    except NameError:
+        pass
+    try:
+        all_tags.update(AUDIBLE_TAGS)
+    except NameError:
+        pass
+    try:
+        all_tags.update(SOUNDCLOUD_TAGS)
+    except NameError:
+        pass
+    try:
+        all_tags.update(BANDCAMP_TAGS)
+    except NameError:
+        pass
+    try:
+        all_tags.update(AUDIO_RESTORATION_TAGS)
+    except NameError:
+        pass
+    return all_tags

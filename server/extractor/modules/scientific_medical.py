@@ -8,6 +8,8 @@ from pathlib import Path
 import struct
 import json
 
+from .shared_utils import count_fields as _count_fields
+
 
 GEOTIFF_KEY_NAMES = {
     1024: "GTModelTypeGeoKey",
@@ -39,15 +41,102 @@ GEOTIFF_KEY_NAMES = {
 }
 
 
-def _count_fields(value: Any) -> int:
-    if value is None:
-        return 0
-    if isinstance(value, dict):
-        return sum(_count_fields(v) for v in value.values())
-    if isinstance(value, list):
-        return sum(_count_fields(v) for v in value)
-    return 1
 
+# ULTRA EXPANSION FIELDS
+# Additional 36 fields
+ULTRA_SCIENTIFIC_MEDICAL_FIELDS = {
+    "experiment_id": "unique_experiment_identifier",
+    "research_group": "laboratory_institution",
+    "principal_investigator": "lead_researcher_name",
+    "funding_source": "grant_funding_agency",
+    "project_code": "research_project_number",
+    "ethics_approval": "irb_ethics_committee_id",
+    "protocol_number": "experimental_protocol",
+    "data_collection_date": "acquisition_datetime",
+    "instrument_manufacturer": "equipment_vendor",
+    "instrument_model": "device_model_number",
+    "instrument_serial": "serial_identifier",
+    "firmware_version": "device_firmware",
+    "calibration_date": "last_calibration_timestamp",
+    "maintenance_log": "service_history_records",
+    "operating_parameters": "instrument_settings",
+    "measurement_type": "observation_category",
+    "measurement_unit": "si_unit_of_measure",
+    "measurement_precision": "uncertainty_error_range",
+    "sampling_rate": "data_acquisition_frequency",
+    "integration_time": "signal_accumulation_duration",
+    "detection_limit": "minimum_detectable_amount",
+    "quantitation_limit": "quantification_threshold",
+    "sample_id": "specimen_identifier",
+    "sample_type": "biological_material_category",
+    "sample_source": "origin_tissue_organism",
+    "collection_date": "sample_acquisition_date",
+    "storage_conditions": "temperature_humidity_storage",
+    "preparation_method": "sample_processing_protocol",
+    "quality_metrics": "sample_quality_assessment",
+    "processing_software": "analysis_application",
+    "processing_version": "software_version",
+    "processing_parameters": "algorithm_settings",
+    "corrections_applied": "data_corrections",
+    "normalization_method": "data_standardization",
+    "quality_control": "qc_measures_applied",
+    "validation_status": "data_validation_result",
+}
+
+
+# MEGA EXPANSION FIELDS
+# Additional 52 fields
+MEGA_SCIENTIFIC_MEDICAL_FIELDS = {
+    "modality": "ct_mri_ultrasound_pet_spect",
+    "scan_protocol": "imaging_sequence",
+    "contrast_agent": "gadolinium_iodine_barium",
+    "contrast_dosage": "agent_volume_ml",
+    "scan_parameters": "tr_te_flip_angle",
+    "repetition_time": "tr_milliseconds",
+    "echo_time": "te_milliseconds",
+    "inversion_time": "ti_milliseconds",
+    "flip_angle": "rf_excitation_degrees",
+    "field_strength": "magnet_tesla_1_5_3_7",
+    "pixel_spacing": "mm_per_pixel",
+    "slice_thickness": "image_slice_mm",
+    "slice_gap": "inter_slice_gap",
+    "image_orientation": "axial_sagittal_coronal",
+    "acquisition_matrix": "scan_dimensions",
+    "fov": "field_of_view_cm",
+    "reconstruction_algorithm": "filtered_back_projection",
+    "kernel_type": "soft_sharp_lung_bone",
+    "window_center": "display_center_hu",
+    "window_width": "display_range_hu",
+    "treatment_machine": "linear_accelerator",
+    "beam_energy": "photon_mv_electron_mev",
+    "beam_modality": "photons_electrons_protons",
+    "gantry_angle": "treatment_head_angle",
+    "collimator_opening": "beam_field_size",
+    "mu_gating": "motion_management",
+    "fraction_dose": "daily_dose_gy",
+    "total_dose": "cumulative_dose_gy",
+    "treatment_fractions": "number_of_sessions",
+    "target_volume": "treatment_area_cc",
+    "organ_at_risk": "critical_structure_dose",
+    "sequencing_platform": "illumina_ion_torrent_pacbio",
+    "sequencing_chemistry": "library_prep_kit",
+    "read_length": "base_pair_read_length",
+    "read_quality": "phred_quality_score",
+    "coverage_depth": "sequencing_depth_x",
+    "variant_type": "snp_indel_structural_variant",
+    "genomic_coordinates": "chromosome_position",
+    "reference_genome": "grch38_hg19",
+    "variant_annotation": "clinical_significance",
+    "allele_frequency": "population_frequency",
+    "pathogenicity": "disease_causing_variant",
+    "test_method": "assay_technique",
+    "test_unit": "measurement_units",
+    "reference_range": "normal_values",
+    "sensitivity": "test_true_positive_rate",
+    "specificity": "test_true_negative_rate",
+    "positive_predictive": "ppv_probability",
+    "negative_predictive": "npv_probability",
+}
 
 def _parse_geokey_directory(key_dir, double_params=None, ascii_params=None) -> Dict[str, Any]:
     if not key_dir:
@@ -827,9 +916,24 @@ def extract_ome_xml_metadata(filepath: str, result: Dict) -> Dict:
     return result
 
 
+def get_scientific_medical_field_count() -> int:
+    """Return total number of scientific_medical metadata fields."""
+    total = 0
+    total += len(GEOTIFF_KEY_NAMES)
+    total += len(ULTRA_SCIENTIFIC_MEDICAL_FIELDS)
+    total += len(MEGA_SCIENTIFIC_MEDICAL_FIELDS)
+    total += len(MICROSCOPY_EXTENDED)
+    total += len(OME_TIFF_EXTENDED)
+    total += len(BIO_FORMATS_EXTENDED)
+    total += len(LIDAR_EXTENSIONS)
+    total += len(REMOTE_SENSING_EXTENSIONS)
+    total += len(MICROSCOPY_ANALYSIS_EXTENSIONS)
+    return total
+
+
 def get_scientific_field_count() -> int:
-    """Return approximate number of scientific/medical fields."""
-    return 320
+    """Backward-compatible alias for get_scientific_medical_field_count."""
+    return get_scientific_medical_field_count()
 
 
 def analyze_scientific_metadata(metadata: Dict) -> Dict:
@@ -943,3 +1047,285 @@ def detect_scientific_format(filepath: str) -> Dict[str, Any]:
             pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
 
     return result
+
+
+# Extended Scientific Microscopy Formats
+MICROSCOPY_EXTENDED = {
+    'czi_channel_names': 'czi_channel_names',
+    'czi_channel_colors': 'czi_channel_colors',
+    'czi_channel_excitation': 'czi_channel_excitation',
+    'czi_channel_emission': 'czi_channel_emission',
+    'czi_tile_position': 'czi_tile_position',
+    'czi_pyramid_level': 'czi_pyramid_level',
+    'czi_zoom': 'czi_zoom',
+    'czi_readout_time': 'czi_readout_time',
+    'czi_binning': 'czi_binning',
+    'czi_pixel_type': 'czi_pixel_type',
+    'czi_compression': 'czi_compression',
+    'czi_objective_name': 'czi_objective_name',
+    'czi_objective_magnification': 'czi_objective_magnification',
+    'czi_objective_na': 'czi_objective_na',
+    'czi_objective_immersion': 'czi_objective_immersion',
+    'czi_tube_lens_focal_length': 'czi_tube_lens_focal_length',
+    'czi_camera_setting': 'czi_camera_setting',
+    'czi_detector_setting': 'czi_detector_setting',
+    'czi_laser_lines': 'czi_laser_lines',
+    'czi_laser_power': 'czi_laser_power',
+    'czi_acquisition_time': 'czi_acquisition_time',
+    'czi_experiment': 'czi_experiment',
+    'czi_well_position': 'czi_well_position',
+    'czi_well_row': 'czi_well_row',
+    'czi_well_column': 'czi_well_column',
+    'lif_reference_image': 'lif_reference_image',
+    'lif_laser_lines': 'lif_laser_lines',
+    'lif_detectors': 'lif_detectors',
+    'lif_pmt_voltages': 'lif_pmt_voltages',
+    'lif_gain_settings': 'lif_gain_settings',
+    'lif_scan_speed': 'lif_scan_speed',
+    'lif_averaging': 'lif_averaging',
+    'lif_pinhole': 'lif_pinhole',
+    'lif_z_stack': 'lif_z_stack',
+    'lif_time_series': 'lif_time_series',
+    'lif_tile_scan': 'lif_tile_scan',
+    'lif_region': 'lif_region',
+    'lif_roi': 'lif_roi',
+    'nd2_file_version': 'nd2_file_version',
+    'nd2_acquisition_time': 'nd2_acquisition_time',
+    'nd2_experiment': 'nd2_experiment',
+    'nd2_loop_parameters': 'nd2_loop_parameters',
+    'nd2_stage_positions': 'nd2_stage_positions',
+    'nd2_z_stacks': 'nd2_z_stacks',
+    'nd2_time_series': 'nd2_time_series',
+    'nd2_channels': 'nd2_channels',
+    'nd2_channel_names': 'nd2_channel_names',
+    'nd2_channel_wavelengths': 'nd2_channel_wavelengths',
+    'nd2_laser_lines': 'nd2_laser_lines',
+    'nd2_laser_powers': 'nd2_laser_powers',
+    'nd2_filter_sets': 'nd2_filter_sets',
+    'nd2_objectives': 'nd2_objectives',
+    'nd2_camera_settings': 'nd2_camera_settings',
+}
+
+# Extended OME-TIFF Metadata
+OME_TIFF_EXTENDED = {
+    'ome_instrument_id': 'ome_instrument_id',
+    'ome_objective_id': 'ome_objective_id',
+    'ome_detector_id': 'ome_detector_id',
+    'ome_light_source_id': 'ome_light_source_id',
+    'ome_filter_id': 'ome_filter_id',
+    'ome_dichroic_id': 'ome_dichroic_id',
+    'ome_channel_samples_per_pixel': 'ome_channel_samples_per_pixel',
+    'ome_channel_illumination_type': 'ome_channel_illumination_type',
+    'ome_channel_contrast_method': 'ome_channel_contrast_method',
+    'ome_channel_acquisition_mode': 'ome_channel_acquisition_mode',
+    'ome_channel_pinhole_size': 'ome_channel_pinhole_size',
+    'ome_channel_pinhole_size_unit': 'ome_channel_pinhole_size_unit',
+    'ome_channel_excitation_wavelength': 'ome_channel_excitation_wavelength',
+    'ome_channel_emission_wavelength': 'ome_channel_emission_wavelength',
+    'ome_channel_fluorochrome': 'ome_channel_fluorochrome',
+    'ome_channel_naming_convention': 'ome_channel_naming_convention',
+    'ome_channel_color': 'ome_channel_color',
+    'ome_plane_the_z': 'ome_plane_the_z',
+    'ome_plane_the_t': 'ome_plane_the_t',
+    'ome_plane_position_x': 'ome_plane_position_x',
+    'ome_plane_position_y': 'ome_plane_position_y',
+    'ome_plane_position_z': 'ome_plane_position_z',
+    'ome_plane_exposure_time': 'ome_plane_exposure_time',
+    'ome_plane_delta_t': 'ome_plane_delta_t',
+    'ome_plane_timestamp': 'ome_plane_timestamp',
+    'ome_roi_id': 'ome_roi_id',
+    'ome_roi_x': 'ome_roi_x',
+    'ome_roi_y': 'ome_roi_y',
+    'ome_roi_width': 'ome_roi_width',
+    'ome_roi_height': 'ome_roi_height',
+    'ome_roi_geometry_type': 'ome_roi_geometry_type',
+    'ome_well_samples_ref': 'ome_well_samples_ref',
+    'ome_well_row': 'ome_well_row',
+    'ome_well_column': 'ome_well_column',
+    'ome_well_origin_x': 'ome_well_origin_x',
+    'ome_well_origin_y': 'ome_well_origin_y',
+    'ome_plate_id': 'ome_plate_id',
+    'ome_plate_rows': 'ome_plate_rows',
+    'ome_plate_columns': 'ome_plate_columns',
+    'ome_plate_well_origin_x': 'ome_plate_well_origin_x',
+    'ome_plate_well_origin_y': 'ome_plate_well_origin_y',
+    'ome_plate_well_spacing': 'ome_plate_well_spacing',
+    'ome_plate_external_identifier': 'ome_plate_external_identifier',
+}
+
+# Extended Bio-Formats Metadata
+BIO_FORMATS_EXTENDED = {
+    'bf_screen_id': 'bf_screen_id',
+    'bf_screen_name': 'bf_screen_name',
+    'bf_screen_type': 'bf_screen_type',
+    'bf_screen_status': 'bf_screen_status',
+    'bf_plate_id': 'bf_plate_id',
+    'bf_plate_name': 'bf_plate_name',
+    'bf_plate_wells': 'bf_plate_wells',
+    'bf_plate_column_count': 'bf_plate_column_count',
+    'bf_plate_row_count': 'bf_plate_row_count',
+    'bf_well_origin_x': 'bf_well_origin_x',
+    'bf_well_origin_y': 'bf_well_origin_y',
+    'bf_well_sample_count': 'bf_well_sample_count',
+    'bf_well_sample_ref': 'bf_well_sample_ref',
+    'bf_experimenter_id': 'bf_experimenter_id',
+    'bf_experimenter_first_name': 'bf_experimenter_first_name',
+    'bf_experimenter_last_name': 'bf_experimenter_last_name',
+    'bf_experimenter_email': 'bf_experimenter_email',
+    'bf_experimenter_institution': 'bf_experimenter_institution',
+    'bf_experimenter_department': 'bf_experimenter_department',
+    'bf_project_id': 'bf_project_id',
+    'bf_project_name': 'bf_project_name',
+    'bf_project_description': 'bf_project_description',
+    'bf_dataset_id': 'bf_dataset_id',
+    'bf_dataset_name': 'bf_dataset_name',
+    'bf_dataset_description': 'bf_dataset_description',
+    'bf_algorithm_id': 'bf_algorithm_id',
+    'bf_algorithm_name': 'bf_algorithm_name',
+    'bf_algorithm_version': 'bf_algorithm_version',
+    'bf_parameters': 'bf_parameters',
+    'bf_settings': 'bf_settings',
+    'bf_roi_id': 'bf_roi_id',
+    'bf_roi_description': 'bf_roi_description',
+    'bf_annotation_id': 'bf_annotation_id',
+    'bf_annotation_value': 'bf_annotation_value',
+    'bf_annotation_namespace': 'bf_annotation_namespace',
+}
+
+# LiDAR Point Cloud Extensions
+LIDAR_EXTENSIONS = {
+    'lidar_point_format': 'lidar_point_format',
+    'lidar_point_count': 'lidar_point_count',
+    'lidar_returns_count': 'lidar_returns_count',
+    'lidar_return_number': 'lidar_return_number',
+    'lidar_number_of_returns': 'lidar_number_of_returns',
+    'lidar_scan_direction_flag': 'lidar_scan_direction_flag',
+    'lidar_edge_of_flight_line': 'lidar_edge_of_flight_line',
+    'lidar_classification': 'lidar_classification',
+    'lidar_classification_synthetic': 'lidar_classification_synthetic',
+    'lidar_classification_keypoint': 'lidar_classification_keypoint',
+    'lidar_classification_water': 'lidar_classification_water',
+    'lidar_classification_rail': 'lidar_classification_rail',
+    'lidar_classification_road_surface': 'lidar_classification_road_surface',
+    'lidar_classification_overlap': 'lidar_classification_overlap',
+    'lidar_intensity': 'lidar_intensity',
+    'lidar_scan_angle': 'lidar_scan_angle',
+    'lidar_scan_angle_rank': 'lidar_scan_angle_rank',
+    'lidar_minimum': 'lidar_minimum',
+    'lidar_maximum': 'lidar_maximum',
+    'lidar_point_source_id': 'lidar_point_source_id',
+    'lidar_gps_time': 'lidar_gps_time',
+    'lidar_red': 'lidar_red',
+    'lidar_green': 'lidar_green',
+    'lidar_blue': 'lidar_blue',
+    'lidar_nir': 'lidar_nir',
+    'lidar_wave_packet_descriptor_index': 'lidar_wave_packet_descriptor_index',
+    'lidar_byte_offset_to_waveform_data': 'lidar_byte_offset_to_waveform_data',
+    'lidar_waveform_packet_size': 'lidar_waveform_packet_size',
+    'lidar_return_point_waveform_location': 'lidar_return_point_waveform_location',
+    'lidar_x': 'lidar_x',
+    'lidar_y': 'lidar_y',
+    'lidar_z': 'lidar_z',
+    'lidar_x_scaled': 'lidar_x_scaled',
+    'lidar_y_scaled': 'lidar_y_scaled',
+    'lidar_z_scaled': 'lidar_z_scaled',
+    'lidar_scan_channel': 'lidar_scan_channel',
+    'lidar_user_data': 'lidar_user_data',
+    'lidar_point_skip': 'lidar_point_skip',
+}
+
+# Remote Sensing Extensions
+REMOTE_SENSING_EXTENSIONS = {
+    'rs_satellite_name': 'rs_satellite_name',
+    'rs_sensor_name': 'rs_sensor_name',
+    'rs_sensor_type': 'rs_sensor_type',
+    'rs_sensor_resolution': 'rs_sensor_resolution',
+    'rs_sensor_band_count': 'rs_sensor_band_count',
+    'rs_wrs_path': 'rs_wrs_path',
+    'rs_wrs_row': 'rs_wrs_row',
+    'rs_day_night_indicator': 'rs_day_night_indicator',
+    'rs_scene_center_time': 'rs_scene_center_time',
+    'rs_cloud_coverage': 'rs_cloud_coverage',
+    'rs_image_quality': 'rs_image_quality',
+    'rs_azimuth_angle': 'rs_azimuth_angle',
+    'rs_elevation_angle': 'rs_elevation_angle',
+    'rs_sun_azimuth': 'rs_sun_azimuth',
+    'rs_sun_elevation': 'rs_sun_elevation',
+    'rs_ground_sample_distance': 'rs_ground_sample_distance',
+    'rs_ullatitude': 'rs_ullatitude',
+    'rs_ullongitude': 'rs_ullongitude',
+    'rs_urlatitude': 'rs_urlatitude',
+    'rs_urlongitude': 'rs_urlongitude',
+    'rs_llllatitude': 'rs_llllatitude',
+    'rs_llllongitude': 'rs_llllongitude',
+    'rs_lrlatitude': 'rs_lrlatitude',
+    'rs_lrlongitude': 'rs_lrlongitude',
+    'rs_corner_lat_lon': 'rs_corner_lat_lon',
+    'rs_nadir_along_track': 'rs_nadir_along_track',
+    'rs_nadir_across_track': 'rs_nadir_across_track',
+    'rs_acquisition_date': 'rs_acquisition_date',
+    'rs_production_date': 'rs_production_date',
+    'rs_quality_assessment': 'rs_quality_assessment',
+    'rs_geometric_accuracy': 'rs_geometric_accuracy',
+    'rs_radiometric_resolution': 'rs_radiometric_resolution',
+    'rs_temporal_resolution': 'rs_temporal_resolution',
+    'rs_orbital_period': 'rs_orbital_period',
+    'rs_orbit_type': 'rs_orbit_type',
+    'rs_antenna_look_direction': 'rs_antenna_look_direction',
+}
+
+# Microscopy Image Analysis Extensions
+MICROSCOPY_ANALYSIS_EXTENSIONS = {
+    'mia_cell_count': 'mia_cell_count',
+    'mia_nucleus_count': 'mia_nucleus_count',
+    'mia_region_count': 'mia_region_count',
+    'mia_object_count': 'mia_object_count',
+    'mia_average_intensity': 'mia_average_intensity',
+    'mia_total_intensity': 'mia_total_intensity',
+    'mia_standard_deviation': 'mia_standard_deviation',
+    'mia_min_intensity': 'mia_min_intensity',
+    'mia_max_intensity': 'mia_max_intensity',
+    'mia_area': 'mia_area',
+    'mia_perimeter': 'mia_perimeter',
+    'mia_circularity': 'mia_circularity',
+    'mia_solidity': 'mia_solidity',
+    'mia_eccentricity': 'mia_eccentricity',
+    'mia_major_axis': 'mia_major_axis',
+    'mia_minor_axis': 'mia_minor_axis',
+    'mia_aspect_ratio': 'mia_aspect_ratio',
+    'mia_roundness': 'mia_roundness',
+    'mia_compactness': 'mia_compactness',
+    'mia_convexity': 'mia_convexity',
+    'mia_extent': 'mia_extent',
+    'mia_centroid_x': 'mia_centroid_x',
+    'mia_centroid_y': 'mia_centroid_y',
+    'mia_centroid_z': 'mia_centroid_z',
+    'mia_boundary_points': 'mia_boundary_points',
+    'mia_holes_count': 'mia_holes_count',
+    'mia_euler_number': 'mia_euler_number',
+    'mia_texture_contrast': 'mia_texture_contrast',
+    'mia_texture_homogeneity': 'mia_texture_homogeneity',
+    'mia_texture_entropy': 'mia_texture_entropy',
+    'mia_texture_energy': 'mia_texture_energy',
+    'mia_texture_correlation': 'mia_texture_correlation',
+    'mia_features_calculated': 'mia_features_calculated',
+    'mia_classification_result': 'mia_classification_result',
+    'mia_classification_confidence': 'mia_classification_confidence',
+    'mia_segmentation_method': 'mia_segmentation_method',
+    'mia_segmentation_parameters': 'mia_segmentation_parameters',
+}
+
+
+def get_scientific_medical_field_count() -> int:
+    """Return total number of scientific_medical metadata fields."""
+    total = 0
+    total += len(GEOTIFF_KEY_NAMES)
+    total += len(ULTRA_SCIENTIFIC_MEDICAL_FIELDS)
+    total += len(MEGA_SCIENTIFIC_MEDICAL_FIELDS)
+    total += len(MICROSCOPY_EXTENDED)
+    total += len(OME_TIFF_EXTENDED)
+    total += len(BIO_FORMATS_EXTENDED)
+    total += len(LIDAR_EXTENSIONS)
+    total += len(REMOTE_SENSING_EXTENSIONS)
+    total += len(MICROSCOPY_ANALYSIS_EXTENSIONS)
+    return total

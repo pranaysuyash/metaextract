@@ -3,7 +3,7 @@
 MetaExtract - Comprehensive Metadata Extraction Engine v4.0
 
 ULTIMATE METADATA EXTRACTION ENGINE
-Extracts 45,000+ metadata fields from any file across ALL domains:
+Extracts a comprehensive set of metadata fields from files across domains (goal configurable):
 
 DOMAINS COVERED:
 - Image Metadata (15,000+ fields): EXIF, MakerNotes, IPTC, XMP, ICC, HDR, Computational Photography
@@ -254,6 +254,382 @@ try:
 except ImportError:
     analyze_steganography = None  # type: ignore[assignment]
 
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the emerging technology module directly by file path
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'emerging_technology_ultimate_advanced.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("emerging_tech", module_path)
+        if spec and spec.loader:
+            emerging_tech_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(emerging_tech_module)
+            extract_emerging_technology_metadata = emerging_tech_module.extract_emerging_technology_metadata
+            logger.info("Successfully imported emerging technology module")
+        else:
+            extract_emerging_technology_metadata = None
+    else:
+        extract_emerging_technology_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import emerging technology module: {e}")
+    extract_emerging_technology_metadata = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the advanced video module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'advanced_video_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("advanced_video", module_path)
+        if spec and spec.loader:
+            advanced_video_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(advanced_video_module)
+            extract_advanced_video_metadata = advanced_video_module.extract_advanced_video_metadata
+            logger.info("Successfully imported advanced video module")
+        else:
+            extract_advanced_video_metadata = None
+    else:
+        extract_advanced_video_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import advanced video module: {e}")
+    extract_advanced_video_metadata = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the advanced audio module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'advanced_audio_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("advanced_audio", module_path)
+        if spec and spec.loader:
+            advanced_audio_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(advanced_audio_module)
+            extract_advanced_audio_metadata = advanced_audio_module.extract_advanced_audio_metadata
+            logger.info("Successfully imported advanced audio module")
+        else:
+            extract_advanced_audio_metadata = None
+    else:
+        extract_advanced_audio_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import advanced audio module: {e}")
+    extract_advanced_audio_metadata = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the document metadata module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'document_metadata_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("document_metadata", module_path)
+        if spec and spec.loader:
+            document_metadata_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(document_metadata_module)
+            extract_document_metadata = document_metadata_module.extract_document_metadata
+            logger.info("Successfully imported document metadata module")
+        else:
+            extract_document_metadata = None
+    else:
+        extract_document_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import document metadata module: {e}")
+    extract_document_metadata = None  # type: ignore[assignment]
+
+try:
+    from .utils.cache import get_cache
+except ImportError:
+    try:
+        from utils.cache import get_cache  # type: ignore
+    except ImportError:
+        get_cache = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the scientific research module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'scientific_research_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("scientific_research", module_path)
+        if spec and spec.loader:
+            scientific_research_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(scientific_research_module)
+            extract_scientific_research_metadata = scientific_research_module.extract_scientific_research_metadata
+            logger.info("Successfully imported scientific research module")
+        else:
+            extract_scientific_research_metadata = None
+    else:
+        extract_scientific_research_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import scientific research module: {e}")
+    extract_scientific_research_metadata = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the multimedia entertainment module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'multimedia_entertainment_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("multimedia_entertainment", module_path)
+        if spec and spec.loader:
+            multimedia_entertainment_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(multimedia_entertainment_module)
+            extract_multimedia_entertainment_metadata = multimedia_entertainment_module.extract_multimedia_entertainment_metadata
+            logger.info("Successfully imported multimedia entertainment module")
+        else:
+            extract_multimedia_entertainment_metadata = None
+    else:
+        extract_multimedia_entertainment_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import multimedia entertainment module: {e}")
+    extract_multimedia_entertainment_metadata = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the industrial manufacturing module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'industrial_manufacturing_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("industrial_manufacturing", module_path)
+        if spec and spec.loader:
+            industrial_manufacturing_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(industrial_manufacturing_module)
+            extract_industrial_manufacturing_metadata = industrial_manufacturing_module.extract_industrial_manufacturing_metadata
+            logger.info("Successfully imported industrial manufacturing module")
+        else:
+            extract_industrial_manufacturing_metadata = None
+    else:
+        extract_industrial_manufacturing_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import industrial manufacturing module: {e}")
+    extract_industrial_manufacturing_metadata = None  # type: ignore[assignment]
+
+try:
+    import sys
+    import os
+    import importlib.util
+    
+    # Import the financial business module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'financial_business_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("financial_business", module_path)
+        if spec and spec.loader:
+            financial_business_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(financial_business_module)
+            extract_financial_business_metadata = financial_business_module.extract_financial_business_metadata
+            logger.info("Successfully imported financial business module")
+        else:
+            extract_financial_business_metadata = None
+    else:
+        extract_financial_business_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import financial business module: {e}")
+    extract_financial_business_metadata = None  # type: ignore[assignment]
+
+# Healthcare Medical Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the healthcare medical module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'healthcare_medical_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("healthcare_medical", module_path)
+        if spec and spec.loader:
+            healthcare_medical_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(healthcare_medical_module)
+            extract_healthcare_medical_metadata = healthcare_medical_module.extract_healthcare_medical_metadata
+            logger.info("Successfully imported healthcare medical module")
+        else:
+            extract_healthcare_medical_metadata = None
+    else:
+        extract_healthcare_medical_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import healthcare medical module: {e}")
+    extract_healthcare_medical_metadata = None  # type: ignore[assignment]
+
+# Transportation Logistics Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the transportation logistics module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'transportation_logistics_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("transportation_logistics", module_path)
+        if spec and spec.loader:
+            transportation_logistics_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(transportation_logistics_module)
+            extract_transportation_logistics_metadata = transportation_logistics_module.extract_transportation_logistics_metadata
+            logger.info("Successfully imported transportation logistics module")
+        else:
+            extract_transportation_logistics_metadata = None
+    else:
+        extract_transportation_logistics_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import transportation logistics module: {e}")
+    extract_transportation_logistics_metadata = None  # type: ignore[assignment]
+
+# Education Academic Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the education academic module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'education_academic_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("education_academic", module_path)
+        if spec and spec.loader:
+            education_academic_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(education_academic_module)
+            extract_education_academic_metadata = education_academic_module.extract_education_academic_metadata
+            logger.info("Successfully imported education academic module")
+        else:
+            extract_education_academic_metadata = None
+    else:
+        extract_education_academic_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import education academic module: {e}")
+    extract_education_academic_metadata = None  # type: ignore[assignment]
+
+# Legal Compliance Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the legal compliance module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'legal_compliance_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("legal_compliance", module_path)
+        if spec and spec.loader:
+            legal_compliance_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(legal_compliance_module)
+            extract_legal_compliance_metadata = legal_compliance_module.extract_legal_compliance_metadata
+            logger.info("Successfully imported legal compliance module")
+        else:
+            extract_legal_compliance_metadata = None
+    else:
+        extract_legal_compliance_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import legal compliance module: {e}")
+    extract_legal_compliance_metadata = None  # type: ignore[assignment]
+
+# Environmental Sustainability Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the environmental sustainability module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'environmental_sustainability_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("environmental_sustainability", module_path)
+        if spec and spec.loader:
+            environmental_sustainability_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(environmental_sustainability_module)
+            extract_environmental_sustainability_metadata = environmental_sustainability_module.extract_environmental_sustainability_metadata
+            logger.info("Successfully imported environmental sustainability module")
+        else:
+            extract_environmental_sustainability_metadata = None
+    else:
+        extract_environmental_sustainability_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import environmental sustainability module: {e}")
+    extract_environmental_sustainability_metadata = None  # type: ignore[assignment]
+
+# Social Media Digital Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the social media digital module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'social_media_digital_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("social_media_digital", module_path)
+        if spec and spec.loader:
+            social_media_digital_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(social_media_digital_module)
+            extract_social_media_digital_metadata = social_media_digital_module.extract_social_media_digital_metadata
+            logger.info("Successfully imported social media digital module")
+        else:
+            extract_social_media_digital_metadata = None
+    else:
+        extract_social_media_digital_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import social media digital module: {e}")
+    extract_social_media_digital_metadata = None  # type: ignore[assignment]
+
+# Gaming Entertainment Ultimate Module
+try:
+    import importlib.util
+    
+    # Import the gaming entertainment module
+    extractor_dir = os.path.dirname(__file__)
+    module_path = os.path.join(extractor_dir, 'modules', 'gaming_entertainment_ultimate.py')
+    
+    if os.path.exists(module_path):
+        spec = importlib.util.spec_from_file_location("gaming_entertainment", module_path)
+        if spec and spec.loader:
+            gaming_entertainment_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(gaming_entertainment_module)
+            extract_gaming_entertainment_metadata = gaming_entertainment_module.extract_gaming_entertainment_metadata
+            logger.info("Successfully imported gaming entertainment module")
+        else:
+            extract_gaming_entertainment_metadata = None
+    else:
+        extract_gaming_entertainment_metadata = None
+        
+except Exception as e:
+    logger.warning(f"Could not import gaming entertainment module: {e}")
+    extract_gaming_entertainment_metadata = None  # type: ignore[assignment]
+
 # ============================================================================
 # Comprehensive Tier Configuration
 # ============================================================================
@@ -278,7 +654,7 @@ class ComprehensiveTierConfig:
     serial_numbers: bool = False
     exiftool_enhanced: bool = False
     
-    # NEW: Comprehensive features
+    # Comprehensive features
     medical_imaging: bool = False          # DICOM extraction
     astronomical_data: bool = False        # FITS extraction
     geospatial_analysis: bool = False      # GIS/mapping data
@@ -295,6 +671,21 @@ class ComprehensiveTierConfig:
     timeline_reconstruction: bool = False  # Forensic timeline analysis
     batch_comparison: bool = False        # Multi-file analysis
     ai_content_detection: bool = False    # AI-generated content detection
+    emerging_technology: bool = False     # AI/ML models, quantum, XR, IoT, etc.
+    advanced_video_analysis: bool = False # Professional video analysis
+    advanced_audio_analysis: bool = False # Professional audio analysis
+    document_analysis: bool = False       # Office, PDF, web documents
+    scientific_research: bool = False     # Research papers, lab data, microscopy, spectroscopy
+    multimedia_entertainment: bool = False # Gaming, streaming, digital art, music production
+    industrial_manufacturing: bool = False # CAD, CNC, quality control, IoT sensors
+    financial_business: bool = False      # Financial reports, trading data, banking, compliance
+    healthcare_medical: bool = False      # EHR, DICOM, clinical trials, medical devices
+    transportation_logistics: bool = False # Vehicle telemetry, GPS tracking, supply chain
+    education_academic: bool = False      # LMS, educational content, academic research
+    legal_compliance: bool = False        # Legal documents, regulatory compliance, IP
+    environmental_sustainability: bool = False # Environmental monitoring, climate data, ESG
+    social_media_digital: bool = False    # Social media posts, digital marketing, messaging
+    gaming_entertainment: bool = False    # Video games, esports, streaming, interactive media
 
 COMPREHENSIVE_TIER_CONFIGS = {
     Tier.FREE: ComprehensiveTierConfig(),
@@ -330,7 +721,12 @@ COMPREHENSIVE_TIER_CONFIGS = {
         # Super exclusive features
         medical_imaging=True, astronomical_data=True, scientific_instruments=True,
         professional_video=True, blockchain_provenance=True, social_media_context=True,
-        manipulation_detection=True, ai_content_detection=True,
+        manipulation_detection=True, ai_content_detection=True, emerging_technology=True,
+        advanced_video_analysis=True, advanced_audio_analysis=True, document_analysis=True,
+        scientific_research=True, multimedia_entertainment=True, industrial_manufacturing=True,
+        financial_business=True, healthcare_medical=True, transportation_logistics=True,
+        education_academic=True, legal_compliance=True, environmental_sustainability=True,
+        social_media_digital=True, gaming_entertainment=True,
     ),
 }
 
@@ -1196,6 +1592,21 @@ class ComprehensiveMetadataExtractor:
             "scientific_instruments": (HDF5_AVAILABLE or NETCDF_AVAILABLE) and tier_config.scientific_instruments,
             "drone_telemetry": tier_config.drone_telemetry,
             "blockchain_provenance": tier_config.blockchain_provenance,
+            "emerging_technology": tier_config.emerging_technology and extract_emerging_technology_metadata is not None,
+            "advanced_video_analysis": tier_config.advanced_video_analysis and extract_advanced_video_metadata is not None,
+            "advanced_audio_analysis": tier_config.advanced_audio_analysis and extract_advanced_audio_metadata is not None,
+            "document_analysis": tier_config.document_analysis and extract_document_metadata is not None,
+            "scientific_research": tier_config.scientific_research and extract_scientific_research_metadata is not None,
+            "multimedia_entertainment": tier_config.multimedia_entertainment and extract_multimedia_entertainment_metadata is not None,
+            "industrial_manufacturing": tier_config.industrial_manufacturing and extract_industrial_manufacturing_metadata is not None,
+            "financial_business": tier_config.financial_business and extract_financial_business_metadata is not None,
+            "healthcare_medical": tier_config.healthcare_medical and extract_healthcare_medical_metadata is not None,
+            "transportation_logistics": tier_config.transportation_logistics and extract_transportation_logistics_metadata is not None,
+            "education_academic": tier_config.education_academic and extract_education_academic_metadata is not None,
+            "legal_compliance": tier_config.legal_compliance and extract_legal_compliance_metadata is not None,
+            "environmental_sustainability": tier_config.environmental_sustainability and extract_environmental_sustainability_metadata is not None,
+            "social_media_digital": tier_config.social_media_digital and extract_social_media_digital_metadata is not None,
+            "gaming_entertainment": tier_config.gaming_entertainment and extract_gaming_entertainment_metadata is not None,
         }
         
         # Detect file type for specialized extraction
@@ -1422,6 +1833,158 @@ class ComprehensiveMetadataExtractor:
             except Exception as e:
                 base_result["timeline_analysis"] = {"error": str(e)}
         
+        # Optional: Emerging technology analysis
+        if tier_config.emerging_technology and extract_emerging_technology_metadata:
+            try:
+                emerging_result = extract_emerging_technology_metadata(filepath)
+                if emerging_result and emerging_result.get("emerging_technology_analysis"):
+                    base_result["emerging_technology"] = emerging_result
+            except Exception as e:
+                base_result["emerging_technology"] = {"error": str(e)}
+
+        # Optional: Advanced video analysis
+        if tier_config.advanced_video_analysis and extract_advanced_video_metadata and is_video:
+            try:
+                video_result = extract_advanced_video_metadata(filepath)
+                if video_result and video_result.get("available"):
+                    base_result["advanced_video"] = video_result
+            except Exception as e:
+                base_result["advanced_video"] = {"error": str(e)}
+
+        # Optional: Advanced audio analysis
+        if tier_config.advanced_audio_analysis and extract_advanced_audio_metadata and is_audio:
+            try:
+                audio_result = extract_advanced_audio_metadata(filepath)
+                if audio_result and audio_result.get("available"):
+                    base_result["advanced_audio"] = audio_result
+            except Exception as e:
+                base_result["advanced_audio"] = {"error": str(e)}
+
+        # Optional: Document analysis
+        if tier_config.document_analysis and extract_document_metadata:
+            # Check if it's a document type
+            file_ext = Path(filepath).suffix.lower()
+            document_extensions = [
+                '.pdf', '.docx', '.xlsx', '.pptx', '.html', '.htm', '.xml', 
+                '.epub', '.mobi', '.zip', '.tar', '.gz', '.py', '.js', '.java',
+                '.json', '.yaml', '.yml', '.toml', '.ini', '.txt', '.md', '.db'
+            ]
+            
+            if file_ext in document_extensions or not (is_image or is_video or is_audio):
+                try:
+                    doc_result = extract_document_metadata(filepath)
+                    if doc_result and doc_result.get("available"):
+                        base_result["document_metadata"] = doc_result
+                except Exception as e:
+                    base_result["document_metadata"] = {"error": str(e)}
+
+        # Optional: Scientific research analysis
+        if tier_config.scientific_research and extract_scientific_research_metadata:
+            try:
+                research_result = extract_scientific_research_metadata(filepath)
+                if research_result and research_result.get("available"):
+                    base_result["scientific_research"] = research_result
+            except Exception as e:
+                base_result["scientific_research"] = {"error": str(e)}
+
+        # Optional: Multimedia entertainment analysis
+        if tier_config.multimedia_entertainment and extract_multimedia_entertainment_metadata:
+            try:
+                entertainment_result = extract_multimedia_entertainment_metadata(filepath)
+                if entertainment_result and entertainment_result.get("available"):
+                    base_result["multimedia_entertainment"] = entertainment_result
+            except Exception as e:
+                base_result["multimedia_entertainment"] = {"error": str(e)}
+
+        # Optional: Industrial manufacturing analysis
+        if tier_config.industrial_manufacturing and extract_industrial_manufacturing_metadata:
+            try:
+                industrial_result = extract_industrial_manufacturing_metadata(filepath)
+                if industrial_result and industrial_result.get("available"):
+                    base_result["industrial_manufacturing"] = industrial_result
+            except Exception as e:
+                base_result["industrial_manufacturing"] = {"error": str(e)}
+
+        # Optional: Financial business analysis
+        if tier_config.financial_business and extract_financial_business_metadata:
+            try:
+                financial_result = extract_financial_business_metadata(filepath)
+                if financial_result and financial_result.get("available"):
+                    base_result["financial_business"] = financial_result
+            except Exception as e:
+                base_result["financial_business"] = {"error": str(e)}
+
+        # Optional: Healthcare medical analysis
+        if tier_config.healthcare_medical and extract_healthcare_medical_metadata:
+            try:
+                healthcare_result = extract_healthcare_medical_metadata(filepath)
+                if healthcare_result and healthcare_result.get("available"):
+                    base_result["healthcare_medical"] = healthcare_result
+            except Exception as e:
+                base_result["healthcare_medical"] = {"error": str(e)}
+
+        # Optional: Transportation logistics analysis
+        if tier_config.transportation_logistics and extract_transportation_logistics_metadata:
+            try:
+                transport_result = extract_transportation_logistics_metadata(filepath)
+                if transport_result and transport_result.get("available"):
+                    base_result["transportation_logistics"] = transport_result
+            except Exception as e:
+                base_result["transportation_logistics"] = {"error": str(e)}
+
+        # Optional: Education academic analysis
+        if tier_config.education_academic and extract_education_academic_metadata:
+            try:
+                education_result = extract_education_academic_metadata(filepath)
+                if education_result and education_result.get("available"):
+                    base_result["education_academic"] = education_result
+            except Exception as e:
+                base_result["education_academic"] = {"error": str(e)}
+
+        # Optional: Legal compliance analysis
+        if tier_config.legal_compliance and extract_legal_compliance_metadata:
+            try:
+                legal_result = extract_legal_compliance_metadata(filepath)
+                if legal_result and legal_result.get("available"):
+                    base_result["legal_compliance"] = legal_result
+            except Exception as e:
+                base_result["legal_compliance"] = {"error": str(e)}
+
+        # Optional: Environmental sustainability analysis
+        if tier_config.environmental_sustainability and extract_environmental_sustainability_metadata:
+            try:
+                environmental_result = extract_environmental_sustainability_metadata(filepath)
+                if environmental_result and environmental_result.get("available"):
+                    base_result["environmental_sustainability"] = environmental_result
+            except Exception as e:
+                base_result["environmental_sustainability"] = {"error": str(e)}
+
+        # Optional: Social media digital analysis
+        if tier_config.social_media_digital and extract_social_media_digital_metadata:
+            try:
+                social_digital_result = extract_social_media_digital_metadata(filepath)
+                if social_digital_result and social_digital_result.get("available"):
+                    base_result["social_media_digital"] = social_digital_result
+            except Exception as e:
+                base_result["social_media_digital"] = {"error": str(e)}
+
+        # Optional: Gaming entertainment analysis
+        if tier_config.gaming_entertainment and extract_gaming_entertainment_metadata:
+            try:
+                gaming_result = extract_gaming_entertainment_metadata(filepath)
+                if gaming_result and gaming_result.get("available"):
+                    base_result["gaming_entertainment"] = gaming_result
+            except Exception as e:
+                base_result["gaming_entertainment"] = {"error": str(e)}
+
+        # Cache the result if caching is available (disabled for now due to implementation issues)
+        # if get_cache:
+        #     try:
+        #         cache = get_cache()
+        #         cache.put(filepath, base_result, tier, int(base_result["extraction_info"].get("extraction_time_ms", 0)))
+        #     except Exception as e:
+        #         logger.debug(f"Cache storage failed: {e}")
+
         # Update field count
         def count_comprehensive_fields(obj):
             if not isinstance(obj, dict):
@@ -1444,6 +2007,22 @@ class ComprehensiveMetadataExtractor:
             specialized_counts["drone_telemetry"] = count_comprehensive_fields(base_result["drone_telemetry"])
         if "blockchain_provenance" in base_result:
             specialized_counts["blockchain_provenance"] = count_comprehensive_fields(base_result["blockchain_provenance"])
+        if "emerging_technology" in base_result:
+            specialized_counts["emerging_technology"] = count_comprehensive_fields(base_result["emerging_technology"])
+        if "advanced_video" in base_result:
+            specialized_counts["advanced_video"] = count_comprehensive_fields(base_result["advanced_video"])
+        if "advanced_audio" in base_result:
+            specialized_counts["advanced_audio"] = count_comprehensive_fields(base_result["advanced_audio"])
+        if "document_metadata" in base_result:
+            specialized_counts["document_metadata"] = count_comprehensive_fields(base_result["document_metadata"])
+        if "scientific_research" in base_result:
+            specialized_counts["scientific_research"] = count_comprehensive_fields(base_result["scientific_research"])
+        if "multimedia_entertainment" in base_result:
+            specialized_counts["multimedia_entertainment"] = count_comprehensive_fields(base_result["multimedia_entertainment"])
+        if "industrial_manufacturing" in base_result:
+            specialized_counts["industrial_manufacturing"] = count_comprehensive_fields(base_result["industrial_manufacturing"])
+        if "financial_business" in base_result:
+            specialized_counts["financial_business"] = count_comprehensive_fields(base_result["financial_business"])
         
         base_result["extraction_info"]["specialized_field_counts"] = specialized_counts
         
@@ -1469,6 +2048,17 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[s
     
     This is the main entry point for the ultimate metadata extraction.
     """
+    # Check cache first if available
+    if get_cache:
+        try:
+            cache = get_cache()
+            cached_result = cache.get(filepath, tier)
+            if cached_result:
+                logger.debug(f"Cache hit for {filepath}")
+                return cached_result
+        except Exception as e:
+            logger.debug(f"Cache lookup failed: {e}")
+    
     extractor = get_comprehensive_extractor()
     return extractor.extract_comprehensive_metadata(filepath, tier)
 

@@ -2,11 +2,11 @@
 
 ## 🌟 Overview
 
-MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - the world's most advanced metadata extraction system capable of extracting **45,000+ metadata fields** across all digital domains.
+MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - the world's most advanced metadata extraction system capable of extracting a comprehensive set of metadata fields across digital domains.
 
 ### 🎯 What's New in v4.0
 
-- **45,000+ metadata fields** (up from 7,000+)
+- **Extensive metadata fields** (up from 7,000+)
 - **10 specialized extraction engines** for different domains
 - **AI content detection** for images, videos, and text
 - **Enhanced forensic analysis** with advanced steganography and manipulation detection
@@ -40,18 +40,18 @@ MetaExtract v4.0 Architecture
 
 ### Specialized Engines
 
-| Engine | Domain | Fields | File Types | Tier Required |
-|--------|--------|--------|------------|---------------|
-| **Medical Imaging** | Healthcare | 4,600+ | DICOM (.dcm) | Super |
-| **Astronomical Data** | Science | 3,000+ | FITS (.fits, .fit) | Super |
-| **Geospatial** | GIS/Mapping | 2,000+ | GeoTIFF, Shapefile | Premium+ |
-| **Scientific Instruments** | Research | Unlimited | HDF5, NetCDF | Super |
-| **Drone/UAV** | Aerial | 500+ | Images/Videos with telemetry | Premium+ |
-| **Professional Video** | Broadcast | 1,000+ | All video formats | Premium+ |
-| **AI Content Detection** | Forensics | 200+ | Images, Videos, Text | Super |
-| **Blockchain Provenance** | Digital Assets | 300+ | Any file with blockchain refs | Premium+ |
-| **Enhanced Steganography** | Security | 100+ | Images | Premium+ |
-| **Enhanced Manipulation** | Forensics | 150+ | Images, Videos | Premium+ |
+| Engine                     | Domain         | Fields    | File Types                    | Tier Required |
+| -------------------------- | -------------- | --------- | ----------------------------- | ------------- |
+| **Medical Imaging**        | Healthcare     | 4,600+    | DICOM (.dcm)                  | Super         |
+| **Astronomical Data**      | Science        | 3,000+    | FITS (.fits, .fit)            | Super         |
+| **Geospatial**             | GIS/Mapping    | 2,000+    | GeoTIFF, Shapefile            | Premium+      |
+| **Scientific Instruments** | Research       | Unlimited | HDF5, NetCDF                  | Super         |
+| **Drone/UAV**              | Aerial         | 500+      | Images/Videos with telemetry  | Premium+      |
+| **Professional Video**     | Broadcast      | 1,000+    | All video formats             | Premium+      |
+| **AI Content Detection**   | Forensics      | 200+      | Images, Videos, Text          | Super         |
+| **Blockchain Provenance**  | Digital Assets | 300+      | Any file with blockchain refs | Premium+      |
+| **Enhanced Steganography** | Security       | 100+      | Images                        | Premium+      |
+| **Enhanced Manipulation**  | Forensics      | 150+      | Images, Videos                | Premium+      |
 
 ## 🚀 Installation
 
@@ -65,6 +65,7 @@ MetaExtract v4.0 Architecture
 ### Manual Installation
 
 1. **System Dependencies**
+
 ```bash
 # macOS
 brew install python@3.11 ffmpeg exiftool libmagic redis postgresql gdal proj geos hdf5 netcdf opencv exempi
@@ -74,6 +75,7 @@ sudo apt-get install python3.11 python3.11-dev ffmpeg libimage-exiftool-perl lib
 ```
 
 2. **Python Environment**
+
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
@@ -81,6 +83,7 @@ pip install -r requirements.txt
 ```
 
 3. **Verify Installation**
+
 ```bash
 python test_comprehensive_engine.py
 ```
@@ -139,7 +142,7 @@ Extracts **4,600+ standardized DICOM fields** from medical images:
 # Patient info (anonymized)
 patient_info: {
     "age": "45Y",
-    "sex": "M", 
+    "sex": "M",
     "weight": "70kg"
 }
 
@@ -160,13 +163,14 @@ equipment_info: {
 # Acquisition parameters (MR-specific)
 acquisition_params: {
     "tr": "2000ms",
-    "te": "30ms", 
+    "te": "30ms",
     "flip_angle": "90°",
     "slice_thickness": "5mm"
 }
 ```
 
 **Supported Modalities:**
+
 - CT (Computed Tomography)
 - MR (Magnetic Resonance)
 - US (Ultrasound)
@@ -209,6 +213,7 @@ wcs_info: {
 ```
 
 **Supported Features:**
+
 - Multi-extension FITS files
 - World Coordinate System (WCS) analysis
 - Instrument-specific metadata
@@ -293,6 +298,7 @@ ai_detection: {
 ```
 
 **Detection Methods:**
+
 - Frequency domain analysis
 - Noise pattern analysis
 - Compression artifact analysis
@@ -301,17 +307,17 @@ ai_detection: {
 
 ## 🎚️ Tier Comparison
 
-| Feature | Free | Starter | Premium | Super |
-|---------|------|---------|---------|-------|
-| **Total Fields** | ~200 | ~1,000 | ~15,000 | **45,000+** |
-| **File Types** | Images | Images, PDF, Audio | All standard formats | **All formats** |
-| **Max File Size** | 10MB | 50MB | 500MB | **1GB** |
-| **Specialized Engines** | None | None | 6 engines | **All 10 engines** |
-| **Medical Imaging** | ❌ | ❌ | ❌ | **✅** |
-| **Astronomical Data** | ❌ | ❌ | ❌ | **✅** |
-| **AI Content Detection** | ❌ | ❌ | ❌ | **✅** |
-| **Advanced Analysis** | ❌ | ❌ | ✅ | **✅** |
-| **Batch Processing** | ❌ | ❌ | ✅ | **✅** |
+| Feature                  | Free   | Starter            | Premium              | Super              |
+| ------------------------ | ------ | ------------------ | -------------------- | ------------------ |
+| **Total Fields**         | ~200   | ~1,000             | ~15,000              | **comprehensive**  |
+| **File Types**           | Images | Images, PDF, Audio | All standard formats | **All formats**    |
+| **Max File Size**        | 10MB   | 50MB               | 500MB                | **1GB**            |
+| **Specialized Engines**  | None   | None               | 6 engines            | **All 10 engines** |
+| **Medical Imaging**      | ❌     | ❌                 | ❌                   | **✅**             |
+| **Astronomical Data**    | ❌     | ❌                 | ❌                   | **✅**             |
+| **AI Content Detection** | ❌     | ❌                 | ❌                   | **✅**             |
+| **Advanced Analysis**    | ❌     | ❌                 | ✅                   | **✅**             |
+| **Batch Processing**     | ❌     | ❌                 | ✅                   | **✅**             |
 
 ## 🔧 Configuration
 
@@ -337,6 +343,7 @@ AI_MODEL_PATH=/path/to/models
 ### Performance Optimization
 
 1. **Enable Redis Caching**
+
 ```bash
 # Install and start Redis
 brew install redis  # macOS
@@ -345,6 +352,7 @@ redis-server
 ```
 
 2. **Optimize for Large Files**
+
 ```python
 # Increase memory limits for large scientific files
 import resource
@@ -352,6 +360,7 @@ resource.setrlimit(resource.RLIMIT_AS, (8 * 1024**3, -1))  # 8GB
 ```
 
 3. **GPU Acceleration** (for AI features)
+
 ```bash
 # Install CUDA support (NVIDIA GPUs)
 pip install tensorflow-gpu torch-gpu
@@ -361,30 +370,31 @@ pip install tensorflow-gpu torch-gpu
 
 ### Extraction Speed by File Type
 
-| File Type | Size | Free Tier | Premium Tier | Super Tier |
-|-----------|------|-----------|--------------|------------|
-| JPEG Image | 5MB | 0.5s | 1.2s | 2.1s |
-| RAW Image | 25MB | N/A | 3.5s | 5.8s |
-| MP4 Video | 100MB | N/A | 8.2s | 12.4s |
-| DICOM Medical | 50MB | N/A | N/A | 15.3s |
-| FITS Astronomy | 200MB | N/A | N/A | 28.7s |
-| HDF5 Scientific | 500MB | N/A | N/A | 45.2s |
+| File Type       | Size  | Free Tier | Premium Tier | Super Tier |
+| --------------- | ----- | --------- | ------------ | ---------- |
+| JPEG Image      | 5MB   | 0.5s      | 1.2s         | 2.1s       |
+| RAW Image       | 25MB  | N/A       | 3.5s         | 5.8s       |
+| MP4 Video       | 100MB | N/A       | 8.2s         | 12.4s      |
+| DICOM Medical   | 50MB  | N/A       | N/A          | 15.3s      |
+| FITS Astronomy  | 200MB | N/A       | N/A          | 28.7s      |
+| HDF5 Scientific | 500MB | N/A       | N/A          | 45.2s      |
 
 ### Memory Usage
 
-| Engine | Typical RAM Usage | Peak RAM Usage |
-|--------|------------------|----------------|
-| Base Engine | 50MB | 100MB |
-| Medical Imaging | 200MB | 500MB |
-| Astronomical Data | 300MB | 800MB |
-| Scientific Data | 500MB | 2GB |
-| AI Detection | 1GB | 4GB |
+| Engine            | Typical RAM Usage | Peak RAM Usage |
+| ----------------- | ----------------- | -------------- |
+| Base Engine       | 50MB              | 100MB          |
+| Medical Imaging   | 200MB             | 500MB          |
+| Astronomical Data | 300MB             | 800MB          |
+| Scientific Data   | 500MB             | 2GB            |
+| AI Detection      | 1GB               | 4GB            |
 
 ## 🛠️ Development
 
 ### Adding New Engines
 
 1. **Create Engine Class**
+
 ```python
 class MyCustomEngine:
     @staticmethod
@@ -394,12 +404,13 @@ class MyCustomEngine:
 ```
 
 2. **Register in Comprehensive Engine**
+
 ```python
 # In comprehensive_metadata_engine.py
 class ComprehensiveMetadataExtractor:
     def __init__(self):
         self.custom_engine = MyCustomEngine()
-    
+
     def extract_comprehensive_metadata(self, filepath, tier):
         # Add your engine logic
         if tier_config.custom_analysis:
@@ -424,11 +435,13 @@ python scripts/benchmark_engines.py
 ### Common Issues
 
 1. **"pydicom not found" Error**
+
 ```bash
 pip install pydicom>=2.4.0
 ```
 
 2. **"GDAL not found" Error**
+
 ```bash
 # macOS
 brew install gdal
@@ -437,12 +450,14 @@ sudo apt-get install gdal-bin libgdal-dev
 ```
 
 3. **Memory Issues with Large Files**
+
 ```python
 # Increase virtual memory
 ulimit -v 8388608  # 8GB
 ```
 
 4. **Slow Performance**
+
 ```bash
 # Enable Redis caching
 redis-server &
@@ -535,4 +550,4 @@ MetaExtract Comprehensive Engine v4.0 is licensed under the MIT License.
 ---
 
 **MetaExtract v4.0** - The Ultimate Metadata Extraction Engine
-*Extracting 45,000+ fields across all digital domains*
+_Extracting comprehensive field coverage across all digital domains_

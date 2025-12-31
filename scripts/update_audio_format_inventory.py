@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Placeholder for audio format inventory generation.
 
-This will be implemented as part of the audio format extractors that adds ~2,315 fields to the 45K+ target.
+This will be implemented as part of the audio format extractors that adds ~2,315 fields to the baseline target goal.
 """
 
 import json

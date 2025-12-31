@@ -1,0 +1,827 @@
+{
+  "extraction_test": {
+    "total_extract_functions": 0,
+    "working_extract_functions": 0,
+    "failed_extract_functions": 0,
+    "sample_results": {
+      "exif.py": {
+        "status": "callable",
+        "returns_dict": true,
+        "field_count": 1
+      },
+      "video.py": {
+        "status": "callable",
+        "returns_dict": true,
+        "field_count": 1
+      },
+      "audio.py": {
+        "status": "callable",
+        "returns_dict": true,
+        "field_count": 1
+      }
+    },
+    "field_coverage": {}
+  },
+  "performance": {
+    "module_load_times": {
+      "exif": {
+        "load_time": 0.0,
+        "memory_kb": 0.0
+      },
+      "video": {
+        "load_time": 0.0,
+        "memory_kb": 0.0
+      },
+      "audio": {
+        "load_time": 0.0,
+        "memory_kb": 0.0
+      },
+      "images": {
+        "load_time": 0.0017,
+        "memory_kb": 17.83
+      },
+      "scientific_medical": {
+        "load_time": 0.0022,
+        "memory_kb": 152.22
+      },
+      "makernotes_complete": {
+        "load_time": 0.0529,
+        "memory_kb": 3232.41
+      },
+      "pdf_metadata_complete": {
+        "load_time": 0.0,
+        "memory_kb": 0.0
+      }
+    },
+    "memory_usage": {},
+    "import_overhead": [],
+    "bottlenecks": [
+      {
+        "file": "audio_codec_details.py",
+        "issue": "High complexity: 62 functions, 23 dicts"
+      },
+      {
+        "file": "container_metadata.py",
+        "issue": "High complexity: 55 functions, 21 dicts"
+      }
+    ]
+  },
+  "dependencies": {
+    "import_graph": {
+      "makernotes_ultimate_advanced_extension_ii": [
+        "typing",
+        "pathlib"
+      ],
+      "video_professional_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "video_professional_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "makernotes_complete": [
+        "typing",
+        "pathlib"
+      ],
+      "mp4_atoms_extractor": [
+        "pathlib",
+        "typing",
+        "dataclasses",
+        "datetime"
+      ],
+      "materials_science": [
+        "typing",
+        "pathlib"
+      ],
+      "scientific_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "scientific_dicom_fits_ultimate_advanced_extension_xxvi": [
+        "shared_utils"
+      ],
+      "metadata_comparator": [
+        "typing",
+        "datetime"
+      ],
+      "makernotes_hasselblad": [
+        "typing",
+        "pathlib"
+      ],
+      "accessibility_metadata": [
+        "typing",
+        "exif",
+        "iptc_xmp"
+      ],
+      "scientific_dicom_fits_ultimate_advanced_extension_xxiii": [
+        "shared_utils"
+      ],
+      "camera_360": [
+        "typing",
+        "exif",
+        "exif",
+        "PIL"
+      ],
+      "ai_ml_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "metadata_db": [
+        "typing",
+        "datetime",
+        "pathlib",
+        "perceptual_hashes"
+      ],
+      "forensic_security_extended": [
+        "typing",
+        "pathlib"
+      ],
+      "scientific_dicom_fits_ultimate_advanced_extension_xxiv": [
+        "shared_utils"
+      ],
+      "timeline": [
+        "typing",
+        "pathlib",
+        "datetime"
+      ],
+      "makernotes_ultimate_advanced_extension_iii": [
+        "shared_utils"
+      ],
+      "quantum_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "makernotes_phaseone": [
+        "typing"
+      ],
+      "steganography": [
+        "typing",
+        "pathlib",
+        "PIL"
+      ],
+      "directory_analysis": [
+        "typing",
+        "pathlib",
+        "datetime",
+        "perceptual_hashes"
+      ],
+      "makernotes_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "makernotes_sigma": [
+        "typing",
+        "pathlib"
+      ],
+      "makernotes_leica": [
+        "typing",
+        "pathlib"
+      ],
+      "dicom_private_tags_complete": [
+        "typing"
+      ],
+      "pdf_metadata_complete": [
+        "typing",
+        "pathlib",
+        "pypdf"
+      ],
+      "video_keyframes": [
+        "typing"
+      ],
+      "wav_riff_extractor": [
+        "pathlib",
+        "typing",
+        "dataclasses"
+      ],
+      "forensic_digital_advanced": [
+        "typing",
+        "pathlib",
+        "math"
+      ],
+      "audio_bwf_registry": [
+        "typing"
+      ],
+      "robotics_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "forensic_complete": [
+        "typing",
+        "pathlib",
+        "datetime",
+        "pytesseract",
+        "dateutil"
+      ],
+      "scientific_comprehensive_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "error_level_analysis": [
+        "typing",
+        "pathlib"
+      ],
+      "audio_id3_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "dicom_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "broadcast_mxf_registry": [
+        "typing"
+      ],
+      "action_camera": [
+        "typing",
+        "pathlib",
+        "PIL",
+        "PIL",
+        "PIL",
+        "PIL",
+        "PIL"
+      ],
+      "perceptual_comparison": [
+        "typing",
+        "pathlib",
+        "collections",
+        "perceptual_hashes"
+      ],
+      "quality_metrics": [
+        "typing",
+        "PIL"
+      ],
+      "dicom_complete_registry": [
+        "typing"
+      ],
+      "workflow_dam": [
+        "typing",
+        "pathlib",
+        "datetime",
+        "PIL",
+        "PIL"
+      ],
+      "video_professional_extended": [
+        "typing",
+        "pathlib"
+      ],
+      "video_telemetry": [
+        "typing"
+      ],
+      "scientific_formats_extended": [
+        "typing",
+        "pathlib"
+      ],
+      "forensic_security_comprehensive_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "pdf_office_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "web_metadata": [
+        "typing",
+        "exif",
+        "iptc_xmp"
+      ],
+      "filesystem": [
+        "pathlib",
+        "datetime",
+        "typing"
+      ],
+      "scientific_dicom_fits_ultimate_advanced_extension": [
+        "typing",
+        "pathlib"
+      ],
+      "scientific_dicom_extended": [
+        "typing",
+        "pathlib"
+      ],
+      "ocr_burned_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "medical_imaging_complete": [
+        "typing",
+        "pathlib"
+      ],
+      "__init__": [
+        "filesystem",
+        "exif",
+        "iptc_xmp",
+        "images",
+        "geocoding",
+        "colors",
+        "quality",
+        "time_based",
+        "video",
+        "audio",
+        "svg",
+        "psd",
+        "perceptual_hashes",
+        "metadata_db",
+        "iptc_xmp_fallback",
+        "video_keyframes",
+        "directory_analysis",
+        "mobile_metadata",
+        "quality_metrics",
+        "drone_metadata",
+        "icc_profile",
+        "camera_360",
+        "accessibility_metadata",
+        "vendor_makernotes",
+        "makernotes_complete",
+        "social_media_metadata",
+        "forensic_metadata",
+        "web_metadata",
+        "action_camera",
+        "scientific_medical",
+        "scientific_data",
+        "video_telemetry",
+        "print_publishing",
+        "workflow_dam",
+        "hashes",
+        "ocr_burned_metadata",
+        "metadata_comparator",
+        "steganography",
+        "temporal_astronomical",
+        "video_codec_analysis",
+        "dicom_medical",
+        "perceptual_comparison",
+        "forensic_complete",
+        "error_level_analysis"
+      ],
+      "dicom_medical": [
+        "typing",
+        "pathlib",
+        "dicom_complete_registry"
+      ],
+      "time_based": [
+        "datetime",
+        "typing",
+        "ephem"
+      ],
+      "geospatial_gis": [
+        "typing",
+        "pathlib"
+      ],
+      "forensic_security_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "emerging_technology_ultimate_advanced_extension_iii": [
+        "shared_utils"
+      ],
+      "email_metadata": [
+        "typing",
+        "pathlib",
+        "datetime"
+      ],
+      "audio_id3_extended": [
+        "typing",
+        "pathlib"
+      ],
+      "fits_complete": [
+        "typing"
+      ],
+      "environmental_climate_comprehensive_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "advanced_analysis": [
+        "pathlib",
+        "typing",
+        "datetime",
+        "transformers"
+      ],
+      "temporal_astronomical": [
+        "typing",
+        "datetime",
+        "pathlib"
+      ],
+      "scientific_medical": [
+        "typing",
+        "pathlib",
+        "shared_utils",
+        "PIL",
+        "PIL",
+        "PIL",
+        "PIL",
+        "PIL"
+      ],
+      "scientific_research_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "audio_metadata_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "pdf_metadata_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "audio_codec_details": [
+        "typing",
+        "pathlib",
+        "shared_utils"
+      ],
+      "icc_profile": [
+        "typing",
+        "PIL",
+        "PIL",
+        "PIL"
+      ],
+      "comparison": [
+        "typing",
+        "pathlib",
+        "datetime"
+      ],
+      "makernotes_ricoh": [
+        "typing"
+      ],
+      "perceptual_hashes": [
+        "typing",
+        "pathlib",
+        "PIL",
+        "imagehash",
+        "imagehash",
+        "imagehash"
+      ],
+      "emerging_technology_ultimate_advanced_extension_ii": [
+        "typing",
+        "pathlib"
+      ],
+      "mobile_metadata": [
+        "typing",
+        "exif",
+        "exif",
+        "exif"
+      ],
+      "scientific_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "exif": [
+        "typing",
+        "shared_utils"
+      ],
+      "medical_healthcare_comprehensive_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "emerging_technology_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "pdf_office_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "c2pa_adobe_cc": [
+        "typing",
+        "pathlib"
+      ],
+      "ar_vr_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "svg": [
+        "typing",
+        "pathlib"
+      ],
+      "geocoding": [
+        "typing",
+        "datetime",
+        "pathlib"
+      ],
+      "opus_extractor": [
+        "pathlib",
+        "typing",
+        "dataclasses",
+        "datetime"
+      ],
+      "vendor_makernotes": [
+        "typing",
+        "exif"
+      ],
+      "id3_frames_complete": [
+        "typing"
+      ],
+      "web_social_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "office_documents_complete": [
+        "typing",
+        "pathlib",
+        "datetime"
+      ],
+      "pdf_office_ultimate_advanced_extension_ii": [
+        "shared_utils"
+      ],
+      "environmental_climate": [
+        "typing",
+        "pathlib"
+      ],
+      "forensic_metadata": [
+        "typing",
+        "datetime",
+        "exif",
+        "iptc_xmp",
+        "exif",
+        "iptc_xmp"
+      ],
+      "images": [
+        "typing",
+        "PIL"
+      ],
+      "autonomous_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "biotechnology_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "neural_network_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "field_registry": [
+        "typing",
+        "dataclasses",
+        "enum"
+      ],
+      "blockchain_nft_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "biometric_health": [
+        "typing",
+        "pathlib"
+      ],
+      "makernotes_advanced": [
+        "typing",
+        "pathlib",
+        "PIL"
+      ],
+      "scientific_dicom_fits_ultimate_advanced_extension_xxv": [
+        "shared_utils"
+      ],
+      "iot_metadata": [
+        "typing",
+        "pathlib"
+      ],
+      "video_professional_ultimate_advanced_extension": [
+        "typing",
+        "pathlib"
+      ],
+      "psd": [
+        "typing",
+        "pathlib",
+        "PIL",
+        "psd_tools"
+      ],
+      "video_professional_ultimate_advanced_extension_ii": [
+        "shared_utils"
+      ],
+      "audio": [
+        "typing",
+        "pathlib"
+      ],
+      "audio_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "video_codec_details": [
+        "typing",
+        "pathlib",
+        "shared_utils",
+        "math"
+      ],
+      "smart_context": [
+        "typing",
+        "dataclasses",
+        "enum"
+      ],
+      "apev2_extractor": [
+        "pathlib",
+        "typing"
+      ],
+      "scientific_dicom_fits_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "audio_id3_complete_registry": [
+        "typing"
+      ],
+      "shared_utils": [
+        "typing"
+      ],
+      "iptc_xmp": [
+        "typing",
+        "pyexiv2"
+      ],
+      "makernotes_ultimate_advanced_extension": [
+        "typing",
+        "pathlib"
+      ],
+      "drone_metadata": [
+        "typing",
+        "exif"
+      ],
+      "office_documents": [
+        "typing",
+        "pathlib"
+      ],
+      "forensic_security_ultimate_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "video_codec_advanced": [
+        "typing",
+        "pathlib"
+      ],
+      "quality": [
+        "typing",
+        "pathlib"
+      ],
+      "iptc_xmp_fallback": [
+        "typing",
+        "iptcinfo3",
+        "libxmp"
+      ],
+      "scientific_dicom_fits_ultimate_advanced_extension_ii": [
+        "shared_utils"
+      ],
+      "print_publishing": [
+        "typing",
+        "pathlib",
+        "datetime",
+        "PIL"
+      ],
+      "video": [
+        "typing",
+        "pathlib"
+      ],
+      "aiff_extractor": [
+        "pathlib",
+        "typing",
+        "dataclasses",
+        "datetime"
+      ],
+      "hashes": [
+        "typing"
+      ],
+      "forensic_security_ultimate_advanced_extension_ii": [
+        "shared_utils"
+      ],
+      "scientific_data": [
+        "typing"
+      ],
+      "container_metadata": [
+        "typing",
+        "pathlib",
+        "shared_utils"
+      ],
+      "social_media_metadata": [
+        "typing",
+        "exif",
+        "iptc_xmp"
+      ],
+      "makernote_exiftool": [
+        "typing",
+        "pathlib"
+      ],
+      "forensic_security_ultimate_advanced_extension": [
+        "typing",
+        "pathlib"
+      ],
+      "colors": [
+        "typing",
+        "pathlib",
+        "PIL"
+      ],
+      "pdf_complete_ultimate": [
+        "typing",
+        "pathlib",
+        "pypdf"
+      ],
+      "video_codec_analysis": [
+        "typing",
+        "pathlib"
+      ]
+    },
+    "module_levels": {},
+    "circular_dependencies": [],
+    "orphan_modules": [],
+    "hub_modules": [
+      [
+        "typing",
+        127
+      ],
+      [
+        "pathlib",
+        95
+      ],
+      [
+        "PIL",
+        24
+      ],
+      [
+        "datetime",
+        19
+      ],
+      [
+        "shared_utils",
+        15
+      ],
+      [
+        "exif",
+        13
+      ],
+      [
+        "dataclasses",
+        6
+      ],
+      [
+        "iptc_xmp",
+        6
+      ],
+      [
+        "perceptual_hashes",
+        4
+      ],
+      [
+        "imagehash",
+        3
+      ]
+    ],
+    "external_dependencies": {
+      "struct": 61,
+      "logging": 64,
+      "json": 54,
+      "re": 25,
+      "pickle": 1,
+      "os": 11,
+      "sqlite3": 2,
+      "hashlib": 10,
+      "numpy": 4,
+      "xml": 8,
+      "cv2": 1,
+      "uuid": 1,
+      "shutil": 3,
+      "subprocess": 9,
+      "stat": 2,
+      "platform": 2,
+      "email": 3,
+      "base64": 2,
+      "quopri": 1,
+      "sys": 1,
+      "math": 2,
+      "difflib": 1,
+      "io": 1,
+      "zipfile": 4,
+      "time": 1,
+      "gzip": 1
+    }
+  },
+  "error_handling": {
+    "try_catch_blocks": 1258,
+    "specific_exceptions": 1111,
+    "generic_exceptions": 137,
+    "error_logging": 12,
+    "graceful_degradation": 22,
+    "risky_modules": []
+  },
+  "api_analysis": {
+    "routes_file": null,
+    "endpoints": [],
+    "middleware": [],
+    "exposure_level": "unknown",
+    "authentication": [],
+    "data_validation": []
+  },
+  "summary": {
+    "overall_health": "fair",
+    "critical_issues": [],
+    "recommendations": [
+      "Implement comprehensive error handling across all file operation modules",
+      "Optimize modules with high complexity and slow load times",
+      "Break circular dependencies to improve modularity",
+      "Add unit tests for critical extraction functions",
+      "Implement API rate limiting and authentication",
+      "Document field coverage discrepancy (theoretical vs actual)"
+    ],
+    "metrics": {
+      "extraction_functions": 0,
+      "working_extractions": 0,
+      "performance_bottlenecks": 2,
+      "risky_modules": 0,
+      "api_endpoints": 0,
+      "health_score": 66.0
+    }
+  }
+}

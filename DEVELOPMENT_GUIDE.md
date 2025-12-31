@@ -3,6 +3,7 @@
 ## 🚀 **Quick Start**
 
 ### **Automated Setup**
+
 ```bash
 # Run the deployment script for full setup
 ./scripts/deploy.sh
@@ -13,16 +14,18 @@ pip install -r requirements.txt
 ```
 
 ### **Development Server**
+
 ```bash
 # Start development server (frontend + backend)
 npm run dev
 
 # Or start components separately
-npm run dev:client  # Frontend only (port 5000)
+npm run dev:client  # Frontend only (port 5173)
 npm run dev         # Backend only (API server)
 ```
 
 ### **Production Build**
+
 ```bash
 # Build for production
 npm run build
@@ -70,12 +73,14 @@ metaextract/
 ## 🔧 **Development Environment Setup**
 
 ### **Prerequisites**
+
 - **Node.js 20+** (LTS recommended)
-- **Python 3.11+** 
+- **Python 3.11+**
 - **PostgreSQL** (or SQLite for development)
 - **Redis** (required for caching layer)
 
 ### **System Dependencies**
+
 ```bash
 # macOS
 brew install ffmpeg exiftool redis libmagic
@@ -89,6 +94,7 @@ sudo apt install ffmpeg libimage-exiftool-perl redis-server libmagic1
 ```
 
 ### **Environment Variables**
+
 ```env
 # .env file
 DATABASE_URL=postgresql://user:password@localhost:5432/metaextract
@@ -96,7 +102,7 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
 NODE_ENV=development
-PORT=5000
+PORT=3000
 
 # Performance settings
 MAX_CONCURRENT_EXTRACTIONS=10
@@ -114,6 +120,7 @@ DODO_ENV=test
 ## 🏗️ **Architecture Overview**
 
 ### **Backend Architecture**
+
 ```
 API Layer (Express.js)
 ├── Routes (routes.ts)
@@ -127,6 +134,7 @@ API Layer (Express.js)
 ```
 
 ### **Frontend Architecture**
+
 ```
 React Application
 ├── Pages (home, results, checkout)
@@ -140,6 +148,7 @@ React Application
 ```
 
 ### **Data Flow**
+
 ```
 1. File Upload → Frontend validation
 2. API Request → Backend tier validation
@@ -155,35 +164,38 @@ React Application
 ## 🧪 **Testing Strategy**
 
 ### **Backend Testing**
+
 ```bash
 # Test Python metadata engine
 python3 server/extractor/metadata_engine_enhanced.py sample.jpg --tier premium
 
 # Test API endpoints
-curl -X POST http://localhost:5000/api/extract \
+curl -X POST http://localhost:3000/api/extract \\
   -F "file=@sample.jpg" \
   -F "tier=premium"
 
 # Test batch processing
-curl -X POST http://localhost:5000/api/extract/batch \
+curl -X POST http://localhost:3000/api/extract/batch \\
   -F "files=@sample1.jpg" \
   -F "files=@sample2.jpg" \
   -F "tier=premium"
 ```
 
 ### **Frontend Testing**
+
 ```bash
 # Run development server
 npm run dev
 
 # Test upload functionality
-# 1. Navigate to http://localhost:5000
+# 1. Navigate to http://localhost:3000
 # 2. Upload a sample file
 # 3. Verify metadata extraction
 # 4. Test tier-based field filtering
 ```
 
 ### **Performance Testing**
+
 ```bash
 # Test caching performance
 python3 -c "
@@ -203,6 +215,7 @@ print(check_system_resources())
 ## 📊 **Performance Optimization**
 
 ### **Caching Strategy**
+
 ```python
 # Cache configuration
 CACHE_SETTINGS = {
@@ -214,18 +227,20 @@ CACHE_SETTINGS = {
 ```
 
 ### **Processing Optimization**
+
 ```python
 # File size-based optimization
 def optimize_for_file_size(file_size_bytes):
     if file_size_bytes < 1_000_000:      # < 1MB
         return {"parallel": False, "chunk_size": 64*1024}
-    elif file_size_bytes < 50_000_000:   # < 50MB  
+    elif file_size_bytes < 50_000_000:   # < 50MB
         return {"parallel": True, "chunk_size": 1*1024*1024}
     else:                                # >= 50MB
         return {"parallel": True, "chunk_size": 4*1024*1024}
 ```
 
 ### **Memory Management**
+
 ```python
 # Automatic cleanup
 with tempfile.NamedTemporaryFile(delete=True) as tmp:
@@ -241,6 +256,7 @@ with tempfile.NamedTemporaryFile(delete=True) as tmp:
 ### **Core Endpoints**
 
 #### **Single File Extraction**
+
 ```http
 POST /api/extract?tier=premium
 Content-Type: multipart/form-data
@@ -249,23 +265,31 @@ file: <binary data>
 ```
 
 **Response:**
+
 ```json
 {
   "filename": "sample.jpg",
-  "tier": "premium", 
+  "tier": "premium",
   "fields_extracted": 1247,
   "processing_ms": 2341,
   "file_integrity": {
     "md5": "d41d8cd98f00b204e9800998ecf8427e",
     "sha256": "e3b0c44298fc1c149afbf4c8996fb924..."
   },
-  "exif": { /* EXIF data */ },
-  "gps": { /* GPS data */ },
-  "performance_metrics": { /* Performance data */ }
+  "exif": {
+    /* EXIF data */
+  },
+  "gps": {
+    /* GPS data */
+  },
+  "performance_metrics": {
+    /* Performance data */
+  }
 }
 ```
 
 #### **Batch Processing**
+
 ```http
 POST /api/extract/batch?tier=premium
 Content-Type: multipart/form-data
@@ -275,6 +299,7 @@ files: <binary data>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -282,18 +307,24 @@ files: <binary data>
   "successful_files": 2,
   "processing_time_ms": 4523,
   "results": {
-    "file1.jpg": { /* metadata */ },
-    "file2.jpg": { /* metadata */ }
+    "file1.jpg": {
+      /* metadata */
+    },
+    "file2.jpg": {
+      /* metadata */
+    }
   }
 }
 ```
 
 #### **Sample Files**
+
 ```http
 GET /api/samples
 ```
 
 **Response:**
+
 ```json
 {
   "samples": [
@@ -308,11 +339,13 @@ GET /api/samples
 ```
 
 #### **Performance Monitoring**
+
 ```http
 GET /api/performance/stats
 ```
 
 **Response:**
+
 ```json
 {
   "cache": {
@@ -322,7 +355,9 @@ GET /api/performance/stats
   },
   "server": {
     "uptime_seconds": 86400,
-    "memory_usage": { /* Node.js memory stats */ }
+    "memory_usage": {
+      /* Node.js memory stats */
+    }
   }
 }
 ```
@@ -332,42 +367,46 @@ GET /api/performance/stats
 ## 🎨 **Frontend Development**
 
 ### **Component Development**
+
 ```typescript
 // Enhanced Upload Zone usage
-import { EnhancedUploadZone } from "@/components/enhanced-upload-zone";
+import { EnhancedUploadZone } from '@/components/enhanced-upload-zone';
 
 <EnhancedUploadZone
   onResults={(results) => console.log(results)}
-  tier="premium"
+  tier='premium'
   maxFiles={10}
-/>
+/>;
 ```
 
 ### **Sample Files Integration**
+
 ```typescript
 // Sample files component
-import { SampleFiles } from "@/components/sample-files";
+import { SampleFiles } from '@/components/sample-files';
 
 <SampleFiles
   onSampleSelect={(sampleId) => processSample(sampleId)}
-  currentTier="premium"
-/>
+  currentTier='premium'
+/>;
 ```
 
 ### **Onboarding Tutorial**
+
 ```typescript
 // Tutorial integration
-import { OnboardingTutorial } from "@/components/onboarding-tutorial";
+import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 
 <OnboardingTutorial
   isOpen={showTutorial}
   onClose={() => setShowTutorial(false)}
   onComplete={() => markTutorialComplete()}
-  userTier="free"
-/>
+  userTier='free'
+/>;
 ```
 
 ### **Styling Guidelines**
+
 ```css
 /* Use TailwindCSS classes */
 .upload-zone {
@@ -387,16 +426,18 @@ import { OnboardingTutorial } from "@/components/onboarding-tutorial";
 ## 🚀 **Deployment**
 
 ### **Development Deployment**
+
 ```bash
 # Start all services
 npm run dev
 
 # Or start individually
-npm run dev:client  # Frontend (port 5000)
+npm run dev:client  # Frontend (port 5173)
 npm run dev         # Backend API
 ```
 
 ### **Production Deployment**
+
 ```bash
 # Build application
 npm run build
@@ -409,6 +450,7 @@ pm2 start dist/index.cjs --name metaextract
 ```
 
 ### **Docker Deployment**
+
 ```dockerfile
 # Dockerfile example
 FROM node:20-alpine
@@ -420,18 +462,19 @@ RUN npm ci --only=production
 COPY . .
 RUN npm run build
 
-EXPOSE 5000
+EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
 ### **Environment-Specific Configuration**
+
 ```bash
 # Development
 NODE_ENV=development
 DATABASE_URL=sqlite:./dev.db
 REDIS_HOST=localhost
 
-# Production  
+# Production
 NODE_ENV=production
 DATABASE_URL=postgresql://...
 REDIS_HOST=redis.production.com
@@ -444,6 +487,7 @@ REDIS_HOST=redis.production.com
 ### **Common Issues**
 
 #### **Python Dependencies**
+
 ```bash
 # Issue: Python packages not found
 # Solution: Activate virtual environment
@@ -452,6 +496,7 @@ pip install -r requirements.txt
 ```
 
 #### **FFmpeg Not Found**
+
 ```bash
 # Issue: Video processing fails
 # Solution: Install FFmpeg
@@ -460,6 +505,7 @@ pip install -r requirements.txt
 ```
 
 #### **Redis Connection Failed**
+
 ```bash
 # Issue: Caching disabled
 # Solution: Start Redis server
@@ -468,6 +514,7 @@ pip install -r requirements.txt
 ```
 
 #### **ExifTool Missing**
+
 ```bash
 # Issue: Limited metadata extraction
 # Solution: Install ExifTool
@@ -476,6 +523,7 @@ pip install -r requirements.txt
 ```
 
 ### **Debug Logging**
+
 ```python
 # Enable debug logging in Python
 import logging
@@ -486,6 +534,7 @@ python3 server/extractor/metadata_engine_enhanced.py sample.jpg --tier premium -
 ```
 
 ### **Performance Debugging**
+
 ```bash
 # Check system resources
 python3 -c "
@@ -495,7 +544,7 @@ print(json.dumps(check_system_resources(), indent=2))
 "
 
 # Monitor cache performance
-curl http://localhost:5000/api/performance/stats | jq
+curl http://localhost:3000/api/performance/stats | jq
 ```
 
 ---
@@ -503,17 +552,20 @@ curl http://localhost:5000/api/performance/stats | jq
 ## 📚 **Additional Resources**
 
 ### **Documentation**
+
 - [Implementation Progress](IMPLEMENTATION_PROGRESS.md)
 - [API Documentation](docs/API.md)
 - [Deployment Guide](README.md)
 
 ### **External Dependencies**
+
 - [ExifTool Documentation](https://exiftool.org/TagNames/)
 - [FFmpeg Documentation](https://ffmpeg.org/documentation.html)
 - [Redis Documentation](https://redis.io/documentation)
 - [Drizzle ORM](https://orm.drizzle.team/)
 
 ### **Development Tools**
+
 - [React Developer Tools](https://react.dev/learn/react-developer-tools)
 - [Postman Collection](docs/MetaExtract.postman_collection.json)
 - [VS Code Extensions](docs/recommended-extensions.md)
@@ -523,6 +575,7 @@ curl http://localhost:5000/api/performance/stats | jq
 ## 🤝 **Contributing**
 
 ### **Development Workflow**
+
 1. Fork the repository
 2. Create a feature branch
 3. Make changes with tests
@@ -530,12 +583,14 @@ curl http://localhost:5000/api/performance/stats | jq
 5. Code review and merge
 
 ### **Code Standards**
+
 - **TypeScript**: Strict mode enabled
 - **Python**: PEP 8 compliance
 - **Testing**: Unit tests for new features
 - **Documentation**: Update docs for API changes
 
 ### **Commit Guidelines**
+
 ```bash
 # Format: type(scope): description
 feat(api): add batch processing endpoint

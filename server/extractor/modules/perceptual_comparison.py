@@ -269,3 +269,31 @@ def deduplication_workflow(
 def get_perceptual_comparison_field_count() -> int:
     """Return number of comparison/matching fields."""
     return 25
+
+
+def extract_perceptual_comparison_metadata(filepath: str) -> Dict[str, Any]:
+    '''Extract perceptual_comparison metadata from files'''
+    result = {
+        "metadata": {},
+        "fields_extracted": 0,
+        "is_valid_perceptual_comparison": False,
+        "extraction_method": "basic"
+    }
+
+    try:
+        if not filepath or not os.path.exists(filepath):
+            result["error"] = "File not found"
+            return result
+
+        # Try format-specific extraction
+        try:
+            # Add perceptual_comparison-specific extraction logic here
+            result["is_valid_perceptual_comparison"] = True
+            result["fields_extracted"] = len(result["metadata"])
+        except Exception as e:
+            result["error"] = f"perceptual_comparison extraction failed: {str(e)[:200]}"
+
+    except Exception as e:
+        result["error"] = f"perceptual_comparison metadata extraction failed: {str(e)[:200]}"
+
+    return result

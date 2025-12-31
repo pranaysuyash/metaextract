@@ -20,11 +20,17 @@ Covers:
 import struct
 import json
 import logging
+import re
 from typing import Dict, Any, Optional
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+try:
+    from .gis_epsg_registry import get_epsg_code_name
+    EPSG_REGISTRY_AVAILABLE = True
+except Exception:
+    EPSG_REGISTRY_AVAILABLE = False
 GEOSPATIAL_EXTENSIONS = [
     '.shp', '.shx', '.dbf', '.prj', '.cpg',  # Shapefile components
     '.geojson', '.json',  # GeoJSON
@@ -474,7 +480,59 @@ def _extract_general_geospatial_properties(filepath: str) -> Dict[str, Any]:
     except Exception:
         pass
 
+    props.update(_extract_epsg_registry(filepath))
+
     return props
+
+
+def _extract_epsg_registry(filepath: str) -> Dict[str, Any]:
+    registry = {
+        "geospatial_epsg_codes": [],
+        "geospatial_epsg_registry": {
+            "available": False,
+            "fields_extracted": 0,
+            "tags": {},
+        },
+    }
+
+    def _extract_codes(text: str) -> Dict[int, None]:
+        codes = {}
+        for match in re.findall(r'EPSG[^0-9]{0,6}([0-9]{3,6})', text, flags=re.IGNORECASE):
+            codes[int(match)] = None
+        for match in re.findall(r'AUTHORITY\\[\"EPSG\",\"([0-9]{3,6})\"\\]', text):
+            codes[int(match)] = None
+        for match in re.findall(r'SRID\\s*=\\s*([0-9]{3,6})', text, flags=re.IGNORECASE):
+            codes[int(match)] = None
+        return codes
+
+    epsg_codes = {}
+    path = Path(filepath)
+    candidates = []
+    if path.suffix.lower() == ".prj":
+        candidates.append(path)
+    else:
+        prj = path.with_suffix(".prj")
+        if prj.exists():
+            candidates.append(prj)
+
+    for candidate in candidates:
+        try:
+            text = candidate.read_text(encoding="utf-8", errors="ignore")
+            epsg_codes.update(_extract_codes(text))
+        except Exception:
+            continue
+
+    if epsg_codes:
+        codes = sorted(epsg_codes.keys())
+        registry["geospatial_epsg_codes"] = codes
+        registry_data = registry["geospatial_epsg_registry"]
+        registry_data["available"] = True
+        for code in codes:
+            name = get_epsg_code_name(code) if EPSG_REGISTRY_AVAILABLE else f"EPSG:{code}"
+            registry_data["tags"][str(code)] = {"code": code, "name": name}
+        registry_data["fields_extracted"] = len(codes)
+
+    return registry
 
 
 def get_geospatial_gis_field_count() -> int:
@@ -501,7 +559,7 @@ def get_geospatial_gis_field_count() -> int:
     netcdf_fields = 10
 
     # General properties
-    general_fields = 8
+    general_fields = 10
 
     return shp_fields + geojson_fields + kml_fields + geotiff_fields + gpkg_fields + gml_fields + netcdf_fields + general_fields
 

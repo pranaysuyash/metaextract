@@ -1,14 +1,15 @@
 # MetaExtract v4.0 - Ultimate Metadata Extraction Engine
 
-**The world's most comprehensive metadata extraction system - extracting 45,000+ fields across all digital domains.**
+**The world's most comprehensive metadata extraction system - extracting a comprehensive universe of metadata fields across digital domains.**
 
 ## 🌟 What's New in v4.0
 
-MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - a revolutionary system that can extract **45,000+ metadata fields** from any file type across all digital domains:
+MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - a revolutionary system that can extract a comprehensive universe of metadata fields from any file type across digital domains:
 
 ### 🎯 Comprehensive Coverage
+
 - **Medical Imaging**: DICOM files with 4,600+ standardized fields
-- **Astronomical Data**: FITS files with 3,000+ fields and WCS support  
+- **Astronomical Data**: FITS files with 3,000+ fields and WCS support
 - **Geospatial Analysis**: GeoTIFF, Shapefile with full CRS and projection metadata
 - **Scientific Data**: HDF5, NetCDF with unlimited metadata fields
 - **Professional Video**: Broadcast standards, HDR, timecode analysis
@@ -19,7 +20,8 @@ MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - a revolution
 - **And much more...**
 
 ### 🚀 Performance & Scale
-- **45,000+ metadata fields** (up from 7,000+)
+
+- **Comprehensive metadata field coverage** (up from 7,000+)
 - **10 specialized extraction engines**
 - **Advanced caching** with Redis support
 - **Batch processing** for multiple files
@@ -28,7 +30,7 @@ MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - a revolution
 
 ## ✨ Core Features
 
-- **45,000+ Metadata Fields** - The world's most comprehensive extraction system
+- **Comprehensive Metadata Fields** - The world's most comprehensive extraction system
 - **Specialized Engines** - Medical, Astronomical, Geospatial, Scientific, AI Detection
 - **Parsed MakerNotes** - Canon, Nikon, Sony, Fujifilm, Olympus, Panasonic, Apple, DJI, GoPro
 - **Full IPTC/XMP** - 50+ IPTC fields, 200+ XMP namespaces
@@ -39,37 +41,42 @@ MetaExtract v4.0 introduces the **Comprehensive Metadata Engine** - a revolution
 
 ## 📁 Supported File Types
 
-| Category | Formats |
-|----------|---------|
-| Images | JPEG, PNG, GIF, WebP, TIFF, BMP, HEIC/HEIF |
-| RAW | CR2, CR3, NEF, ARW, DNG, ORF, RW2, RAF, PEF |
-| Video | MP4, MOV, AVI, WebM, MKV, M4V |
-| Audio | MP3, FLAC, WAV, OGG, M4A, AAC, AIFF |
-| Documents | PDF, SVG |
+| Category  | Formats                                     |
+| --------- | ------------------------------------------- |
+| Images    | JPEG, PNG, GIF, WebP, TIFF, BMP, HEIC/HEIF  |
+| RAW       | CR2, CR3, NEF, ARW, DNG, ORF, RW2, RAF, PEF |
+| Video     | MP4, MOV, AVI, WebM, MKV, M4V               |
+| Audio     | MP3, FLAC, WAV, OGG, M4A, AAC, AIFF         |
+| Documents | PDF, SVG                                    |
 
 ## 🔬 Extraction Capabilities
 
 ### MakerNote Parsing (Premium)
+
 Unlike other tools that show raw hex, we parse manufacturer-specific fields:
 
-| Manufacturer | Fields | Examples |
-|--------------|--------|----------|
-| **Canon** | ~80 | SerialNumber, ShutterCount, LensInfo, AFPoint, InternalTemp |
-| **Nikon** | ~70 | ShutterCount, AFInfo, VibrationReduction, HighISONoiseReduction |
-| **Sony** | ~60 | InternalSerialNumber, FocusMode, DynamicRangeOptimizer |
-| **Fujifilm** | ~50 | FilmMode, DynamicRange, ShadowTone, HighlightTone |
-| **Apple** | ~40 | HDRImageType, ContentIdentifier, LivePhotoVideoIndex |
-| **DJI** | ~30 | FlightYawDegree, GimbalPitchDegree, RelativeAltitude |
+| Manufacturer | Fields | Examples                                                        |
+| ------------ | ------ | --------------------------------------------------------------- |
+| **Canon**    | ~80    | SerialNumber, ShutterCount, LensInfo, AFPoint, InternalTemp     |
+| **Nikon**    | ~70    | ShutterCount, AFInfo, VibrationReduction, HighISONoiseReduction |
+| **Sony**     | ~60    | InternalSerialNumber, FocusMode, DynamicRangeOptimizer          |
+| **Fujifilm** | ~50    | FilmMode, DynamicRange, ShadowTone, HighlightTone               |
+| **Apple**    | ~40    | HDRImageType, ContentIdentifier, LivePhotoVideoIndex            |
+| **DJI**      | ~30    | FlightYawDegree, GimbalPitchDegree, RelativeAltitude            |
 
 ### IPTC Metadata (Premium)
+
 Full IPTC-IIM support including:
+
 - Keywords, Caption, Headline, Credit, Source
 - Copyright, By-line, City, Province, Country
 - DateCreated, TimeCreated, DigitalCreationDate
 - ~50 additional fields
 
 ### XMP Namespaces (Premium)
+
 Complete XMP extraction across 20+ namespaces:
+
 - **XMP-dc**: Dublin Core (title, creator, description, rights)
 - **XMP-photoshop**: Photoshop metadata (ColorMode, History)
 - **XMP-crs**: Camera Raw Settings (all Lightroom adjustments)
@@ -139,16 +146,17 @@ python server/extractor/metadata_engine.py --help
 
 ## 💰 Pricing Tiers
 
-| Tier | Price | File Types | Fields | Key Features |
-|------|-------|------------|--------|--------------|
-| **Free** | $0 | Images (JPG, PNG, GIF, WebP) | ~50 | Basic EXIF, 10MB limit |
-| **Starter** | $5/mo | + RAW, PDF, Audio | ~200 | GPS, hashes, forensics |
-| **Pro** | $27/mo | + Video, all formats | 7000+ | MakerNotes, IPTC, XMP, batch |
-| **Super** | $99/mo | All + API | 7000+ | API access, 1GB files |
+| Tier        | Price  | File Types                   | Fields | Key Features                 |
+| ----------- | ------ | ---------------------------- | ------ | ---------------------------- |
+| **Free**    | $0     | Images (JPG, PNG, GIF, WebP) | ~50    | Basic EXIF, 10MB limit       |
+| **Starter** | $5/mo  | + RAW, PDF, Audio            | ~200   | GPS, hashes, forensics       |
+| **Pro**     | $27/mo | + Video, all formats         | 7000+  | MakerNotes, IPTC, XMP, batch |
+| **Super**   | $99/mo | All + API                    | 7000+  | API access, 1GB files        |
 
 ## 🔗 API Endpoints
 
 ### Extraction
+
 ```
 POST /api/extract?tier=premium
 Content-Type: multipart/form-data
@@ -158,6 +166,7 @@ Response: Complete metadata JSON
 ```
 
 ### Configuration
+
 ```
 GET /api/tiers          - All tier configurations
 GET /api/fields         - Field information by tier
@@ -165,6 +174,7 @@ GET /api/health         - Health check
 ```
 
 ### Credits & Payments
+
 ```
 POST /api/checkout/create-session  - Create subscription
 POST /api/credits/purchase         - Buy credit pack
@@ -203,18 +213,18 @@ metaextract/
 
 ## 📈 Comparison
 
-| Feature | MetaExtract | exiftool.org | Jeffrey's Exif | metapicz |
-|---------|-------------|--------------|----------------|----------|
-| Fields | 7000+ | 300+ | 100+ | 50+ |
-| MakerNote Parsing | ✅ Parsed | ✅ Parsed | ❌ Raw | ❌ No |
-| IPTC/XMP | ✅ Full | ✅ Full | ⚠️ Basic | ❌ No |
-| Video | ✅ Full | ✅ Full | ❌ No | ❌ No |
-| Audio | ✅ Full | ⚠️ Basic | ❌ No | ❌ No |
-| PDF | ✅ | ❌ | ❌ | ❌ |
-| Beautiful UI | ✅ | ❌ | ❌ | ✅ |
-| File Hashes | ✅ | ❌ | ❌ | ❌ |
-| API Access | ✅ | ❌ | ❌ | ❌ |
-| Zero Storage | ✅ | ✅ | ✅ | ? |
+| Feature           | MetaExtract | exiftool.org | Jeffrey's Exif | metapicz |
+| ----------------- | ----------- | ------------ | -------------- | -------- |
+| Fields            | 7000+       | 300+         | 100+           | 50+      |
+| MakerNote Parsing | ✅ Parsed   | ✅ Parsed    | ❌ Raw         | ❌ No    |
+| IPTC/XMP          | ✅ Full     | ✅ Full      | ⚠️ Basic       | ❌ No    |
+| Video             | ✅ Full     | ✅ Full      | ❌ No          | ❌ No    |
+| Audio             | ✅ Full     | ⚠️ Basic     | ❌ No          | ❌ No    |
+| PDF               | ✅          | ❌           | ❌             | ❌       |
+| Beautiful UI      | ✅          | ❌           | ❌             | ✅       |
+| File Hashes       | ✅          | ❌           | ❌             | ❌       |
+| API Access        | ✅          | ❌           | ❌             | ❌       |
+| Zero Storage      | ✅          | ✅           | ✅             | ?        |
 
 ## 🚢 Deployment
 
@@ -225,6 +235,7 @@ metaextract/
 3. Deploy!
 
 Railway auto-detects the nixpacks.toml and installs:
+
 - Node.js 20
 - Python 3.11
 - FFmpeg

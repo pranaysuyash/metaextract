@@ -6,6 +6,18 @@ Comprehensive extraction of DICOM tags for medical imaging forensics
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
+try:
+    from .dicom_complete_registry import get_dicom_registry_fields
+    DICOM_REGISTRY_FIELDS = get_dicom_registry_fields()
+except Exception:
+    DICOM_REGISTRY_FIELDS = {}
+
+try:
+    from .dicom_private_tags_complete import GE_PRIVATE_TAGS
+    DICOM_PRIVATE_REGISTRY = {**GE_PRIVATE_TAGS}
+except Exception:
+    DICOM_PRIVATE_REGISTRY = {}
+
 
 DICOM_PATIENT_TAGS = {
     (0x0010, 0x0010): "patient_name",
@@ -827,6 +839,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
         "sop": {},
         "modality_specific": {},
         "private_tags": {},
+        "registry": {},
         "fields_extracted": 0,
         "is_valid_dicom": False
     }
@@ -929,7 +942,51 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
         result["private_tags"]["count"] = len(private_elements)
         result["private_tags"]["elements"] = private_elements[:10]
 
-        result["fields_extracted"] = (
+        registry_tags: Dict[str, Dict[str, Any]] = {}
+        unknown_tags: Dict[str, Dict[str, Any]] = {}
+
+        def _format_dicom_value(value: Any) -> Any:
+            if value is None:
+                return None
+            if isinstance(value, bytes):
+                return {"bytes": len(value)}
+            if isinstance(value, (list, tuple)):
+                return [_format_dicom_value(item) for item in value[:50]]
+            text = str(value)
+            if len(text) > 500:
+                return text[:500] + "..."
+            return text
+
+        if DICOM_REGISTRY_FIELDS:
+            for elem in ds:
+                try:
+                    if elem.tag == (0x7FE0, 0x0010):
+                        continue
+                    if elem.VR in {"OB", "OW", "OF", "UN"}:
+                        continue
+                    tag_code = f"{elem.tag.group:04X},{elem.tag.element:04X}"
+                    tag_name = (
+                        DICOM_REGISTRY_FIELDS.get(tag_code)
+                        or DICOM_PRIVATE_REGISTRY.get(elem.tag)
+                        or elem.keyword
+                        or elem.name
+                    )
+                    entry = {"name": tag_name, "value": _format_dicom_value(elem.value)}
+                    registry_tags[tag_code] = entry
+                    if tag_code not in DICOM_REGISTRY_FIELDS:
+                        unknown_tags[tag_code] = entry
+                except Exception:
+                    continue
+
+        result["registry"] = {
+            "available": bool(DICOM_REGISTRY_FIELDS),
+            "fields_extracted": len(registry_tags),
+            "unknown_count": len(unknown_tags),
+            "tags": registry_tags,
+            "unknown_tags": unknown_tags,
+        }
+
+        category_count = (
             len(result["patient"]) +
             len(result["study"]) +
             len(result["series"]) +
@@ -940,6 +997,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
             len(result["modality_specific"]) +
             len(result["private_tags"])
         )
+        result["fields_extracted"] = len(registry_tags) if registry_tags else category_count
 
     except ImportError:
         result["error"] = "pydicom not installed"
@@ -951,6 +1009,8 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
 
 def get_dicom_field_count() -> int:
     """Return total number of DICOM fields."""
+    if DICOM_REGISTRY_FIELDS:
+        return len(DICOM_REGISTRY_FIELDS)
     return len(ALL_DICOM_TAGS)
 
 

@@ -2,7 +2,7 @@
 """
 MetaExtract Field Inventory System - Implementation Complete
 
-Summary of comprehensive field inventory generation based on 45K+ Ultimate Metadata Universe.
+Summary of comprehensive field inventory generation based on the ultimate metadata inventory (legacy 45K baseline referenced).
 
 Run date: 2025-12-30
 """
@@ -268,7 +268,7 @@ def main():
     print(f"Unique Fields:    {INVENTORY_STATS['unique_by_category_table_name']:,}")
     print()
 
-    print("45K+ Taxonomy Coverage:")
+    print("Legacy 45K taxonomy coverage (for reference):")
     print(f"  Target:  {INVENTORY_STATS['taxonomy_target']:,}")
     print(f"  Mapped:  {INVENTORY_STATS['taxonomy_mapped']:,}")
     print(f"  Coverage: {INVENTORY_STATS['coverage_45k_taxonomy']:.1f}%")

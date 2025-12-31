@@ -31,7 +31,7 @@ export function registerTierRoutes(app: Express): void {
   // Field information endpoint
   app.get('/api/fields', (req, res) => {
     res.json({
-      total_possible_fields: '45,000+',
+      total_possible_fields: 'configurable',
       comprehensive_engine_version: '4.0.0',
       tiers: {
         free: {
@@ -95,7 +95,7 @@ export function registerTierRoutes(app: Express): void {
           ],
         },
         enterprise: {
-          fields: '45,000+',
+          fields: 'configurable',
           categories: ['all_fields', 'batch_processing', 'api_access'],
           file_types: ['All file types'],
           max_size_mb: 2000,
@@ -111,8 +111,7 @@ export function registerTierRoutes(app: Express): void {
         hashes: 'MD5, SHA256, SHA1, CRC32 checksums',
         calculated: 'Aspect ratio, megapixels, file age',
         forensic: 'Device identification, modification detection',
-        makernote:
-          'Vendor-specific camera data (Canon, Nikon, Sony, etc.)',
+        makernote: 'Vendor-specific camera data (Canon, Nikon, Sony, etc.)',
         iptc: 'News/photo agency metadata (copyright, keywords, captions)',
         xmp: 'Adobe metadata (editing history, keywords)',
         video: 'Codec, streams, chapters, HDR metadata',

@@ -24,6 +24,8 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 from datetime import datetime, timezone
 from email.message import EmailMessage
+from functools import lru_cache
+from importlib.util import module_from_spec, spec_from_file_location
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +87,43 @@ CONTACT_HEADERS = {
 }
 
 
+@lru_cache(maxsize=1)
+def _load_email_registry_fields() -> List[str]:
+    root = Path(__file__).resolve().parents[3]
+    inventory_path = root / "scripts" / "inventory_email.py"
+    if inventory_path.exists():
+        try:
+            spec = spec_from_file_location("inventory_email", inventory_path)
+            if spec and spec.loader:
+                module = module_from_spec(spec)
+                spec.loader.exec_module(module)
+                if hasattr(module, "generate_email_inventory"):
+                    inventory = module.generate_email_inventory()
+                else:
+                    inventory = getattr(module, "INVENTORY", None)
+                if isinstance(inventory, dict):
+                    fields: List[str] = []
+                    for category in inventory.get("categories", {}).values():
+                        for field in category.get("fields", []) or []:
+                            fields.append(str(field))
+                    if fields:
+                        return sorted(set(fields))
+        except Exception:
+            pass
+    return []
+
+
+def get_email_registry_fields() -> List[str]:
+    return _load_email_registry_fields()
+
+
 def extract_email_metadata(filepath: str) -> Dict[str, Any]:
     """
     Extract email and communication metadata from email files.
 
     Supports various email formats including RFC 5322, MIME, etc.
     """
-    result = {}
+    result: Dict[str, Any] = {}
 
     try:
         # Read email content
@@ -136,6 +168,21 @@ def extract_email_metadata(filepath: str) -> Dict[str, Any]:
         # Parse date and time information
         datetime_data = _parse_email_datetime(msg)
         result.update(datetime_data)
+
+        registry_fields = get_email_registry_fields()
+        registry = {
+            "available": True,
+            "fields_extracted": 0,
+            "tags": {},
+            "unknown_tags": {},
+            "field_catalog": registry_fields,
+        }
+        for key, value in result.items():
+            registry["tags"][key] = {"name": key, "value": value}
+            if registry_fields and key not in registry_fields:
+                registry["unknown_tags"][key] = {"name": key, "value": value}
+        registry["fields_extracted"] = len(registry["tags"])
+        result["registry"] = registry
 
     except Exception as e:
         logger.warning(f"Error extracting email metadata from {filepath}: {e}")
@@ -593,6 +640,9 @@ def _parse_vcard_content(vcard_str: str) -> Dict[str, Any]:
 
 def get_email_field_count() -> int:
     """Return the number of fields extracted by email metadata."""
+    registry_fields = get_email_registry_fields()
+    if registry_fields:
+        return len(registry_fields)
     # Basic headers (30+)
     basic_headers = len(EMAIL_HEADERS) + 10  # +10 for parsed variants
 

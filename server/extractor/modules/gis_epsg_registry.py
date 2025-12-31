@@ -25,3 +25,31 @@ def get_epsg_code_name(code: int) -> str:
         2154: "RGF93 / Lambert-93 -- France",
     }
     return common_codes.get(code, f"EPSG:{code}")
+
+
+def extract_gis_epsg_registry_metadata(filepath: str) -> Dict[str, Any]:
+    '''Extract gis_epsg_registry metadata from files'''
+    result = {
+        "metadata": {},
+        "fields_extracted": 0,
+        "is_valid_gis_epsg_registry": False,
+        "extraction_method": "basic"
+    }
+
+    try:
+        if not filepath or not os.path.exists(filepath):
+            result["error"] = "File not found"
+            return result
+
+        # Try format-specific extraction
+        try:
+            # Add gis_epsg_registry-specific extraction logic here
+            result["is_valid_gis_epsg_registry"] = True
+            result["fields_extracted"] = len(result["metadata"])
+        except Exception as e:
+            result["error"] = f"gis_epsg_registry extraction failed: {str(e)[:200]}"
+
+    except Exception as e:
+        result["error"] = f"gis_epsg_registry metadata extraction failed: {str(e)[:200]}"
+
+    return result

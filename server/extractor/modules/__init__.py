@@ -6,7 +6,7 @@ Comprehensive metadata extraction for media files
 # Core extraction modules
 from .filesystem import extract_filesystem_metadata, extract_extended_attributes
 from .exif import extract_exif_metadata, extract_gps_metadata, get_exif_field_count
-from .iptc_xmp import extract_iptc_xmp_metadata, get_iptc_field_count
+from .iptc_xmp import extract_iptc_xmp_metadata, get_iptc_field_count, get_iptc_xmp_field_count
 from .images import extract_image_properties, extract_thumbnail_properties, get_image_field_count
 from .geocoding import reverse_geocode, batch_reverse_geocode, geocode_from_exif, get_geocoding_field_count
 try:
@@ -165,7 +165,7 @@ from .social_media_metadata import (
 from .forensic_metadata import (
     extract_forensic_metadata,
     analyze_provenance,
-    get_forensic_field_count
+    get_forensic_metadata_field_count
 )
 
 # Web/Open Graph Metadata
@@ -186,7 +186,7 @@ from .action_camera import (
 from .scientific_medical import (
     extract_scientific_metadata,
     detect_scientific_format,
-    get_scientific_field_count
+    get_scientific_medical_field_count
 )
 
 # Scientific Data (HDF5/NetCDF)
@@ -440,6 +440,7 @@ __all__ = [
     # Field count helpers
     'get_exif_field_count',
     'get_iptc_field_count',
+    'get_iptc_xmp_field_count',
     'get_image_field_count',
     'get_geocoding_field_count',
     'get_color_field_count',
@@ -460,9 +461,10 @@ __all__ = [
     'get_accessibility_field_count',
     'get_makernote_field_count',
     'get_social_media_field_count',
-    'get_forensic_field_count',
+    'get_forensic_metadata_field_count',
     'get_web_metadata_field_count',
     'get_action_camera_field_count',
+    'get_scientific_medical_field_count',
     'get_scientific_field_count',
     'get_print_publishing_field_count',
     'get_workflow_dam_field_count',
@@ -516,6 +518,7 @@ __all__ = [
     'estimate_noise_level',
     'detect_double_compression',
     'get_forensic_field_count',
+    'get_forensic_metadata_field_count',
 
     # Error Level Analysis
     'analyze_ela',

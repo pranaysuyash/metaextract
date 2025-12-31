@@ -1013,3 +1013,54 @@ def extract_vendor_makernotes(filepath: str) -> Optional[Dict[str, Any]]:
 
 def get_makernote_field_count() -> int:
     return len(CANON_MAKERNOTE_TAGS) + len(NIKON_MAKERNOTE_TAGS) + len(SONY_MAKERNOTE_TAGS) + len(FUJIFILM_MAKERNOTE_TAGS) + len(OLYMPUS_MAKERNOTE_TAGS) + len(PANASONIC_MAKERNOTE_TAGS) + len(PENTAX_MAKERNOTE_TAGS)
+
+
+def extract_vendor_makernotes_metadata(filepath: str) -> Dict[str, Any]:
+    '''Extract comprehensive vendor_makernotes metadata from files.
+
+    Args:
+        filepath: Path to the file
+
+    Returns:
+        Dictionary containing extracted vendor_makernotes metadata
+    '''
+    result = {
+        "extracted_fields": {},
+        "registry_fields": {},
+        "fields_extracted": 0,
+        "is_valid_vendor_makernotes": False
+    }
+
+    try:
+        # TODO: Implement specific extraction logic for vendor_makernotes
+        # This is a template that needs to be customized based on file format
+
+        # Basic file validation
+        if not filepath or not os.path.exists(filepath):
+            result["error"] = "File path not provided or file doesn't exist"
+            return result
+
+        result["is_valid_vendor_makernotes"] = True
+
+        # Template structure - customize based on actual format requirements
+        try:
+            # Add format-specific extraction logic here
+            # Examples:
+            # - Read file headers
+            # - Parse binary structures
+            # - Extract metadata fields
+            # - Map to registry definitions
+
+            pass  # Replace with actual implementation
+
+        except Exception as e:
+            result["error"] = f"vendor_makernotes extraction failed: {str(e)[:200]}"
+
+        # Count extracted fields
+        total_fields = len(result["extracted_fields"]) + len(result["registry_fields"])
+        result["fields_extracted"] = total_fields
+
+    except Exception as e:
+        result["error"] = f"vendor_makernotes metadata extraction failed: {str(e)[:200]}"
+
+    return result

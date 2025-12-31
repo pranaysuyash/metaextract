@@ -1,11 +1,11 @@
-import DodoPayments from "dodopayments";
-import type { Express, Request, Response } from "express";
-import { db } from "./db";
-import { users, subscriptions } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import crypto from "crypto";
-import { storage } from "./storage";
-import { normalizeTier } from "@shared/tierConfig";
+import DodoPayments from 'dodopayments';
+import type { Express, Request, Response } from 'express';
+import { db } from './db';
+import { users, subscriptions } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
+import { storage } from './storage';
+import { normalizeTier } from '@shared/tierConfig';
 
 // ============================================================================
 // DodoPayments Configuration
@@ -13,12 +13,12 @@ import { normalizeTier } from "@shared/tierConfig";
 
 const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY;
 const DODO_WEBHOOK_SECRET = process.env.DODO_WEBHOOK_SECRET;
-const IS_TEST_MODE = process.env.DODO_ENV !== "live";
+const IS_TEST_MODE = process.env.DODO_ENV !== 'live';
 
 const dodoClient = DODO_API_KEY
   ? new DodoPayments({
       bearerToken: DODO_API_KEY,
-      environment: IS_TEST_MODE ? "test_mode" : "live_mode",
+      environment: IS_TEST_MODE ? 'test_mode' : 'live_mode',
     })
   : null;
 
@@ -31,50 +31,51 @@ export const DODO_SUBSCRIPTION_PRODUCTS = {
   professional:
     process.env.DODO_PRODUCT_PROFESSIONAL ||
     process.env.DODO_PRODUCT_STARTER ||
-    "pdt_0NV8f7BHv56aq5nVIdg3Y",
+    'pdt_0NV8f7BHv56aq5nVIdg3Y',
   forensic:
     process.env.DODO_PRODUCT_FORENSIC ||
     process.env.DODO_PRODUCT_PREMIUM ||
-    "pdt_0NV8fLqUtlChurxFwXlKB",
+    'pdt_0NV8fLqUtlChurxFwXlKB',
   enterprise:
     process.env.DODO_PRODUCT_ENTERPRISE ||
     process.env.DODO_PRODUCT_SUPER ||
     process.env.DODO_PRODUCT_PREMIUM ||
-    "pdt_0NV8fLqUtlChurxFwXlKB",
+    'pdt_0NV8fLqUtlChurxFwXlKB',
 } as const;
 
 // One-time credit pack products
 export const DODO_CREDIT_PRODUCTS = {
-  single: process.env.DODO_PRODUCT_CREDITS_SINGLE || "pdt_0NV8hiVHeqx1npWvjaXwt",
-  batch: process.env.DODO_PRODUCT_CREDITS_BATCH || "pdt_0NV8hnJ3qBd0dUHEbQRw9",
-  bulk: process.env.DODO_PRODUCT_CREDITS_BULK || "pdt_0NV8hsCRYsFDHaVGPITwa",
+  single:
+    process.env.DODO_PRODUCT_CREDITS_SINGLE || 'pdt_0NV8hiVHeqx1npWvjaXwt',
+  batch: process.env.DODO_PRODUCT_CREDITS_BATCH || 'pdt_0NV8hnJ3qBd0dUHEbQRw9',
+  bulk: process.env.DODO_PRODUCT_CREDITS_BULK || 'pdt_0NV8hsCRYsFDHaVGPITwa',
 } as const;
 
 // Credit pack configuration
 export const CREDIT_PACKS = {
-  single: { 
-    credits: 10, 
+  single: {
+    credits: 10,
     price: 0,
-    priceDisplay: "$0.00",
-    name: "Test Pack",
-    description: "10 credits for testing",
-    productId: DODO_CREDIT_PRODUCTS.single
+    priceDisplay: '$0.00',
+    name: 'Test Pack',
+    description: '10 credits for testing',
+    productId: DODO_CREDIT_PRODUCTS.single,
   },
-  batch: { 
-    credits: 50, 
+  batch: {
+    credits: 50,
     price: 600,
-    priceDisplay: "$6.00",
-    name: "Batch Pack",
-    description: "50 credits - best for occasional use",
-    productId: DODO_CREDIT_PRODUCTS.batch
+    priceDisplay: '$6.00',
+    name: 'Batch Pack',
+    description: '50 credits - best for occasional use',
+    productId: DODO_CREDIT_PRODUCTS.batch,
   },
-  bulk: { 
-    credits: 200, 
+  bulk: {
+    credits: 200,
     price: 2800,
-    priceDisplay: "$28.00",
-    name: "Bulk Pack",
-    description: "200 credits - best value",
-    productId: DODO_CREDIT_PRODUCTS.bulk
+    priceDisplay: '$28.00',
+    name: 'Bulk Pack',
+    description: '200 credits - best value',
+    productId: DODO_CREDIT_PRODUCTS.bulk,
   },
 } as const;
 
@@ -92,7 +93,7 @@ function getBaseUrl(): string {
   if (process.env.BASE_URL) {
     return process.env.BASE_URL;
   }
-  return "http://localhost:5000";
+  return 'http://localhost:3000';
 }
 
 // ============================================================================
@@ -100,117 +101,137 @@ function getBaseUrl(): string {
 // ============================================================================
 
 export function registerPaymentRoutes(app: Express) {
-  
   // ---------------------------------------------------------------------------
   // Checkout Session Creation (Subscriptions)
   // ---------------------------------------------------------------------------
-  
-  app.post("/api/checkout/create-session", async (req: Request, res: Response) => {
-    try {
-      if (!dodoClient) {
-        return res.status(503).json({ 
-          error: "Payment system not configured",
-          message: "Please add DODO_PAYMENTS_API_KEY to enable payments"
+
+  app.post(
+    '/api/checkout/create-session',
+    async (req: Request, res: Response) => {
+      try {
+        if (!dodoClient) {
+          return res.status(503).json({
+            error: 'Payment system not configured',
+            message: 'Please add DODO_PAYMENTS_API_KEY to enable payments',
+          });
+        }
+
+        const { tier, userId, email } = req.body;
+        const requestedTier =
+          typeof tier === 'string' ? tier.toLowerCase() : '';
+        const allowedTiers = new Set([
+          'professional',
+          'forensic',
+          'enterprise',
+          'starter',
+          'premium',
+          'super',
+        ]);
+        if (!requestedTier || !allowedTiers.has(requestedTier)) {
+          return res.status(400).json({ error: 'Invalid tier' });
+        }
+
+        const normalizedTier = normalizeTier(requestedTier);
+        const productId = DODO_SUBSCRIPTION_PRODUCTS[normalizedTier];
+        if (!productId) {
+          return res
+            .status(400)
+            .json({
+              error: `Product not configured for tier: ${normalizedTier}`,
+            });
+        }
+
+        const baseUrl = getBaseUrl();
+
+        const session = await dodoClient.checkoutSessions.create({
+          product_cart: [{ product_id: productId, quantity: 1 }],
+          customer: email ? { email } : undefined,
+          return_url: `${baseUrl}/checkout/success?tier=${normalizedTier}`,
+          metadata: {
+            tier: normalizedTier,
+            user_id: userId || 'anonymous',
+            type: 'subscription',
+          },
+        });
+
+        console.log(
+          `Created checkout session for ${normalizedTier}:`,
+          session.session_id
+        );
+
+        res.json({
+          checkout_url: session.checkout_url,
+          session_id: session.session_id,
+        });
+      } catch (error) {
+        console.error('Checkout session error:', error);
+        res.status(500).json({
+          error: 'Failed to create checkout session',
+          details: error instanceof Error ? error.message : 'Unknown error',
         });
       }
-
-      const { tier, userId, email } = req.body;
-      const requestedTier = typeof tier === "string" ? tier.toLowerCase() : "";
-      const allowedTiers = new Set(["professional", "forensic", "enterprise", "starter", "premium", "super"]);
-      if (!requestedTier || !allowedTiers.has(requestedTier)) {
-        return res.status(400).json({ error: "Invalid tier" });
-      }
-
-      const normalizedTier = normalizeTier(requestedTier);
-      const productId = DODO_SUBSCRIPTION_PRODUCTS[normalizedTier];
-      if (!productId) {
-        return res.status(400).json({ error: `Product not configured for tier: ${normalizedTier}` });
-      }
-
-      const baseUrl = getBaseUrl();
-
-      const session = await dodoClient.checkoutSessions.create({
-        product_cart: [{ product_id: productId, quantity: 1 }],
-        customer: email ? { email } : undefined,
-        return_url: `${baseUrl}/checkout/success?tier=${normalizedTier}`,
-        metadata: {
-          tier: normalizedTier,
-          user_id: userId || "anonymous",
-          type: "subscription",
-        },
-      });
-
-      console.log(`Created checkout session for ${normalizedTier}:`, session.session_id);
-
-      res.json({
-        checkout_url: session.checkout_url,
-        session_id: session.session_id,
-      });
-      
-    } catch (error) {
-      console.error("Checkout session error:", error);
-      res.status(500).json({ 
-        error: "Failed to create checkout session",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
     }
-  });
+  );
 
   // ---------------------------------------------------------------------------
   // Credit Purchase
   // ---------------------------------------------------------------------------
-  
-  app.post("/api/credits/purchase", async (req: Request, res: Response) => {
+
+  app.post('/api/credits/purchase', async (req: Request, res: Response) => {
     try {
       if (!dodoClient) {
-        return res.status(503).json({ 
-          error: "Payment system not configured",
-          message: "Please add DODO_PAYMENTS_API_KEY to enable payments"
+        return res.status(503).json({
+          error: 'Payment system not configured',
+          message: 'Please add DODO_PAYMENTS_API_KEY to enable payments',
         });
       }
 
       const { pack, sessionId, email } = req.body;
-      
-      if (!pack || !["single", "batch", "bulk"].includes(pack)) {
-        return res.status(400).json({ error: "Invalid credit pack" });
+
+      if (!pack || !['single', 'batch', 'bulk'].includes(pack)) {
+        return res.status(400).json({ error: 'Invalid credit pack' });
       }
 
       if (!sessionId) {
-        return res.status(400).json({ error: "Session ID required" });
+        return res.status(400).json({ error: 'Session ID required' });
       }
 
       const balance = await storage.getOrCreateCreditBalance(sessionId);
       const packInfo = CREDIT_PACKS[pack as keyof typeof CREDIT_PACKS];
-      
+
       const baseUrl = getBaseUrl();
 
       const session = await dodoClient.checkoutSessions.create({
-        product_cart: [{
-          product_id: packInfo.productId,
-          quantity: 1,
-        }],
+        product_cart: [
+          {
+            product_id: packInfo.productId,
+            quantity: 1,
+          },
+        ],
         customer: email ? { email } : undefined,
         return_url: `${baseUrl}/credits/success?pack=${pack}&balanceId=${balance.id}`,
         metadata: {
-          type: "credit_purchase",
+          type: 'credit_purchase',
           pack,
           credits: packInfo.credits.toString(),
           balance_id: balance.id,
         },
       });
 
-      console.log(`Created credit purchase session for ${pack}:`, session.session_id);
+      console.log(
+        `Created credit purchase session for ${pack}:`,
+        session.session_id
+      );
 
       res.json({
         checkout_url: session.checkout_url,
         session_id: session.session_id,
       });
-      
     } catch (error) {
-      console.error("Credit purchase error:", error);
-      res.status(500).json({ 
-        error: "Failed to create checkout session",
-        details: error instanceof Error ? error.message : "Unknown error"
+      console.error('Credit purchase error:', error);
+      res.status(500).json({
+        error: 'Failed to create checkout session',
+        details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
@@ -219,29 +240,29 @@ export function registerPaymentRoutes(app: Express) {
   // Credit Balance Endpoints
   // ---------------------------------------------------------------------------
 
-  app.get("/api/credits/balance", async (req: Request, res: Response) => {
+  app.get('/api/credits/balance', async (req: Request, res: Response) => {
     try {
       const sessionId = req.query.sessionId as string;
-      
+
       if (!sessionId) {
         return res.json({ credits: 0, balanceId: null });
       }
 
       const balance = await storage.getOrCreateCreditBalance(sessionId);
-      res.json({ 
-        credits: balance.credits, 
-        balanceId: balance.id 
+      res.json({
+        credits: balance.credits,
+        balanceId: balance.id,
       });
     } catch (error) {
-      console.error("Get credits error:", error);
-      res.status(500).json({ error: "Failed to get credit balance" });
+      console.error('Get credits error:', error);
+      res.status(500).json({ error: 'Failed to get credit balance' });
     }
   });
 
-  app.get("/api/credits/transactions", async (req: Request, res: Response) => {
+  app.get('/api/credits/transactions', async (req: Request, res: Response) => {
     try {
       const balanceId = req.query.balanceId as string;
-      
+
       if (!balanceId) {
         return res.json({ transactions: [] });
       }
@@ -249,73 +270,77 @@ export function registerPaymentRoutes(app: Express) {
       const transactions = await storage.getCreditTransactions(balanceId);
       res.json({ transactions });
     } catch (error) {
-      console.error("Get transactions error:", error);
-      res.status(500).json({ error: "Failed to get transactions" });
+      console.error('Get transactions error:', error);
+      res.status(500).json({ error: 'Failed to get transactions' });
     }
   });
 
   // Manual credit addition (for testing/admin)
-  app.post("/api/credits/add", async (req: Request, res: Response) => {
+  app.post('/api/credits/add', async (req: Request, res: Response) => {
     try {
       const { balanceId, credits, description } = req.body;
-      
+
       if (!balanceId || !credits) {
-        return res.status(400).json({ error: "Balance ID and credits required" });
+        return res
+          .status(400)
+          .json({ error: 'Balance ID and credits required' });
       }
 
       const tx = await storage.addCredits(
-        balanceId, 
-        credits, 
-        description || "Manual credit addition"
+        balanceId,
+        credits,
+        description || 'Manual credit addition'
       );
-      
+
       const balance = await storage.getCreditBalance(balanceId);
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         transaction: tx,
-        newBalance: balance?.credits || 0
+        newBalance: balance?.credits || 0,
       });
     } catch (error) {
-      console.error("Add credits error:", error);
-      res.status(500).json({ error: "Failed to add credits" });
+      console.error('Add credits error:', error);
+      res.status(500).json({ error: 'Failed to add credits' });
     }
   });
 
   // Use credits for extraction
-  app.post("/api/credits/use", async (req: Request, res: Response) => {
+  app.post('/api/credits/use', async (req: Request, res: Response) => {
     try {
       const { balanceId, amount, fileType } = req.body;
-      
+
       if (!balanceId || !amount) {
-        return res.status(400).json({ error: "Balance ID and amount required" });
+        return res
+          .status(400)
+          .json({ error: 'Balance ID and amount required' });
       }
 
       const balance = await storage.getCreditBalance(balanceId);
       if (!balance || balance.credits < amount) {
-        return res.status(402).json({ 
-          error: "Insufficient credits",
+        return res.status(402).json({
+          error: 'Insufficient credits',
           required: amount,
-          available: balance?.credits || 0
+          available: balance?.credits || 0,
         });
       }
 
       const tx = await storage.useCredits(
-        balanceId, 
-        amount, 
+        balanceId,
+        amount,
         `Extraction: ${fileType || 'file'}`
       );
-      
+
       const newBalance = await storage.getCreditBalance(balanceId);
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         transaction: tx,
-        newBalance: newBalance?.credits || 0
+        newBalance: newBalance?.credits || 0,
       });
     } catch (error) {
-      console.error("Use credits error:", error);
-      res.status(500).json({ error: "Failed to use credits" });
+      console.error('Use credits error:', error);
+      res.status(500).json({ error: 'Failed to use credits' });
     }
   });
 
@@ -323,18 +348,18 @@ export function registerPaymentRoutes(app: Express) {
   // Subscription Status
   // ---------------------------------------------------------------------------
 
-  app.get("/api/subscription/status", async (req: Request, res: Response) => {
+  app.get('/api/subscription/status', async (req: Request, res: Response) => {
     try {
       const userId = req.query.userId as string;
-      
+
       if (!userId) {
-        return res.json({ tier: "enterprise", status: "none" });
+        return res.json({ tier: 'enterprise', status: 'none' });
       }
 
       const [user] = await db.select().from(users).where(eq(users.id, userId));
-      
+
       if (!user) {
-        return res.json({ tier: "enterprise", status: "none" });
+        return res.json({ tier: 'enterprise', status: 'none' });
       }
 
       res.json({
@@ -343,40 +368,41 @@ export function registerPaymentRoutes(app: Express) {
         subscriptionId: user.subscriptionId,
       });
     } catch (error) {
-      console.error("Subscription status error:", error);
-      res.status(500).json({ error: "Failed to get subscription status" });
+      console.error('Subscription status error:', error);
+      res.status(500).json({ error: 'Failed to get subscription status' });
     }
   });
 
-  app.post("/api/subscription/cancel", async (req: Request, res: Response) => {
+  app.post('/api/subscription/cancel', async (req: Request, res: Response) => {
     try {
       if (!dodoClient) {
-        return res.status(503).json({ error: "Payment system not configured" });
+        return res.status(503).json({ error: 'Payment system not configured' });
       }
 
       const { userId } = req.body;
-      
+
       const [user] = await db.select().from(users).where(eq(users.id, userId));
-      
+
       if (!user || !user.subscriptionId) {
-        return res.status(400).json({ error: "No active subscription" });
+        return res.status(400).json({ error: 'No active subscription' });
       }
 
       await dodoClient.subscriptions.update(user.subscriptionId, {
-        status: "cancelled",
+        status: 'cancelled',
       });
 
-      await db.update(users)
-        .set({ 
-          subscriptionStatus: "cancelled",
-          tier: "enterprise"
+      await db
+        .update(users)
+        .set({
+          subscriptionStatus: 'cancelled',
+          tier: 'enterprise',
         })
         .where(eq(users.id, userId));
 
-      res.json({ success: true, message: "Subscription cancelled" });
+      res.json({ success: true, message: 'Subscription cancelled' });
     } catch (error) {
-      console.error("Cancel subscription error:", error);
-      res.status(500).json({ error: "Failed to cancel subscription" });
+      console.error('Cancel subscription error:', error);
+      res.status(500).json({ error: 'Failed to cancel subscription' });
     }
   });
 
@@ -384,64 +410,64 @@ export function registerPaymentRoutes(app: Express) {
   // Webhook Handler
   // ---------------------------------------------------------------------------
 
-  app.post("/api/webhooks/dodo", async (req: Request, res: Response) => {
+  app.post('/api/webhooks/dodo', async (req: Request, res: Response) => {
     try {
       // Verify signature (using Standard Webhooks format)
-      const webhookId = req.headers["webhook-id"] as string;
-      const webhookSignature = req.headers["webhook-signature"] as string;
-      const webhookTimestamp = req.headers["webhook-timestamp"] as string;
-      
+      const webhookId = req.headers['webhook-id'] as string;
+      const webhookSignature = req.headers['webhook-signature'] as string;
+      const webhookTimestamp = req.headers['webhook-timestamp'] as string;
+
       // Log webhook receipt
-      console.log("Webhook received:", {
+      console.log('Webhook received:', {
         id: webhookId,
         type: req.body?.type,
-        timestamp: webhookTimestamp
+        timestamp: webhookTimestamp,
       });
 
       const event = req.body;
 
       switch (event.type) {
-        case "subscription.active": {
+        case 'subscription.active': {
           const subscription = event.data;
           await handleSubscriptionActive(subscription);
           break;
         }
-        case "subscription.on_hold": {
+        case 'subscription.on_hold': {
           const subscription = event.data;
           await handleSubscriptionOnHold(subscription);
           break;
         }
-        case "subscription.failed": {
+        case 'subscription.failed': {
           const subscription = event.data;
           await handleSubscriptionFailed(subscription);
           break;
         }
-        case "subscription.renewed": {
+        case 'subscription.renewed': {
           const subscription = event.data;
           await handleSubscriptionRenewed(subscription);
           break;
         }
-        case "subscription.cancelled": {
+        case 'subscription.cancelled': {
           const subscription = event.data;
           await handleSubscriptionCancelled(subscription);
           break;
         }
-        case "payment.succeeded": {
+        case 'payment.succeeded': {
           await handlePaymentSucceeded(event.data);
           break;
         }
-        case "payment.failed": {
-          console.log("Payment failed:", event.data.payment_id);
+        case 'payment.failed': {
+          console.log('Payment failed:', event.data.payment_id);
           break;
         }
         default:
-          console.log("Unhandled webhook event:", event.type);
+          console.log('Unhandled webhook event:', event.type);
       }
 
       res.json({ received: true });
     } catch (error) {
-      console.error("Webhook error:", error);
-      res.status(500).json({ error: "Webhook processing failed" });
+      console.error('Webhook error:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
 
@@ -449,7 +475,7 @@ export function registerPaymentRoutes(app: Express) {
   // Credit Pack Info
   // ---------------------------------------------------------------------------
 
-  app.get("/api/credits/packs", (req: Request, res: Response) => {
+  app.get('/api/credits/packs', (req: Request, res: Response) => {
     res.json({
       packs: CREDIT_PACKS,
       costs: {
@@ -459,7 +485,7 @@ export function registerPaymentRoutes(app: Express) {
         audio: 2,
         pdf: 1,
       },
-      description: "1 credit = 1 standard file extraction"
+      description: '1 credit = 1 standard file extraction',
     });
   });
 }
@@ -470,37 +496,41 @@ export function registerPaymentRoutes(app: Express) {
 
 async function handleSubscriptionActive(subscription: any) {
   const { subscription_id, customer, metadata } = subscription;
-  const tier = normalizeTier(metadata?.tier || "enterprise");
+  const tier = normalizeTier(metadata?.tier || 'enterprise');
   const userId = metadata?.user_id;
 
   console.log(`Subscription ${subscription_id} activated for tier ${tier}`);
 
-  if (userId && userId !== "anonymous") {
-    await db.update(users)
+  if (userId && userId !== 'anonymous') {
+    await db
+      .update(users)
       .set({
         tier,
         subscriptionId: subscription_id,
-        subscriptionStatus: "active",
+        subscriptionStatus: 'active',
         customerId: customer?.customer_id,
       })
       .where(eq(users.id, userId));
   }
 
   // Update or create subscription record
-  const existingSub = await db.select().from(subscriptions)
+  const existingSub = await db
+    .select()
+    .from(subscriptions)
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
-  if (existingSub.length === 0 && userId && userId !== "anonymous") {
+  if (existingSub.length === 0 && userId && userId !== 'anonymous') {
     await db.insert(subscriptions).values({
       userId,
       dodoSubscriptionId: subscription_id,
-      dodoCustomerId: customer?.customer_id || "",
+      dodoCustomerId: customer?.customer_id || '',
       tier,
-      status: "active",
+      status: 'active',
     });
   } else if (existingSub.length > 0) {
-    await db.update(subscriptions)
-      .set({ status: "active", tier })
+    await db
+      .update(subscriptions)
+      .set({ status: 'active', tier })
       .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
   }
 }
@@ -510,16 +540,20 @@ async function handleSubscriptionOnHold(subscription: any) {
 
   console.log(`Subscription ${subscription_id} on hold`);
 
-  await db.update(subscriptions)
-    .set({ status: "on_hold" })
+  await db
+    .update(subscriptions)
+    .set({ status: 'on_hold' })
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
-  const [sub] = await db.select().from(subscriptions)
+  const [sub] = await db
+    .select()
+    .from(subscriptions)
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
   if (sub) {
-    await db.update(users)
-      .set({ subscriptionStatus: "on_hold" })
+    await db
+      .update(users)
+      .set({ subscriptionStatus: 'on_hold' })
       .where(eq(users.id, sub.userId));
   }
 }
@@ -529,18 +563,22 @@ async function handleSubscriptionFailed(subscription: any) {
 
   console.log(`Subscription ${subscription_id} failed`);
 
-  await db.update(subscriptions)
-    .set({ status: "failed" })
+  await db
+    .update(subscriptions)
+    .set({ status: 'failed' })
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
-  const [sub] = await db.select().from(subscriptions)
+  const [sub] = await db
+    .select()
+    .from(subscriptions)
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
   if (sub) {
-    await db.update(users)
-      .set({ 
-        subscriptionStatus: "failed",
-        tier: "enterprise"
+    await db
+      .update(users)
+      .set({
+        subscriptionStatus: 'failed',
+        tier: 'enterprise',
       })
       .where(eq(users.id, sub.userId));
   }
@@ -551,10 +589,11 @@ async function handleSubscriptionRenewed(subscription: any) {
 
   console.log(`Subscription ${subscription_id} renewed`);
 
-  await db.update(subscriptions)
-    .set({ 
-      status: "active",
-      updatedAt: new Date()
+  await db
+    .update(subscriptions)
+    .set({
+      status: 'active',
+      updatedAt: new Date(),
     })
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 }
@@ -564,34 +603,38 @@ async function handleSubscriptionCancelled(subscription: any) {
 
   console.log(`Subscription ${subscription_id} cancelled`);
 
-  await db.update(subscriptions)
-    .set({ status: "cancelled" })
+  await db
+    .update(subscriptions)
+    .set({ status: 'cancelled' })
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
-  const [sub] = await db.select().from(subscriptions)
+  const [sub] = await db
+    .select()
+    .from(subscriptions)
     .where(eq(subscriptions.dodoSubscriptionId, subscription_id));
 
   if (sub) {
-    await db.update(users)
-      .set({ 
-        subscriptionStatus: "cancelled",
-        tier: "enterprise"
+    await db
+      .update(users)
+      .set({
+        subscriptionStatus: 'cancelled',
+        tier: 'enterprise',
       })
       .where(eq(users.id, sub.userId));
   }
 }
 
 async function handlePaymentSucceeded(data: any) {
-  console.log("Payment succeeded:", data.payment_id);
-  
+  console.log('Payment succeeded:', data.payment_id);
+
   const metadata = data.metadata;
-  
+
   // Handle credit purchases
-  if (metadata?.type === "credit_purchase") {
-    const credits = parseInt(metadata.credits || "0");
+  if (metadata?.type === 'credit_purchase') {
+    const credits = parseInt(metadata.credits || '0');
     const balanceId = metadata.balance_id;
     const pack = metadata.pack;
-    
+
     if (credits > 0 && balanceId) {
       await storage.addCredits(
         balanceId,

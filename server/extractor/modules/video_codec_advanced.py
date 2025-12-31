@@ -181,6 +181,14 @@ def _extract_mxf_advanced(filepath: str) -> Dict[str, Any]:
         if header[0:6] == b'\x06\x0e\x2b\x34\x02\x05':
             mxf_data['video_codec_mxf_has_klv_header'] = True
 
+        try:
+            from .broadcast_mxf_registry import extract as extract_mxf_registry
+            registry_result = extract_mxf_registry(filepath)
+            if registry_result.get("registry"):
+                mxf_data["mxf_registry"] = registry_result["registry"]
+        except Exception:
+            pass
+
     except Exception as e:
         mxf_data['video_codec_mxf_extraction_error'] = str(e)
 

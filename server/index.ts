@@ -1,16 +1,19 @@
-import express, { type Request, Response, NextFunction } from "express";
-import cookieParser from "cookie-parser";
-import { registerRoutes } from "./routes";
-import { registerAuthRoutes, authMiddleware } from "./auth";
-import { registerMockAuthRoutes, authMiddleware as mockAuthMiddleware } from "./auth-mock";
-import { serveStatic } from "./static";
-import { createServer } from "http";
-import { db } from "./db";
+import express, { type Request, Response, NextFunction } from 'express';
+import cookieParser from 'cookie-parser';
+import { registerRoutes } from './routes';
+import { registerAuthRoutes, authMiddleware } from './auth';
+import {
+  registerMockAuthRoutes,
+  authMiddleware as mockAuthMiddleware,
+} from './auth-mock';
+import { serveStatic } from './static';
+import { createServer } from 'http';
+import { db } from './db';
 
 const app = express();
 const httpServer = createServer(app);
 
-declare module "http" {
+declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown;
   }
@@ -24,7 +27,7 @@ app.use(
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
-  }),
+  })
 );
 
 app.use(express.urlencoded({ extended: false }));
@@ -34,17 +37,17 @@ app.use(express.urlencoded({ extended: false }));
 const isDatabaseAvailable = !!db;
 if (isDatabaseAvailable) {
   app.use(authMiddleware);
-  log("Using database authentication system");
+  log('Using database authentication system');
 } else {
   app.use(mockAuthMiddleware);
-  log("⚠️  Database not available - using mock authentication system");
+  log('⚠️  Database not available - using mock authentication system');
 }
 
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
+export function log(message: string, source = 'express') {
+  const formattedTime = new Date().toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: true,
   });
 
@@ -62,12 +65,15 @@ app.use((req, res, next) => {
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
+    if (path.startsWith('/api')) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        const truncated = JSON.stringify(capturedJsonResponse).substring(0, 200);
+        const truncated = JSON.stringify(capturedJsonResponse).substring(
+          0,
+          200
+        );
         logLine += ` :: ${truncated}${truncated.length >= 200 ? '...' : ''}`;
       }
 
@@ -83,19 +89,19 @@ app.use((req, res, next) => {
   const isDatabaseAvailable = !!db;
   if (isDatabaseAvailable) {
     registerAuthRoutes(app);
-    log("Registered database authentication routes");
+    log('Registered database authentication routes');
   } else {
     registerMockAuthRoutes(app);
-    log("⚠️  Registered mock authentication routes (development mode)");
-    log("📋 Test credentials available at /api/auth/dev/users");
+    log('⚠️  Registered mock authentication routes (development mode)');
+    log('📋 Test credentials available at /api/auth/dev/users');
   }
-  
+
   // Register main API routes
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const message = err.message || 'Internal Server Error';
 
     res.status(status).json({ message });
     throw err;
@@ -104,25 +110,26 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === 'production') {
     serveStatic(app);
   } else {
-    const { setupVite } = await import("./vite");
+    const { setupVite } = await import('./vite');
     await setupVite(httpServer, app);
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
+  // Other ports are firewalled. Default to 3000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const port = parseInt(process.env.PORT || '3000', 10);
+  const host = process.env.HOST || '0.0.0.0';
   httpServer.listen(
     {
       port,
-      host: "0.0.0.0",
+      host,
     },
     () => {
-      log(`serving on port ${port}`);
-    },
+      log(`serving on ${host}:${port}`);
+    }
   );
 })();

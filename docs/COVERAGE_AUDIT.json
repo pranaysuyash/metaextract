@@ -1,0 +1,3620 @@
+{
+  "summary": {
+    "modules_scanned": 347,
+    "inventory_total": 53287,
+    "registry_total": 53625,
+    "stub_extractors": 10
+  },
+  "modules": [
+    {
+      "module": "server/extractor/modules/accessibility_metadata.py",
+      "inventory_count": 20,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_accessibility_field_count": 20
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/action_camera.py",
+      "inventory_count": 48,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_action_camera_field_count": 48
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/advanced_analysis.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/advanced_audio_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/advanced_video_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/aerospace_registry.py",
+      "inventory_count": 0,
+      "registry_count": 3500,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_aerospace_registry_field_count": 3500
+      }
+    },
+    {
+      "module": "server/extractor/modules/agriculture_registry.py",
+      "inventory_count": 0,
+      "registry_count": 3000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_agriculture_registry_field_count": 3000
+      }
+    },
+    {
+      "module": "server/extractor/modules/ai_ml_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/ai_ml_metadata_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_ai_ml_metadata_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/aiff_extractor.py",
+      "inventory_count": 74,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_aiff_field_count": 74
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/apev2_extractor.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/ar_vr_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/arri_raw_registry.py",
+      "inventory_count": 0,
+      "registry_count": 300,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_arri_raw_registry_field_count": 300
+      }
+    },
+    {
+      "module": "server/extractor/modules/audio.py",
+      "inventory_count": 75,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_audio_field_count": 75
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/audio_bwf_registry.py",
+      "inventory_count": 0,
+      "registry_count": 783,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_audio_bwf_registry_field_count": 783
+      }
+    },
+    {
+      "module": "server/extractor/modules/audio_codec_details.py",
+      "inventory_count": 930,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_audio_codec_details_field_count": 930
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/audio_id3_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/audio_id3_complete_registry.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/audio_id3_extended.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/audio_metadata_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/audio_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/automotive_registry.py",
+      "inventory_count": 0,
+      "registry_count": 4000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_automotive_registry_field_count": 4000
+      }
+    },
+    {
+      "module": "server/extractor/modules/autonomous_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/biometric_health.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/biotechnology_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/biotechnology_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_biotechnology_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/blackmagic_braw_registry.py",
+      "inventory_count": 0,
+      "registry_count": 200,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_blackmagic_braw_registry_field_count": 200
+      }
+    },
+    {
+      "module": "server/extractor/modules/blockchain_asset_registry.py",
+      "inventory_count": 0,
+      "registry_count": 250,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_blockchain_asset_registry_field_count": 250
+      }
+    },
+    {
+      "module": "server/extractor/modules/blockchain_extended_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_blockchain_extended_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/blockchain_nft_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/broadcast_mxf_registry.py",
+      "inventory_count": 0,
+      "registry_count": 977,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_broadcast_mxf_registry_field_count": 977
+      }
+    },
+    {
+      "module": "server/extractor/modules/broadcast_standards_registry.py",
+      "inventory_count": 0,
+      "registry_count": 6500,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_broadcast_standards_registry_field_count": 6500
+      }
+    },
+    {
+      "module": "server/extractor/modules/c2pa_adobe_cc.py",
+      "inventory_count": 30,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_c2pa_adobe_field_count": 30
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/c2pa_manifest_registry.py",
+      "inventory_count": 0,
+      "registry_count": 300,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_c2pa_manifest_registry_field_count": 300
+      }
+    },
+    {
+      "module": "server/extractor/modules/camera_360.py",
+      "inventory_count": 25,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_360_field_count": 25
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/colors.py",
+      "inventory_count": 25,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_color_field_count": 25
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/comparison.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/container_metadata.py",
+      "inventory_count": 700,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_container_metadata_field_count": 700
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/cve_vulnerability_registry.py",
+      "inventory_count": 0,
+      "registry_count": 5000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_cve_vulnerability_registry_field_count": 5000
+      }
+    },
+    {
+      "module": "server/extractor/modules/cybersecurity_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_cybersecurity_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/dicom_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/dicom_complete_registry.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/dicom_complete_ultimate.py",
+      "inventory_count": 2285,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_dicom_complete_ultimate_field_count": 2285
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/dicom_medical.py",
+      "inventory_count": 727,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_dicom_field_count": 727
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/dicom_vendor_tags.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/directory_analysis.py",
+      "inventory_count": 30,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_directory_field_count": 30
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/document_metadata_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/drone_metadata.py",
+      "inventory_count": 35,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_drone_field_count": 35
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/education_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_education_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/email_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_ii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_iii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_iii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_iv.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_iv_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_ix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_ix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_v.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_v_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_vi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_vi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_vii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_vii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_viii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_viii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_x.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_x_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_xi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_xi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/emerging_technology_ultimate_advanced_extension_xii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_emerging_technology_ultimate_advanced_extension_xii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/engineering_cad_registry.py",
+      "inventory_count": 0,
+      "registry_count": 5000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_engineering_cad_registry_field_count": 5000
+      }
+    },
+    {
+      "module": "server/extractor/modules/entertainment_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_entertainment_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/environmental_climate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/environmental_climate_comprehensive_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/error_level_analysis.py",
+      "inventory_count": 15,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_ela_field_count": 15
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/exif.py",
+      "inventory_count": 784,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_exif_field_count": 784
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/fashion_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_fashion_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/field_registry.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/filesystem.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/financial_business_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/financial_fintech_registry.py",
+      "inventory_count": 0,
+      "registry_count": 8000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_financial_fintech_registry_field_count": 8000
+      }
+    },
+    {
+      "module": "server/extractor/modules/fits_complete.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/fonts_complete_registry.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/food_beverage_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_food_beverage_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/forensic_complete.py",
+      "inventory_count": 253,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_field_count": 253
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_digital_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_comprehensive_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_extended.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_ii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_ii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_iii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_iii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_iv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_iv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_ix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_ix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_v.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_v_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_vi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_vi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_vii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_vii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_viii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_viii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_x.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_x_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_xi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_xi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_xii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_xii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_xiii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_xiii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_xiv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_xiv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_xv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_xv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/forensic_security_ultimate_advanced_extension_xvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_forensic_security_ultimate_advanced_extension_xvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/gaming_asset_registry.py",
+      "inventory_count": 0,
+      "registry_count": 3000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_gaming_asset_registry_field_count": 3000
+      }
+    },
+    {
+      "module": "server/extractor/modules/geocoding.py",
+      "inventory_count": 15,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_geocoding_field_count": 15
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/geospatial_gis.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/gis_epsg_registry.py",
+      "inventory_count": 0,
+      "registry_count": 6500,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_gis_epsg_registry_field_count": 6500
+      }
+    },
+    {
+      "module": "server/extractor/modules/hashes.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/healthcare_medical_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/icc_profile.py",
+      "inventory_count": 30,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_icc_field_count": 30
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_ii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_ii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_iii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_iii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_iv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_iv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_v.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_v_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_vi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_vi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_vii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_vii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/id3_audio_ultimate_advanced_extension_viii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_id3_audio_ultimate_advanced_extension_viii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/images.py",
+      "inventory_count": 18,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_image_field_count": 18
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/industrial_manufacturing_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/iot_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/iptc_newscodes_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1500,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_iptc_newscodes_registry_field_count": 1500
+      }
+    },
+    {
+      "module": "server/extractor/modules/iptc_xmp.py",
+      "inventory_count": 4367,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_iptc_field_count": 4367
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/iptc_xmp_fallback.py",
+      "inventory_count": 50,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_fallback_field_count": 50
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/legal_compliance_registry.py",
+      "inventory_count": 0,
+      "registry_count": 2000,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_legal_compliance_registry_field_count": 2000
+      }
+    },
+    {
+      "module": "server/extractor/modules/legal_contracts_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_legal_contracts_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/logistics_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_logistics_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/makernote_exiftool.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_complete.py",
+      "inventory_count": 4760,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernote_field_count": 4760,
+        "get_vendor_field_count": 0
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_dji.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_vendor_field_count": 0
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_hasselblad.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_vendor_field_count": 0
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_leica.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_vendor_field_count": 0
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_phase_one.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_vendor_field_count": 0
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_phaseone.py",
+      "inventory_count": 277,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_phaseone_field_count": 277
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ricoh.py",
+      "inventory_count": 224,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ricoh_field_count": 224
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_sigma.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_vendor_field_count": 0
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_ii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_iii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_iii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_iv.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_iv_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_ix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_ix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_v.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_v_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_vi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_vi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_vii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_vii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_viii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_viii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_x.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_x_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_xi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_xi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_xii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_xii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_xiii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_xiii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_xiv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_xiv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_xv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_xv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/makernotes_ultimate_advanced_extension_xvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernotes_ultimate_advanced_extension_xvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/materials_science.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/medical_healthcare_comprehensive_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/medical_imaging_complete.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/metadata_comparator.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/metadata_db.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/mobile_metadata.py",
+      "inventory_count": 110,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_mobile_field_count": 110
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/mp4_atoms_extractor.py",
+      "inventory_count": 114,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_mp4_field_count": 114
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/multimedia_entertainment_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/neural_network_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/ocr_burned_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/office_documents.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/office_documents_complete.py",
+      "inventory_count": 613,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_office_documents_complete_field_count": 613
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/opus_extractor.py",
+      "inventory_count": 94,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_opus_field_count": 94
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_complete_ultimate.py",
+      "inventory_count": 1196,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_complete_ultimate_field_count": 1196
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_metadata_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_metadata_complete.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_ii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_ii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_iii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_iii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_iv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_iv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_v.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_v_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_vi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_vi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_vii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_vii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/pdf_office_ultimate_advanced_extension_viii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_pdf_office_ultimate_advanced_extension_viii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/perceptual_comparison.py",
+      "inventory_count": 25,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_perceptual_comparison_field_count": 25
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/perceptual_hashes.py",
+      "inventory_count": 12,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_perceptual_hash_field_count": 12
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/physics_registry.py",
+      "inventory_count": 0,
+      "registry_count": 2500,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_physics_registry_field_count": 2500
+      }
+    },
+    {
+      "module": "server/extractor/modules/print_publishing.py",
+      "inventory_count": 45,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_print_publishing_field_count": 45
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/psd.py",
+      "inventory_count": 35,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_psd_field_count": 35
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/quality.py",
+      "inventory_count": 15,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_quality_field_count": 15
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/quality_metrics.py",
+      "inventory_count": 16,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_quality_field_count": 16
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/quantum_computing_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_quantum_computing_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/quantum_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/red_r3d_registry.py",
+      "inventory_count": 0,
+      "registry_count": 300,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_red_r3d_registry_field_count": 300
+      }
+    },
+    {
+      "module": "server/extractor/modules/robotics_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/robotics_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_robotics_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/scientific_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_comprehensive_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_data.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_extended.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_c.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_c_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_ci.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_ci_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_ciii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_ciii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_civ.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_civ_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_cx.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_cx_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_ii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_iii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_iv.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_iv_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_ix.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_ix_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_l.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_l_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_li.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_li_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_liii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_liii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_liv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_liv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lx.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lx_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxiii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxiii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxiv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxiv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxx.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxx_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxiii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxiii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxiv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxiv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxx.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxx_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxiii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxiv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_lxxxviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_lxxxviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_v.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_v_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_vi.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_vi_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_vii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_vii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_viii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_viii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_x.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_x_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xc.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xc_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xci.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xci_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xcii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xcii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xciii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xciii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xciv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xciv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xcix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xcix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xcv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xcv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xcvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xcvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xcvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xcvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xcviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xcviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xi.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xi_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xiii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xiii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xiv.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xiv_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xix.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xl.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xl_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xli.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xli_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xlii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xlii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xliii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xliii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xliv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xliv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xlix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xlix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xlv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xlv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xlvi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xlvi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xlvii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xlvii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xlviii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xlviii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xv.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xvi.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xvii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xviii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xx.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxi.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxiii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xxiii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxiv.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xxiv_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxix.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxv.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xxv_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxvi.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xxvi_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxvii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxviii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxx.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxi.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxiii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxiv.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_dicom_fits_ultimate_advanced_extension_xxxix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxv.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxvi.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxvii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_dicom_fits_ultimate_advanced_extension_xxxviii.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_formats_extended.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_medical.py",
+      "inventory_count": 320,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_scientific_field_count": 320
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_research_ultimate.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_research_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/scientific_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/shared_utils.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/smart_cities_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_smart_cities_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/smart_context.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/social_media_metadata.py",
+      "inventory_count": 60,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_social_media_field_count": 60
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/space_aerospace_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_space_aerospace_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/sports_registry.py",
+      "inventory_count": 0,
+      "registry_count": 1,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {
+        "get_sports_field_count": 1
+      }
+    },
+    {
+      "module": "server/extractor/modules/steganography.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/svg.py",
+      "inventory_count": 20,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_svg_field_count": 20
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/temporal_astronomical.py",
+      "inventory_count": 65,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_temporal_field_count": 65
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/time_based.py",
+      "inventory_count": 11,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_time_based_field_count": 11
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/timeline.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/universal_metadata_extractor.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/vendor_makernotes.py",
+      "inventory_count": 811,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_makernote_field_count": 811
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video.py",
+      "inventory_count": 120,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_field_count": 120
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_codec_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_codec_analysis.py",
+      "inventory_count": 85,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_codec_field_count": 85
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_codec_details.py",
+      "inventory_count": 650,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_codec_details_field_count": 650
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_keyframes.py",
+      "inventory_count": 20,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_keyframe_field_count": 20
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_extended.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_ii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": true,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_ii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_iii.py",
+      "inventory_count": 260,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_iii_field_count": 260
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_iv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_iv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_ix.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_ix_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_v.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_v_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_vi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_vi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_vii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_vii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_viii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_viii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_x.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_x_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_xi.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_xi_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_xii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_xii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_xiii.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_xiii_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_xiv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_xiv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_professional_ultimate_advanced_extension_xv.py",
+      "inventory_count": 200,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_video_professional_ultimate_advanced_extension_xv_field_count": 200
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/video_telemetry.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/wav_riff_extractor.py",
+      "inventory_count": 123,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_riff_field_count": 123
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/web_metadata.py",
+      "inventory_count": 75,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_web_metadata_field_count": 75
+      },
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/web_social_metadata.py",
+      "inventory_count": 0,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {},
+      "registry_functions": {}
+    },
+    {
+      "module": "server/extractor/modules/workflow_dam.py",
+      "inventory_count": 35,
+      "registry_count": 0,
+      "extract_stub": false,
+      "extract_field_estimate": null,
+      "inventory_functions": {
+        "get_workflow_dam_field_count": 35
+      },
+      "registry_functions": {}
+    }
+  ]
+}

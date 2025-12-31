@@ -45,14 +45,7 @@ function AppRouter() {
             </ProtectedRoute>
           } 
         />
-        <Route 
-          path="/results" 
-          element={
-            <ProtectedRoute>
-              <Results />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/results" element={<Results />} />
         <Route 
           path="/checkout/success" 
           element={

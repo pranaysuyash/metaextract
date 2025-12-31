@@ -2,13 +2,13 @@
 
 **Date**: 2025-12-30 (Updated with comprehensive research)
 **Scope**: All possible metadata fields across media, documents, scientific data, forensic/security, and web/social domains
-**Purpose**: Capture the full technical universe (~45,000+ fields) beyond media-only coverage
+**Purpose**: Capture the full technical universe (tens of thousands of fields) beyond media-only coverage
 
 ---
 
 ## Summary
 
-- **All-domain universe**: 45,000+ possible metadata fields across standards and formats.
+- **All-domain universe**: comprehensive set of possible metadata fields across standards and formats.
 - **Media-only universe**: ~7,870 fields (see `METADATA_COMPLETE_UNIVERSE.md`).
 - **All-domain expansion** adds document, scientific, forensic/security, and web/social metadata.
 
@@ -91,7 +91,7 @@ This strategy is reflected in the expanded roadmap phases.
 
 **External Research Findings** (2025 comprehensive analysis):
 
-- **Total Universe**: 45,000+ fields across all domains and standards
+- **Total Universe**: a comprehensive inventory (tens of thousands of fields) across all domains and standards
 - **Technical Reality**: No single tool can extract all fields due to performance, complexity, and legal constraints
 - **Practical Maximum**: 10,000-15,000 fields (ExifTool with all plugins)
 - **Consumer Tools**: 50-500 fields (Adobe Lightroom, Google Photos)

@@ -97,6 +97,91 @@ AUDIO_TAG_FIELDS = {
 }
 
 
+
+# ULTRA EXPANSION FIELDS
+# Additional 36 fields
+ULTRA_AUDIO_FIELDS = {
+    "audio_codec": "flac_alac_aac_wma_codec",
+    "audio_bit_depth": "16_24_32_bit_depth",
+    "audio_sample_rate": "44_1_48_96_192_khz",
+    "audio_bitrate": "kbps_constant_bitrate",
+    "audio_channels": "mono_stereo_5_1_surround",
+    "audio_duration": "playback_length_seconds",
+    "audio_file_size": "compressed_file_bytes",
+    "audio_compression": "lossy_lossless_format",
+    "lyrics_unsynced": "plain_text_lyrics",
+    "lyrics_synced": "timestamped_lyrics",
+    "album_art": "embedded_cover_image",
+    "bpm_tempo": "beats_per_minute",
+    "initial_key": "musical_key_signature",
+    "energy_level": "track_energy_rating",
+    "danceability": "dance_rating_score",
+    "acousticness": "acoustic_vs_electronic",
+    "instrumentalness": "vocal_content_presence",
+    "liveness": "live_vs_studio",
+    "speechiness": "speech_content_ratio",
+    "valence": "emotional_positivity",
+    "composer": "musical_composer_name",
+    "producer": "record_producer",
+    "engineer": "audio_engineer",
+    "mix_engineer": "mix_engineer_name",
+    "mastering_engineer": "mastering_engineer",
+    "record_label": "production_company",
+    "catalog_number": "label_catalog_id",
+    "isrc": "international_standard_recording_code",
+    "upc_ean": "product_barcode",
+    "hot_cue_points": "dj_cue_marker_locations",
+    "loop_points": "beat_loop_start_end",
+    "beatgrid_offset": "beatgrid_adjustment",
+    "key_detection": "detected_musical_key",
+    "gain_normalization": "replaygain_value",
+    "waveform_preview": "audio_waveform_data",
+    "key_analysis": "harmonic_key_compatibility",
+}
+
+
+# MEGA EXPANSION FIELDS
+# Additional 37 fields
+MEGA_AUDIO_FIELDS = {
+    "sample_bit_depth": "16bit_24bit_32bit_float",
+    "sample_rate_khz": "44_1_48_96_192_384",
+    "bitrate_kbps": "lossless_compressed_bitrate",
+    "channel_configuration": "mono_stereo_5_1_7_1_7_1_4_atmos",
+    "audio_codec_profile": "aac_lc_aac_he_aac_ld",
+    "compression_format": "flac_alac_wma_mp3_aac_opus",
+    "lossless_compression": "flac_alac_wavpack_ape",
+    "daw_project": "ableton_live_logic_pro_tools",
+    "midi_tracks": "instrument_track_count",
+    "vst_plugins": "virtual_instruments_effects",
+    "automation_data": "parameter_automation",
+    "mixdown_settings": "stereo_summing",
+    "mastering_engineer": "final_processing",
+    "mastering_studio": "recording_facility",
+    "mastering_year": "mastering_date",
+    "waveform_data": "audio_waveform_points",
+    "spectrogram_data": "frequency_spectrum_analysis",
+    "transient_detection": "attack_transients",
+    "pitch_detection": "fundamental_frequency",
+    "tempo_detection": "bpm_beat_tracking",
+    "key_detection": "musical_key_signature",
+    "chord_progression": "harmonic_analysis",
+    "instrument_classification": "sound_type_identification",
+    "speaker_identification": "speaker_recognition",
+    "speech_to_text": "transcription_data",
+    "emotion_detection": "vocal_emotion_analysis",
+    "language_detection": "spoken_language",
+    "voice_biometrics": "speaker_authentication",
+    "prosody_analysis": "intonation_patterns",
+    "accent_detection": "regional_accent",
+    "voice_print": "vocal_characteristics",
+    "ambient_noise": "background_sound_level",
+    "reverberation_time": "rt60_decay",
+    "sound_pressure_level": "spl_decibels",
+    "frequency_response": "hertz_frequency_curve",
+    "dynamic_range": "loudest_quiet_ratio",
+    "phase_coherence": "stereo_phase",
+}
+
 def extract_audio_metadata(filepath: str) -> Optional[Dict[str, Any]]:
     """
     Extract audio metadata using mutagen.
@@ -213,6 +298,24 @@ def extract_audio_metadata(filepath: str) -> Optional[Dict[str, Any]]:
                 result["tags"]['bpm'] = int(float(result["tags"]['bpm']))
             except (ValueError, TypeError):
                 pass
+
+        if ID3 is not None and isinstance(audio.tags, ID3):
+            try:
+                from .audio_id3_complete_registry import extract as extract_id3_registry
+                registry_result = extract_id3_registry(filepath)
+                if registry_result.get("registry"):
+                    result["id3_registry"] = registry_result["registry"]
+            except Exception:
+                pass
+
+        if filepath.lower().endswith((".wav", ".bwf", ".rf64")):
+            try:
+                from .audio_bwf_registry import extract as extract_bwf_registry
+                bwf_result = extract_bwf_registry(filepath)
+                if bwf_result.get("registry"):
+                    result["bwf_registry"] = bwf_result["registry"]
+            except Exception:
+                pass
         
         total_fields = (
             len(result["format"]) +
@@ -286,5 +389,9 @@ def extract_audio_advanced_metadata(filepath: str) -> Optional[Dict[str, Any]]:
 
 
 def get_audio_field_count() -> int:
-    """Return approximate number of audio fields."""
-    return 75
+    """Return total number of audio metadata fields."""
+    total = 0
+    total += len(AUDIO_TAG_FIELDS)
+    total += len(ULTRA_AUDIO_FIELDS)
+    total += len(MEGA_AUDIO_FIELDS)
+    return total

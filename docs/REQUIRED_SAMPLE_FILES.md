@@ -27,6 +27,10 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 - OME-XML standalone file.
 - GeoTIFF with GeoKeyDirectory + PixelScale/TiePoint tags.
 - LAS/LAZ point cloud with LASF_Projection VLRs + WKT.
+- GeoJSON FeatureCollection with mixed geometry types and properties.
+- KML with multiple Placemarks, folders, and styles.
+- GML 3.2 with srsName and feature members.
+- GeoPackage with gpkg_geometry_columns and RTree index.
 
 ## Scientific Data (HDF5 / NetCDF)
 - HDF5 with nested groups, dataset attributes, and compression.
@@ -61,6 +65,8 @@ that cannot be fully covered by synthetic fixtures or unit tests.
 ## Document Metadata (PDF/Office)
 - PDF with AcroForm fields (text, checkbox, choice) and annotations.
 - PDF with digital signature fields and signed revisions.
+- HTML page with OpenGraph/Twitter/Schema.org JSON-LD + local web manifest.
+- Web manifest JSON with icons, shortcuts, serviceworker block.
 
 ## Emerging Technology Metadata
 - GLB with JSON chunk and mesh/material data.

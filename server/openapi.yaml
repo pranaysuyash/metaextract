@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: MetaExtract API
   description: |
-    MetaExtract is a comprehensive metadata extraction platform that extracts up to 45,000+
+    MetaExtract is a comprehensive metadata extraction platform that extracts an extensive set of metadata fields (configurable)
     metadata fields from any file. This API provides endpoints for file analysis, forensic
     investigation, and metadata management.
 
@@ -18,7 +18,7 @@ info:
     | Free | ~200 | 10MB | Images |
     | Professional | ~1,000 | 100MB | Images + RAW |
     | Forensic | ~15,000 | 500MB | All media |
-    | Enterprise | 45,000+ | 2GB | All files |
+    | Enterprise | configurable | 2GB | All files |
 
   version: 2.0.0
   contact:
@@ -469,7 +469,7 @@ paths:
                     example: MetaExtract API
                   version:
                     type: string
-                    example: "2.0.0"
+                    example: '2.0.0'
                   timestamp:
                     type: string
                     format: date-time

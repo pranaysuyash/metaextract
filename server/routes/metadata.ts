@@ -24,7 +24,15 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
       'extractor',
       'metadata_db_cli.py'
     );
-    const python = spawn('python3', [pythonScript, ...args]);
+
+    // Prefer a configured Python executable (e.g., project's venv) when available
+    const configuredPython = process.env.PYTHON_EXECUTABLE;
+    const venvPython = path.join(__dirname, '..', '.venv', 'bin', 'python');
+    const pythonExec =
+      configuredPython ||
+      (require('fs').existsSync(venvPython) ? venvPython : 'python3');
+
+    const python = spawn(pythonExec, [pythonScript, ...args]);
 
     let stdout = '';
     let stderr = '';
@@ -39,12 +47,14 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
 
     python.on('close', (code) => {
       if (code !== 0) {
+        console.error('metadata_db_cli stderr:', stderr);
         reject(new Error(stderr || 'metadata db cli failed'));
         return;
       }
       try {
         resolve(JSON.parse(stdout));
       } catch (error) {
+        console.error('metadata_db_cli stdout (raw):', stdout);
         reject(new Error('failed to parse metadata db cli output'));
       }
     });
