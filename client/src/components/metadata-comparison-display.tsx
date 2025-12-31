@@ -87,8 +87,19 @@ export function MetadataComparisonDisplay({
     return null;
   }
 
-  const status = comparison.summary.overall_status;
-  const config = statusConfig[status];
+  const summary = comparison.summary ?? {
+    embedded_metadata_present: false,
+    burned_metadata_present: false,
+    gps_comparison: 'no_gps',
+    timestamp_comparison: 'no_timestamp',
+    overall_status: 'no_metadata',
+  };
+  const matches = comparison.matches ?? [];
+  const discrepancies = comparison.discrepancies ?? [];
+  const warnings = comparison.warnings ?? [];
+
+  const status = summary.overall_status || 'no_metadata';
+  const config = statusConfig[status] ?? statusConfig.no_metadata;
   const Icon = config.icon;
   const isSuspicious = status === 'suspicious';
   const isVerified = status === 'verified';
@@ -126,33 +137,32 @@ export function MetadataComparisonDisplay({
           </h6>
           <div
             className={`text-xs px-2 py-1 rounded font-mono ${
-              comparison.summary.gps_comparison === 'match'
+              summary.gps_comparison === 'match'
                 ? 'bg-emerald-500/20 text-emerald-300'
-                : comparison.summary.gps_comparison === 'mismatch'
+                : summary.gps_comparison === 'mismatch'
                 ? 'bg-rose-500/20 text-rose-300'
                 : 'bg-slate-500/20 text-slate-300'
             }`}
           >
-            {comparison.summary.gps_comparison.toUpperCase()}
+            {summary.gps_comparison.toUpperCase()}
           </div>
 
           {/* Show GPS distance if mismatch */}
-          {comparison.matches.find(
-            (m) => m.field === 'gps' && m.matches === true
-          )?.difference && (
+          {matches.find((m) => m.field === 'gps' && m.matches === true)
+            ?.difference && (
             <div className='text-[10px] text-emerald-400 mt-2 font-mono'>
               ✓ Match (±
-              {comparison.matches
+              {matches
                 .find((m) => m.field === 'gps')
                 ?.difference?.approx_meters?.toFixed(1)}
               m)
             </div>
           )}
 
-          {comparison.discrepancies.find((d) => d.field === 'gps') && (
+          {discrepancies.find((d) => d.field === 'gps') && (
             <div className='text-[10px] text-rose-400 mt-2'>
               ⚠️{' '}
-              {comparison.discrepancies.find((d) => d.field === 'gps')?.warning}
+              {discrepancies.find((d) => d.field === 'gps')?.warning}
             </div>
           )}
         </div>
@@ -164,17 +174,17 @@ export function MetadataComparisonDisplay({
           </h6>
           <div
             className={`text-xs px-2 py-1 rounded font-mono ${
-              comparison.summary.timestamp_comparison === 'match'
+              summary.timestamp_comparison === 'match'
                 ? 'bg-emerald-500/20 text-emerald-300'
-                : comparison.summary.timestamp_comparison === 'mismatch'
+                : summary.timestamp_comparison === 'mismatch'
                 ? 'bg-rose-500/20 text-rose-300'
                 : 'bg-slate-500/20 text-slate-300'
             }`}
           >
-            {comparison.summary.timestamp_comparison.toUpperCase()}
+            {summary.timestamp_comparison.toUpperCase()}
           </div>
 
-          {comparison.discrepancies.find((d) => d.field === 'timestamp') && (
+          {discrepancies.find((d) => d.field === 'timestamp') && (
             <div className='text-[10px] text-rose-400 mt-2'>
               ⚠️ Timestamps don't match
             </div>
@@ -183,14 +193,14 @@ export function MetadataComparisonDisplay({
       </div>
 
       {/* Matches Section */}
-      {comparison.matches.length > 0 && (
+      {matches.length > 0 && (
         <div className='bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 mb-3'>
           <h6 className='text-xs font-bold text-emerald-400 mb-2 flex items-center gap-2'>
             <CheckCircle2 className='w-3 h-3' /> Verified Fields (
-            {comparison.matches.length})
+            {matches.length})
           </h6>
           <div className='space-y-1'>
-            {comparison.matches.map((match, i) => (
+            {matches.map((match, i) => (
               <div
                 key={i}
                 className='text-xs text-emerald-300 font-mono flex items-center gap-2'
@@ -205,14 +215,14 @@ export function MetadataComparisonDisplay({
       )}
 
       {/* Discrepancies Section */}
-      {comparison.discrepancies.length > 0 && (
+      {discrepancies.length > 0 && (
         <div className='bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 mb-3'>
           <h6 className='text-xs font-bold text-rose-400 mb-2 flex items-center gap-2'>
             <AlertTriangle className='w-3 h-3' /> Discrepancies (
-            {comparison.discrepancies.length})
+            {discrepancies.length})
           </h6>
           <div className='space-y-1'>
-            {comparison.discrepancies.map((disc, i) => (
+            {discrepancies.map((disc, i) => (
               <div key={i} className='text-xs text-rose-300 font-mono'>
                 <span className='text-rose-500'>⚠️</span>{' '}
                 {disc.warning || `${disc.field} mismatch detected`}
@@ -223,13 +233,13 @@ export function MetadataComparisonDisplay({
       )}
 
       {/* Warnings Section */}
-      {comparison.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div className='bg-amber-500/10 border border-amber-500/30 rounded-lg p-3'>
           <h6 className='text-xs font-bold text-amber-400 mb-2 flex items-center gap-2'>
             <AlertCircle className='w-3 h-3' /> Warnings
           </h6>
           <div className='space-y-1'>
-            {comparison.warnings.map((warning, i) => (
+            {warnings.map((warning, i) => (
               <div key={i} className='text-xs text-amber-300'>
                 • {warning}
               </div>

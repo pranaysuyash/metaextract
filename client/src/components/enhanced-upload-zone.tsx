@@ -474,37 +474,41 @@ export function EnhancedUploadZone({
                       </div>
 
                       {/* Progress Bar */}
-                      {fileState.status !== 'pending' && (
-                        <div className="mt-2">
-                          <Progress value={fileState.progress} className="h-1" />
-                          <div className="flex items-center gap-2 mt-1">
-                            {fileState.status === 'uploading' && (
-                              <>
-                                <Upload className="w-3 h-3 text-blue-500" />
-                                <span className="text-xs text-muted-foreground">Uploading...</span>
-                              </>
-                            )}
-                            {fileState.status === 'processing' && (
-                              <>
-                                <Loader2 className="w-3 h-3 text-yellow-500 animate-spin" />
-                                <span className="text-xs text-muted-foreground">Processing...</span>
-                              </>
-                            )}
-                            {fileState.status === 'complete' && (
-                              <>
-                                <CheckCircle2 className="w-3 h-3 text-green-500" />
-                                <span className="text-xs text-green-600">Complete</span>
-                              </>
-                            )}
-                            {fileState.status === 'error' && (
-                              <>
-                                <AlertCircle className="w-3 h-3 text-red-500" />
-                                <span className="text-xs text-red-600">{fileState.error || 'Error'}</span>
-                              </>
-                            )}
-                          </div>
+                      <div className="mt-2">
+                        <Progress value={fileState.progress} className="h-1" />
+                        <div className="flex items-center gap-2 mt-1">
+                          {fileState.status === 'pending' && (
+                            <>
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span className="text-xs text-muted-foreground">Ready</span>
+                            </>
+                          )}
+                          {fileState.status === 'uploading' && (
+                            <>
+                              <Upload className="w-3 h-3 text-blue-500" />
+                              <span className="text-xs text-muted-foreground">Uploading...</span>
+                            </>
+                          )}
+                          {fileState.status === 'processing' && (
+                            <>
+                              <Loader2 className="w-3 h-3 text-yellow-500 animate-spin" />
+                              <span className="text-xs text-muted-foreground">Processing...</span>
+                            </>
+                          )}
+                          {fileState.status === 'complete' && (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-green-500" />
+                              <span className="text-xs text-green-600">Complete</span>
+                            </>
+                          )}
+                          {fileState.status === 'error' && (
+                            <>
+                              <AlertCircle className="w-3 h-3 text-red-500" />
+                              <span className="text-xs text-red-600">{fileState.error || 'Error'}</span>
+                            </>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
 
                     {/* Actions */}

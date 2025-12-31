@@ -268,8 +268,8 @@ function FileBrowser({
 
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger>
-                    <div
+                  <TooltipTrigger asChild>
+                    <span
                       className={`h-3 w-3 rounded-full ${getDensityColor(file.metadataDensity)}`}
                     />
                   </TooltipTrigger>
