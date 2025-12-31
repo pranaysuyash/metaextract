@@ -16,6 +16,14 @@ jest.mock('@/hooks/use-toast', () => ({
   }),
 }));
 
+// Mock field explanations utility
+jest.mock('@/utils/fieldExplanations', () => ({
+  getFieldExplanation: jest.fn(() => null),
+  hasExplanation: jest.fn(() => false),
+  FIELD_EXPLANATIONS: {},
+  CATEGORY_EXPLANATIONS: {},
+}));
+
 // Mock ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
