@@ -113,3 +113,31 @@ export type CreditTransaction = typeof creditTransactions.$inferSelect;
 // ============================================================================
 // Metadata Storage Schema (Phase 1: Foundation)
 // ============================================================================
+
+// ============================================================================
+// Onboarding System Schema
+// ============================================================================
+
+export const onboardingSessions = pgTable("onboarding_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  currentStep: integer("current_step").notNull().default(0),
+  pathId: text("path_id").notNull(),
+  userProfile: text("user_profile").notNull(), // JSON string
+  progress: text("progress").notNull(), // JSON string
+  interactions: text("interactions").notNull().default("[]"), // JSON array
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertOnboardingSessionSchema = createInsertSchema(onboardingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
+export type OnboardingSession = typeof onboardingSessions.$inferSelect;

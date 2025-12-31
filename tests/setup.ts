@@ -8,6 +8,17 @@ process.env.SESSION_SECRET = 'test-session-secret-for-testing';
 // Mock fetch globally
 global.fetch = jest.fn();
 
+// Mock crypto.randomUUID for Node.js environment
+global.crypto = {
+  randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9)
+} as any;
+
+// Mock document.cookie for auth system
+Object.defineProperty(document, 'cookie', {
+  writable: true,
+  value: ''
+});
+
 // Mock toast hook
 jest.mock('@/hooks/use-toast', () => ({
   useToast: () => ({

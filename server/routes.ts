@@ -26,6 +26,7 @@ import {
 } from '@shared/tierConfig';
 import { registerPaymentRoutes } from './payments';
 import { registerForensicRoutes } from './routes/forensic';
+import { registerOnboardingRoutes } from './routes/onboarding';
 import { type AuthRequest, getEffectiveTier } from './auth';
 
 // ============================================================================
@@ -2368,6 +2369,9 @@ print(json.dumps(report))
 
   // Register forensic routes
   registerForensicRoutes(app);
+
+  // Register onboarding routes
+  registerOnboardingRoutes(app);
 
   return httpServer;
 }

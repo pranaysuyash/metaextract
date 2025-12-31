@@ -27,6 +27,18 @@ Author: MetaExtract Team
 Version: 4.0.0 - Ultimate Edition
 """
 
+# Import the dynamic module discovery system
+try:
+    from .module_discovery import (
+        discover_and_register_modules,
+        get_extraction_function_safe,
+        get_module_discovery_stats
+    )
+    MODULE_DISCOVERY_AVAILABLE = True
+except ImportError:
+    MODULE_DISCOVERY_AVAILABLE = False
+    logger.warning("Module discovery system not available, falling back to manual imports")
+
 import os
 import sys
 import json
@@ -47,6 +59,18 @@ import base64
 import mimetypes
 import time
 import traceback
+
+# Import monitoring
+try:
+    from .monitoring import record_extraction_for_monitoring
+    MONITORING_AVAILABLE = True
+except ImportError:
+    # Create a dummy function if monitoring is not available
+    def record_extraction_for_monitoring(processing_time_ms: float, success: bool,
+                                       tier: str = "unknown", file_type: str = "unknown",
+                                       error_type: Optional[str] = None):
+        pass
+    MONITORING_AVAILABLE = False
 
 # Import base engine
 if __name__ == "__main__":
@@ -1667,6 +1691,97 @@ class ComprehensiveMetadataExtractor:
         self.scientific_engine = ScientificInstrumentEngine()
         self.drone_engine = DroneUAVEngine()
         self.blockchain_engine = BlockchainProvenanceEngine()
+        
+        # Initialize dynamic module discovery system
+        self.module_registry = None
+        self.module_discovery_stats = None
+        if MODULE_DISCOVERY_AVAILABLE:
+            try:
+                self.module_registry = discover_and_register_modules()
+                self.module_discovery_stats = get_module_discovery_stats()
+                logger.info(f"Dynamic module discovery initialized: {self.module_discovery_stats['loaded_count']} modules loaded")
+            except Exception as e:
+                logger.error(f"Failed to initialize module discovery: {e}")
+                MODULE_DISCOVERY_AVAILABLE = False
+    
+    def _execute_dynamic_modules(self, filepath: str, base_result: Dict[str, Any], tier_config: Any) -> None:
+        """
+        Execute dynamically discovered modules based on tier configuration.
+        
+        Args:
+            filepath: Path to the file being processed
+            base_result: Base metadata result dictionary
+            tier_config: Tier configuration object
+        """
+        if not MODULE_DISCOVERY_AVAILABLE or not self.module_registry:
+            return
+            
+        try:
+            # Get all available extraction functions
+            all_functions = get_all_available_extraction_functions()
+            
+            # Execute modules based on their categories and tier configuration
+            for module_name, functions in all_functions.items():
+                module_info = self.module_registry.get_module_info(module_name)
+                if not module_info or not module_info.get("enabled", True):
+                    continue
+                    
+                category = module_info.get("category", "general")
+                
+                # Determine if this module should be executed based on tier and category
+                should_execute = self._should_execute_module_category(category, tier_config)
+                
+                if should_execute:
+                    for function_name, extraction_func in functions.items():
+                        try:
+                            # Execute the function with safe error handling
+                            result = safe_extract_module(
+                                extraction_func, 
+                                filepath, 
+                                f"{module_name}_{function_name}"
+                            )
+                            
+                            if result:
+                                # Store the result in the base result
+                                result_key = f"{module_name}_{function_name}"
+                                base_result[result_key] = result
+                                logger.debug(f"Successfully executed dynamic module: {module_name}.{function_name}")
+                                
+                        except Exception as e:
+                            logger.warning(f"Error executing dynamic module {module_name}.{function_name}: {e}")
+                            
+        except Exception as e:
+            logger.error(f"Error in dynamic module execution: {e}")
+    
+    def _should_execute_module_category(self, category: str, tier_config: Any) -> bool:
+        """
+        Determine if modules in a category should be executed based on tier configuration.
+        
+        Args:
+            category: Module category
+            tier_config: Tier configuration object
+            
+        Returns:
+            True if modules in this category should be executed
+        """
+        # Map categories to tier configuration attributes
+        category_mapping = {
+            "image": tier_config.image_metadata,
+            "video": tier_config.video_metadata,
+            "audio": tier_config.audio_metadata,
+            "document": tier_config.document_metadata,
+            "scientific": tier_config.scientific_metadata,
+            "forensic": tier_config.forensic_details,
+            "mobile": tier_config.mobile_sensors,
+            "web": tier_config.web_metadata,
+            "ai": tier_config.ai_ml_metadata,
+            "emerging": tier_config.emerging_technology,
+            "industrial": tier_config.industrial_metadata,
+            "professional": tier_config.professional_video,
+            "general": True  # Always execute general modules
+        }
+        
+        return category_mapping.get(category, True)
     
     def extract_comprehensive_metadata(
         self,
@@ -1710,6 +1825,14 @@ class ComprehensiveMetadataExtractor:
 
         # Add comprehensive extraction info
         base_result["extraction_info"]["comprehensive_version"] = "4.0.0"
+        
+        # Add module discovery statistics if available
+        if MODULE_DISCOVERY_AVAILABLE and self.module_discovery_stats:
+            base_result["extraction_info"]["module_discovery"] = self.module_discovery_stats
+            base_result["extraction_info"]["dynamic_modules_enabled"] = True
+        else:
+            base_result["extraction_info"]["dynamic_modules_enabled"] = False
+        
         base_result["extraction_info"]["specialized_engines"] = {
             "medical_imaging": DICOM_AVAILABLE and tier_config.medical_imaging,
             "astronomical_data": FITS_AVAILABLE and tier_config.astronomical_data,
@@ -2096,6 +2219,14 @@ class ComprehensiveMetadataExtractor:
         total_duration_ms = (time.time() - start_time) * 1000
         base_result["extraction_info"]["processing_ms"] = total_duration_ms
 
+        # Execute dynamically discovered modules
+        if MODULE_DISCOVERY_AVAILABLE:
+            try:
+                self._execute_dynamic_modules(filepath, base_result, tier_config)
+                logger.info(f"Dynamic module execution completed for {filepath}")
+            except Exception as e:
+                logger.error(f"Error in dynamic module execution: {e}")
+        
         # Calculate performance summary
         # Collect performance data from all module results
         all_module_performance = {}
@@ -2113,6 +2244,15 @@ class ComprehensiveMetadataExtractor:
             "transportation_logistics", "education_academic", "legal_compliance",
             "environmental_sustainability", "social_media_digital", "gaming_entertainment"
         ]
+        
+        # Add dynamic module result keys (they follow the pattern module_name_function_name)
+        if MODULE_DISCOVERY_AVAILABLE and self.module_registry:
+            all_functions = get_all_available_extraction_functions()
+            for module_name, functions in all_functions.items():
+                for function_name in functions.keys():
+                    dynamic_key = f"{module_name}_{function_name}"
+                    if dynamic_key not in module_result_keys:
+                        module_result_keys.append(dynamic_key)
 
         for key in module_result_keys:
             if key in base_result and isinstance(base_result[key], dict) and "performance" in base_result[key]:

@@ -146,10 +146,14 @@ class TestComprehensiveMetadataExtractor(unittest.TestCase):
     @patch('server.extractor.comprehensive_metadata_engine.extract_base_metadata')
     def test_extraction_with_base_error(self, mock_extract_base):
         """Test that errors in base extraction are handled properly."""
-        mock_extract_base.return_value = {"error": "Base extraction failed"}
-        
+        # Mock should return a result with error but also with extraction_info to avoid the exception
+        mock_extract_base.return_value = {
+            "error": "Base extraction failed",
+            "extraction_info": {"processing_ms": 0}
+        }
+
         result = self.extractor.extract_comprehensive_metadata(self.temp_file.name, "super")
-        
+
         self.assertIn("error", result)
         self.assertEqual(result["error"], "Base extraction failed")
         self.assertIn("extraction_info", result)

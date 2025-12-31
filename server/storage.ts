@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type InsertExtractionAnalytics, type ExtractionAnalytics, extractionAnalytics, creditBalances, creditTransactions, type CreditBalance, type CreditTransaction, type InsertCreditBalance, type InsertCreditTransaction } from "@shared/schema";
+import { type User, type InsertUser, type InsertExtractionAnalytics, type ExtractionAnalytics, extractionAnalytics, creditBalances, creditTransactions, type CreditBalance, type CreditTransaction, type InsertCreditBalance, type InsertCreditTransaction, onboardingSessions, type OnboardingSession, type InsertOnboardingSession } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { desc, sql, count, eq } from "drizzle-orm";
 
@@ -15,6 +15,10 @@ export interface IStorage {
   addCredits(balanceId: string, amount: number, description: string, paymentId?: string): Promise<CreditTransaction>;
   useCredits(balanceId: string, amount: number, description: string, fileType?: string): Promise<CreditTransaction | null>;
   getCreditTransactions(balanceId: string, limit?: number): Promise<CreditTransaction[]>;
+  // Onboarding system
+  getOnboardingSession(userId: string): Promise<OnboardingSession | undefined>;
+  createOnboardingSession(data: InsertOnboardingSession): Promise<OnboardingSession>;
+  updateOnboardingSession(sessionId: string, updates: Partial<OnboardingSession>): Promise<void>;
 }
 
 export interface AnalyticsSummary {
@@ -34,6 +38,7 @@ export class MemStorage implements IStorage {
   private analyticsLog: ExtractionAnalytics[];
   private creditBalancesMap: Map<string, CreditBalance> = new Map();
   private creditTransactionsList: CreditTransaction[] = [];
+  private onboardingSessionsMap: Map<string, OnboardingSession> = new Map();
 
   constructor() {
     this.users = new Map();
@@ -202,6 +207,30 @@ export class MemStorage implements IStorage {
       .filter(t => t.balanceId === balanceId)
       .slice(-limit)
       .reverse();
+  }
+
+  async getOnboardingSession(userId: string): Promise<OnboardingSession | undefined> {
+    return Array.from(this.onboardingSessionsMap.values())
+      .filter(s => s.userId === userId)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
+  }
+
+  async createOnboardingSession(data: InsertOnboardingSession): Promise<OnboardingSession> {
+    const session: OnboardingSession = {
+      ...data,
+      id: data.id || randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.onboardingSessionsMap.set(session.id, session);
+    return session;
+  }
+
+  async updateOnboardingSession(sessionId: string, updates: Partial<OnboardingSession>): Promise<void> {
+    const session = this.onboardingSessionsMap.get(sessionId);
+    if (session) {
+      Object.assign(session, updates, { updatedAt: new Date() });
+    }
   }
 }
 
@@ -425,6 +454,44 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Failed to get credit transactions:", error);
       return [];
+    }
+  }
+
+  async getOnboardingSession(userId: string): Promise<OnboardingSession | undefined> {
+    if (!this.db) return undefined;
+    try {
+      const [session] = await this.db.select().from(onboardingSessions)
+        .where(eq(onboardingSessions.userId, userId))
+        .orderBy(desc(onboardingSessions.startedAt))
+        .limit(1);
+      return session;
+    } catch (error) {
+      console.error("Failed to get onboarding session:", error);
+      return undefined;
+    }
+  }
+
+  async createOnboardingSession(data: InsertOnboardingSession): Promise<OnboardingSession> {
+    if (!this.db) throw new Error("Database not available");
+    try {
+      const [session] = await this.db.insert(onboardingSessions)
+        .values(data)
+        .returning();
+      return session;
+    } catch (error) {
+      console.error("Failed to create onboarding session:", error);
+      throw error;
+    }
+  }
+
+  async updateOnboardingSession(sessionId: string, updates: Partial<OnboardingSession>): Promise<void> {
+    if (!this.db) return;
+    try {
+      await this.db.update(onboardingSessions)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(onboardingSessions.id, sessionId));
+    } catch (error) {
+      console.error("Failed to update onboarding session:", error);
     }
   }
 }
