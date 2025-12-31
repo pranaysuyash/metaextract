@@ -38,7 +38,7 @@ import struct
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, List, Union, Tuple
+from typing import Any, Dict, Optional, List, Union, Tuple, Callable
 from dataclasses import dataclass
 from enum import Enum
 import concurrent.futures
@@ -46,6 +46,7 @@ import hashlib
 import base64
 import mimetypes
 import time
+import traceback
 
 # Import base engine
 if __name__ == "__main__":
@@ -57,7 +58,7 @@ try:
     from metadata_engine import (
         extract_metadata as extract_base_metadata,
         TIER_CONFIGS, Tier, logger,
-        PIL_AVAILABLE, EXIFREAD_AVAILABLE, FFMPEG_AVAILABLE, 
+        PIL_AVAILABLE, EXIFREAD_AVAILABLE, FFMPEG_AVAILABLE,
         MUTAGEN_AVAILABLE, PYPDF_AVAILABLE, EXIFTOOL_AVAILABLE
     )
 except ImportError:
@@ -65,7 +66,7 @@ except ImportError:
         from .metadata_engine import (
             extract_metadata as extract_base_metadata,
             TIER_CONFIGS, Tier, logger,
-            PIL_AVAILABLE, EXIFREAD_AVAILABLE, FFMPEG_AVAILABLE, 
+            PIL_AVAILABLE, EXIFREAD_AVAILABLE, FFMPEG_AVAILABLE,
             MUTAGEN_AVAILABLE, PYPDF_AVAILABLE, EXIFTOOL_AVAILABLE
         )
     except ImportError:
@@ -76,9 +77,57 @@ except ImportError:
         from metadata_engine import (
             extract_metadata as extract_base_metadata,
             TIER_CONFIGS, Tier, logger,
-            PIL_AVAILABLE, EXIFREAD_AVAILABLE, FFMPEG_AVAILABLE, 
+            PIL_AVAILABLE, EXIFREAD_AVAILABLE, FFMPEG_AVAILABLE,
             MUTAGEN_AVAILABLE, PYPDF_AVAILABLE, EXIFTOOL_AVAILABLE
         )
+
+# ============================================================================
+# Robust Error Handling Utilities
+# ============================================================================
+
+def safe_extract_module(
+    extraction_func: Callable,
+    filepath: str,
+    module_name: str,
+    *args,
+    **kwargs
+) -> Optional[Dict[str, Any]]:
+    """
+    Safely execute a metadata extraction module with comprehensive error handling.
+
+    Args:
+        extraction_func: The extraction function to call
+        filepath: Path to the file being processed
+        module_name: Name of the module for logging purposes
+        *args, **kwargs: Additional arguments to pass to the extraction function
+
+    Returns:
+        The result of the extraction function or None if it fails
+    """
+    try:
+        logger.debug(f"Starting extraction with {module_name} for {filepath}")
+        result = extraction_func(filepath, *args, **kwargs)
+        logger.debug(f"Successfully completed extraction with {module_name}")
+        return result
+    except ImportError as e:
+        logger.warning(f"Module {module_name} not available: {e}")
+        return None
+    except FileNotFoundError as e:
+        logger.warning(f"File not found for {module_name}: {e}")
+        return None
+    except PermissionError as e:
+        logger.warning(f"Permission denied for {module_name}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error in {module_name} extraction: {e}")
+        logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
+        # Return a structured error response instead of failing completely
+        return {
+            "available": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "module": module_name
+        }
 
 try:
     from .modules.metadata_db import store_file_metadata
