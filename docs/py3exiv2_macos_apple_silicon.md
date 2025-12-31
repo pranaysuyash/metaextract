@@ -21,6 +21,36 @@ brew unlink python@3.14
 brew link python@3.11 --force --overwrite
 ```
 
+## Database for local testing
+
+If you don't need auth/credits, you can disable the DB by using the placeholder
+`DATABASE_URL` in `.env` (this forces in-memory storage):
+
+```
+DATABASE_URL=postgresql://user:password@host:5432/metaextract
+```
+
+If you want login/tiers working locally, run Postgres and set a real URL:
+
+```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/metaextract
+```
+
+Docker example (requires Docker Desktop running):
+
+```
+docker run --name metaextract-postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=metaextract \
+  -p 5432:5432 -d postgres:16
+```
+
+Then run:
+
+```
+npm run db:push
+```
+
 ## Build Exiv2 0.27.7 locally
 
 ```
