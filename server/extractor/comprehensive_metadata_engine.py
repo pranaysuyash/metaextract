@@ -104,29 +104,87 @@ def safe_extract_module(
     Returns:
         The result of the extraction function or None if it fails
     """
+    import time
+    start_time = time.time()
     try:
         logger.debug(f"Starting extraction with {module_name} for {filepath}")
         result = extraction_func(filepath, *args, **kwargs)
-        logger.debug(f"Successfully completed extraction with {module_name}")
+        duration = time.time() - start_time
+        logger.debug(f"Successfully completed extraction with {module_name} in {duration:.3f}s")
+        # Add performance metrics to result if it's a dict
+        if isinstance(result, dict):
+            if 'performance' not in result:
+                result['performance'] = {}
+            result['performance'][module_name] = {
+                'duration_seconds': duration,
+                'status': 'success'
+            }
         return result
     except ImportError as e:
-        logger.warning(f"Module {module_name} not available: {e}")
-        return None
+        duration = time.time() - start_time
+        logger.warning(f"Module {module_name} not available: {e} (took {duration:.3f}s)")
+        return {
+            "available": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "module": module_name,
+            "performance": {
+                module_name: {
+                    "duration_seconds": duration,
+                    "status": "failed",
+                    "error_type": type(e).__name__
+                }
+            }
+        }
     except FileNotFoundError as e:
-        logger.warning(f"File not found for {module_name}: {e}")
-        return None
+        duration = time.time() - start_time
+        logger.warning(f"File not found for {module_name}: {e} (took {duration:.3f}s)")
+        return {
+            "available": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "module": module_name,
+            "performance": {
+                module_name: {
+                    "duration_seconds": duration,
+                    "status": "failed",
+                    "error_type": type(e).__name__
+                }
+            }
+        }
     except PermissionError as e:
-        logger.warning(f"Permission denied for {module_name}: {e}")
-        return None
+        duration = time.time() - start_time
+        logger.warning(f"Permission denied for {module_name}: {e} (took {duration:.3f}s)")
+        return {
+            "available": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "module": module_name,
+            "performance": {
+                module_name: {
+                    "duration_seconds": duration,
+                    "status": "failed",
+                    "error_type": type(e).__name__
+                }
+            }
+        }
     except Exception as e:
-        logger.error(f"Error in {module_name} extraction: {e}")
+        duration = time.time() - start_time
+        logger.error(f"Error in {module_name} extraction: {e} (took {duration:.3f}s)")
         logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
         # Return a structured error response instead of failing completely
         return {
             "available": False,
             "error": str(e),
             "error_type": type(e).__name__,
-            "module": module_name
+            "module": module_name,
+            "performance": {
+                module_name: {
+                    "duration_seconds": duration,
+                    "status": "failed",
+                    "error_type": type(e).__name__
+                }
+            }
         }
 
 try:
@@ -1618,20 +1676,27 @@ class ComprehensiveMetadataExtractor:
         """
         Extract comprehensive metadata using all available engines
         """
+        import time
+        start_time = time.time()
+
         try:
             # Start with base metadata extraction
             base_result = extract_base_metadata(filepath, tier)
 
             if "error" in base_result:
+                # Add performance tracking even for error cases
+                duration_ms = (time.time() - start_time) * 1000
+                base_result["extraction_info"]["processing_ms"] = duration_ms
                 return base_result
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Critical error in base metadata extraction: {e}")
             return {
                 "error": f"Critical error in base metadata extraction: {str(e)}",
                 "error_type": type(e).__name__,
                 "extraction_info": {
                     "comprehensive_version": "4.0.0",
-                    "processing_ms": 0
+                    "processing_ms": duration_ms
                 }
             }
         
@@ -2026,7 +2091,62 @@ class ComprehensiveMetadataExtractor:
             specialized_counts["financial_business"] = count_comprehensive_fields(base_result["financial_business"])
         
         base_result["extraction_info"]["specialized_field_counts"] = specialized_counts
-        
+
+        # Add overall performance metrics
+        total_duration_ms = (time.time() - start_time) * 1000
+        base_result["extraction_info"]["processing_ms"] = total_duration_ms
+
+        # Calculate performance summary
+        # Collect performance data from all module results
+        all_module_performance = {}
+
+        # Look for performance data in all module results
+        module_result_keys = [
+            "medical_imaging", "astronomical_data", "geospatial", "scientific_data",
+            "drone_telemetry", "blockchain_provenance", "web_metadata", "social_media",
+            "mobile_metadata", "forensic_security", "action_camera", "camera_360",
+            "print_publishing", "workflow_dam", "audio_advanced", "video_advanced",
+            "steganography_analysis", "manipulation_detection", "ai_detection",
+            "timeline_analysis", "emerging_technology", "advanced_video", "advanced_audio",
+            "document_metadata", "scientific_research", "multimedia_entertainment",
+            "industrial_manufacturing", "financial_business", "healthcare_medical",
+            "transportation_logistics", "education_academic", "legal_compliance",
+            "environmental_sustainability", "social_media_digital", "gaming_entertainment"
+        ]
+
+        for key in module_result_keys:
+            if key in base_result and isinstance(base_result[key], dict) and "performance" in base_result[key]:
+                all_module_performance.update(base_result[key]["performance"])
+
+        if all_module_performance:
+            successful_modules = 0
+            failed_modules = 0
+            total_module_time = 0
+
+            for module_name, perf_data in all_module_performance.items():
+                if perf_data.get("status") == "success":
+                    successful_modules += 1
+                    total_module_time += perf_data.get("duration_seconds", 0) * 1000
+                else:
+                    failed_modules += 1
+
+            base_result["extraction_info"]["performance_summary"] = {
+                "total_processing_time_ms": total_duration_ms,
+                "successful_modules": successful_modules,
+                "failed_modules": failed_modules,
+                "total_module_processing_time_ms": total_module_time,
+                "overhead_time_ms": total_duration_ms - total_module_time if total_module_time > 0 else total_duration_ms
+            }
+        else:
+            # If no module performance data was collected, provide basic summary
+            base_result["extraction_info"]["performance_summary"] = {
+                "total_processing_time_ms": total_duration_ms,
+                "successful_modules": 0,
+                "failed_modules": 0,
+                "total_module_processing_time_ms": 0,
+                "overhead_time_ms": total_duration_ms
+            }
+
         return base_result
 
 # ============================================================================

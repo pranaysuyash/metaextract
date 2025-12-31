@@ -52,6 +52,7 @@ import {
   Info,
   Lock,
 } from 'lucide-react';
+import { getFieldExplanation, hasExplanation } from '@/utils/fieldExplanations';
 
 // ============================================================================
 // Types
@@ -251,11 +252,10 @@ function FileBrowser({
             <button
               key={file.id}
               onClick={() => onFileSelect(file.id)}
-              className={`mb-1 flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${
-                selectedFileId === file.id
-                  ? 'bg-primary/10 text-primary'
-                  : 'hover:bg-muted'
-              }`}
+              className={`mb-1 flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${selectedFileId === file.id
+                ? 'bg-primary/10 text-primary'
+                : 'hover:bg-muted'
+                }`}
             >
               <div className="flex-shrink-0">{getFileIcon(file.type)}</div>
 
@@ -398,22 +398,56 @@ function MetadataTree({
                     <button
                       key={field.key}
                       onClick={() => onFieldSelect(field)}
-                      className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm transition-colors ${
-                        selectedField?.key === field.key
-                          ? 'bg-primary/10 text-primary'
-                          : 'hover:bg-muted'
-                      }`}
+                      className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm transition-colors ${selectedField?.key === field.key
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-muted'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{field.key}</span>
-                        {field.significance && (
+                        {(hasExplanation(field.key) || field.significance) && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
                                 <Info className="h-3 w-3 text-muted-foreground" />
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p>{field.significance}</p>
+                              <TooltipContent className="max-w-sm">
+                                {(() => {
+                                  const explanation = getFieldExplanation(field.key);
+                                  if (explanation) {
+                                    return (
+                                      <div className="space-y-2">
+                                        <div>
+                                          <p className="font-semibold">{explanation.title}</p>
+                                          <p className="text-sm mt-1">{explanation.description}</p>
+                                        </div>
+                                        {explanation.details && explanation.details.length > 0 && (
+                                          <div>
+                                            <p className="text-xs font-semibold mb-1">Details:</p>
+                                            <ul className="text-xs space-y-1">
+                                              {explanation.details.map((detail, idx) => (
+                                                <li key={idx}>• {detail}</li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        )}
+                                        {explanation.useCases && explanation.useCases.length > 0 && (
+                                          <div>
+                                            <p className="text-xs font-semibold mb-1">Use Cases:</p>
+                                            <ul className="text-xs space-y-1">
+                                              {explanation.useCases.map((useCase, idx) => (
+                                                <li key={idx}>• {useCase}</li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  } else if (field.significance) {
+                                    return <p>{field.significance}</p>;
+                                  }
+                                  return null;
+                                })()}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
