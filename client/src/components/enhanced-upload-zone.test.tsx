@@ -6,7 +6,6 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EnhancedUploadZone } from './enhanced-upload-zone';
-import { ToastProvider } from '@/hooks/use-toast';
 
 // Mock react-dropzone
 jest.mock('react-dropzone', () => ({
@@ -41,6 +40,17 @@ jest.mock('react-dropzone', () => ({
   })
 }));
 
+// Mock the analyzeFile function
+jest.mock('@/utils/fileAnalysis', () => ({
+  analyzeFile: jest.fn(() => Promise.resolve({
+    category: 'image',
+    warnings: [],
+    suggestions: [],
+    expectedFields: [],
+    isNativeFormat: true
+  }))
+}));
+
 // Mock fetch API
 global.fetch = jest.fn();
 
@@ -63,9 +73,9 @@ function createMockFileList(files: File[]): FileList {
   return fileList;
 }
 
-// Wrapper component with ToastProvider
+// Wrapper component - toast hook is mocked globally
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <ToastProvider>{children}</ToastProvider>
+  <>{children}</>
 );
 
 describe('EnhancedUploadZone', () => {

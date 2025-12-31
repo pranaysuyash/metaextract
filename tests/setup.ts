@@ -8,6 +8,14 @@ process.env.SESSION_SECRET = 'test-session-secret-for-testing';
 // Mock fetch globally
 global.fetch = jest.fn();
 
+// Mock toast hook
+jest.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: jest.fn(),
+    dismiss: jest.fn(),
+  }),
+}));
+
 // Mock ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),

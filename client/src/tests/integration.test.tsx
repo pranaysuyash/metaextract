@@ -237,7 +237,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       expect(processedFile.name).toBe('test_image.jpg');
       expect(processedFile.fieldCount).toBeGreaterThan(0);
-      expect(processedFile.categories).toHaveLength > 0;
+      expect(processedFile.categories.length).toBeGreaterThan(0);
 
       render(
         <MetadataExplorer

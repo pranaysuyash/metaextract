@@ -690,7 +690,7 @@ describe('AdvancedAnalysisResults', () => {
         <AdvancedAnalysisResults
           steganography={{ ...mockSteganographyData, detected: true }}
           manipulation={{ ...mockManipulationData, detected: false }}
-          aiDetection={{ ...mockAIDetectionData, detected: false }}
+          aiDetection={{ ...mockAIDetectionData, ai_generated: false }}
           timeline={mockTimelineData}
         />
       );

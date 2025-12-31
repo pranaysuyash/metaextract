@@ -132,7 +132,7 @@ export function registerPaymentRoutes(app: Express) {
         }
 
         const normalizedTier = normalizeTier(requestedTier);
-        const productId = DODO_SUBSCRIPTION_PRODUCTS[normalizedTier];
+        const productId = (DODO_SUBSCRIPTION_PRODUCTS as Record<string, string>)[normalizedTier];
         if (!productId) {
           return res
             .status(400)

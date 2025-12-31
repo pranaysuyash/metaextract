@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Upload,
   File,
@@ -21,6 +22,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { analyzeFile, type FileAnalysis } from "@/utils/fileAnalysis";
 
 interface FileState {
   file: File;
@@ -30,6 +32,7 @@ interface FileState {
   progress: number;
   result?: any;
   error?: string;
+  analysis?: FileAnalysis; // File type analysis with warnings/suggestions
 }
 
 interface EnhancedUploadZoneProps {
@@ -170,7 +173,7 @@ export function EnhancedUploadZone({
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
     // Handle rejected files
     rejectedFiles.forEach(({ file, errors }) => {
       errors.forEach((error: any) => {
@@ -182,15 +185,20 @@ export function EnhancedUploadZone({
       });
     });
 
-    // Add accepted files
-    const newFiles: FileState[] = acceptedFiles.map(file => ({
-      file,
-      id: crypto.randomUUID(),
-      status: 'pending',
-      progress: 0,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-    }));
+    // Add accepted files with analysis
+    const newFilesPromises = acceptedFiles.map(async (file) => {
+      const analysis = await analyzeFile(file);
+      return {
+        file,
+        id: crypto.randomUUID(),
+        status: 'pending' as const,
+        progress: 0,
+        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+        analysis
+      };
+    });
 
+    const newFiles = await Promise.all(newFilesPromises);
     setFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
   }, [maxFiles, toast]);
 
@@ -508,6 +516,26 @@ export function EnhancedUploadZone({
                           )}
                         </div>
                       </div>
+
+                      {/* File Analysis Warnings/Suggestions */}
+                      {fileState.analysis && (fileState.analysis.warnings.length > 0 || fileState.analysis.suggestions.length > 0) && (
+                        <div className="mt-3 space-y-2">
+                          {fileState.analysis.warnings.map((warning, idx) => (
+                            <Alert key={`warn-${idx}`} variant="destructive" className="py-2">
+                              <AlertDescription className="text-xs">
+                                {warning}
+                              </AlertDescription>
+                            </Alert>
+                          ))}
+                          {fileState.analysis.suggestions.map((suggestion, idx) => (
+                            <Alert key={`sug-${idx}`} className="py-2 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                              <AlertDescription className="text-xs text-blue-900 dark:text-blue-100">
+                                {suggestion}
+                              </AlertDescription>
+                            </Alert>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}

@@ -1611,27 +1611,38 @@ class ComprehensiveMetadataExtractor:
         self.blockchain_engine = BlockchainProvenanceEngine()
     
     def extract_comprehensive_metadata(
-        self, 
-        filepath: str, 
+        self,
+        filepath: str,
         tier: str = "super"
     ) -> Dict[str, Any]:
         """
         Extract comprehensive metadata using all available engines
         """
-        # Start with base metadata extraction
-        base_result = extract_base_metadata(filepath, tier)
-        
-        if "error" in base_result:
-            return base_result
+        try:
+            # Start with base metadata extraction
+            base_result = extract_base_metadata(filepath, tier)
+
+            if "error" in base_result:
+                return base_result
+        except Exception as e:
+            logger.error(f"Critical error in base metadata extraction: {e}")
+            return {
+                "error": f"Critical error in base metadata extraction: {str(e)}",
+                "error_type": type(e).__name__,
+                "extraction_info": {
+                    "comprehensive_version": "4.0.0",
+                    "processing_ms": 0
+                }
+            }
         
         # Get tier configuration
         try:
             tier_enum = Tier(tier.lower())
         except ValueError:
             tier_enum = Tier.SUPER
-        
+
         tier_config = COMPREHENSIVE_TIER_CONFIGS[tier_enum]
-        
+
         # Add comprehensive extraction info
         base_result["extraction_info"]["comprehensive_version"] = "4.0.0"
         base_result["extraction_info"]["specialized_engines"] = {
@@ -1657,294 +1668,315 @@ class ComprehensiveMetadataExtractor:
             "social_media_digital": tier_config.social_media_digital and extract_social_media_digital_metadata is not None,
             "gaming_entertainment": tier_config.gaming_entertainment and extract_gaming_entertainment_metadata is not None,
         }
-        
+
         # Detect file type for specialized extraction
         file_ext = Path(filepath).suffix.lower()
         mime_type = base_result.get("file", {}).get("mime_type", "")
         is_image = mime_type.startswith("image/")
         is_video = mime_type.startswith("video/")
         is_audio = mime_type.startswith("audio/") or file_ext in [".mp3", ".flac", ".ogg", ".wav", ".m4a", ".aac", ".aiff"]
-        
-        # Medical imaging (DICOM)
-        if tier_config.medical_imaging and (file_ext in ['.dcm', '.dicom'] or 'dicom' in mime_type):
-            dicom_result = safe_extract_module(self.medical_engine.extract_dicom_metadata, filepath, "medical_imaging")
-            if dicom_result and dicom_result.get("available"):
-                base_result["medical_imaging"] = dicom_result
 
-        # Astronomical data (FITS)
-        if tier_config.astronomical_data and file_ext in ['.fits', '.fit', '.fts']:
-            fits_result = safe_extract_module(self.astronomical_engine.extract_fits_metadata, filepath, "astronomical_data")
-            if fits_result and fits_result.get("available"):
-                base_result["astronomical_data"] = fits_result
+        try:
+            # Medical imaging (DICOM)
+            if tier_config.medical_imaging and (file_ext in ['.dcm', '.dicom'] or 'dicom' in mime_type):
+                dicom_result = safe_extract_module(self.medical_engine.extract_dicom_metadata, filepath, "medical_imaging")
+                if dicom_result and dicom_result.get("available"):
+                    base_result["medical_imaging"] = dicom_result
 
-        # Geospatial data
-        if tier_config.geospatial_analysis:
-            if file_ext in ['.tif', '.tiff'] and 'geo' in str(base_result.get("exif", {})).lower():
-                geotiff_result = safe_extract_module(self.geospatial_engine.extract_geotiff_metadata, filepath, "geospatial_geotiff")
-                if geotiff_result and geotiff_result.get("available"):
-                    base_result["geospatial"] = geotiff_result
+            # Astronomical data (FITS)
+            if tier_config.astronomical_data and file_ext in ['.fits', '.fit', '.fts']:
+                fits_result = safe_extract_module(self.astronomical_engine.extract_fits_metadata, filepath, "astronomical_data")
+                if fits_result and fits_result.get("available"):
+                    base_result["astronomical_data"] = fits_result
 
-            elif file_ext in ['.shp']:
-                shapefile_result = safe_extract_module(self.geospatial_engine.extract_shapefile_metadata, filepath, "geospatial_shapefile")
-                if shapefile_result and shapefile_result.get("available"):
-                    base_result["geospatial"] = shapefile_result
+            # Geospatial data
+            if tier_config.geospatial_analysis:
+                if file_ext in ['.tif', '.tiff'] and 'geo' in str(base_result.get("exif", {})).lower():
+                    geotiff_result = safe_extract_module(self.geospatial_engine.extract_geotiff_metadata, filepath, "geospatial_geotiff")
+                    if geotiff_result and geotiff_result.get("available"):
+                        base_result["geospatial"] = geotiff_result
 
-        # Scientific instruments
-        if tier_config.scientific_instruments:
-            if file_ext in ['.h5', '.hdf5', '.he5']:
-                hdf5_result = safe_extract_module(self.scientific_engine.extract_hdf5_metadata, filepath, "scientific_hdf5")
-                if hdf5_result and hdf5_result.get("available"):
-                    base_result["scientific_data"] = hdf5_result
+                elif file_ext in ['.shp']:
+                    shapefile_result = safe_extract_module(self.geospatial_engine.extract_shapefile_metadata, filepath, "geospatial_shapefile")
+                    if shapefile_result and shapefile_result.get("available"):
+                        base_result["geospatial"] = shapefile_result
 
-            elif file_ext in ['.nc', '.netcdf', '.nc4']:
-                netcdf_result = safe_extract_module(self.scientific_engine.extract_netcdf_metadata, filepath, "scientific_netcdf")
-                if netcdf_result and netcdf_result.get("available"):
-                    base_result["scientific_data"] = netcdf_result
-        
-        # Drone telemetry (for images and videos)
-        if tier_config.drone_telemetry and mime_type.startswith(('image/', 'video/')):
-            # Use exiftool data if available
-            exiftool_data = None
-            if hasattr(base_result, 'get') and any(key in base_result for key in ['exif', 'gps', 'makernote', 'xmp']):
-                exiftool_data = {
-                    'exif': base_result.get('exif', {}),
-                    'gps': base_result.get('gps', {}),
-                    'makernote': base_result.get('makernote', {}),
-                    'xmp': base_result.get('xmp', {}),
-                    'other': base_result.get('composite', {})
+            # Scientific instruments
+            if tier_config.scientific_instruments:
+                if file_ext in ['.h5', '.hdf5', '.he5']:
+                    hdf5_result = safe_extract_module(self.scientific_engine.extract_hdf5_metadata, filepath, "scientific_hdf5")
+                    if hdf5_result and hdf5_result.get("available"):
+                        base_result["scientific_data"] = hdf5_result
+
+                elif file_ext in ['.nc', '.netcdf', '.nc4']:
+                    netcdf_result = safe_extract_module(self.scientific_engine.extract_netcdf_metadata, filepath, "scientific_netcdf")
+                    if netcdf_result and netcdf_result.get("available"):
+                        base_result["scientific_data"] = netcdf_result
+
+            # Drone telemetry (for images and videos)
+            if tier_config.drone_telemetry and mime_type.startswith(('image/', 'video/')):
+                # Use exiftool data if available
+                exiftool_data = None
+                if hasattr(base_result, 'get') and any(key in base_result for key in ['exif', 'gps', 'makernote', 'xmp']):
+                    exiftool_data = {
+                        'exif': base_result.get('exif', {}),
+                        'gps': base_result.get('gps', {}),
+                        'makernote': base_result.get('makernote', {}),
+                        'xmp': base_result.get('xmp', {}),
+                        'other': base_result.get('composite', {})
+                    }
+
+                drone_result = safe_extract_module(self.drone_engine.extract_drone_telemetry, filepath, "drone_telemetry", exiftool_data)
+                if drone_result:
+                    base_result["drone_telemetry"] = drone_result
+
+            # Blockchain provenance
+            if tier_config.blockchain_provenance:
+                exiftool_data = None
+                if hasattr(base_result, 'get'):
+                    exiftool_data = {
+                        'xmp': base_result.get('xmp', {}),
+                        'iptc': base_result.get('iptc', {}),
+                        'exif': base_result.get('exif', {})
+                    }
+
+                blockchain_result = safe_extract_module(self.blockchain_engine.extract_blockchain_metadata, filepath, "blockchain_provenance", exiftool_data)
+                if blockchain_result:
+                    base_result["blockchain_provenance"] = blockchain_result
+
+            # Optional: Web metadata
+            if tier_config.web_metadata and extract_web_metadata:
+                web_result = safe_extract_module(extract_web_metadata, filepath, "web_metadata")
+                if web_result:
+                    base_result["web_metadata"] = web_result
+
+            # Optional: Social media context
+            if tier_config.social_media_context and extract_social_media_metadata:
+                social_result = safe_extract_module(extract_social_media_metadata, filepath, "social_media_metadata")
+                if social_result:
+                    base_result["social_media"] = social_result
+
+            # Optional: Mobile sensors
+            if tier_config.mobile_sensors and extract_mobile_metadata and is_image:
+                def mobile_section(name: str) -> Dict[str, Any]:
+                    section = base_result.get(name, {})
+                    if isinstance(section, dict) and not section.get("_locked"):
+                        return section
+                    return {}
+
+                mobile_exiftool_data = {
+                    "exif": mobile_section("exif"),
+                    "xmp": mobile_section("xmp"),
+                    "xmp_namespaces": mobile_section("xmp_namespaces"),
+                    "makernote": mobile_section("makernote"),
+                    "composite": mobile_section("composite"),
                 }
-            
-            drone_result = self.drone_engine.extract_drone_telemetry(filepath, exiftool_data)
-            if drone_result:
-                base_result["drone_telemetry"] = drone_result
-        
-        # Blockchain provenance
-        if tier_config.blockchain_provenance:
-            exiftool_data = None
-            if hasattr(base_result, 'get'):
-                exiftool_data = {
-                    'xmp': base_result.get('xmp', {}),
-                    'iptc': base_result.get('iptc', {}),
-                    'exif': base_result.get('exif', {})
+
+                mobile_result = safe_extract_module(extract_mobile_metadata, filepath, "mobile_metadata", mobile_exiftool_data)
+                if mobile_result:
+                    base_result["mobile_metadata"] = mobile_result
+
+            # Optional: Forensic/security metadata
+            if tier_config.forensic_details and extract_forensic_metadata:
+                forensic_result = safe_extract_module(extract_forensic_metadata, filepath, "forensic_metadata")
+                if forensic_result:
+                    base_result["forensic_security"] = forensic_result
+
+            # Optional: Action camera metadata
+            if (tier_config.drone_telemetry or tier_config.professional_video) and extract_action_camera_metadata and (is_image or is_video):
+                action_result = safe_extract_module(extract_action_camera_metadata, filepath, "action_camera_metadata")
+                if action_result:
+                    base_result["action_camera"] = action_result
+
+            # Optional: 360° camera metadata
+            if extract_360_camera_metadata and is_image:
+                def camera_360_section(name: str) -> Dict[str, Any]:
+                    section = base_result.get(name, {})
+                    if isinstance(section, dict) and not section.get("_locked"):
+                        return section
+                    return {}
+
+                camera_360_exiftool_data = {
+                    "exif": camera_360_section("exif"),
+                    "xmp": camera_360_section("xmp"),
+                    "xmp_namespaces": camera_360_section("xmp_namespaces"),
+                    "makernote": camera_360_section("makernote"),
+                    "composite": camera_360_section("composite"),
+                    "image_container": camera_360_section("image_container"),
                 }
-            
-            blockchain_result = self.blockchain_engine.extract_blockchain_metadata(filepath, exiftool_data)
-            if blockchain_result:
-                base_result["blockchain_provenance"] = blockchain_result
 
-        # Optional: Web metadata
-        if tier_config.web_metadata and extract_web_metadata:
-            web_result = safe_extract_module(extract_web_metadata, filepath, "web_metadata")
-            if web_result:
-                base_result["web_metadata"] = web_result
+                camera_360_result = safe_extract_module(extract_360_camera_metadata, filepath, "360_camera_metadata", camera_360_exiftool_data)
+                if camera_360_result:
+                    base_result["camera_360"] = camera_360_result
 
-        # Optional: Social media context
-        if tier_config.social_media_context and extract_social_media_metadata:
-            social_result = safe_extract_module(extract_social_media_metadata, filepath, "social_media_metadata")
-            if social_result:
-                base_result["social_media"] = social_result
+            # Optional: Print/publishing metadata
+            if tier_config.web_metadata and extract_print_publishing_metadata and is_image:
+                print_result = safe_extract_module(extract_print_publishing_metadata, filepath, "print_publishing_metadata")
+                if print_result:
+                    base_result["print_publishing"] = print_result
 
-        # Optional: Mobile sensors
-        if tier_config.mobile_sensors and extract_mobile_metadata and is_image:
-            def mobile_section(name: str) -> Dict[str, Any]:
-                section = base_result.get(name, {})
-                if isinstance(section, dict) and not section.get("_locked"):
-                    return section
-                return {}
+            # Optional: Workflow/DAM metadata
+            if tier_config.web_metadata and extract_workflow_dam_metadata:
+                workflow_result = safe_extract_module(extract_workflow_dam_metadata, filepath, "workflow_dam_metadata")
+                if workflow_result:
+                    base_result["workflow_dam"] = workflow_result
 
-            mobile_exiftool_data = {
-                "exif": mobile_section("exif"),
-                "xmp": mobile_section("xmp"),
-                "xmp_namespaces": mobile_section("xmp_namespaces"),
-                "makernote": mobile_section("makernote"),
-                "composite": mobile_section("composite"),
-            }
+            # Optional: Advanced audio/video analysis
+            if tier_config.advanced_audio and extract_audio_advanced_metadata and is_audio:
+                audio_adv = safe_extract_module(extract_audio_advanced_metadata, filepath, "audio_advanced_metadata")
+                if audio_adv:
+                    base_result["audio_advanced"] = audio_adv
 
-            mobile_result = safe_extract_module(extract_mobile_metadata, filepath, "mobile_metadata", mobile_exiftool_data)
-            if mobile_result:
-                base_result["mobile_metadata"] = mobile_result
+            if tier_config.professional_video and extract_video_advanced_metadata and is_video:
+                video_adv = safe_extract_module(extract_video_advanced_metadata, filepath, "video_advanced_metadata")
+                if video_adv:
+                    base_result["video_advanced"] = video_adv
 
-        # Optional: Forensic/security metadata
-        if tier_config.forensic_details and extract_forensic_metadata:
-            forensic_result = safe_extract_module(extract_forensic_metadata, filepath, "forensic_metadata")
-            if forensic_result:
-                base_result["forensic_security"] = forensic_result
+            # Optional: Steganography/manipulation/AI detection
+            if tier_config.steganography_detection and is_image:
+                if detect_enhanced_steganography:
+                    steg_result = safe_extract_module(detect_enhanced_steganography, filepath, "enhanced_steganography")
+                    if steg_result:
+                        base_result["steganography_analysis"] = steg_result
+                elif analyze_steganography:
+                    steg_result = safe_extract_module(analyze_steganography, filepath, "steganography_analysis")
+                    if steg_result:
+                        base_result["steganography_analysis"] = steg_result
 
-        # Optional: Action camera metadata
-        if (tier_config.drone_telemetry or tier_config.professional_video) and extract_action_camera_metadata and (is_image or is_video):
-            action_result = safe_extract_module(extract_action_camera_metadata, filepath, "action_camera_metadata")
-            if action_result:
-                base_result["action_camera"] = action_result
+            if tier_config.manipulation_detection and detect_enhanced_manipulation and is_image:
+                manipulation_result = safe_extract_module(detect_enhanced_manipulation, filepath, "manipulation_detection", base_result)
+                if manipulation_result:
+                    base_result["manipulation_detection"] = manipulation_result
 
-        # Optional: 360° camera metadata
-        if extract_360_camera_metadata and is_image:
-            def camera_360_section(name: str) -> Dict[str, Any]:
-                section = base_result.get(name, {})
-                if isinstance(section, dict) and not section.get("_locked"):
-                    return section
-                return {}
+            if tier_config.ai_content_detection and detect_ai_content:
+                ai_result = safe_extract_module(detect_ai_content, filepath, "ai_detection", base_result)
+                if ai_result:
+                    base_result["ai_detection"] = ai_result
 
-            camera_360_exiftool_data = {
-                "exif": camera_360_section("exif"),
-                "xmp": camera_360_section("xmp"),
-                "xmp_namespaces": camera_360_section("xmp_namespaces"),
-                "makernote": camera_360_section("makernote"),
-                "composite": camera_360_section("composite"),
-                "image_container": camera_360_section("image_container"),
-            }
+            # Optional: Timeline reconstruction
+            if tier_config.timeline_reconstruction and analyze_single_file_timeline:
+                timeline_result = safe_extract_module(analyze_single_file_timeline, base_result, "timeline_analysis")
+                if timeline_result:
+                    base_result["timeline_analysis"] = timeline_result
 
-            camera_360_result = safe_extract_module(extract_360_camera_metadata, filepath, "360_camera_metadata", camera_360_exiftool_data)
-            if camera_360_result:
-                base_result["camera_360"] = camera_360_result
+            # Optional: Emerging technology analysis
+            if tier_config.emerging_technology and extract_emerging_technology_metadata:
+                emerging_result = safe_extract_module(extract_emerging_technology_metadata, filepath, "emerging_technology")
+                if emerging_result and emerging_result.get("emerging_technology_analysis"):
+                    base_result["emerging_technology"] = emerging_result
 
-        # Optional: Print/publishing metadata
-        if tier_config.web_metadata and extract_print_publishing_metadata and is_image:
-            print_result = safe_extract_module(extract_print_publishing_metadata, filepath, "print_publishing_metadata")
-            if print_result:
-                base_result["print_publishing"] = print_result
+            # Optional: Advanced video analysis
+            if tier_config.advanced_video_analysis and extract_advanced_video_metadata and is_video:
+                video_result = safe_extract_module(extract_advanced_video_metadata, filepath, "advanced_video")
+                if video_result and video_result.get("available"):
+                    base_result["advanced_video"] = video_result
 
-        # Optional: Workflow/DAM metadata
-        if tier_config.web_metadata and extract_workflow_dam_metadata:
-            workflow_result = safe_extract_module(extract_workflow_dam_metadata, filepath, "workflow_dam_metadata")
-            if workflow_result:
-                base_result["workflow_dam"] = workflow_result
+            # Optional: Advanced audio analysis
+            if tier_config.advanced_audio_analysis and extract_advanced_audio_metadata and is_audio:
+                audio_result = safe_extract_module(extract_advanced_audio_metadata, filepath, "advanced_audio")
+                if audio_result and audio_result.get("available"):
+                    base_result["advanced_audio"] = audio_result
 
-        # Optional: Advanced audio/video analysis
-        if tier_config.advanced_audio and extract_audio_advanced_metadata and is_audio:
-            audio_adv = safe_extract_module(extract_audio_advanced_metadata, filepath, "audio_advanced_metadata")
-            if audio_adv:
-                base_result["audio_advanced"] = audio_adv
+            # Optional: Document analysis
+            if tier_config.document_analysis and extract_document_metadata:
+                # Check if it's a document type
+                file_ext = Path(filepath).suffix.lower()
+                document_extensions = [
+                    '.pdf', '.docx', '.xlsx', '.pptx', '.html', '.htm', '.xml',
+                    '.epub', '.mobi', '.zip', '.tar', '.gz', '.py', '.js', '.java',
+                    '.json', '.yaml', '.yml', '.toml', '.ini', '.txt', '.md', '.db'
+                ]
 
-        if tier_config.professional_video and extract_video_advanced_metadata and is_video:
-            video_adv = safe_extract_module(extract_video_advanced_metadata, filepath, "video_advanced_metadata")
-            if video_adv:
-                base_result["video_advanced"] = video_adv
+                if file_ext in document_extensions or not (is_image or is_video or is_audio):
+                    doc_result = safe_extract_module(extract_document_metadata, filepath, "document_metadata")
+                    if doc_result and doc_result.get("available"):
+                        base_result["document_metadata"] = doc_result
 
-        # Optional: Steganography/manipulation/AI detection
-        if tier_config.steganography_detection and is_image:
-            if detect_enhanced_steganography:
-                steg_result = safe_extract_module(detect_enhanced_steganography, filepath, "enhanced_steganography")
-                if steg_result:
-                    base_result["steganography_analysis"] = steg_result
-            elif analyze_steganography:
-                steg_result = safe_extract_module(analyze_steganography, filepath, "steganography_analysis")
-                if steg_result:
-                    base_result["steganography_analysis"] = steg_result
+            # Optional: Scientific research analysis
+            if tier_config.scientific_research and extract_scientific_research_metadata:
+                research_result = safe_extract_module(extract_scientific_research_metadata, filepath, "scientific_research")
+                if research_result and research_result.get("available"):
+                    base_result["scientific_research"] = research_result
 
-        if tier_config.manipulation_detection and detect_enhanced_manipulation and is_image:
-            manipulation_result = safe_extract_module(detect_enhanced_manipulation, filepath, "manipulation_detection", base_result)
-            if manipulation_result:
-                base_result["manipulation_detection"] = manipulation_result
+            # Optional: Multimedia entertainment analysis
+            if tier_config.multimedia_entertainment and extract_multimedia_entertainment_metadata:
+                entertainment_result = safe_extract_module(extract_multimedia_entertainment_metadata, filepath, "multimedia_entertainment")
+                if entertainment_result and entertainment_result.get("available"):
+                    base_result["multimedia_entertainment"] = entertainment_result
 
-        if tier_config.ai_content_detection and detect_ai_content:
-            ai_result = safe_extract_module(detect_ai_content, filepath, "ai_detection", base_result)
-            if ai_result:
-                base_result["ai_detection"] = ai_result
+            # Optional: Industrial manufacturing analysis
+            if tier_config.industrial_manufacturing and extract_industrial_manufacturing_metadata:
+                industrial_result = safe_extract_module(extract_industrial_manufacturing_metadata, filepath, "industrial_manufacturing")
+                if industrial_result and industrial_result.get("available"):
+                    base_result["industrial_manufacturing"] = industrial_result
 
-        # Optional: Timeline reconstruction
-        if tier_config.timeline_reconstruction and analyze_single_file_timeline:
-            timeline_result = safe_extract_module(analyze_single_file_timeline, base_result, "timeline_analysis")
-            if timeline_result:
-                base_result["timeline_analysis"] = timeline_result
+            # Optional: Financial business analysis
+            if tier_config.financial_business and extract_financial_business_metadata:
+                financial_result = safe_extract_module(extract_financial_business_metadata, filepath, "financial_business")
+                if financial_result and financial_result.get("available"):
+                    base_result["financial_business"] = financial_result
 
-        # Optional: Emerging technology analysis
-        if tier_config.emerging_technology and extract_emerging_technology_metadata:
-            emerging_result = safe_extract_module(extract_emerging_technology_metadata, filepath, "emerging_technology")
-            if emerging_result and emerging_result.get("emerging_technology_analysis"):
-                base_result["emerging_technology"] = emerging_result
+            # Optional: Healthcare medical analysis
+            if tier_config.healthcare_medical and extract_healthcare_medical_metadata:
+                healthcare_result = safe_extract_module(extract_healthcare_medical_metadata, filepath, "healthcare_medical")
+                if healthcare_result and healthcare_result.get("available"):
+                    base_result["healthcare_medical"] = healthcare_result
 
-        # Optional: Advanced video analysis
-        if tier_config.advanced_video_analysis and extract_advanced_video_metadata and is_video:
-            video_result = safe_extract_module(extract_advanced_video_metadata, filepath, "advanced_video")
-            if video_result and video_result.get("available"):
-                base_result["advanced_video"] = video_result
+            # Optional: Transportation logistics analysis
+            if tier_config.transportation_logistics and extract_transportation_logistics_metadata:
+                transport_result = safe_extract_module(extract_transportation_logistics_metadata, filepath, "transportation_logistics")
+                if transport_result and transport_result.get("available"):
+                    base_result["transportation_logistics"] = transport_result
 
-        # Optional: Advanced audio analysis
-        if tier_config.advanced_audio_analysis and extract_advanced_audio_metadata and is_audio:
-            audio_result = safe_extract_module(extract_advanced_audio_metadata, filepath, "advanced_audio")
-            if audio_result and audio_result.get("available"):
-                base_result["advanced_audio"] = audio_result
+            # Optional: Education academic analysis
+            if tier_config.education_academic and extract_education_academic_metadata:
+                education_result = safe_extract_module(extract_education_academic_metadata, filepath, "education_academic")
+                if education_result and education_result.get("available"):
+                    base_result["education_academic"] = education_result
 
-        # Optional: Document analysis
-        if tier_config.document_analysis and extract_document_metadata:
-            # Check if it's a document type
-            file_ext = Path(filepath).suffix.lower()
-            document_extensions = [
-                '.pdf', '.docx', '.xlsx', '.pptx', '.html', '.htm', '.xml',
-                '.epub', '.mobi', '.zip', '.tar', '.gz', '.py', '.js', '.java',
-                '.json', '.yaml', '.yml', '.toml', '.ini', '.txt', '.md', '.db'
-            ]
+            # Optional: Legal compliance analysis
+            if tier_config.legal_compliance and extract_legal_compliance_metadata:
+                legal_result = safe_extract_module(extract_legal_compliance_metadata, filepath, "legal_compliance")
+                if legal_result and legal_result.get("available"):
+                    base_result["legal_compliance"] = legal_result
 
-            if file_ext in document_extensions or not (is_image or is_video or is_audio):
-                doc_result = safe_extract_module(extract_document_metadata, filepath, "document_metadata")
-                if doc_result and doc_result.get("available"):
-                    base_result["document_metadata"] = doc_result
+            # Optional: Environmental sustainability analysis
+            if tier_config.environmental_sustainability and extract_environmental_sustainability_metadata:
+                environmental_result = safe_extract_module(extract_environmental_sustainability_metadata, filepath, "environmental_sustainability")
+                if environmental_result and environmental_result.get("available"):
+                    base_result["environmental_sustainability"] = environmental_result
 
-        # Optional: Scientific research analysis
-        if tier_config.scientific_research and extract_scientific_research_metadata:
-            research_result = safe_extract_module(extract_scientific_research_metadata, filepath, "scientific_research")
-            if research_result and research_result.get("available"):
-                base_result["scientific_research"] = research_result
+            # Optional: Social media digital analysis
+            if tier_config.social_media_digital and extract_social_media_digital_metadata:
+                social_digital_result = safe_extract_module(extract_social_media_digital_metadata, filepath, "social_media_digital")
+                if social_digital_result and social_digital_result.get("available"):
+                    base_result["social_media_digital"] = social_digital_result
 
-        # Optional: Multimedia entertainment analysis
-        if tier_config.multimedia_entertainment and extract_multimedia_entertainment_metadata:
-            entertainment_result = safe_extract_module(extract_multimedia_entertainment_metadata, filepath, "multimedia_entertainment")
-            if entertainment_result and entertainment_result.get("available"):
-                base_result["multimedia_entertainment"] = entertainment_result
+            # Optional: Gaming entertainment analysis
+            if tier_config.gaming_entertainment and extract_gaming_entertainment_metadata:
+                gaming_result = safe_extract_module(extract_gaming_entertainment_metadata, filepath, "gaming_entertainment")
+                if gaming_result and gaming_result.get("available"):
+                    base_result["gaming_entertainment"] = gaming_result
 
-        # Optional: Industrial manufacturing analysis
-        if tier_config.industrial_manufacturing and extract_industrial_manufacturing_metadata:
-            industrial_result = safe_extract_module(extract_industrial_manufacturing_metadata, filepath, "industrial_manufacturing")
-            if industrial_result and industrial_result.get("available"):
-                base_result["industrial_manufacturing"] = industrial_result
+        except Exception as e:
+            logger.error(f"Error in comprehensive extraction process: {e}")
+            logger.debug(f"Full traceback: {traceback.format_exc()}")
+            # Add error to results but continue with other processing
+            if "extraction_errors" not in base_result:
+                base_result["extraction_errors"] = []
+            base_result["extraction_errors"].append({
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "module": "comprehensive_extraction_process"
+            })
 
-        # Optional: Financial business analysis
-        if tier_config.financial_business and extract_financial_business_metadata:
-            financial_result = safe_extract_module(extract_financial_business_metadata, filepath, "financial_business")
-            if financial_result and financial_result.get("available"):
-                base_result["financial_business"] = financial_result
-
-        # Optional: Healthcare medical analysis
-        if tier_config.healthcare_medical and extract_healthcare_medical_metadata:
-            healthcare_result = safe_extract_module(extract_healthcare_medical_metadata, filepath, "healthcare_medical")
-            if healthcare_result and healthcare_result.get("available"):
-                base_result["healthcare_medical"] = healthcare_result
-
-        # Optional: Transportation logistics analysis
-        if tier_config.transportation_logistics and extract_transportation_logistics_metadata:
-            transport_result = safe_extract_module(extract_transportation_logistics_metadata, filepath, "transportation_logistics")
-            if transport_result and transport_result.get("available"):
-                base_result["transportation_logistics"] = transport_result
-
-        # Optional: Education academic analysis
-        if tier_config.education_academic and extract_education_academic_metadata:
-            education_result = safe_extract_module(extract_education_academic_metadata, filepath, "education_academic")
-            if education_result and education_result.get("available"):
-                base_result["education_academic"] = education_result
-
-        # Optional: Legal compliance analysis
-        if tier_config.legal_compliance and extract_legal_compliance_metadata:
-            legal_result = safe_extract_module(extract_legal_compliance_metadata, filepath, "legal_compliance")
-            if legal_result and legal_result.get("available"):
-                base_result["legal_compliance"] = legal_result
-
-        # Optional: Environmental sustainability analysis
-        if tier_config.environmental_sustainability and extract_environmental_sustainability_metadata:
-            environmental_result = safe_extract_module(extract_environmental_sustainability_metadata, filepath, "environmental_sustainability")
-            if environmental_result and environmental_result.get("available"):
-                base_result["environmental_sustainability"] = environmental_result
-
-        # Optional: Social media digital analysis
-        if tier_config.social_media_digital and extract_social_media_digital_metadata:
-            social_digital_result = safe_extract_module(extract_social_media_digital_metadata, filepath, "social_media_digital")
-            if social_digital_result and social_digital_result.get("available"):
-                base_result["social_media_digital"] = social_digital_result
-
-        # Optional: Gaming entertainment analysis
-        if tier_config.gaming_entertainment and extract_gaming_entertainment_metadata:
-            gaming_result = safe_extract_module(extract_gaming_entertainment_metadata, filepath, "gaming_entertainment")
-            if gaming_result and gaming_result.get("available"):
-                base_result["gaming_entertainment"] = gaming_result
+        # Cache the result if caching is available (disabled for now due to implementation issues)
+        # if get_cache:
+        #     try:
+        #         cache = get_cache()
+        #         cache.put(filepath, base_result, tier, int(base_result["extraction_info"].get("extraction_time_ms", 0)))
+        #     except Exception as e:
+        #         logger.debug(f"Cache storage failed: {e}")
 
         # Cache the result if caching is available (disabled for now due to implementation issues)
         # if get_cache:

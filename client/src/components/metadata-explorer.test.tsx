@@ -602,7 +602,7 @@ describe('MetadataExplorer', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle null/undefined values gracefully', () => {
+    it('should handle null/undefined values gracefully', async () => {
       const fileWithNulls = {
         ...mockFiles[0],
         categories: [
@@ -635,7 +635,7 @@ describe('MetadataExplorer', () => {
       expect(screen.getByText('N/A')).toBeInTheDocument();
     });
 
-    it('should handle object and array values', () => {
+    it('should handle object and array values', async () => {
       const fileWithComplex = {
         ...mockFiles[0],
         categories: [
@@ -668,7 +668,7 @@ describe('MetadataExplorer', () => {
       expect(screen.getByText('one, two, three')).toBeInTheDocument();
     });
 
-    it('should handle special characters in values', () => {
+    it('should handle special characters in values', async () => {
       const fileWithSpecial = {
         ...mockFiles[0],
         categories: [

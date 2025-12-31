@@ -32,7 +32,7 @@ module.exports = {
     '^@shared/(.*)$': '<rootDir>/shared/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '@testing-library/jest-dom'],
   collectCoverageFrom: [
     'client/src/**/*.{ts,tsx}',
     'server/**/*.ts',
@@ -57,5 +57,7 @@ module.exports = {
     'jest-watch-typeahead/filename',
     'jest-watch-typeahead/testname'
   ],
-  verbose: true
+  verbose: true,
+  // Run integration tests in separate processes to avoid port conflicts
+  maxWorkers: 1
 };
