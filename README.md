@@ -157,7 +157,7 @@ python server/extractor/metadata_engine.py --help
 
 ### Extraction
 
-```
+```bash
 POST /api/extract?tier=premium
 Content-Type: multipart/form-data
 Body: file=<binary>
@@ -167,7 +167,7 @@ Response: Complete metadata JSON
 
 ### Configuration
 
-```
+```bash
 GET /api/tiers          - All tier configurations
 GET /api/fields         - Field information by tier
 GET /api/health         - Health check
@@ -175,7 +175,7 @@ GET /api/health         - Health check
 
 ### Credits & Payments
 
-```
+```bash
 POST /api/checkout/create-session  - Create subscription
 POST /api/credits/purchase         - Buy credit pack
 GET /api/credits/balance           - Check balance
@@ -183,7 +183,7 @@ GET /api/credits/balance           - Check balance
 
 ## 📊 Project Structure
 
-```
+```bash
 metaextract/
 ├── client/                    # React frontend
 │   ├── src/

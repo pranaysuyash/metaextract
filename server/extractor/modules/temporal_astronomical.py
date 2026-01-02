@@ -121,7 +121,7 @@ def parse_datetime(dt_str: str) -> Optional[datetime]:
                 except Exception as e:
                     continue
         except Exception as e:
-            pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+            logger.debug(f"Failed to calculate astronomical time data: {e}")
     return None
 
 

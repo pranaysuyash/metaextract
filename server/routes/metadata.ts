@@ -8,9 +8,15 @@
  * - Similar file finding
  */
 
-import type { Express, Response } from 'express';
-import path from 'path';
 import { spawn } from 'child_process';
+
+import type { Express } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // ============================================================================
 // Helper Functions
@@ -53,7 +59,7 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
       }
       try {
         resolve(JSON.parse(stdout));
-      } catch (error) {
+      } catch (_error) {
         console.error('metadata_db_cli stdout (raw):', stdout);
         reject(new Error('failed to parse metadata db cli output'));
       }
@@ -94,7 +100,7 @@ export function registerMetadataRoutes(app: Express): void {
         String(offset),
       ]);
       res.json(results);
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ error: 'metadata search failed' });
     }
   });
@@ -115,7 +121,7 @@ export function registerMetadataRoutes(app: Express): void {
       }
       const history = await runMetadataDbCli(args);
       res.json(history);
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ error: 'history lookup failed' });
     }
   });
@@ -125,7 +131,7 @@ export function registerMetadataRoutes(app: Express): void {
     try {
       const stats = await runMetadataDbCli(['stats']);
       res.json(stats);
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ error: 'metadata stats failed' });
     }
   });
@@ -135,7 +141,7 @@ export function registerMetadataRoutes(app: Express): void {
     try {
       const favorites = await runMetadataDbCli(['favorites', '--list']);
       res.json(favorites);
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ error: 'favorites lookup failed' });
     }
   });
@@ -158,7 +164,7 @@ export function registerMetadataRoutes(app: Express): void {
       }
       const result = await runMetadataDbCli(args);
       res.json(result);
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ error: 'favorites toggle failed' });
     }
   });
@@ -182,7 +188,7 @@ export function registerMetadataRoutes(app: Express): void {
         String(limit),
       ]);
       res.json(result);
-    } catch (error) {
+    } catch (_error) {
       res.status(500).json({ error: 'similarity search failed' });
     }
   });

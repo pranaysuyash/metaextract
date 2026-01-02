@@ -42,7 +42,7 @@ See `docs/IMAGE_METADATA_ROADMAP.md` for the detailed plan and status on EXIF/IF
 
 **Modules**:
 
-```
+```bash
 ✅ forensic_metadata.py (253 fields)
    - Filesystem: timestamps, permissions, hashes, entropy
    - Device: identifiers, firmware, serial numbers
@@ -419,6 +419,7 @@ To begin Phase 2 immediately:
    ```
 
 5. **Track Progress**:
+
    ```bash
    python field_count.py
    # Target: 2,899 → 3,300+ fields

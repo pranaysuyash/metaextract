@@ -316,7 +316,7 @@
 
 ### **Backend Stack**
 
-```
+```bash
 Enhanced Python Engine (v3.2)
 ├── Core Extraction (metadata_engine.py)
 ├── Performance Layer (metadata_engine_enhanced.py)
@@ -332,7 +332,7 @@ Enhanced Python Engine (v3.2)
 
 ### **Frontend Stack**
 
-```
+```bash
 React + TypeScript
 ├── Enhanced Upload (enhanced-upload-zone.tsx)
 ├── Sample Files (sample-files.tsx)
@@ -344,7 +344,7 @@ React + TypeScript
 
 ### **Infrastructure**
 
-```
+```bash
 Production Deployment
 ├── Node.js/Express API Server
 ├── Python Metadata Engine with Advanced Analysis

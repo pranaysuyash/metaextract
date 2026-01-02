@@ -278,7 +278,7 @@ export const TIER_CONFIGS: Record<TierName, TierConfig> = {
       'application/x-robotics',
       'application/x-biotech',
     ],
-    maxFileSizeMB: 2000, 
+    maxFileSizeMB: 2000,
     monthlyFileLimit: null, // Unlimited
     dailyFileLimit: null,
     apiRequestsPerMonth: 5000,
@@ -378,7 +378,8 @@ export const LEGACY_TIER_MAP: Record<string, TierName> = {
   pro: 'forensic', // Alias
 };
 
-export function normalizeTier(tier: string): TierName {
+export function normalizeTier(tier: string | null | undefined): TierName {
+  if (!tier) return 'enterprise';
   const normalized = tier.toLowerCase();
   return (
     LEGACY_TIER_MAP[normalized] ||
@@ -408,22 +409,26 @@ export function toPythonTier(tier: string): PythonTierName {
 
 /**
  * Get tier configuration with dev mode override capability.
- * 
+ *
  * In development mode (VITE_DEV_FULL_ACCESS=true), always returns enterprise config
  * to provide full access to all features without payment barriers.
  */
 export function getTierConfig(tier: string): TierConfig {
   // Dev mode: Full access for development
-  // Check both import.meta.env (client) and process.env (server)
-  const isDevMode = 
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEV_FULL_ACCESS === 'true') ||
-    (typeof process !== 'undefined' && process.env?.VITE_DEV_FULL_ACCESS === 'true');
-  
+  // NOTE: Avoid `import.meta` here so this file can be compiled by Jest/ts-jest
+  // in CommonJS mode. The Vite client entrypoint sets a global flag from
+  // `import.meta.env.VITE_DEV_FULL_ACCESS`.
+  const isDevMode =
+    (typeof globalThis !== 'undefined' &&
+      (globalThis as any).__METAEXTRACT_DEV_FULL_ACCESS__ === 'true') ||
+    (typeof process !== 'undefined' &&
+      process.env?.VITE_DEV_FULL_ACCESS === 'true');
+
   if (isDevMode) {
     console.log('[DEV MODE] Full access enabled - returning enterprise config');
     return TIER_CONFIGS.enterprise;
   }
-  
+
   const normalizedTier = normalizeTier(tier);
   return TIER_CONFIGS[normalizedTier] || TIER_CONFIGS.free;
 }

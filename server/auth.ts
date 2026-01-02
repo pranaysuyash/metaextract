@@ -85,6 +85,21 @@ function verifyToken(token: string): AuthUser | null {
   }
 }
 
+function isDatabaseConnectionError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const code = (error as { code?: string }).code;
+  return (
+    code === "ECONNREFUSED" ||
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "ENOTFOUND" ||
+    code === "57P01" ||
+    code === "3D000"
+  );
+}
+
 // ============================================================================
 // Middleware
 // ============================================================================
@@ -256,7 +271,8 @@ export function registerAuthRoutes(app: Express) {
       
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(500).json({
+      const status = isDatabaseConnectionError(error) ? 503 : 500;
+      res.status(status).json({
         error: "Registration failed",
         message: error instanceof Error ? error.message : "Unknown error"
       });
@@ -370,7 +386,8 @@ export function registerAuthRoutes(app: Express) {
       
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({
+      const status = isDatabaseConnectionError(error) ? 503 : 500;
+      res.status(status).json({
         error: "Login failed",
         message: error instanceof Error ? error.message : "Unknown error"
       });
@@ -389,47 +406,56 @@ export function registerAuthRoutes(app: Express) {
   // Get Current User (Session Validation)
   // -------------------------------------------------------------------------
   app.get("/api/auth/me", authMiddleware, async (req: AuthRequest, res: Response) => {
-    if (!req.isAuthenticated || !req.user) {
-      return res.json({ 
+    try {
+      if (!req.isAuthenticated || !req.user) {
+        return res.json({ 
+          authenticated: false,
+          user: null 
+        });
+      }
+      
+      // Refresh user data from DB if available
+      if (db) {
+        try {
+          const [freshUser] = await db.select().from(users)
+            .where(eq(users.id, req.user.id))
+            .limit(1);
+          
+          if (freshUser) {
+            return res.json({
+              authenticated: true,
+              user: {
+                id: freshUser.id,
+                email: freshUser.email,
+                username: freshUser.username,
+                tier: freshUser.tier,
+                subscriptionStatus: freshUser.subscriptionStatus,
+              }
+            });
+          }
+        } catch {
+          // Fall back to token data
+        }
+      }
+      
+      res.json({
+        authenticated: true,
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+          username: req.user.username,
+          tier: req.user.tier,
+          subscriptionStatus: req.user.subscriptionStatus,
+        }
+      });
+    } catch (error) {
+      console.error("Auth session check error:", error);
+      res.status(200).json({
         authenticated: false,
-        user: null 
+        user: null,
+        error: "Session check failed"
       });
     }
-    
-    // Refresh user data from DB if available
-    if (db) {
-      try {
-        const [freshUser] = await db.select().from(users)
-          .where(eq(users.id, req.user.id))
-          .limit(1);
-        
-        if (freshUser) {
-          return res.json({
-            authenticated: true,
-            user: {
-              id: freshUser.id,
-              email: freshUser.email,
-              username: freshUser.username,
-              tier: freshUser.tier,
-              subscriptionStatus: freshUser.subscriptionStatus,
-            }
-          });
-        }
-      } catch {
-        // Fall back to token data
-      }
-    }
-    
-    res.json({
-      authenticated: true,
-      user: {
-        id: req.user.id,
-        email: req.user.email,
-        username: req.user.username,
-        tier: req.user.tier,
-        subscriptionStatus: req.user.subscriptionStatus,
-      }
-    });
   });
   
   // -------------------------------------------------------------------------

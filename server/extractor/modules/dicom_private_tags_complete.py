@@ -2516,4 +2516,4 @@ GE_PRIVATE_TAGS = {
     (0x0019, 0x1877): "ge_private_data_2267",
     (0x0019, 0x1878): "ge_private_data_2268",
     (0x0019, 0x1879): "ge_private_data_2269",
-    (0x
+}

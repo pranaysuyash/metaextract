@@ -24,6 +24,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import json
 import hashlib
+import os
 
 # ============================================================================
 # MODEL ARCHITECTURE FIELDS (500+ fields)
@@ -437,8 +438,24 @@ def extract_ai_ml_metadata_metadata(filepath: str) -> Dict[str, Any]:
     }
 
     try:
-        # Implement extraction logic here
-        pass
+        if not filepath or not os.path.exists(filepath):
+            result["error"] = "File path not provided or file doesn't exist"
+            return result
+
+        extracted = extract_ai_ml_metadata(filepath)
+        if not isinstance(extracted, dict):
+            result["error"] = "ai_ml_metadata extraction returned invalid data"
+            return result
+
+        if "error" in extracted:
+            result["error"] = extracted.get("error")
+            return result
+
+        result["ai_ml_metadata_metadata"] = extracted
+        result["is_valid_ai_ml_metadata"] = bool(extracted.get("is_valid_ai_ml"))
+        extracted_count = extracted.get("fields_extracted")
+        if isinstance(extracted_count, int):
+            result["fields_extracted"] = extracted_count
     except Exception as e:
         result["error"] = str(e)[:200]
 

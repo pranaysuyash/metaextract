@@ -8,6 +8,9 @@ from pathlib import Path
 import subprocess
 import json
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 H264_PROFILE_LEVELS = {
@@ -256,7 +259,7 @@ def extract_h264_details(stream: Dict) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_h264_details: %s", e)
 
     return result
 
@@ -321,7 +324,7 @@ def extract_hevc_details(stream: Dict) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_hevc_details: %s", e)
 
     return result
 
@@ -370,7 +373,7 @@ def extract_vp9_details(stream: Dict) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_vp9_details: %s", e)
 
     return result
 
@@ -429,7 +432,7 @@ def extract_av1_details(stream: Dict) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_av1_details: %s", e)
 
     return result
 
@@ -461,7 +464,7 @@ def analyze_frame_types(stream: Dict) -> Dict[str, Any]:
                 result["gop_size_estimate"] = 30
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in analyze_frame_types: %s", e)
 
     return result
 
@@ -524,7 +527,7 @@ def extract_hdr_metadata(filepath: str) -> Dict[str, Any]:
                 result["max_fall"] = max_fall
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_hdr_metadata: %s", e)
 
     return result
 
@@ -589,6 +592,6 @@ def analyze_video_quality(filepath: str) -> Dict[str, Any]:
             result["recommendations"].append("B-frames enabled - good for compression efficiency")
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in analyze_video_quality: %s", e)
 
     return result

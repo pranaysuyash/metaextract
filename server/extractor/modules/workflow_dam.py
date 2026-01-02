@@ -8,6 +8,9 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def extract_workflow_dam_metadata(filepath: str) -> Optional[Dict[str, Any]]:
@@ -51,7 +54,7 @@ def extract_workflow_dam_metadata(filepath: str) -> Optional[Dict[str, Any]]:
             result["fields_extracted"] = total_fields
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_workflow_dam_metadata: %s", e)
 
     return result
 
@@ -124,7 +127,7 @@ def extract_dam_properties(filepath: str, exif_data: Dict) -> Dict:
         dam["created_timestamp"] = datetime.fromtimestamp(stat.st_ctime).isoformat()
         dam["modified_timestamp"] = datetime.fromtimestamp(stat.st_mtime).isoformat()
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_dam_properties: %s", e)
 
     dam["is_synthetic"] = False
 
@@ -225,7 +228,7 @@ def calculate_asset_fingerprint(filepath: str) -> Dict[str, Any]:
             fingerprint[" perceptual_hash"] = str(imagehash.phash(img))
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_version_info: %s", e)
 
     fingerprint["fingerprint_timestamp"] = datetime.now().isoformat()
 

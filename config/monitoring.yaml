@@ -1,0 +1,189 @@
+# Monitoring Configuration for MetaExtract
+
+# This configuration defines how the monitoring system collects and processes metrics
+
+# Metrics Collection Configuration
+metrics:
+  # Enable/disable metrics collection
+  enabled: true
+  
+  # Collection interval in seconds
+  collection_interval: 60
+  
+  # Retention period for metrics in days
+  retention_days: 30
+  
+  # Sampling rate (0.0 to 1.0)
+  sampling_rate: 1.0
+
+# Performance Metrics Configuration
+performance:
+  # Enable performance metrics collection
+  enabled: true
+  
+  # Track processing time for each file type
+  track_by_file_type: true
+  
+  # Track processing time by tier
+  track_by_tier: true
+  
+  # Calculate percentiles (p50, p95, p99)
+  calculate_percentiles: true
+  
+  # Outlier detection threshold (in milliseconds)
+  outlier_threshold: 5000
+
+# Error Metrics Configuration
+errors:
+  # Enable error metrics collection
+  enabled: true
+  
+  # Track error rates by type
+  track_by_type: true
+  
+  # Track error rates by file type
+  track_by_file_type: true
+  
+  # Track error rates by tier
+  track_by_tier: true
+  
+  # Error rate alert threshold (0.0 to 1.0)
+  alert_threshold: 0.1
+
+# System Metrics Configuration
+system:
+  # Enable system metrics collection
+  enabled: true
+  
+  # CPU usage metrics
+  cpu_enabled: true
+  
+  # Memory usage metrics
+  memory_enabled: true
+  
+  # Disk usage metrics
+  disk_enabled: true
+  
+  # Network metrics
+  network_enabled: false
+
+# Custom Metrics Configuration
+custom:
+  # Enable custom metrics
+  enabled: true
+  
+  # Custom metrics storage
+  storage_enabled: true
+  
+  # Custom metrics retention days
+  retention_days: 7
+
+# Export Configuration
+export:
+  # Enable metrics export
+  enabled: true
+  
+  # Export format (json, csv, prometheus)
+  format: json
+  
+  # Export path
+  path: "./exports/monitoring"
+  
+  # Export schedule (cron format)
+  schedule: "0 */6 * * *"  # every 6 hours
+  
+  # Enable compression
+  compress: true
+
+# Alert Configuration
+alerts:
+  # Enable alerting
+  enabled: true
+  
+  # Evaluation interval in seconds
+  evaluation_interval: 300
+  
+  # Repeat interval in seconds
+  repeat_interval: 3600
+  
+  # Cooldown period in seconds
+  cooldown_period: 600
+
+# Rules Configuration
+rules:
+  # High error rate rule
+  - name: "high_error_rate"
+    condition: "error_rate > 0.1"
+    severity: "critical"
+    summary: "High error rate detected"
+    description: "Error rate has exceeded 10% threshold"
+    enabled: true
+  
+  # Slow processing rule
+  - name: "slow_processing"
+    condition: "avg_processing_time > 5000"
+    severity: "high"
+    summary: "Slow processing detected"
+    description: "Average processing time has exceeded 5 seconds"
+    enabled: true
+  
+  # Low throughput rule
+  - name: "low_throughput"
+    condition: "extractions_per_minute < 1"
+    severity: "medium"
+    summary: "Low throughput detected"
+    description: "System throughput has dropped below 1 extraction per minute"
+    enabled: true
+
+# Storage Configuration
+storage:
+  # Storage type (memory, file, database)
+  type: "database"
+  
+  # Database configuration (if using database storage)
+  database:
+    url: "postgresql://username:password@localhost:5432/metaextract_monitoring"
+    table_prefix: "monitoring_"
+    max_connections: 10
+    idle_timeout: 300
+  
+  # File storage configuration (if using file storage)
+  file:
+    path: "./data/monitoring"
+    rotation_interval: 86400  # 24 hours in seconds
+    max_file_size: 10485760  # 10MB in bytes
+    max_files: 10
+
+# Security Configuration
+security:
+  # Enable security metrics
+  enabled: true
+  
+  # Track security-related events
+  track_security_events: true
+  
+  # Security event alert threshold
+  security_alert_threshold: 5  # number of events per minute
+  
+  # Security metrics retention
+  security_retention_days: 90
+
+# Analytics Configuration
+analytics:
+  # Enable analytics metrics
+  enabled: true
+  
+  # Track usage patterns
+  track_usage_patterns: true
+  
+  # Track performance trends
+  track_performance_trends: true
+  
+  # Analytics retention
+  analytics_retention_days: 30
+  
+  # Enable anomaly detection
+  anomaly_detection_enabled: true
+  
+  # Anomaly detection sensitivity (0.0 to 1.0)
+  anomaly_sensitivity: 0.7

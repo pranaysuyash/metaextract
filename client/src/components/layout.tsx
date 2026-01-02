@@ -1,254 +1,284 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ShieldCheck, Menu, Cpu, Github, Twitter, User, LogOut, ChevronDown, CreditCard } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AuthModal } from "@/components/auth-modal";
-import { useAuth } from "@/lib/auth";
+/**
+ * Layout Component
+ *
+ * Main layout wrapper for authenticated/internal pages.
+ * Uses the dark forensic theme consistent with the app design.
+ *
+ * For public pages (landing, pricing), use PublicLayout instead.
+ */
 
-export function Layout({ children }: { children: React.ReactNode }) {
-  const _location = useLocation();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<"login" | "register">("login");
-  const { user, isAuthenticated, logout, isLoading } = useAuth();
+import React from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { LogOut, User, Menu, X, Cpu } from 'lucide-react';
+import { useState } from 'react';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { cn } from '@/lib/utils';
+import {
+  dashboardNavSections,
+  navStyles,
+  brandConfig,
+  isActivePath,
+} from '@/lib/navigation-config';
 
-  const openLogin = () => {
-    setAuthModalTab("login");
-    setAuthModalOpen(true);
+interface LayoutProps {
+  children?: React.ReactNode;
+  /** Hide sidebar for full-width content */
+  hideSidebar?: boolean;
+  /** Hide header */
+  hideHeader?: boolean;
+}
+
+export const Layout = ({
+  children,
+  hideSidebar = false,
+  hideHeader = false,
+}: LayoutProps) => {
+  const { user, isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navItems = dashboardNavSections.flatMap((section) => section.items);
+
+  const isActive = (path: string) => isActivePath(location.pathname, path);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
   };
 
-  const openRegister = () => {
-    setAuthModalTab("register");
-    setAuthModalOpen(true);
-  };
-
-  const getTierBadgeColor = (tier: string) => {
-    switch (tier) {
-      case "professional": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      case "forensic": return "bg-purple-500/20 text-purple-400 border-purple-500/30";
-      case "enterprise": return "bg-amber-500/20 text-amber-400 border-amber-500/30";
-      default: return "bg-slate-500/20 text-slate-400 border-slate-500/30";
-    }
-  };
+  // For public pages (landing), render without the dashboard chrome
+  if (location.pathname === '/' && !isAuthenticated) {
+    return <>{children ?? <Outlet />}</>;
+  }
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground flex flex-col">
-      {/* Tech Grid Background Overlay */}
-      <div className="fixed inset-0 bg-grid opacity-20 pointer-events-none z-0"></div>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        defaultTab={authModalTab}
-      />
-
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/">
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-md rounded-full group-hover:bg-primary/40 transition-all"></div>
-                <div className="relative bg-black border border-white/20 p-2 rounded-lg shadow-lg group-hover:border-primary/50 transition-colors">
-                  <Cpu className="w-5 h-5 text-primary" />
-                </div>
+    <div className='min-h-screen bg-[#0B0C10] text-white'>
+      {/* Mobile Header */}
+      {!hideHeader && (
+        <header className='lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#0B0C10]/95 backdrop-blur-xl border-b border-white/5'>
+          <div className='flex items-center justify-between px-4 h-14'>
+            <Link to='/' className='flex items-center gap-2'>
+              <div className='w-7 h-7 bg-primary rounded flex items-center justify-center'>
+                <Cpu className='w-4 h-4 text-black' />
               </div>
-              <span className="font-mono font-bold text-lg tracking-tight text-white group-hover:text-primary transition-colors">
-                META<span className="text-primary">EXTRACT</span>
+              <span className='font-bold text-sm'>
+                Meta<span className='text-primary'>Extract</span>
               </span>
-            </div>
-          </Link>
+            </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-semibold text-slate-200 hover:text-white transition-colors hover:bg-white/10 px-3 py-2 rounded-md">Capabilities</a>
-            <a href="#pricing" className="text-sm font-semibold text-slate-200 hover:text-white transition-colors hover:bg-white/10 px-3 py-2 rounded-md">Pricing</a>
-            <a href="#api" className="text-sm font-semibold text-slate-200 hover:text-white transition-colors hover:bg-white/10 px-3 py-2 rounded-md">API</a>
-            <div className="h-4 w-px bg-white/20"></div>
-
-            {isLoading ? (
-              <div className="w-20 h-8 bg-white/5 animate-pulse rounded"></div>
-            ) : isAuthenticated && user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-slate-200 hover:text-white hover:bg-white/10 font-semibold gap-2">
-                    <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                      <User className="w-4 h-4 text-primary" />
-                    </div>
-                    <span className="max-w-[100px] truncate">{user.username}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${getTierBadgeColor(user.tier)}`}>
-                      {user.tier.toUpperCase()}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-[#0B0C10] border border-white/10">
-                  <div className="px-3 py-2 border-b border-white/5">
-                    <p className="text-sm font-medium text-white">{user.username}</p>
-                    <p className="text-xs text-slate-500">{user.email}</p>
-                  </div>
-                  <DropdownMenuItem className="text-slate-300 focus:text-white focus:bg-white/5 cursor-pointer">
-                    <User className="w-4 h-4 mr-2" />
-                    Account Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-slate-300 focus:text-white focus:bg-white/5 cursor-pointer">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-white/5" />
-                  <DropdownMenuItem
-                    className="text-red-400 focus:text-red-300 focus:bg-red-500/10 cursor-pointer"
-                    onClick={() => logout()}
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  className="text-slate-200 hover:text-white hover:bg-white/10 font-semibold"
-                  onClick={openLogin}
-                  data-auth="login"
-                >
-                  Sign In
-                </Button>
-                <Button
-                  className="bg-primary hover:bg-primary/90 text-black font-bold rounded px-6 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] tracking-tight"
-                  onClick={openRegister}
-                  data-auth="register"
-                >
-                  Get Started
-                </Button>
-              </>
-            )}
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className='text-white hover:bg-white/10'
+            >
+              {sidebarOpen ? (
+                <X className='w-5 h-5' />
+              ) : (
+                <Menu className='w-5 h-5' />
+              )}
+            </Button>
           </div>
+        </header>
+      )}
 
-          {/* Mobile Nav */}
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-slate-400">
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent className="bg-card border-l-white/10">
-                <div className="flex flex-col gap-4 mt-8">
-                  <Link to="/"><span className="text-lg font-medium text-white">Home</span></Link>
-                  <a href="#features" className="text-lg font-medium text-slate-300">Capabilities</a>
-                  <a href="#pricing" className="text-lg font-medium text-slate-300">Pricing</a>
-                  <a href="#api" className="text-lg font-medium text-slate-300">API</a>
-
-                  {isAuthenticated && user ? (
-                    <>
-                      <div className="pt-4 border-t border-white/10">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                            <User className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-white font-medium">{user.username}</p>
-                            <p className="text-xs text-slate-500">{user.email}</p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
-                          onClick={() => logout()}
-                        >
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Sign Out
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="w-full mt-4"
-                        onClick={openLogin}
-                      >
-                        Sign In
-                      </Button>
-                      <Button
-                        className="w-full bg-primary text-black"
-                        onClick={openRegister}
-                      >
-                        Get Started
-                      </Button>
-                    </>
-                  )}
+      <div className='flex'>
+        {/* Sidebar */}
+        {!hideSidebar && (
+          <>
+            {/* Desktop Sidebar */}
+            <aside className='hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-[#0a0a0f] border-r border-white/5'>
+              {/* Logo */}
+              <div className='flex items-center gap-3 px-6 h-16 border-b border-white/5'>
+                <div className='w-8 h-8 bg-primary rounded flex items-center justify-center'>
+                  <Cpu className='w-5 h-5 text-black' />
                 </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </nav>
-
-      <main className="relative z-10 flex-1">
-        {children}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-white/5 bg-black/40 py-12 mt-20 relative z-10">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-primary" />
-                <span className="font-mono font-bold text-lg text-white">METAEXTRACT</span>
+                <span className='font-bold text-lg tracking-tight'>
+                  Meta<span className='text-primary'>Extract</span>
+                </span>
               </div>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Advanced forensic metadata extraction engine.
-                Process 7000+ fields across 400+ file formats.
-                Zero data retention policy.
-              </p>
-            </div>
 
-            <div>
-              <h4 className="font-mono font-semibold mb-4 text-white">Product</h4>
-               <ul className="space-y-2 text-sm text-slate-300 font-mono">
-                 <li><a href="#features" className="hover:text-primary transition-colors">Features</a></li>
-                 <li><a href="#capabilities" className="hover:text-primary transition-colors">Capabilities</a></li>
-                 <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
-               </ul>
-            </div>
+              {/* Navigation */}
+              <nav className='flex-1 px-3 py-4 space-y-1 overflow-y-auto'>
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.href}
+                      className={cn(
+                        navStyles.item.base,
+                        active ? navStyles.item.active : navStyles.item.inactive
+                      )}
+                      title={item.description}
+                    >
+                      <Icon
+                        className={cn(
+                          navStyles.item.icon,
+                          active && navStyles.item.iconActive
+                        )}
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
 
-            <div>
-              <h4 className="font-mono font-semibold mb-4 text-white">Legal</h4>
-               <ul className="space-y-2 text-sm text-slate-300 font-mono">
-                 <li><a href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</a></li>
-                 <li><a href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</a></li>
-                 <li><a href="/refunds" className="hover:text-primary transition-colors">Payment & Refund Policy</a></li>
-               </ul>
-            </div>
+              {/* User Section */}
+              {isAuthenticated && user && (
+                <div className='p-4 border-t border-white/5'>
+                  <div className='flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5'>
+                    <div className='w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center'>
+                      <User className='w-4 h-4 text-primary' />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-white truncate'>
+                        {user.username}
+                      </p>
+                      <p className='text-xs text-slate-500 truncate'>
+                        {user.tier}
+                      </p>
+                    </div>
+                  </div>
+                  <div className='mt-2 flex items-center justify-between'>
+                    <span className='text-xs text-slate-500'>Theme</span>
+                    <ThemeToggle />
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={handleLogout}
+                    className='w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start'
+                  >
+                    <LogOut className='w-4 h-4 mr-2' />
+                    Sign Out
+                  </Button>
+                </div>
+              )}
+            </aside>
 
-            <div>
-              <h4 className="font-mono font-semibold mb-4 text-white">Connect</h4>
-               <div className="flex gap-4">
-                 <a href="https://github.com/metaextract" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
-                   <Github className="w-5 h-5" />
-                 </a>
-                 <a href="https://x.com/metaextract" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors" aria-label="Twitter">
-                   <Twitter className="w-5 h-5" />
-                 </a>
-               </div>
-            </div>
-          </div>
+            {/* Mobile Sidebar Overlay */}
+            {sidebarOpen && (
+              <div
+                className='lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm'
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
 
-          <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-sm text-slate-300 font-mono">
-            <p>&copy; 2025 MetaExtract Inc. System Version 3.0.0</p>
-            <div className="flex items-center gap-4 mt-4 md:mt-0">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Secure Enclave Processing</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+            {/* Mobile Sidebar */}
+            <aside
+              className={cn(
+                'lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a0f] border-r border-white/5 transform transition-transform duration-300',
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+              )}
+            >
+              {/* Logo */}
+              <div className='flex items-center justify-between px-4 h-14 border-b border-white/5'>
+                <Link
+                  to='/'
+                  className='flex items-center gap-2'
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <div className='w-7 h-7 bg-primary rounded flex items-center justify-center'>
+                    <Cpu className='w-4 h-4 text-black' />
+                  </div>
+                  <span className='font-bold text-sm'>
+                    Meta<span className='text-primary'>Extract</span>
+                  </span>
+                </Link>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => setSidebarOpen(false)}
+                  className='text-white hover:bg-white/10'
+                >
+                  <X className='w-5 h-5' />
+                </Button>
+              </div>
+
+              {/* Navigation */}
+              <nav className='flex-1 px-3 py-4 space-y-1 overflow-y-auto'>
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        navStyles.item.base,
+                        active ? navStyles.item.active : navStyles.item.inactive
+                      )}
+                      title={item.description}
+                    >
+                      <Icon
+                        className={cn(
+                          navStyles.item.icon,
+                          active && navStyles.item.iconActive
+                        )}
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* User Section */}
+              {isAuthenticated && user && (
+                <div className='p-4 border-t border-white/5'>
+                  <div className='flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5'>
+                    <div className='w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center'>
+                      <User className='w-4 h-4 text-primary' />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-white truncate'>
+                        {user.username}
+                      </p>
+                      <p className='text-xs text-slate-500 truncate'>
+                        {user.tier}
+                      </p>
+                    </div>
+                  </div>
+                  <div className='mt-3'>
+                    <p className='text-xs text-slate-500 mb-2'>Theme</p>
+                    <ThemeToggle />
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => {
+                      handleLogout();
+                      setSidebarOpen(false);
+                    }}
+                    className='w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start'
+                  >
+                    <LogOut className='w-4 h-4 mr-2' />
+                    Sign Out
+                  </Button>
+                </div>
+              )}
+            </aside>
+          </>
+        )}
+
+        {/* Main Content */}
+        <main
+          className={cn(
+            'flex-1 min-h-screen',
+            !hideSidebar && 'lg:pl-64',
+            !hideHeader && 'pt-14 lg:pt-0'
+          )}
+        >
+          {children ?? <Outlet />}
+        </main>
+      </div>
     </div>
   );
-}
+};
+
+export default Layout;

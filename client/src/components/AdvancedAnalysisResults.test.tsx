@@ -7,15 +7,28 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdvancedAnalysisResults } from './AdvancedAnalysisResults';
 
+// Helper to find text that might be split by Badge component icons
+function findBadgeWithText(text: string) {
+  return (
+    screen.queryAllByText(text).find((element) => {
+      return (
+        element.textContent === text || element.textContent?.includes(text)
+      );
+    }) || screen.getByText(text)
+  );
+}
+
 describe('AdvancedAnalysisResults', () => {
+  let user: ReturnType<typeof userEvent.setup>;
+
   const mockSteganographyData = {
     detected: true,
     confidence: 85,
     methods_checked: ['LSB', 'DCT', 'Frequency Analysis'],
     findings: [
       'Potential LSB steganography detected in blue channel',
-      'Unusual patterns in DCT coefficients'
-    ]
+      'Unusual patterns in DCT coefficients',
+    ],
   };
 
   const mockManipulationData = {
@@ -25,25 +38,29 @@ describe('AdvancedAnalysisResults', () => {
       {
         type: 'JPEG Ghosts',
         severity: 'high' as const,
-        description: 'Evidence of multiple compression artifacts'
+        description: 'Evidence of multiple compression artifacts',
       },
       {
         type: 'Lighting Inconsistency',
         severity: 'medium' as const,
-        description: 'Inconsistent lighting directions detected'
+        description: 'Inconsistent lighting directions detected',
       },
       {
         type: 'Noise Pattern Analysis',
         severity: 'low' as const,
-        description: 'Minor variations in noise patterns'
-      }
-    ]
+        description: 'Minor variations in noise patterns',
+      },
+    ],
   };
 
   const mockAIDetectionData = {
     ai_generated: true,
     confidence: 88,
-    model_hints: ['GAN artifacts', 'Unnatural texture patterns', 'AI-generated faces']
+    model_hints: [
+      'GAN artifacts',
+      'Unnatural texture patterns',
+      'AI-generated faces',
+    ],
   };
 
   const mockTimelineData = {
@@ -51,47 +68,55 @@ describe('AdvancedAnalysisResults', () => {
       {
         timestamp: '2024-01-15 10:30:00',
         event_type: 'File Created',
-        source: 'EXIF DateTimeOriginal'
+        source: 'EXIF DateTimeOriginal',
       },
       {
         timestamp: '2024-01-15 14:22:00',
         event_type: 'Metadata Modified',
-        source: 'XMP ModifyDate'
+        source: 'XMP ModifyDate',
       },
       {
         timestamp: '2024-01-16 09:15:00',
         event_type: 'File Uploaded',
-        source: 'HTTP Headers'
-      }
+        source: 'HTTP Headers',
+      },
     ],
     gaps_detected: false,
-    chain_of_custody_complete: true
+    chain_of_custody_complete: true,
   };
 
   const defaultProps = {
     steganography: null,
     manipulation: null,
     aiDetection: null,
-    timeline: null
+    timeline: null,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    user = userEvent.setup();
   });
 
   describe('Empty State', () => {
     it('should show empty state when no analysis data', () => {
       render(<AdvancedAnalysisResults {...defaultProps} />);
 
-      expect(screen.getByText('No advanced analysis data available')).toBeInTheDocument();
-      expect(screen.getByText(/Advanced analysis requires Forensic or Enterprise tier/)).toBeInTheDocument();
+      expect(
+        screen.getByText('No advanced analysis data available')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Advanced analysis requires Forensic or Enterprise tier/
+        )
+      ).toBeInTheDocument();
     });
 
     it('should display shield icon in empty state', () => {
       render(<AdvancedAnalysisResults {...defaultProps} />);
 
-      const shieldIcon = document.querySelector('svg[data-lucide="shield"]') ||
-                        document.querySelector('svg[class*="shield"]');
+      const shieldIcon =
+        document.querySelector('svg[data-lucide="shield"]') ||
+        document.querySelector('svg[class*="shield"]');
       expect(shieldIcon).toBeInTheDocument();
     });
   });
@@ -105,7 +130,8 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText('Hidden Data Detected')).toBeInTheDocument();
+      const hiddenDataBadge = findBadgeWithText('Hidden Data Detected');
+      expect(hiddenDataBadge).toBeInTheDocument();
       expect(screen.getByText('85%')).toBeInTheDocument();
     });
 
@@ -131,8 +157,12 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText(/Potential LSB steganography detected/)).toBeInTheDocument();
-      expect(screen.getByText(/Unusual patterns in DCT coefficients/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Potential LSB steganography detected/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Unusual patterns in DCT coefficients/)
+      ).toBeInTheDocument();
     });
 
     it('should show negative result when no steganography detected', () => {
@@ -143,12 +173,13 @@ describe('AdvancedAnalysisResults', () => {
             ...mockSteganographyData,
             detected: false,
             confidence: 95,
-            findings: []
+            findings: [],
           }}
         />
       );
 
-      expect(screen.getByText('No Hidden Data')).toBeInTheDocument();
+      const noHiddenDataBadge = findBadgeWithText('No Hidden Data');
+      expect(noHiddenDataBadge).toBeInTheDocument();
       expect(screen.getByText('95%')).toBeInTheDocument();
     });
 
@@ -158,12 +189,12 @@ describe('AdvancedAnalysisResults', () => {
           {...defaultProps}
           steganography={{
             ...mockSteganographyData,
-            findings: []
+            findings: [],
           }}
         />
       );
 
-      expect(screen.getByText('Hidden Data Detected')).toBeInTheDocument();
+      expect(findBadgeWithText('Hidden Data Detected')).toBeInTheDocument();
     });
 
     it('should handle empty methods array', () => {
@@ -172,18 +203,18 @@ describe('AdvancedAnalysisResults', () => {
           {...defaultProps}
           steganography={{
             ...mockSteganographyData,
-            methods_checked: []
+            methods_checked: [],
           }}
         />
       );
 
-      expect(screen.getByText('Hidden Data Detected')).toBeInTheDocument();
+      expect(findBadgeWithText('Hidden Data Detected')).toBeInTheDocument();
       expect(screen.queryByText('Methods Analyzed:')).not.toBeInTheDocument();
     });
   });
 
   describe('Manipulation Detection', () => {
-    it('should display manipulation detection results', () => {
+    it('should display manipulation detection results', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -191,30 +222,41 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText('Manipulation Detected')).toBeInTheDocument();
+      // Click on the Manipulation tab first
+      const manipulationTab = screen.getByText('Manipulation');
+      await userEvent.click(manipulationTab);
+
+      const manipulationBadge = findBadgeWithText('Manipulation Detected');
+      expect(manipulationBadge).toBeInTheDocument();
       expect(screen.getByText('92%')).toBeInTheDocument();
     });
 
-    it('should show indicators with severity levels', () => {
+    it('should show indicators with severity levels', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           manipulation={mockManipulationData}
         />
       );
+
+      // Click on the Manipulation tab
+      await userEvent.click(screen.getByText('Manipulation'));
 
       expect(screen.getByText('JPEG Ghosts')).toBeInTheDocument();
       expect(screen.getByText('Lighting Inconsistency')).toBeInTheDocument();
       expect(screen.getByText('Noise Pattern Analysis')).toBeInTheDocument();
     });
 
-    it('should apply correct severity styling', () => {
+    it('should apply correct severity styling', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           manipulation={mockManipulationData}
         />
       );
+
+      // Click on the Manipulation tab
+      await userEvent.click(screen.getByText('Manipulation'));
 
       const highSeverityBadge = screen.getByText('HIGH');
       const mediumSeverityBadge = screen.getByText('MEDIUM');
@@ -225,7 +267,7 @@ describe('AdvancedAnalysisResults', () => {
       expect(lowSeverityBadge).toBeInTheDocument();
     });
 
-    it('should display indicator descriptions', () => {
+    it('should display indicator descriptions', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -233,12 +275,21 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText(/Evidence of multiple compression artifacts/)).toBeInTheDocument();
-      expect(screen.getByText(/Inconsistent lighting directions detected/)).toBeInTheDocument();
-      expect(screen.getByText(/Minor variations in noise patterns/)).toBeInTheDocument();
+      // Manipulation content is hidden until its tab is active
+      await user.click(screen.getByText('Manipulation'));
+
+      expect(
+        screen.getByText(/Evidence of multiple compression artifacts/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Inconsistent lighting directions detected/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Minor variations in noise patterns/)
+      ).toBeInTheDocument();
     });
 
-    it('should show negative result when no manipulation detected', () => {
+    it('should show negative result when no manipulation detected', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -246,32 +297,37 @@ describe('AdvancedAnalysisResults', () => {
             ...mockManipulationData,
             detected: false,
             confidence: 98,
-            indicators: []
+            indicators: [],
           }}
         />
       );
 
-      expect(screen.getByText('No Manipulation')).toBeInTheDocument();
+      await userEvent.click(screen.getByText('Manipulation'));
+
+      const noManipulationBadge = findBadgeWithText('No Manipulation');
+      expect(noManipulationBadge).toBeInTheDocument();
       expect(screen.getByText('98%')).toBeInTheDocument();
     });
 
-    it('should handle empty indicators array', () => {
+    it('should handle empty indicators array', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           manipulation={{
             ...mockManipulationData,
-            indicators: []
+            indicators: [],
           }}
         />
       );
 
-      expect(screen.getByText('Manipulation Detected')).toBeInTheDocument();
+      await userEvent.click(screen.getByText('Manipulation'));
+
+      expect(findBadgeWithText('Manipulation Detected')).toBeInTheDocument();
     });
   });
 
   describe('AI Detection', () => {
-    it('should display AI detection results', () => {
+    it('should display AI detection results', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -279,11 +335,15 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText('AI-Generated')).toBeInTheDocument();
+      // Click on the AI Detection tab
+      await userEvent.click(screen.getByText('AI Detection'));
+
+      const aiGeneratedBadge = findBadgeWithText('AI-Generated');
+      expect(aiGeneratedBadge).toBeInTheDocument();
       expect(screen.getByText('88%')).toBeInTheDocument();
     });
 
-    it('should show model hints', () => {
+    it('should show model hints', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -291,65 +351,80 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
+      // Click on the AI Detection tab
+      await userEvent.click(screen.getByText('AI Detection'));
+
       expect(screen.getByText('Model Indicators:')).toBeInTheDocument();
       expect(screen.getByText('GAN artifacts')).toBeInTheDocument();
-      expect(screen.getByText('Unnatural texture patterns')).toBeInTheDocument();
+      expect(
+        screen.getByText('Unnatural texture patterns')
+      ).toBeInTheDocument();
       expect(screen.getByText('AI-generated faces')).toBeInTheDocument();
     });
 
-    it('should show negative result when content is likely authentic', () => {
+    it('should show negative result when content is likely authentic', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           aiDetection={{
             ai_generated: false,
             confidence: 75,
-            model_hints: []
+            model_hints: [],
           }}
         />
       );
 
-      expect(screen.getByText('Likely Authentic')).toBeInTheDocument();
+      // Click on the AI Detection tab
+      await userEvent.click(screen.getByText('AI Detection'));
+
+      const authenticBadge = findBadgeWithText('Likely Authentic');
+      expect(authenticBadge).toBeInTheDocument();
       expect(screen.getByText('75%')).toBeInTheDocument();
     });
 
-    it('should handle empty model hints', () => {
+    it('should handle empty model hints', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           aiDetection={{
             ...mockAIDetectionData,
-            model_hints: []
+            model_hints: [],
           }}
         />
       );
 
+      // AI content is hidden until its tab is active
+      await user.click(screen.getByText('AI Detection'));
       expect(screen.getByText('AI-Generated')).toBeInTheDocument();
       expect(screen.queryByText('Model Indicators:')).not.toBeInTheDocument();
     });
   });
 
   describe('Timeline Analysis', () => {
-    it('should display timeline events', () => {
+    it('should display timeline events', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           timeline={mockTimelineData}
         />
       );
+
+      await userEvent.click(screen.getByText('Timeline'));
 
       expect(screen.getByText('File Created')).toBeInTheDocument();
       expect(screen.getByText('Metadata Modified')).toBeInTheDocument();
       expect(screen.getByText('File Uploaded')).toBeInTheDocument();
     });
 
-    it('should show event timestamps and sources', () => {
+    it('should show event timestamps and sources', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           timeline={mockTimelineData}
         />
       );
+
+      await user.click(screen.getByText('Timeline'));
 
       expect(screen.getByText('2024-01-15 10:30:00')).toBeInTheDocument();
       expect(screen.getByText('EXIF DateTimeOriginal')).toBeInTheDocument();
@@ -357,7 +432,7 @@ describe('AdvancedAnalysisResults', () => {
       expect(screen.getByText('XMP ModifyDate')).toBeInTheDocument();
     });
 
-    it('should display chain of custody status', () => {
+    it('should display chain of custody status', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -365,48 +440,56 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
+      await userEvent.click(screen.getByText('Timeline'));
+
       expect(screen.getByText('No Gaps')).toBeInTheDocument();
       expect(screen.getByText('Chain Complete')).toBeInTheDocument();
     });
 
-    it('should show negative status when gaps detected', () => {
+    it('should show negative status when gaps detected', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           timeline={{
             ...mockTimelineData,
-            gaps_detected: true
+            gaps_detected: true,
           }}
         />
       );
+
+      await userEvent.click(screen.getByText('Timeline'));
 
       expect(screen.getByText('Gaps Detected')).toBeInTheDocument();
     });
 
-    it('should show incomplete chain status', () => {
+    it('should show incomplete chain status', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           timeline={{
             ...mockTimelineData,
-            chain_of_custody_complete: false
+            chain_of_custody_complete: false,
           }}
         />
       );
+
+      await userEvent.click(screen.getByText('Timeline'));
 
       expect(screen.getByText('Chain Incomplete')).toBeInTheDocument();
     });
 
-    it('should handle empty events array', () => {
+    it('should handle empty events array', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
           timeline={{
             ...mockTimelineData,
-            events: []
+            events: [],
           }}
         />
       );
+
+      await userEvent.click(screen.getByText('Timeline'));
 
       expect(screen.getByText('No Gaps')).toBeInTheDocument();
     });
@@ -459,7 +542,7 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      const badge = screen.getByText('Hidden Data Detected');
+      const badge = findBadgeWithText('Hidden Data Detected');
       expect(badge).toHaveClass('bg-red-500/20');
     });
 
@@ -469,12 +552,12 @@ describe('AdvancedAnalysisResults', () => {
           {...defaultProps}
           steganography={{
             ...mockSteganographyData,
-            detected: false
+            detected: false,
           }}
         />
       );
 
-      const badge = screen.getByText('No Hidden Data');
+      const badge = findBadgeWithText('No Hidden Data');
       expect(badge).toHaveClass('bg-emerald-500/20');
     });
   });
@@ -519,10 +602,12 @@ describe('AdvancedAnalysisResults', () => {
     it('should handle null values gracefully', () => {
       render(<AdvancedAnalysisResults {...defaultProps} />);
 
-      expect(screen.getByText('No advanced analysis data available')).toBeInTheDocument();
+      expect(
+        screen.getByText('No advanced analysis data available')
+      ).toBeInTheDocument();
     });
 
-    it('should handle partial data (only some tabs populated)', () => {
+    it('should handle partial data (only some tabs populated)', async () => {
       render(
         <AdvancedAnalysisResults
           {...defaultProps}
@@ -530,8 +615,23 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText('Hidden Data Detected')).toBeInTheDocument();
-      expect(screen.getByText('Steganography analysis not available')).toBeInTheDocument();
+      expect(findBadgeWithText('Hidden Data Detected')).toBeInTheDocument();
+
+      // Other tabs should show "not available" messaging when their data is missing.
+      await user.click(screen.getByText('Manipulation'));
+      expect(
+        screen.getByText('Manipulation detection not available')
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByText('AI Detection'));
+      expect(
+        screen.getByText('AI detection not available')
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByText('Timeline'));
+      expect(
+        screen.getByText('Timeline analysis not available')
+      ).toBeInTheDocument();
     });
 
     it('should handle zero confidence values', () => {
@@ -540,7 +640,7 @@ describe('AdvancedAnalysisResults', () => {
           {...defaultProps}
           steganography={{
             ...mockSteganographyData,
-            confidence: 0
+            confidence: 0,
           }}
         />
       );
@@ -554,7 +654,7 @@ describe('AdvancedAnalysisResults', () => {
           {...defaultProps}
           steganography={{
             ...mockSteganographyData,
-            confidence: 100
+            confidence: 100,
           }}
         />
       );
@@ -568,7 +668,9 @@ describe('AdvancedAnalysisResults', () => {
           {...defaultProps}
           steganography={{
             ...mockSteganographyData,
-            findings: ['Finding with <script>alert("xss")</script> special chars']
+            findings: [
+              'Finding with <script>alert("xss")</script> special chars',
+            ],
           }}
         />
       );
@@ -576,7 +678,7 @@ describe('AdvancedAnalysisResults', () => {
       expect(screen.getByText(/Finding with/)).toBeInTheDocument();
     });
 
-    it('should handle very long indicator descriptions', () => {
+    it('should handle very long indicator descriptions', async () => {
       const longDescription = 'A'.repeat(500);
       render(
         <AdvancedAnalysisResults
@@ -587,13 +689,14 @@ describe('AdvancedAnalysisResults', () => {
               {
                 type: 'Test',
                 severity: 'low',
-                description: longDescription
-              }
-            ]
+                description: longDescription,
+              },
+            ],
           }}
         />
       );
 
+      await user.click(screen.getByText('Manipulation'));
       expect(screen.getByText(longDescription)).toBeInTheDocument();
     });
   });
@@ -608,7 +711,7 @@ describe('AdvancedAnalysisResults', () => {
       );
 
       const tabs = screen.getAllByRole('tab');
-      tabs.forEach(tab => {
+      tabs.forEach((tab) => {
         expect(tab).toBeVisible();
       });
     });
@@ -622,7 +725,7 @@ describe('AdvancedAnalysisResults', () => {
       );
 
       const progressBars = screen.getAllByRole('progressbar');
-      progressBars.forEach(bar => {
+      progressBars.forEach((bar) => {
         expect(bar).toBeVisible();
       });
     });
@@ -650,7 +753,9 @@ describe('AdvancedAnalysisResults', () => {
       );
 
       expect(screen.getByText('Forensic Analysis')).toBeInTheDocument();
-      expect(screen.getByText(/Deep analysis for authenticity/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Deep analysis for authenticity/)
+      ).toBeInTheDocument();
     });
 
     it('should display fingerprint icon', () => {
@@ -661,14 +766,15 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      const fingerprintIcon = document.querySelector('svg[data-lucide="fingerprint"]') ||
-                              document.querySelector('svg[class*="fingerprint"]');
+      const fingerprintIcon =
+        document.querySelector('svg[data-lucide="fingerprint"]') ||
+        document.querySelector('svg[class*="fingerprint"]');
       expect(fingerprintIcon).toBeInTheDocument();
     });
   });
 
   describe('Component Integration', () => {
-    it('should render all analysis types together', () => {
+    it('should render all analysis types together', async () => {
       render(
         <AdvancedAnalysisResults
           steganography={mockSteganographyData}
@@ -679,13 +785,19 @@ describe('AdvancedAnalysisResults', () => {
       );
 
       expect(screen.getByText('Forensic Analysis')).toBeInTheDocument();
-      expect(screen.getByText('Hidden Data Detected')).toBeInTheDocument();
-      expect(screen.getByText('Manipulation Detected')).toBeInTheDocument();
-      expect(screen.getByText('AI-Generated')).toBeInTheDocument();
+      expect(findBadgeWithText('Hidden Data Detected')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Manipulation'));
+      expect(findBadgeWithText('Manipulation Detected')).toBeInTheDocument();
+
+      await user.click(screen.getByText('AI Detection'));
+      expect(findBadgeWithText('AI-Generated')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Timeline'));
       expect(screen.getByText('No Gaps')).toBeInTheDocument();
     });
 
-    it('should handle mixed positive and negative results', () => {
+    it('should handle mixed positive and negative results', async () => {
       render(
         <AdvancedAnalysisResults
           steganography={{ ...mockSteganographyData, detected: true }}
@@ -695,9 +807,15 @@ describe('AdvancedAnalysisResults', () => {
         />
       );
 
-      expect(screen.getByText('Hidden Data Detected')).toBeInTheDocument();
-      expect(screen.getByText('No Manipulation')).toBeInTheDocument();
-      expect(screen.getByText('Likely Authentic')).toBeInTheDocument();
+      expect(findBadgeWithText('Hidden Data Detected')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Manipulation'));
+      expect(findBadgeWithText('No Manipulation')).toBeInTheDocument();
+
+      await user.click(screen.getByText('AI Detection'));
+      expect(findBadgeWithText('Likely Authentic')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Timeline'));
       expect(screen.getByText('Chain Complete')).toBeInTheDocument();
     });
   });

@@ -175,7 +175,7 @@ describe('Tutorial Overlay Property Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.boolean(), // isSkippable
-        async (isSkippable) => {
+        async (_isSkippable) => {
           const onClose = jest.fn();
 
           // The onClose handler should be a function

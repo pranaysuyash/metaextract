@@ -14,9 +14,18 @@ if (isDatabaseConfigured) {
       connectionString: process.env.DATABASE_URL,
     });
     db = drizzle(pool, { schema });
+
+    // Export a cleanup function for tests
+    (db as any).$pool = pool;
   } catch (error) {
     console.error("Failed to initialize database:", error);
   }
 }
 
 export { db };
+
+export async function closeDatabase() {
+  if (db && (db as any).$pool) {
+    await (db as any).$pool.end();
+  }
+}

@@ -195,6 +195,11 @@ tesseract --version  # Check if installed
 - Check if text is too stylized
 - Try different image
 
+**OCR fails on temp uploads?**
+
+- Set `METAEXTRACT_OCR_TMP_DIR` to a readable directory
+- The extractor will copy the image there before running OCR
+
 ## Documentation
 
 - **Quick Start**: This file

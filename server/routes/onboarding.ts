@@ -1,11 +1,11 @@
 /**
  * Onboarding API Routes
- * 
+ *
  * Handles onboarding session management, progress tracking, and user profile persistence.
  */
 
 import type { Express, Request, Response } from 'express';
-import { storage } from '../storage';
+import { storage } from '../storage/index';
 import type { AuthRequest } from '../auth';
 
 // ============================================================================
@@ -57,7 +57,7 @@ async function getOnboardingStatus(req: Request, res: Response) {
       hasSession: !!session,
       session: session || null,
       isComplete: session?.completedAt != null,
-      isActive: session?.isActive || false
+      isActive: session?.isActive || false,
     });
   } catch (error) {
     console.error('Failed to get onboarding status:', error);
@@ -77,17 +77,16 @@ async function startOnboarding(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { id, pathId, userProfile, progress, interactions } = req.body;
+    const { pathId, userProfile, progress, interactions } = req.body;
 
-    if (!id || !pathId || !userProfile) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: id, pathId, userProfile' 
+    if (!pathId || !userProfile) {
+      return res.status(400).json({
+        error: 'Missing required fields: pathId, userProfile',
       });
     }
 
     // Create new onboarding session
     const session = await storage.createOnboardingSession({
-      id,
       userId,
       startedAt: new Date(),
       currentStep: 0,
@@ -95,12 +94,12 @@ async function startOnboarding(req: Request, res: Response) {
       userProfile: JSON.stringify(userProfile),
       progress: JSON.stringify(progress || {}),
       interactions: JSON.stringify(interactions || []),
-      isActive: true
+      isActive: true,
     });
 
     res.json({
       success: true,
-      session
+      session,
     });
   } catch (error) {
     console.error('Failed to start onboarding:', error);
@@ -120,7 +119,7 @@ async function updateProgress(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { session, interaction } = req.body;
+    const { session } = req.body;
 
     if (!session) {
       return res.status(400).json({ error: 'Session data required' });
@@ -131,14 +130,14 @@ async function updateProgress(req: Request, res: Response) {
       currentStep: session.progress.currentStepIndex,
       progress: JSON.stringify(session.progress),
       interactions: JSON.stringify(session.interactions),
-      isActive: session.isActive
+      isActive: session.isActive,
     });
 
     res.json({
       success: true,
-      message: 'Progress updated successfully'
+      message: 'Progress updated successfully',
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Failed to update progress:', error);
     res.status(500).json({ error: 'Failed to update onboarding progress' });
   }
@@ -163,14 +162,14 @@ async function pauseOnboarding(req: Request, res: Response) {
     }
 
     await storage.updateOnboardingSession(sessionId, {
-      isActive: false
+      isActive: false,
     });
 
     res.json({
       success: true,
-      message: 'Onboarding paused'
+      message: 'Onboarding paused',
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Failed to pause onboarding:', error);
     res.status(500).json({ error: 'Failed to pause onboarding' });
   }
@@ -195,14 +194,14 @@ async function resumeOnboarding(req: Request, res: Response) {
     }
 
     await storage.updateOnboardingSession(sessionId, {
-      isActive: true
+      isActive: true,
     });
 
     res.json({
       success: true,
-      message: 'Onboarding resumed'
+      message: 'Onboarding resumed',
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Failed to resume onboarding:', error);
     res.status(500).json({ error: 'Failed to resume onboarding' });
   }
@@ -228,14 +227,14 @@ async function completeOnboarding(req: Request, res: Response) {
 
     await storage.updateOnboardingSession(sessionId, {
       completedAt: new Date(),
-      isActive: false
+      isActive: false,
     });
 
     res.json({
       success: true,
-      message: 'Onboarding completed'
+      message: 'Onboarding completed',
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Failed to complete onboarding:', error);
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
@@ -258,7 +257,7 @@ async function getOnboardingAnalytics(req: Request, res: Response) {
     if (!session) {
       return res.json({
         hasData: false,
-        analytics: null
+        analytics: null,
       });
     }
 
@@ -277,10 +276,10 @@ async function getOnboardingAnalytics(req: Request, res: Response) {
         pathId: session.pathId,
         isComplete: !!session.completedAt,
         startedAt: session.startedAt,
-        completedAt: session.completedAt
-      }
+        completedAt: session.completedAt,
+      },
     });
-  } catch (error) {
+  } catch (_error) {
     console.error('Failed to get onboarding analytics:', error);
     res.status(500).json({ error: 'Failed to retrieve analytics' });
   }

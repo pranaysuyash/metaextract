@@ -42,7 +42,7 @@ class GeocodeCache:
             with open(self.cache_file, 'w') as f:
                 json.dump(self._cache, f)
         except Exception as e:
-            pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+            logger.debug(f"Failed to perform location lookup: {e}")
     
     def get(self, lat: float, lon: float) -> Optional[Dict[str, Any]]:
         """Get cached result."""

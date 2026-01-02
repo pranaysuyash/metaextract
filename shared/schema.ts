@@ -141,3 +141,24 @@ export const insertOnboardingSessionSchema = createInsertSchema(onboardingSessio
 
 export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
 export type OnboardingSession = typeof onboardingSessions.$inferSelect;
+
+// ============================================================================
+// Trial Usage Tracking Schema
+// ============================================================================
+
+export const trialUsages = pgTable("trial_usages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  usedAt: timestamp("used_at").notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: text("session_id"),
+});
+
+export const insertTrialUsageSchema = createInsertSchema(trialUsages).omit({
+  id: true,
+  usedAt: true,
+});
+
+export type InsertTrialUsage = z.infer<typeof insertTrialUsageSchema>;
+export type TrialUsage = typeof trialUsages.$inferSelect;

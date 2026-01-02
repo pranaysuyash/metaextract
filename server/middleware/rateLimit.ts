@@ -55,7 +55,8 @@ function getClientKey(req: Request): string {
     return `user:${authReq.user.id}`;
   }
 
-  const ip = req.ip ||
+  const ip =
+    req.ip ||
     req.headers['x-forwarded-for']?.toString().split(',')[0] ||
     req.socket.remoteAddress ||
     'unknown';
@@ -135,18 +136,22 @@ export function createRateLimiter(options?: {
       res.setHeader('Retry-After', retryAfter);
       res.setHeader('X-RateLimit-Limit', limits.requestsPerMinute);
       res.setHeader('X-RateLimit-Remaining', 0);
-      res.setHeader('X-RateLimit-Reset', Math.ceil((entry.windowStart + windowMs) / 1000));
+      res.setHeader(
+        'X-RateLimit-Reset',
+        Math.ceil((entry.windowStart + windowMs) / 1000)
+      );
 
       res.status(429).json({
         error: 'Too many requests',
         message: `Rate limit exceeded. Maximum ${limits.requestsPerMinute} requests per minute for ${tier} tier.`,
         tier,
         retry_after_seconds: retryAfter,
-        upgrade_message: tier === 'free'
-          ? 'Upgrade to Professional for higher rate limits'
-          : tier === 'professional'
-          ? 'Upgrade to Forensic for higher rate limits'
-          : undefined,
+        upgrade_message:
+          tier === 'free'
+            ? 'Upgrade to Professional for higher rate limits'
+            : tier === 'professional'
+            ? 'Upgrade to Forensic for higher rate limits'
+            : undefined,
       });
       return;
     }
@@ -164,9 +169,10 @@ export function createRateLimiter(options?: {
         message: `Daily limit of ${limits.requestsPerDay} requests exceeded for ${tier} tier.`,
         tier,
         reset_at: nextDay.toISOString(),
-        upgrade_message: tier === 'free'
-          ? 'Upgrade to Professional for unlimited daily extractions'
-          : undefined,
+        upgrade_message:
+          tier === 'free'
+            ? 'Upgrade to Professional for unlimited daily extractions'
+            : undefined,
       });
       return;
     }
@@ -177,20 +183,29 @@ export function createRateLimiter(options?: {
 
     // Set rate limit headers
     res.setHeader('X-RateLimit-Limit', limits.requestsPerMinute);
-    res.setHeader('X-RateLimit-Remaining', Math.max(0, limits.requestsPerMinute - entry.count));
-    res.setHeader('X-RateLimit-Reset', Math.ceil((entry.windowStart + windowMs) / 1000));
+    res.setHeader(
+      'X-RateLimit-Remaining',
+      Math.max(0, limits.requestsPerMinute - entry.count)
+    );
+    res.setHeader(
+      'X-RateLimit-Reset',
+      Math.ceil((entry.windowStart + windowMs) / 1000)
+    );
     res.setHeader('X-RateLimit-Daily-Limit', limits.requestsPerDay);
-    res.setHeader('X-RateLimit-Daily-Remaining', Math.max(0, limits.requestsPerDay - entry.dailyCount));
+    res.setHeader(
+      'X-RateLimit-Daily-Remaining',
+      Math.max(0, limits.requestsPerDay - entry.dailyCount)
+    );
 
     // Handle response to decrement on failure if configured
     if (skipFailedRequests) {
       const originalEnd = res.end;
-      res.end = function(...args: any[]) {
+      res.end = function (...args: any[]) {
         if (res.statusCode >= 400) {
           entry!.count = Math.max(0, entry!.count - 1);
           entry!.dailyCount = Math.max(0, entry!.dailyCount - 1);
         }
-        return originalEnd.apply(res, args);
+        return (originalEnd as any).apply(res, args as any);
       };
     }
 
@@ -223,7 +238,8 @@ export const extractionRateLimiter = createRateLimiter({
 export const authRateLimiter = createRateLimiter({
   windowMs: 300000, // 5 minutes
   keyGenerator: (req) => {
-    const ip = req.ip ||
+    const ip =
+      req.ip ||
       req.headers['x-forwarded-for']?.toString().split(',')[0] ||
       'unknown';
     return `auth:${ip}`;

@@ -21,6 +21,19 @@ MetaExtract now includes several powerful advanced features that significantly e
 - Support for multiple dependency declaration methods
 - Integration with parallel execution
 
+### 4. **Hot Reloading System** 🔄
+- Automatic reload of modules during development
+- Configurable reload intervals to prevent excessive reloading
+- Thread-safe execution with proper locking mechanisms
+- Integration with file system watching for automatic detection
+
+### 5. **Plugin System** 🧩
+- Support for third-party extensions and custom modules
+- Directory-based and single-file plugin support
+- Automatic plugin discovery and loading
+- Plugin metadata extraction and validation
+- Plugin enable/disable/reload management
+
 ## 🏃‍♂️ Parallel Execution Engine
 
 ### Overview
@@ -599,6 +612,159 @@ dependency_order = get_dependency_order_global()
 # Create execution wrapper
 wrapper = create_safe_execution_wrapper(safe_extract_module)
 ```
+
+## 🔄 Hot Reloading System
+
+### Overview
+
+The **Hot Reloading System** enables developers to modify modules and have them automatically reloaded without restarting the entire system, significantly improving development productivity.
+
+### Key Features
+
+- **File System Watching**: Uses `watchdog` to monitor module directories
+- **Automatic Reloading**: Modules reload automatically when files change
+- **Configurable Intervals**: Minimum reload interval to prevent excessive reloading
+- **Thread-Safe**: Proper locking mechanisms for safe concurrent access
+- **Integration**: Works seamlessly with existing module system
+
+### Configuration
+
+```python
+from server.extractor.module_discovery import enable_hot_reloading_global
+
+# Enable hot reloading with 1 second minimum interval
+enable_hot_reloading_global(True, "server/extractor/modules/", min_interval=1.0)
+
+# Disable hot reloading
+enable_hot_reloading_global(False)
+```
+
+### Usage
+
+```python
+# Hot reload a specific module
+from server.extractor.module_discovery import hot_reload_module_global
+hot_reload_module_global("my_module")
+
+# Hot reload all modules
+from server.extractor.module_discovery import hot_reload_all_modules_global
+hot_reload_all_modules_global()
+
+# Get hot reload statistics
+from server.extractor.module_discovery import get_hot_reload_stats_global
+stats = get_hot_reload_stats_global()
+```
+
+### Benefits
+
+1. **Development Productivity**: No need to restart for module changes
+2. **Real-time Updates**: Changes take effect immediately
+3. **Safe Execution**: Thread-safe with proper error handling
+4. **Configurable**: Adjustable reload intervals and watch paths
+5. **Monitoring**: Comprehensive statistics and success rates
+
+## 🧩 Plugin System
+
+### Overview
+
+The **Plugin System** enables third-party extensions and custom modules, allowing developers to extend MetaExtract's functionality without modifying the core system.
+
+### Key Features
+
+- **Directory-based Plugins**: Support for plugins with `__init__.py`
+- **Single-file Plugins**: Simple plugins in single Python files
+- **Automatic Discovery**: Plugins discovered automatically in configured paths
+- **Metadata Extraction**: Comprehensive plugin metadata support
+- **Dependency Management**: Plugins can declare dependencies on other modules
+
+### Plugin Structure
+
+```
+my_plugin/
+├── __init__.py          # Main plugin file
+├── README.md           # Plugin documentation
+└── requirements.txt    # Optional dependencies
+```
+
+### Creating a Plugin
+
+```python
+# my_plugin/__init__.py
+
+# Plugin metadata
+PLUGIN_VERSION = "1.0.0"
+PLUGIN_AUTHOR = "Your Name"
+PLUGIN_DESCRIPTION = "My custom plugin"
+PLUGIN_LICENSE = "MIT"
+
+# Optional: Dynamic metadata
+def get_plugin_metadata():
+    return {
+        "version": PLUGIN_VERSION,
+        "website": "https://example.com"
+    }
+
+# Extraction function
+def extract_custom_metadata(filepath: str) -> dict:
+    return {"custom": {"data": "value"}}
+
+# Optional: Dependencies
+MODULE_DEPENDENCIES = ["base_metadata"]
+```
+
+### Plugin Management
+
+```python
+# Enable plugin system
+from server.extractor.module_discovery import enable_plugins_global
+enable_plugins_global(True, ["plugins/", "external_plugins/"])
+
+# Discover and load plugins
+from server.extractor.module_discovery import discover_and_load_plugins_global
+discover_and_load_plugins_global()
+
+# Get plugin information
+from server.extractor.module_discovery import get_plugin_info_global
+plugin_info = get_plugin_info_global("my_plugin")
+
+# Enable/disable plugins
+from server.extractor.module_discovery import enable_plugin_global, disable_plugin_global
+enable_plugin_global("my_plugin")
+disable_plugin_global("my_plugin")
+
+# Reload plugins
+from server.extractor.module_discovery import reload_plugin_global
+reload_plugin_global("my_plugin")
+
+# Get plugin statistics
+from server.extractor.module_discovery import get_plugin_stats_global
+plugin_stats = get_plugin_stats_global()
+```
+
+### Plugin Statistics
+
+```json
+{
+  "plugins": {
+    "plugins_enabled": true,
+    "plugin_paths": ["plugins/", "external_plugins/"],
+    "plugins_loaded": 5,
+    "plugins_failed": 0,
+    "plugin_discovery_time": 0.452,
+    "loaded_plugins": ["plugin1", "plugin2"],
+    "failed_plugins": [],
+    "success_rate": 1.0
+  }
+}
+```
+
+### Benefits
+
+1. **Extensibility**: Add custom functionality without modifying core
+2. **Isolation**: Plugins run in their own context
+3. **Maintainability**: Easy to update and replace
+4. **Performance**: Integrates with parallel execution
+5. **Compatibility**: Works with all MetaExtract features
 
 ## 🎉 Conclusion
 

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+coverage/
+*.min.js
+*.min.css
+.DS_Store
+.env
+.env.local
+.env.production
+.env.development
+.vscode/
+.idea/
+.nyc_output/
+tmp/
+temp/

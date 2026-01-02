@@ -271,7 +271,7 @@ def extract_icc_profile_metadata(filepath: str) -> Optional[Dict[str, Any]]:
                             result["profile_details"]["can_serialize"] = True
                             
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to parse ICC color profile: {e}")
                 
                 result["color_space_data"]["mode"] = img.mode
                 

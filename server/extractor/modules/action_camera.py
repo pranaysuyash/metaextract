@@ -6,6 +6,9 @@ Extract metadata from GoPro, Sony Action Cam, Insta360, DJI Osmo, and other acti
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def extract_action_camera_metadata(filepath: str) -> Optional[Dict[str, Any]]:
@@ -52,7 +55,7 @@ def extract_action_camera_metadata(filepath: str) -> Optional[Dict[str, Any]]:
             result["fields_extracted"] = len(result.get("action_specific", {}))
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_action_camera_metadata: %s", e)
 
     return result
 
@@ -76,7 +79,7 @@ def extract_gopro_metadata(filepath: str, exif_data: Dict, result: Dict) -> Dict
                     if tag in [37500, 37510, 37520, 37530]:
                         gopro_data[f"gopro_tag_{tag}"] = str(value)[:100]
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_gopro_metadata: %s", e)
 
     if 36867 in exif_data:
         date_str = exif_data[36867]
@@ -297,7 +300,7 @@ def detect_action_camera(filepath: str) -> Dict[str, Any]:
                         break
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_insta360_metadata: %s", e)
 
     return result
 
@@ -328,7 +331,7 @@ def extract_gopro_gps_data(filepath: str) -> Optional[Dict[str, Any]]:
                         break
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_dji_osmo_metadata: %s", e)
 
     return result
 
@@ -359,6 +362,6 @@ def extract_action_camera_settings(filepath: str) -> Optional[Dict[str, Any]]:
                 settings["f_number"] = exif_data[37121]
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in extract_generic_action_metadata: %s", e)
 
     return settings if settings else None

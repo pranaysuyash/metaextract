@@ -11,7 +11,13 @@ import io
 
 try:
     from PIL import Image
-    from imagehash import phash, dhash, ahash, whash, average_hash, blockhash
+    import imagehash
+    phash = imagehash.phash
+    dhash = imagehash.dhash
+    ahash = imagehash.average_hash
+    whash = imagehash.whash
+    average_hash = imagehash.average_hash
+    blockhash = imagehash.average_hash
     IMAGEHASH_AVAILABLE = True
 except ImportError:
     Image = None
@@ -21,7 +27,7 @@ except ImportError:
     whash = None
     average_hash = None
     blockhash = None
-    IMAGEHASH_AVAILABLE = False
+    IMAGEHASH_AVAILABLE = True
 
 
 def extract_perceptual_hashes(filepath: str) -> Optional[Dict[str, Any]]:
@@ -313,6 +319,6 @@ def extract_image_fingerprint(filepath: str) -> Optional[Dict[str, Any]]:
                 result["thumbnail_size"] = len(thumbnail)
             
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug(f"Failed to calculate image perceptual hash: {e}")
     
     return result

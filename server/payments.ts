@@ -4,7 +4,7 @@ import { db } from './db';
 import { users, subscriptions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
-import { storage } from './storage';
+import { storage } from './storage/index';
 import { normalizeTier } from '@shared/tierConfig';
 
 // ============================================================================
@@ -132,13 +132,13 @@ export function registerPaymentRoutes(app: Express) {
         }
 
         const normalizedTier = normalizeTier(requestedTier);
-        const productId = (DODO_SUBSCRIPTION_PRODUCTS as Record<string, string>)[normalizedTier];
+        const productId = (
+          DODO_SUBSCRIPTION_PRODUCTS as Record<string, string>
+        )[normalizedTier];
         if (!productId) {
-          return res
-            .status(400)
-            .json({
-              error: `Product not configured for tier: ${normalizedTier}`,
-            });
+          return res.status(400).json({
+            error: `Product not configured for tier: ${normalizedTier}`,
+          });
         }
 
         const baseUrl = getBaseUrl();
@@ -350,6 +350,14 @@ export function registerPaymentRoutes(app: Express) {
 
   app.get('/api/subscription/status', async (req: Request, res: Response) => {
     try {
+      if (!db) {
+        return res.status(503).json({
+          error: 'Database not available',
+          message:
+            'Please configure DATABASE_URL to enable subscription status',
+        });
+      }
+
       const userId = req.query.userId as string;
 
       if (!userId) {
@@ -377,6 +385,14 @@ export function registerPaymentRoutes(app: Express) {
     try {
       if (!dodoClient) {
         return res.status(503).json({ error: 'Payment system not configured' });
+      }
+
+      if (!db) {
+        return res.status(503).json({
+          error: 'Database not available',
+          message:
+            'Please configure DATABASE_URL to enable subscription cancellation',
+        });
       }
 
       const { userId } = req.body;
@@ -495,6 +511,11 @@ export function registerPaymentRoutes(app: Express) {
 // ============================================================================
 
 async function handleSubscriptionActive(subscription: any) {
+  if (!db) {
+    console.warn('handleSubscriptionActive skipped: database not configured');
+    return;
+  }
+
   const { subscription_id, customer, metadata } = subscription;
   const tier = normalizeTier(metadata?.tier || 'enterprise');
   const userId = metadata?.user_id;
@@ -536,6 +557,11 @@ async function handleSubscriptionActive(subscription: any) {
 }
 
 async function handleSubscriptionOnHold(subscription: any) {
+  if (!db) {
+    console.warn('handleSubscriptionOnHold skipped: database not configured');
+    return;
+  }
+
   const { subscription_id } = subscription;
 
   console.log(`Subscription ${subscription_id} on hold`);
@@ -559,6 +585,11 @@ async function handleSubscriptionOnHold(subscription: any) {
 }
 
 async function handleSubscriptionFailed(subscription: any) {
+  if (!db) {
+    console.warn('handleSubscriptionFailed skipped: database not configured');
+    return;
+  }
+
   const { subscription_id } = subscription;
 
   console.log(`Subscription ${subscription_id} failed`);
@@ -585,6 +616,11 @@ async function handleSubscriptionFailed(subscription: any) {
 }
 
 async function handleSubscriptionRenewed(subscription: any) {
+  if (!db) {
+    console.warn('handleSubscriptionRenewed skipped: database not configured');
+    return;
+  }
+
   const { subscription_id } = subscription;
 
   console.log(`Subscription ${subscription_id} renewed`);
@@ -599,6 +635,13 @@ async function handleSubscriptionRenewed(subscription: any) {
 }
 
 async function handleSubscriptionCancelled(subscription: any) {
+  if (!db) {
+    console.warn(
+      'handleSubscriptionCancelled skipped: database not configured'
+    );
+    return;
+  }
+
   const { subscription_id } = subscription;
 
   console.log(`Subscription ${subscription_id} cancelled`);

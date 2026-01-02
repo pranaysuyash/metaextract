@@ -800,11 +800,11 @@ def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
         result["error"] = str(e)[:200]
         return result
 
-            result["is_valid_audio"] = True
-            result["audio_format"] = type(audio_file).__name__
+    result["is_valid_audio"] = True
+    result["audio_format"] = type(audio_file).__name__
 
-            # Extract ID3v2 frames
-            if hasattr(audio_file, 'tags') and audio_file.tags:
+    # Extract ID3v2 frames
+    if hasattr(audio_file, 'tags') and audio_file.tags:
                 try:
                     # Try ID3 frames
                     if isinstance(audio_file, ID3) or (hasattr(audio_file, 'tags') and any(isinstance(t, ID3) for t in [audio_file.tags] if not isinstance(audio_file.tags, dict))):

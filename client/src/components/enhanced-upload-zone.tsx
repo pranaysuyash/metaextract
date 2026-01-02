@@ -17,12 +17,14 @@ import {
   AlertCircle,
   Loader2,
   Zap,
-  Clock
+  Clock,
+  Timer
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeFile, type FileAnalysis } from "@/utils/fileAnalysis";
+import { estimateProcessingTime, type ProcessingEstimate } from "@/utils/processingEstimates";
 
 interface FileState {
   file: File;
@@ -33,6 +35,7 @@ interface FileState {
   result?: any;
   error?: string;
   analysis?: FileAnalysis; // File type analysis with warnings/suggestions
+  estimate?: ProcessingEstimate; // Processing time estimate
 }
 
 interface EnhancedUploadZoneProps {
@@ -40,6 +43,7 @@ interface EnhancedUploadZoneProps {
   tier: string;
   maxFiles?: number;
   className?: string;
+  advanced?: boolean;
 }
 
 const ACCEPTED_TYPES = {
@@ -165,7 +169,8 @@ export function EnhancedUploadZone({
   onResults,
   tier,
   maxFiles = 10,
-  className
+  className,
+  advanced = false
 }: EnhancedUploadZoneProps) {
   const [files, setFiles] = useState<FileState[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -185,22 +190,28 @@ export function EnhancedUploadZone({
       });
     });
 
-    // Add accepted files with analysis
+    // Add accepted files with analysis and estimates
     const newFilesPromises = acceptedFiles.map(async (file) => {
-      const analysis = await analyzeFile(file);
+      // Run analysis and estimation in parallel
+      const [analysis, estimate] = await Promise.all([
+        analyzeFile(file),
+        Promise.resolve(estimateProcessingTime(file, tier as any)) // Sync but wrapped for consistency
+      ]);
+
       return {
         file,
         id: crypto.randomUUID(),
         status: 'pending' as const,
         progress: 0,
         preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
-        analysis
+        analysis,
+        estimate
       };
     });
 
     const newFiles = await Promise.all(newFilesPromises);
     setFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
-  }, [maxFiles, toast]);
+  }, [maxFiles, toast, tier]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -247,7 +258,8 @@ export function EnhancedUploadZone({
         const formData = new FormData();
         formData.append('file', fileState.file);
 
-        const response = await fetch(`/api/extract?tier=${tier}`, {
+        const endpoint = advanced ? '/api/extract/advanced' : '/api/extract';
+        const response = await fetch(`${endpoint}?tier=${tier}`, {
           method: 'POST',
           body: formData,
           signal: abortControllerRef.current.signal
@@ -367,7 +379,13 @@ export function EnhancedUploadZone({
           : "border-muted-foreground/25 hover:border-muted-foreground/50"
       )}>
         <CardContent className="p-8">
-          <div {...getRootProps()} className="text-center cursor-pointer">
+          <div
+            {...getRootProps()}
+            className="text-center cursor-pointer"
+            role="button"
+            aria-label="Upload files for metadata extraction"
+            tabIndex={0}
+          >
             <input {...getInputProps()} />
 
             <motion.div
@@ -376,6 +394,7 @@ export function EnhancedUploadZone({
                 rotate: dragActive ? 5 : 0
               }}
               className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center"
+              aria-hidden="true"
             >
               <Upload className={cn(
                 "w-8 h-8 transition-colors",
@@ -429,12 +448,22 @@ export function EnhancedUploadZone({
               <h4 className="font-medium">Files ({files.length})</h4>
               <div className="flex gap-2">
                 {!isProcessing && files.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={clearAll}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAll}
+                    aria-label="Clear all files from upload list"
+                  >
                     Clear All
                   </Button>
                 )}
                 {isProcessing && (
-                  <Button variant="outline" size="sm" onClick={cancelProcessing}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelProcessing}
+                    aria-label="Cancel file processing"
+                  >
                     Cancel
                   </Button>
                 )}
@@ -478,6 +507,12 @@ export function EnhancedUploadZone({
                         <Badge variant="outline" className="text-xs">
                           {formatFileSize(fileState.file.size)}
                         </Badge>
+                        {fileState.estimate && fileState.status === 'pending' && (
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            <Timer className="w-3 h-3" />
+                            {fileState.estimate.displayText}
+                          </Badge>
+                        )}
                       </div>
 
                       {/* Progress Bar */}
@@ -546,8 +581,9 @@ export function EnhancedUploadZone({
                           size="sm"
                           onClick={() => removeFile(fileState.id)}
                           className="h-8 w-8 p-0"
+                          aria-label={`Remove ${fileState.file.name}`}
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-4 h-4" aria-hidden="true" />
                         </Button>
                       )}
                     </div>
@@ -567,8 +603,9 @@ export function EnhancedUploadZone({
                   onClick={processFiles}
                   className="w-full"
                   size="lg"
+                  aria-label={`Extract metadata from ${files.filter(f => f.status === 'pending').length} files`}
                 >
-                  <Zap className="w-4 h-4 mr-2" />
+                  <Zap className="w-4 h-4 mr-2" aria-hidden="true" />
                   Extract Metadata ({files.filter(f => f.status === 'pending').length} files)
                 </Button>
               </motion.div>

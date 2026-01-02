@@ -1,8 +1,14 @@
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+// Polyfill for Node.js globals in server tests
+(global as any).TextEncoder = TextEncoder;
+(global as any).TextDecoder = TextDecoder;
 
 // Mock environment variables
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/metaextract_test';
+process.env.DATABASE_URL =
+  'postgresql://test:test@localhost:5432/metaextract_test';
 process.env.SESSION_SECRET = 'test-session-secret-for-testing';
 
 // Mock fetch globally
@@ -10,14 +16,16 @@ global.fetch = jest.fn();
 
 // Mock crypto.randomUUID for Node.js environment
 global.crypto = {
-  randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9)
+  randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9),
 } as any;
 
-// Mock document.cookie for auth system
-Object.defineProperty(document, 'cookie', {
-  writable: true,
-  value: ''
-});
+// Mock document.cookie for auth system (jsdom only)
+if (typeof document !== 'undefined') {
+  Object.defineProperty(document, 'cookie', {
+    writable: true,
+    value: '',
+  });
+}
 
 // Mock toast hook
 jest.mock('@/hooks/use-toast', () => ({
@@ -49,20 +57,22 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+// Mock window.matchMedia (jsdom only)
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+}
 
 // Reset mocks before each test
 beforeEach(() => {
@@ -104,6 +114,13 @@ beforeAll(() => {
   };
 });
 
-afterAll(() => {
+afterAll(async () => {
   console.error = originalError;
+  // Cleanup database handles to allow Jest to exit
+  try {
+    const { closeDatabase } = require('../server/db');
+    await closeDatabase();
+  } catch (e) {
+    // Ignore if not a server test or if db module not found
+  }
 });

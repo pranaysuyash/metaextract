@@ -15,7 +15,7 @@ jobs:
   # Frontend Build and Test
   # =========================================================================
   frontend:
-    name: Frontend (Node ${{ env.NODE_VERSION }})
+    name: Frontend (Node 20)
     runs-on: ubuntu-latest
 
     steps:
@@ -57,7 +57,7 @@ jobs:
   # Backend Python Tests
   # =========================================================================
   backend:
-    name: Backend (Python ${{ env.PYTHON_VERSION }})
+    name: Backend (Python 3.11)
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -107,7 +107,7 @@ def extract_extended_attributes(filepath: str) -> Dict[str, Any]:
                     import base64
                     attrs[key.decode() if isinstance(key, bytes) else key] = base64.b64encode(value).decode()
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to read file statistics: {e}")
         
         return {
             "available": True,

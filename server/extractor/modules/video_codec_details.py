@@ -11,7 +11,15 @@ import json
 import struct
 import re
 
+# Dynamic import handling for both normal and module loading
+try:
+    from shared_utils import count_fields as _count_fields
+except ImportError:
+    try:
 from .shared_utils import count_fields as _count_fields
+    except ImportError:
+        # Fallback - define stub function
+        def _count_fields(d): return 0
 
 
 # H.264 Profile IDC Mappings

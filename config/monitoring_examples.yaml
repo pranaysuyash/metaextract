@@ -1,0 +1,219 @@
+# Example Monitoring and Alerting Configuration for MetaExtract
+
+# This file provides examples of how to configure monitoring and alerting for different scenarios
+
+# Example 1: Basic Monitoring Setup
+basic_monitoring:
+  # Enable basic metrics collection
+  metrics:
+    enabled: true
+    collection_interval: 60  # Collect metrics every minute
+    retention_days: 7        # Keep metrics for 7 days
+  
+  # Enable basic performance tracking
+  performance:
+    enabled: true
+    outlier_threshold: 10000  # Flag processing times over 10 seconds
+  
+  # Enable error tracking
+  errors:
+    enabled: true
+    alert_threshold: 0.05     # Alert if error rate exceeds 5%
+
+# Example 2: Production Monitoring Setup
+production_monitoring:
+  # Comprehensive metrics collection
+  metrics:
+    enabled: true
+    collection_interval: 30   # More frequent collection
+    retention_days: 30        # Longer retention
+    sampling_rate: 1.0        # Full sampling
+  
+  # Detailed performance tracking
+  performance:
+    enabled: true
+    track_by_file_type: true
+    track_by_tier: true
+    calculate_percentiles: true
+    outlier_threshold: 5000   # Lower threshold for production
+  
+  # Comprehensive error tracking
+  errors:
+    enabled: true
+    track_by_type: true
+    track_by_file_type: true
+    track_by_tier: true
+    alert_threshold: 0.02     # Lower threshold for production
+  
+  # System metrics
+  system:
+    enabled: true
+    cpu_enabled: true
+    memory_enabled: true
+    disk_enabled: true
+  
+  # Export configuration
+  export:
+    enabled: true
+    format: "prometheus"      # For integration with Prometheus
+    path: "/var/export/monitoring"
+    schedule: "*/5 * * * *"   # Every 5 minutes
+
+# Example 3: Alerting Configuration for Different Severity Levels
+alerting_examples:
+  # Critical alerts (immediate attention required)
+  critical_alerts:
+    - name: "service_down"
+      condition: "health_check_failed"
+      severity: "critical"
+      summary: "Service is down"
+      description: "The MetaExtract service has failed its health check"
+      enabled: true
+      notification_channels: ["email", "slack", "sms"]
+    
+    - name: "high_error_rate"
+      condition: "error_rate > 0.15"
+      severity: "critical"
+      summary: "Very high error rate"
+      description: "Error rate has exceeded 15%, indicating a serious issue"
+      enabled: true
+      notification_channels: ["email", "slack", "webhook"]
+  
+  # High severity alerts (attention needed soon)
+  high_severity_alerts:
+    - name: "slow_processing"
+      condition: "avg_processing_time > 8000"
+      severity: "high"
+      summary: "Processing is very slow"
+      description: "Average processing time has exceeded 8 seconds"
+      enabled: true
+      notification_channels: ["email", "slack"]
+    
+    - name: "resource_exhaustion"
+      condition: "memory_usage > 90 or cpu_usage > 95"
+      severity: "high"
+      summary: "Resource exhaustion imminent"
+      description: "Memory or CPU usage is critically high"
+      enabled: true
+      notification_channels: ["email", "slack"]
+  
+  # Medium severity alerts (should be reviewed)
+  medium_severity_alerts:
+    - name: "moderate_error_rate"
+      condition: "error_rate > 0.05 and error_rate <= 0.15"
+      severity: "medium"
+      summary: "Moderate error rate"
+      description: "Error rate is elevated but not critical"
+      enabled: true
+      notification_channels: ["email"]
+    
+    - name: "processing_slowdown"
+      condition: "avg_processing_time > 3000 and avg_processing_time <= 8000"
+      severity: "medium"
+      summary: "Processing slowdown detected"
+      description: "Average processing time has increased above normal"
+      enabled: true
+      notification_channels: ["email"]
+  
+  # Low severity alerts (informational)
+  low_severity_alerts:
+    - name: "low_throughput"
+      condition: "extractions_per_minute < 5"
+      severity: "low"
+      summary: "Low throughput"
+      description: "System throughput is below normal levels"
+      enabled: true
+      notification_channels: ["dashboard_only"]
+
+# Example 4: Notification Channel Configuration
+notification_channels:
+  email:
+    enabled: true
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_secure: false
+    recipients: ["admin@company.com", "ops@company.com"]
+    from: "alerts@metaextract.company.com"
+    subject_prefix: "[METAEXTRACT ALERT]"
+  
+  slack:
+    enabled: true
+    webhook_url: "https://hooks.slack.com/services/TEAM/CHANNEL/KEY"
+    channel: "#metaextract-alerts"
+    username: "MetaExtract-Bot"
+    icon_emoji: ":warning:"
+  
+  webhook:
+    enabled: true
+    url: "https://api.company.com/alerts"
+    headers:
+      Authorization: "Bearer YOUR_TOKEN"
+      Content-Type: "application/json"
+    template: '{"alert": "{{.Name}}", "severity": "{{.Severity}}", "message": "{{.Message}}"}'
+
+# Example 5: Maintenance Window Configuration
+maintenance_windows:
+  enabled: true
+  windows:
+    - name: "weekly_maintenance"
+      start_time: "02:00"  # UTC time
+      end_time: "04:00"    # UTC time
+      days: ["saturday"]   # Apply only on Saturdays
+      suppress_alerts: true  # Don't send alerts during maintenance
+      description: "Weekly maintenance window"
+  
+    - name: "backup_window"
+      start_time: "03:00"  # UTC time
+      end_time: "03:30"    # UTC time
+      days: ["sunday"]     # Apply only on Sundays
+      suppress_alerts: false  # Still send critical alerts
+      description: "Database backup window"
+
+# Example 6: Custom Metrics Configuration
+custom_metrics:
+  enabled: true
+  definitions:
+    - name: "custom_processing_metric"
+      type: "gauge"
+      description: "Custom metric for tracking specific processing aspects"
+      query: "SELECT AVG(process_time) FROM processing_logs WHERE timestamp > NOW() - INTERVAL '1 hour'"
+    
+    - name: "user_activity_metric"
+      type: "counter"
+      description: "Metric for tracking user activity"
+      query: "SELECT COUNT(*) FROM user_sessions WHERE last_seen > NOW() - INTERVAL '5 minutes'"
+
+# Example 7: Alert Escalation Configuration
+escalation_rules:
+  enabled: true
+  rules:
+    - name: "unacknowledged_alert_escalation"
+      condition: "alert_unacknowledged_for > 3600"  # 1 hour
+      target: ["senior_ops@company.com", "manager@company.com"]
+      message: "Alert has been unacknowledged for more than 1 hour. Immediate attention required."
+      enabled: true
+    
+    - name: "recurring_alert_escalation"
+      condition: "same_alert_fired_count > 5 within 300"  # 5 times in 5 minutes
+      target: ["senior_ops@company.com"]
+      message: "Same alert has fired multiple times, indicating a persistent issue."
+      enabled: true
+
+# Example 8: Integration with External Monitoring Systems
+external_integrations:
+  prometheus:
+    enabled: true
+    endpoint: "/metrics"
+    scrape_interval: 30  # seconds
+  
+  datadog:
+    enabled: false
+    api_key: "YOUR_DATADOG_API_KEY"
+    app_key: "YOUR_DATADOG_APP_KEY"
+    site: "datadoghq.com"  # or "datadoghq.eu" for EU
+  
+  new_relic:
+    enabled: false
+    license_key: "YOUR_NEW_RELIC_LICENSE_KEY"
+    account_id: "YOUR_ACCOUNT_ID"
+    trust_key: "YOUR_TRUST_KEY"

@@ -20,6 +20,8 @@ import {
   TrendingDown,
   TrendingUp
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface FileAnalysis {
   file_name: string;
@@ -105,9 +107,162 @@ export function ForensicReport({ reportData }: ForensicReportProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else {
-      // PDF export would require additional implementation
-      alert('PDF export functionality would be implemented with a PDF generation library');
+      generatePDFReport();
     }
+  };
+
+  const generatePDFReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    let yPosition = 20;
+
+    // Helper function to add text with word wrapping
+    const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10) => {
+      doc.setFontSize(fontSize);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      doc.text(lines, x, y);
+      return y + (lines.length * fontSize * 0.4);
+    };
+
+    // Helper function to check if we need a new page
+    const checkNewPage = (requiredSpace: number) => {
+      if (yPosition + requiredSpace > pageHeight - 20) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    };
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORENSIC ANALYSIS REPORT', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Report Info
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Report ID: ${reportData.report_id}`, 20, yPosition);
+    yPosition += 8;
+    doc.text(`Generated: ${new Date(reportData.generated_at).toLocaleString()}`, 20, yPosition);
+    yPosition += 8;
+    doc.text(`Analyst: ${reportData.analyst}`, 20, yPosition);
+    yPosition += 15;
+
+    // Case Summary
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CASE SUMMARY', 20, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Files Analyzed: ${reportData.case_summary.total_files}`, 20, yPosition);
+    yPosition += 8;
+    yPosition = addWrappedText(`Analysis Scope: ${reportData.case_summary.analysis_scope}`, 20, yPosition, pageWidth - 40);
+    yPosition += 10;
+
+    // File List
+    checkNewPage(60);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FILES ANALYZED', 20, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(9);
+    reportData.case_summary.file_names.forEach((fileName, index) => {
+      if (yPosition > pageHeight - 30) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.text(`${index + 1}. ${fileName}`, 25, yPosition);
+      yPosition += 6;
+    });
+    yPosition += 10;
+
+    // Conclusions
+    checkNewPage(80);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CONCLUSIONS', 20, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const assessmentText = `Overall Assessment: ${reportData.conclusions.overall_assessment.toUpperCase()}`;
+    doc.text(assessmentText, 20, yPosition);
+    yPosition += 8;
+
+    doc.text(`Files Analyzed: ${reportData.conclusions.files_analyzed}`, 20, yPosition);
+    yPosition += 6;
+    doc.text(`High Risk Files: ${reportData.conclusions.high_risk_files}`, 20, yPosition);
+    yPosition += 6;
+    doc.text(`Medium Risk Files: ${reportData.conclusions.medium_risk_files}`, 20, yPosition);
+    yPosition += 6;
+    doc.text(`Average Authenticity Score: ${reportData.conclusions.average_authenticity_score.toFixed(1)}%`, 20, yPosition);
+    yPosition += 15;
+
+    // File Analysis Table
+    checkNewPage(100);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETAILED FILE ANALYSIS', 20, yPosition);
+    yPosition += 10;
+
+    const tableData = reportData.files.map(file => [
+      file.file_name,
+      `${(file.file_size / 1024).toFixed(1)} KB`,
+      file.authenticity_score.toFixed(1) + '%',
+      file.risk_level.toUpperCase(),
+      file.forensic_findings.length > 0 ? file.forensic_findings.join('; ') : 'None'
+    ]);
+
+    (doc as any).autoTable({
+      startY: yPosition,
+      head: [['File Name', 'Size', 'Authenticity', 'Risk Level', 'Findings']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 'auto' }
+      }
+    });
+
+    yPosition = (doc as any).lastAutoTable.finalY + 15;
+
+    // Recommendations
+    if (reportData.recommendations && reportData.recommendations.length > 0) {
+      checkNewPage(60);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECOMMENDATIONS', 20, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      reportData.recommendations.forEach((rec, index) => {
+        checkNewPage(10);
+        yPosition = addWrappedText(`${index + 1}. ${rec}`, 20, yPosition, pageWidth - 40, 9);
+        yPosition += 3;
+      });
+    }
+
+    // Footer
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text(`Generated by MetaExtract Forensic Suite - Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    }
+
+    // Save the PDF
+    doc.save(`forensic-report-${reportData.report_id}.pdf`);
   };
 
   const printReport = () => {

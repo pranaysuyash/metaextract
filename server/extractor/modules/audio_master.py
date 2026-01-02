@@ -11,6 +11,7 @@ Modules Integrated:
 - audio_bwf_registry.py: Broadcast Wave Format (~200 fields)
 - audio_id3_complete_registry.py: ID3 tags (~464 fields)
 - advanced_audio_ultimate.py: Professional broadcast (179 fields)
+- audio_metadata_extended.py: Extended analysis (63 fields)
 
 Author: MetaExtract Team
 Version: 2.0.0
@@ -51,6 +52,7 @@ _audio_codec = _load_module('audio_codec_details')
 _audio_bwf = _load_module('audio_bwf_registry')
 _audio_id3 = _load_module('audio_id3_complete_registry')
 _audio_advanced = _load_module('advanced_audio_ultimate')
+_audio_extended = _load_module('audio_metadata_extended')
 
 
 def extract_audio_master(filepath: str) -> Dict[str, Any]:
@@ -86,6 +88,7 @@ def extract_audio_master(filepath: str) -> Dict[str, Any]:
     fields_count += _safe_extract('audio_bwf_registry', 'extract_audio_bwf', 'bwf_metadata')
     fields_count += _safe_extract('audio_id3_complete_registry', 'extract_id3_complete', 'id3_tags')
     fields_count += _safe_extract('advanced_audio_ultimate', 'extract_advanced_audio_metadata', 'advanced_analysis')
+    fields_count += _safe_extract('audio_metadata_extended', 'extract_audio_metadata_extended', 'extended_analysis')
     
     result["total_fields_extracted"] = fields_count
     return result

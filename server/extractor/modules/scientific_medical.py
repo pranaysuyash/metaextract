@@ -7,8 +7,11 @@ from typing import Dict, Any, Optional, List
 from pathlib import Path
 import struct
 import json
+import logging
 
 from .shared_utils import count_fields as _count_fields
+
+logger = logging.getLogger(__name__)
 
 
 GEOTIFF_KEY_NAMES = {
@@ -421,7 +424,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM patient tag {name}: {e}")
 
                 DICOM_STUDY_TAGS = [
                     (0x0020, 0x000D, "study_instance_uid"),
@@ -452,7 +455,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM study tag {name}: {e}")
 
                 DICOM_SERIES_TAGS = [
                     (0x0020, 0x000E, "series_instance_uid"),
@@ -512,7 +515,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM series tag {name}: {e}")
 
                 DICOM_IMAGE_TAGS = [
                     (0x0008, 0x0008, "image_type"),
@@ -567,7 +570,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM image tag {name}: {e}")
 
                 DICOM_EQUIPMENT_TAGS = [
                     (0x0008, 0x0070, "manufacturer"),
@@ -608,7 +611,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM equipment tag {name}: {e}")
 
                 DICOM_VOI_LUT_TAGS = [
                     (0x0028, 0x1056, "voilut_function"),
@@ -625,7 +628,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM VOI LUT tag {name}: {e}")
 
                 DICOM_SOP_TAGS = [
                     (0x0008, 0x0016, "sop_class_uid"),
@@ -652,7 +655,7 @@ def extract_dicom_metadata(filepath: str, result: Dict) -> Dict:
                         if value:
                             dicom_data[name] = str(value)
                     except Exception as e:
-                        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                        logger.debug(f"Failed to extract DICOM SOP tag {name}: {e}")
 
                 if hasattr(ds, 'pixel_array'):
                     dicom_data["has_pixel_data"] = True
@@ -862,7 +865,7 @@ def extract_microscopy_metadata(filepath: str, result: Dict, ext: str) -> Dict:
                 micro_data["is_multi_channel"] = True
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug(f"Failed to extract TIFF/Image tags from microscopy file: {e}")
 
     micro_data["microscopy_detected"] = True
     result["scientific"] = micro_data
@@ -1044,7 +1047,7 @@ def detect_scientific_format(filepath: str) -> Dict[str, Any]:
                     result["format"] = "FITS"
                     result["confidence"] = 1.0
         except Exception as e:
-            pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+            logger.debug(f"Failed to detect scientific file format from header: {e}")
 
     return result
 

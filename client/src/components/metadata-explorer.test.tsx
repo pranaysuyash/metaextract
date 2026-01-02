@@ -3,9 +3,18 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MetadataExplorer, convertMetadataToProcessedFile } from './metadata-explorer';
+import {
+  MetadataExplorer,
+  convertMetadataToProcessedFile,
+} from './metadata-explorer';
 
 // Mock clipboard API
 Object.assign(navigator, {
@@ -22,6 +31,14 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
 }));
 
 describe('MetadataExplorer', () => {
+  let user: ReturnType<typeof userEvent.setup>;
+
+  const getFileBrowser = () =>
+    within(screen.getByTestId('metadata-file-browser'));
+  const getMetadataTree = () => within(screen.getByTestId('metadata-tree'));
+  const getDetailView = () =>
+    within(screen.getByTestId('metadata-detail-view'));
+
   const mockFiles = [
     {
       id: 'file1',
@@ -36,7 +53,7 @@ describe('MetadataExplorer', () => {
         {
           name: 'summary',
           displayName: 'Summary',
-          icon: <div data-testid="icon-summary" />,
+          icon: <div data-testid='icon-summary' />,
           fields: [
             {
               key: 'filename',
@@ -54,19 +71,21 @@ describe('MetadataExplorer', () => {
         {
           name: 'exif',
           displayName: 'Camera & EXIF',
-          icon: <div data-testid="icon-camera" />,
+          icon: <div data-testid='icon-camera' />,
           fields: [
             {
               key: 'Make',
               value: 'Canon',
               category: 'Camera & EXIF',
-              significance: 'Camera manufacturer - useful for identifying device',
+              significance:
+                'Camera manufacturer - useful for identifying device',
             },
             {
               key: 'Model',
               value: 'EOS R5',
               category: 'Camera & EXIF',
-              significance: 'Camera model - helps determine capabilities and age',
+              significance:
+                'Camera model - helps determine capabilities and age',
             },
             {
               key: 'DateTimeOriginal',
@@ -80,7 +99,7 @@ describe('MetadataExplorer', () => {
         {
           name: 'gps',
           displayName: 'Location',
-          icon: <div data-testid="icon-location" />,
+          icon: <div data-testid='icon-location' />,
           fields: [
             {
               key: 'GPSLatitude',
@@ -123,7 +142,7 @@ describe('MetadataExplorer', () => {
         {
           name: 'summary',
           displayName: 'Summary',
-          icon: <div data-testid="icon-summary" />,
+          icon: <div data-testid='icon-summary' />,
           fields: [
             {
               key: 'filename',
@@ -148,73 +167,103 @@ describe('MetadataExplorer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    user = userEvent.setup();
   });
 
   describe('File Browser (Left Pane)', () => {
     it('should display all files', () => {
       render(<MetadataExplorer {...defaultProps} />);
 
-      expect(screen.getByText('photo1.jpg')).toBeInTheDocument();
-      expect(screen.getByText('document.pdf')).toBeInTheDocument();
+      expect(
+        getFileBrowser().getByRole('button', { name: /photo1\.jpg/i })
+      ).toBeInTheDocument();
+      expect(
+        getFileBrowser().getByRole('button', { name: /document\.pdf/i })
+      ).toBeInTheDocument();
     });
 
     it('should show file metadata density indicators', () => {
       render(<MetadataExplorer {...defaultProps} />);
 
-      const highDensityIndicator = screen.getByText('photo1.jpg')
-        .closest('button')
-        ?.querySelector('[class*="bg-green-500"]');
+      const photoButton = getFileBrowser().getByRole('button', {
+        name: /photo1\.jpg.*150 fields/i,
+      });
+      const highDensityIndicator = photoButton.querySelector(
+        '[class*="bg-green-500"]'
+      );
       expect(highDensityIndicator).toBeInTheDocument();
     });
 
     it('should show field count for each file', () => {
       render(<MetadataExplorer {...defaultProps} />);
 
-      expect(screen.getByText(/150 fields/)).toBeInTheDocument();
-      expect(screen.getByText(/45 fields/)).toBeInTheDocument();
+      expect(getFileBrowser().getByText(/150 fields/)).toBeInTheDocument();
+      expect(getFileBrowser().getByText(/45 fields/)).toBeInTheDocument();
     });
 
     it('should filter files by search query', async () => {
       render(<MetadataExplorer {...defaultProps} />);
 
-      const searchInput = screen.getAllByPlaceholderText('Search files...')[0];
-      await userEvent.type(searchInput, 'photo');
+      const fileBrowser = getFileBrowser();
+      const searchInput = fileBrowser.getByLabelText('Search files');
+      fireEvent.change(searchInput, { target: { value: 'photo' } });
+      expect(searchInput).toHaveValue('photo');
 
-      expect(screen.getByText('photo1.jpg')).toBeInTheDocument();
-      expect(screen.queryByText('document.pdf')).not.toBeInTheDocument();
+      expect(
+        fileBrowser.getByRole('button', { name: /photo1\.jpg/i })
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(
+          fileBrowser.queryByRole('button', { name: /document\.pdf/i })
+        ).not.toBeInTheDocument();
+      });
     });
 
     it('should select file when clicked', async () => {
       const mockOnFileSelect = jest.fn();
-      render(<MetadataExplorer {...defaultProps} onFileSelect={mockOnFileSelect} />);
+      render(
+        <MetadataExplorer {...defaultProps} onFileSelect={mockOnFileSelect} />
+      );
 
-      const fileButton = screen.getByText('photo1.jpg').closest('button');
-      await userEvent.click(fileButton!);
+      const fileButton = getFileBrowser().getByRole('button', {
+        name: /photo1\.jpg/i,
+      });
+      await user.click(fileButton);
 
       expect(mockOnFileSelect).toHaveBeenCalledWith('file1');
     });
 
     it('should highlight selected file', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const selectedFile = screen.getByText('photo1.jpg').closest('button');
+      const selectedFile = getFileBrowser().getByRole('button', {
+        name: /photo1\.jpg/i,
+      });
       expect(selectedFile).toHaveClass('bg-primary/10');
     });
 
     it('should show no results message when search yields no results', async () => {
       render(<MetadataExplorer {...defaultProps} />);
 
-      const searchInput = screen.getAllByPlaceholderText('Search files...')[0];
-      await userEvent.type(searchInput, 'nonexistent');
+      const fileBrowser = getFileBrowser();
+      const searchInput = fileBrowser.getByLabelText('Search files');
+      fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
+      expect(searchInput).toHaveValue('nonexistent');
 
-      expect(screen.getByText('No files match your search')).toBeInTheDocument();
+      expect(
+        fileBrowser.getByText(/No files match your search/i)
+      ).toBeInTheDocument();
     });
 
     it('should display file size', () => {
       render(<MetadataExplorer {...defaultProps} />);
 
-      expect(screen.getByText(/2\.5 MB.*150 fields/)).toBeInTheDocument();
-      expect(screen.getByText(/1\.2 MB.*45 fields/)).toBeInTheDocument();
+      expect(
+        getFileBrowser().getByText(/2\.5 MB.*150 fields/)
+      ).toBeInTheDocument();
+      expect(
+        getFileBrowser().getByText(/1\.2 MB.*45 fields/)
+      ).toBeInTheDocument();
     });
   });
 
@@ -222,125 +271,167 @@ describe('MetadataExplorer', () => {
     it('should show select file message when no file selected', () => {
       render(<MetadataExplorer files={[]} />);
 
-      expect(screen.getByText('Select a file to view metadata')).toBeInTheDocument();
+      expect(
+        screen.getByText('Select a file to view metadata')
+      ).toBeInTheDocument();
     });
 
     it('should display categories for selected file', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      expect(screen.getByText('Summary')).toBeInTheDocument();
-      expect(screen.getByText('Camera & EXIF')).toBeInTheDocument();
-      expect(screen.getByText('Location')).toBeInTheDocument();
+      const tree = getMetadataTree();
+      expect(tree.getByText('Summary')).toBeInTheDocument();
+      expect(tree.getByText('Camera & EXIF')).toBeInTheDocument();
+      expect(tree.getByText('Location')).toBeInTheDocument();
     });
 
     it('should show field count badges for categories', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const summaryBadge = screen.getByText('Summary')
-        .parentElement
-        ?.querySelector('[class*="badge"]');
-      expect(summaryBadge).toHaveTextContent('2');
+      const tree = getMetadataTree();
+      const summaryTrigger = tree.getByRole('button', { name: /Summary/i });
+      expect(summaryTrigger).toBeInTheDocument();
+      expect(
+        within(summaryTrigger as HTMLElement).getByText('2')
+      ).toBeInTheDocument();
     });
 
     it('should display fields within categories', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      expect(screen.getByText('Make')).toBeInTheDocument();
-      expect(screen.getByText('Model')).toBeInTheDocument();
-      expect(screen.getByText('DateTimeOriginal')).toBeInTheDocument();
+      const tree = getMetadataTree();
+      expect(tree.getByRole('button', { name: /Make/i })).toBeInTheDocument();
+      expect(tree.getByRole('button', { name: /Model/i })).toBeInTheDocument();
+      expect(
+        tree.getByRole('button', { name: /DateTimeOriginal/i })
+      ).toBeInTheDocument();
     });
 
     it('should filter fields by search query', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const searchInput = screen.getAllByPlaceholderText('Search fields...')[0];
-      await userEvent.type(searchInput, 'canon');
+      const tree = getMetadataTree();
+      const searchInput = tree.getByLabelText('Search fields');
+      fireEvent.change(searchInput, { target: { value: 'canon' } });
+      expect(searchInput).toHaveValue('canon');
 
-      expect(screen.getByText('Make')).toBeInTheDocument();
-      expect(screen.queryByText('Model')).not.toBeInTheDocument();
+      expect(tree.getByRole('button', { name: /Make/i })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(
+          tree.queryByRole('button', { name: /Model/i })
+        ).not.toBeInTheDocument();
+      });
     });
 
     it('should filter categories in simple view mode', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" viewMode="simple" />);
+      render(
+        <MetadataExplorer
+          {...defaultProps}
+          selectedFileId='file1'
+          viewMode='simple'
+        />
+      );
 
       // Should only show key categories in simple mode
-      expect(screen.getByText('Summary')).toBeInTheDocument();
-      expect(screen.getByText('Camera & EXIF')).toBeInTheDocument();
+      const tree = getMetadataTree();
+      expect(tree.getByText('Summary')).toBeInTheDocument();
+      expect(tree.getByText('Camera & EXIF')).toBeInTheDocument();
     });
 
     it('should select field when clicked', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const makeField = screen.getByText('Make');
-      await userEvent.click(makeField);
+      const tree = getMetadataTree();
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
+      await user.click(makeField);
 
       // Detail view should update
-      expect(screen.getByText('Camera manufacturer - useful for identifying device')).toBeInTheDocument();
+      expect(
+        getDetailView().getByText(
+          'Camera manufacturer - useful for identifying device'
+        )
+      ).toBeInTheDocument();
     });
 
     it('should highlight selected field', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const makeField = screen.getByText('Make');
-      await userEvent.click(makeField);
+      const tree = getMetadataTree();
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
+      await user.click(makeField);
 
-      const selectedField = screen.getByText('Make').closest('button');
+      const selectedField = tree.getByRole('button', { name: /Make\s+Canon/i });
       expect(selectedField).toHaveClass('bg-primary/10');
     });
   });
 
   describe('Detail View (Right Pane)', () => {
     it('should show select field message when no field selected', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      expect(screen.getByText('Select a field to see details')).toBeInTheDocument();
+      expect(
+        getDetailView().getByText('Select a field to see details')
+      ).toBeInTheDocument();
     });
 
     it('should display field details', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const makeField = screen.getByText('Make');
-      await userEvent.click(makeField);
+      const tree = getMetadataTree();
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
+      await user.click(makeField);
 
-      expect(screen.getByText('Make')).toBeInTheDocument();
-      expect(screen.getByText('Camera & EXIF')).toBeInTheDocument();
-      expect(screen.getByText('Canon')).toBeInTheDocument();
+      const detail = getDetailView();
+      expect(detail.getByRole('heading', { name: 'Make' })).toBeInTheDocument();
+      // Category appears in multiple places (header + technical details).
+      // Assert the header category text specifically.
+      expect(
+        detail.getByText('Camera & EXIF', { selector: 'p' })
+      ).toBeInTheDocument();
+      expect(detail.getByText('Canon')).toBeInTheDocument();
     });
 
     it('should show field significance', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const makeField = screen.getByText('Make');
-      await userEvent.click(makeField);
+      const tree = getMetadataTree();
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
+      await user.click(makeField);
 
-      expect(screen.getByText('Why This Matters')).toBeInTheDocument();
-      expect(screen.getByText('Camera manufacturer - useful for identifying device')).toBeInTheDocument();
+      const detail = getDetailView();
+      expect(detail.getByText('Why This Matters')).toBeInTheDocument();
+      expect(
+        detail.getByText('Camera manufacturer - useful for identifying device')
+      ).toBeInTheDocument();
     });
 
     it('should copy value to clipboard', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const makeField = screen.getByText('Make');
-      await userEvent.click(makeField);
+      const tree = getMetadataTree();
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
+      await user.click(makeField);
 
-      const copyButton = screen.getAllByRole('button').find(
-        button => button.querySelector('svg[data-lucide="copy"]')
-      );
+      const copyButton = screen
+        .getAllByRole('button')
+        .find((button) => button.querySelector('svg[data-lucide="copy"]'));
 
       if (copyButton) {
-        await userEvent.click(copyButton);
+        await user.click(copyButton);
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Canon');
       }
     });
 
     it('should show GPS location link for GPS fields', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const gpsField = screen.getByText('GPSLatitude');
-      await userEvent.click(gpsField);
+      const tree = getMetadataTree();
+      const gpsField = tree.getByRole('button', { name: /GPSLatitude/i });
+      await user.click(gpsField);
 
-      expect(screen.getByText('Location')).toBeInTheDocument();
-      expect(screen.getByText('Open in Google Maps')).toBeInTheDocument();
+      expect(
+        getDetailView().getByText('Open in Google Maps')
+      ).toBeInTheDocument();
     });
 
     it('should show external link for URL values', async () => {
@@ -363,23 +454,25 @@ describe('MetadataExplorer', () => {
         ],
       };
 
-      render(<MetadataExplorer files={[fileWithUrl]} selectedFileId="file1" />);
+      render(<MetadataExplorer files={[fileWithUrl]} selectedFileId='file1' />);
 
       const urlField = screen.getByText('url');
-      await userEvent.click(urlField);
+      await user.click(urlField);
 
       expect(screen.getByText('Open Link')).toBeInTheDocument();
     });
 
     it('should display technical details', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
-      const makeField = screen.getByText('Make');
-      await userEvent.click(makeField);
+      const tree = getMetadataTree();
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
+      await user.click(makeField);
 
-      expect(screen.getByText('Technical Details')).toBeInTheDocument();
-      expect(screen.getByText('Category')).toBeInTheDocument();
-      expect(screen.getByText('Type')).toBeInTheDocument();
+      const detail = getDetailView();
+      expect(detail.getByText('Technical Details')).toBeInTheDocument();
+      expect(detail.getByText('Category')).toBeInTheDocument();
+      expect(detail.getByText('Type')).toBeInTheDocument();
     });
 
     it('should format long values as code blocks', async () => {
@@ -402,14 +495,17 @@ describe('MetadataExplorer', () => {
         ],
       };
 
-      render(<MetadataExplorer files={[fileWithLongValue]} selectedFileId="file1" />);
+      render(
+        <MetadataExplorer files={[fileWithLongValue]} selectedFileId='file1' />
+      );
 
-      const longField = screen.getByText('long_value');
-      await userEvent.click(longField);
+      const tree = getMetadataTree();
+      const longField = tree.getByRole('button', { name: /long_value/i });
+      await user.click(longField);
 
-      const codeBlock = screen.getByText('a'.repeat(150))
-        .closest('pre');
-      expect(codeBlock).toBeInTheDocument();
+      const detail = getDetailView();
+      const pre = detail.getByText((_, node) => node?.tagName === 'PRE');
+      expect(pre).toHaveTextContent('a'.repeat(150));
     });
   });
 
@@ -419,29 +515,36 @@ describe('MetadataExplorer', () => {
       render(
         <MetadataExplorer
           {...defaultProps}
-          selectedFileId="file1"
+          selectedFileId='file1'
           onViewModeChange={mockOnViewModeChange}
         />
       );
 
-      const simpleTab = screen.getByText('Simple');
-      await userEvent.click(simpleTab);
+      const simpleTab = screen.getByRole('tab', { name: /Simple/i });
+      fireEvent.click(simpleTab);
       expect(mockOnViewModeChange).toHaveBeenCalledWith('simple');
 
-      const advancedTab = screen.getByText('Advanced');
-      await userEvent.click(advancedTab);
+      const advancedTab = screen.getByRole('tab', { name: /Advanced/i });
+      fireEvent.click(advancedTab);
       expect(mockOnViewModeChange).toHaveBeenCalledWith('advanced');
 
-      const rawTab = screen.getByText('Raw');
-      await userEvent.click(rawTab);
+      const rawTab = screen.getByRole('tab', { name: /Raw/i });
+      fireEvent.click(rawTab);
       expect(mockOnViewModeChange).toHaveBeenCalledWith('raw');
     });
 
     it('should display raw JSON in raw view mode', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" viewMode="raw" />);
+      render(
+        <MetadataExplorer
+          {...defaultProps}
+          selectedFileId='file1'
+          viewMode='raw'
+        />
+      );
 
-      expect(screen.getByText('"filename"')).toBeInTheDocument();
-      expect(screen.getByText('"photo1.jpg"')).toBeInTheDocument();
+      const raw = screen.getByTestId('metadata-raw-json');
+      expect(raw).toHaveTextContent('"filename"');
+      expect(raw).toHaveTextContent('"photo1.jpg"');
     });
   });
 
@@ -451,13 +554,16 @@ describe('MetadataExplorer', () => {
         filename: 'test.jpg',
         mime_type: 'image/jpeg',
         filesize: '1.5 MB',
+        summary: {
+          filename: 'test.jpg',
+        },
         exif: {
           Make: 'Nikon',
           Model: 'D850',
         },
         gps: {
           latitude: 40.7128,
-          longitude: -74.0060,
+          longitude: -74.006,
         },
         image: {
           ImageWidth: 8256,
@@ -465,7 +571,10 @@ describe('MetadataExplorer', () => {
         },
       };
 
-      const processedFile = convertMetadataToProcessedFile(apiMetadata, 'test-id');
+      const processedFile = convertMetadataToProcessedFile(
+        apiMetadata,
+        'test-id'
+      );
 
       expect(processedFile.name).toBe('test.jpg');
       expect(processedFile.type).toBe('image/jpeg');
@@ -478,19 +587,25 @@ describe('MetadataExplorer', () => {
         exif: { Make: 'Canon' },
       };
 
-      const highDensityMetadata = {
-        filename: 'high.jpg',
-        exif: { Make: 'Canon', Model: 'R5' },
-        gps: { latitude: 37.7, longitude: -122.4 },
-        image: { width: 1000, height: 1000 },
-        filesystem: { size: 1000 },
+      // 31 fields -> "medium" by current thresholds (> 30)
+      const mediumDensityMetadata = {
+        filename: 'medium.jpg',
+        exif: Object.fromEntries(
+          Array.from({ length: 31 }, (_, i) => [`Field${i}`, i])
+        ),
       };
 
-      const lowFile = convertMetadataToProcessedFile(lowDensityMetadata, 'low-id');
-      const highFile = convertMetadataToProcessedFile(highDensityMetadata, 'high-id');
+      const lowFile = convertMetadataToProcessedFile(
+        lowDensityMetadata,
+        'low-id'
+      );
+      const mediumFile = convertMetadataToProcessedFile(
+        mediumDensityMetadata,
+        'medium-id'
+      );
 
       expect(lowFile.metadataDensity).toBe('low');
-      expect(highFile.metadataDensity).toBe('medium');
+      expect(mediumFile.metadataDensity).toBe('medium');
     });
 
     it('should handle locked categories', () => {
@@ -501,9 +616,14 @@ describe('MetadataExplorer', () => {
         },
       };
 
-      const processedFile = convertMetadataToProcessedFile(lockedMetadata, 'locked-id');
+      const processedFile = convertMetadataToProcessedFile(
+        lockedMetadata,
+        'locked-id'
+      );
 
-      const makernoteCategory = processedFile.categories.find(c => c.name === 'makernote');
+      const makernoteCategory = processedFile.categories.find(
+        (c) => c.name === 'makernote'
+      );
       expect(makernoteCategory?.locked).toBe(true);
       expect(makernoteCategory?.fieldCount).toBe(0);
     });
@@ -513,7 +633,9 @@ describe('MetadataExplorer', () => {
     it('should show empty state when no files provided', () => {
       render(<MetadataExplorer files={[]} />);
 
-      expect(screen.getByText('Select a file to view metadata')).toBeInTheDocument();
+      expect(
+        screen.getByText('Select a file to view metadata')
+      ).toBeInTheDocument();
     });
 
     it('should show empty state in file browser when no files', () => {
@@ -529,26 +651,26 @@ describe('MetadataExplorer', () => {
       render(<MetadataExplorer {...defaultProps} />);
 
       const fileButtons = screen.getAllByText('photo1.jpg');
-      fileButtons.forEach(button => {
+      fileButtons.forEach((button) => {
         expect(button).toBeVisible();
       });
     });
 
     it('should have accessible field buttons', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
       const fieldButtons = screen.getAllByText('Make');
-      fieldButtons.forEach(button => {
+      fieldButtons.forEach((button) => {
         expect(button).toBeVisible();
       });
     });
 
     it('should announce changes to screen readers', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
       // Tabs and buttons should be keyboard accessible
       const tabs = screen.getAllByRole('tab');
-      tabs.forEach(tab => {
+      tabs.forEach((tab) => {
         expect(tab).toBeVisible();
       });
     });
@@ -556,11 +678,15 @@ describe('MetadataExplorer', () => {
 
   describe('Responsive Layout', () => {
     it('should render resizable panels', () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
       // Check if all three panes are rendered
-      expect(screen.getByPlaceholderText('Search files...')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Search fields...')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Search files...')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Search fields...')
+      ).toBeInTheDocument();
     });
   });
 
@@ -584,17 +710,17 @@ describe('MetadataExplorer', () => {
         ],
       };
 
-      render(<MetadataExplorer files={[largeFile]} selectedFileId="file1" />);
+      render(<MetadataExplorer files={[largeFile]} selectedFileId='file1' />);
 
       expect(screen.getByText('Large Category')).toBeInTheDocument();
     });
 
     it('should debounce search inputs', async () => {
-      render(<MetadataExplorer {...defaultProps} selectedFileId="file1" />);
+      render(<MetadataExplorer {...defaultProps} selectedFileId='file1' />);
 
       const searchInput = screen.getAllByPlaceholderText('Search fields...')[0];
 
-      await userEvent.type(searchInput, 'test');
+      await user.type(searchInput, 'test');
 
       // Should handle rapid typing without errors
       expect(screen.getByText('Camera & EXIF')).toBeInTheDocument();
@@ -627,12 +753,19 @@ describe('MetadataExplorer', () => {
         ],
       };
 
-      render(<MetadataExplorer files={[fileWithNulls]} selectedFileId="file1" />);
+      render(
+        <MetadataExplorer files={[fileWithNulls]} selectedFileId='file1' />
+      );
 
-      const nullField = screen.getByText('null_value');
-      await userEvent.click(nullField);
+      const tree = getMetadataTree();
+      const nullField = tree.getByRole('button', { name: /null_value/i });
+      await user.click(nullField);
 
-      expect(screen.getByText('N/A')).toBeInTheDocument();
+      const detail = getDetailView();
+      expect(
+        detail.getByRole('heading', { name: 'null_value' })
+      ).toBeInTheDocument();
+      expect(detail.getByText('N/A')).toBeInTheDocument();
     });
 
     it('should handle object and array values', async () => {
@@ -660,12 +793,19 @@ describe('MetadataExplorer', () => {
         ],
       };
 
-      render(<MetadataExplorer files={[fileWithComplex]} selectedFileId="file1" />);
+      render(
+        <MetadataExplorer files={[fileWithComplex]} selectedFileId='file1' />
+      );
 
-      const arrayField = screen.getByText('array_value');
-      await userEvent.click(arrayField);
+      const tree = getMetadataTree();
+      const arrayField = tree.getByRole('button', { name: /array_value/i });
+      await user.click(arrayField);
 
-      expect(screen.getByText('one, two, three')).toBeInTheDocument();
+      const detail = getDetailView();
+      expect(
+        detail.getByRole('heading', { name: 'array_value' })
+      ).toBeInTheDocument();
+      expect(detail.getByText('one, two, three')).toBeInTheDocument();
     });
 
     it('should handle special characters in values', async () => {
@@ -688,9 +828,13 @@ describe('MetadataExplorer', () => {
         ],
       };
 
-      render(<MetadataExplorer files={[fileWithSpecial]} selectedFileId="file1" />);
+      render(
+        <MetadataExplorer files={[fileWithSpecial]} selectedFileId='file1' />
+      );
 
-      expect(screen.getByText('<script>alert("xss")</script>')).toBeInTheDocument();
+      expect(
+        screen.getByText('<script>alert("xss")</script>')
+      ).toBeInTheDocument();
     });
   });
 });

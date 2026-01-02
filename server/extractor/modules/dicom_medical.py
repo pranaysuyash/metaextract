@@ -855,7 +855,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["patient"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM patient tag {name}: {e}")
 
         for tag, name in DICOM_STUDY_TAGS.items():
             try:
@@ -863,7 +863,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["study"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM study tag {name}: {e}")
 
         for tag, name in DICOM_SERIES_TAGS.items():
             try:
@@ -871,7 +871,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["series"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM series tag {name}: {e}")
 
         for tag, name in DICOM_IMAGE_TAGS.items():
             try:
@@ -879,7 +879,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["image"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM image tag {name}: {e}")
 
         for tag, name in DICOM_EQUIPMENT_TAGS.items():
             try:
@@ -887,7 +887,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["equipment"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM equipment tag {name}: {e}")
 
         for tag, name in DICOM_VOI_LUT_TAGS.items():
             try:
@@ -895,7 +895,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["voi_lut"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM VOI LUT tag {name}: {e}")
 
         for tag, name in DICOM_SOP_TAGS.items():
             try:
@@ -903,7 +903,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                 if value:
                     result["sop"][name] = str(value)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract DICOM SOP tag {name}: {e}")
 
         modality = result["series"].get("modality", "")
         if modality == "CT":
@@ -913,7 +913,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                     if value:
                         result["modality_specific"][name] = str(value)
                 except Exception as e:
-                    pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                    logger.debug(f"Failed to extract DICOM CT-specific tag {name}: {e}")
         elif modality == "MR":
             for tag, name in DICOM_MR_SPECIFIC.items():
                 try:
@@ -921,7 +921,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                     if value:
                         result["modality_specific"][name] = str(value)
                 except Exception as e:
-                    pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                    logger.debug(f"Failed to extract DICOM MR-specific tag {name}: {e}")
         elif modality == "US":
             for tag, name in DICOM_US_SPECIFIC.items():
                 try:
@@ -929,7 +929,7 @@ def extract_dicom_metadata(filepath: str) -> Dict[str, Any]:
                     if value:
                         result["modality_specific"][name] = str(value)
                 except Exception as e:
-                    pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                    logger.debug(f"Failed to extract DICOM US-specific tag {name}: {e}")
 
         private_elements = []
         for elem in ds:

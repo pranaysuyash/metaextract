@@ -9,7 +9,11 @@ import shutil
 import subprocess
 from typing import Any, Dict, Optional, Sequence, Union
 
-from .shared_utils import safe_str as _safe_str
+# Fix relative import issue for dynamic module loading
+try:
+    from .shared_utils import safe_str as _safe_str
+except ImportError:
+    _safe_str = lambda x: str(x) if x is not None else ''
 
 TagDict = Dict[str, Any]
 

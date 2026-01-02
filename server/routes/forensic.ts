@@ -8,12 +8,11 @@
  * - Forensic reports
  */
 
-import type { Express, Response } from 'express';
+import type { Express } from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-import { spawn } from 'child_process';
 import {
   getTierConfig,
   isFileTypeAllowed,
@@ -170,7 +169,6 @@ export function registerForensicRoutes(app: Express): void {
       const requestedTier = (req.query.tier as string) || 'enterprise';
       const normalizedTier = normalizeTier(requestedTier);
       const pythonTier = toPythonTier(normalizedTier);
-      const tierConfig = getTierConfig(normalizedTier);
 
       // Comparison requires Professional+ tier (disabled in dev)
       if (process.env.NODE_ENV !== 'development' && normalizedTier === 'free') {
@@ -663,4 +661,102 @@ export function registerForensicRoutes(app: Express): void {
       }
     }
   );
+
+  // Advanced single file extraction with forensic analysis
+  app.post('/api/extract/advanced', upload.single('file'), async (req, res) => {
+    const startTime = Date.now();
+    let tempPath: string | null = null;
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const requestedTier = (req.query.tier as string) || 'enterprise';
+      const normalizedTier = normalizeTier(requestedTier);
+      const pythonTier = toPythonTier(normalizedTier);
+      const mimeType = req.file.mimetype || 'application/octet-stream';
+
+      // Advanced extraction requires Professional+ tier (disabled in dev)
+      if (process.env.NODE_ENV !== 'development' && normalizedTier === 'free') {
+        return res.status(403).json({
+          error: 'Advanced extraction not available for your plan',
+          current_tier: normalizedTier,
+          required_tier: 'professional',
+        });
+      }
+
+      // Validate file type for tier
+      if (!isFileTypeAllowed(normalizedTier, mimeType)) {
+        return res.status(403).json({
+          error: `File type not allowed: ${req.file.originalname}`,
+          file_type: mimeType,
+        });
+      }
+
+      // Validate file size for tier
+      if (!isFileSizeAllowed(normalizedTier, req.file.size)) {
+        return res.status(403).json({
+          error: `File size exceeds limit: ${req.file.originalname}`,
+        });
+      }
+
+      // Write file to temp location
+      const tempDir = '/tmp/metaextract';
+      await fs.mkdir(tempDir, { recursive: true });
+      tempPath = path.join(
+        tempDir,
+        `${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`
+      );
+      await fs.writeFile(tempPath, req.file.buffer);
+
+      // Extract metadata with advanced analysis enabled
+      const rawMetadata = await extractMetadataWithPython(
+        tempPath,
+        pythonTier,
+        false, // includePerformanceMetrics
+        true   // enableAdvancedAnalysis
+      );
+
+      const metadata = transformMetadataForFrontend(
+        rawMetadata,
+        req.file.originalname,
+        normalizedTier
+      );
+
+      // Add advanced analysis summary
+      const advancedAnalysis = rawMetadata.advanced_analysis;
+      metadata.advanced_analysis = {
+        enabled: true,
+        processing_time_ms: advancedAnalysis?.processing_time_ms || 0,
+        modules_run: advancedAnalysis?.modules_run || [],
+        forensic_score: advancedAnalysis?.forensic_score || 0,
+        authenticity_assessment: advancedAnalysis?.authenticity_assessment || 'Unknown',
+      };
+
+      const processingMs = Date.now() - startTime;
+
+      res.json({
+        ...metadata,
+        advanced_enabled: true,
+        processing_time_ms: processingMs,
+      });
+    } catch (error) {
+      const processingMs = Date.now() - startTime;
+      console.error('Advanced extraction error:', error);
+      res.status(500).json({
+        error: 'Advanced extraction failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        processing_time_ms: processingMs,
+      });
+    } finally {
+      if (tempPath) {
+        try {
+          await fs.unlink(tempPath);
+        } catch (error) {
+          console.error('Failed to delete temp file:', tempPath, error);
+        }
+      }
+    }
+  });
 }

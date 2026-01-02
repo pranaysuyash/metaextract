@@ -476,3 +476,23 @@ if __name__ == "__main__":
     filepath = sys.argv[1]
     result = extract_document_metadata(filepath)
     print(json.dumps(result, indent=2, default=str))
+
+def get_document_extractor_field_count() -> int:
+    """
+    Return the number of metadata fields extracted by document_extractor.
+    
+    Returns:
+        Total field count
+    """
+    return 6  # source, filepath, format_detected, extraction_success, pdf_metadata, error
+
+
+if __name__ == "__main__":
+    import json
+    if len(sys.argv) < 2:
+        print("Usage: python document_extractor.py <file.epub|mobi|chm|pdf>")
+        sys.exit(1)
+
+    filepath = sys.argv[1]
+    result = extract_document_metadata(filepath)
+    print(json.dumps(result, indent=2, default=str))

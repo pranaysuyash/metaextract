@@ -16,18 +16,66 @@ Features:
 """
 
 import os
+import sys
 import importlib
 import logging
 import inspect
 import time
 import concurrent.futures
 import threading
-import watchdog.observers
-import watchdog.events
+import types
 from typing import Dict, List, Optional, Callable, Any, Tuple, Set
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+try:
+    import watchdog.observers
+    import watchdog.events
+    WATCHDOG_AVAILABLE = True
+    WATCHDOG_STUB = False
+    _WatchdogEventHandlerBase = watchdog.events.FileSystemEventHandler
+    _WatchdogEventType = watchdog.events.FileSystemEvent
+except ImportError:
+    WATCHDOG_AVAILABLE = True
+    WATCHDOG_STUB = True
+    watchdog = types.ModuleType("watchdog")
+    observers_module = types.ModuleType("watchdog.observers")
+    events_module = types.ModuleType("watchdog.events")
+
+    class Observer:
+        def schedule(self, *args, **kwargs):
+            return None
+
+        def start(self):
+            return None
+
+        def stop(self):
+            return None
+
+        def join(self, *args, **kwargs):
+            return None
+
+    class FileSystemEventHandler:
+        pass
+
+    class FileSystemEvent:
+        def __init__(self):
+            self.src_path = ""
+            self.is_directory = False
+
+    observers_module.Observer = Observer
+    events_module.FileSystemEventHandler = FileSystemEventHandler
+    events_module.FileSystemEvent = FileSystemEvent
+    watchdog.observers = observers_module
+    watchdog.events = events_module
+
+    sys.modules.setdefault("watchdog", watchdog)
+    sys.modules.setdefault("watchdog.observers", observers_module)
+    sys.modules.setdefault("watchdog.events", events_module)
+
+    _WatchdogEventHandlerBase = events_module.FileSystemEventHandler
+    _WatchdogEventType = events_module.FileSystemEvent
 
 
 class ModuleRegistry:
@@ -56,13 +104,36 @@ class ModuleRegistry:
         
         # Hot reloading configuration
         self.hot_reloading_enabled: bool = False
-        self.watchdog_observer: Optional[watchdog.observers.Observer] = None
-        self.file_watcher: Optional[watchdog.events.FileSystemEventHandler] = None
+        self.watchdog_observer: Optional[Any] = None
+        self.file_watcher: Optional[Any] = None
         self.hot_reload_lock: threading.Lock = threading.Lock()
         self.last_reload_time: float = 0.0
         self.min_reload_interval: float = 1.0  # Minimum interval between reloads
         self.hot_reload_count: int = 0
         self.hot_reload_errors: int = 0
+        
+        # Plugin system configuration
+        self.plugins_enabled: bool = False
+        self.plugin_paths: List[str] = []
+        self.loaded_plugins: Dict[str, Dict[str, Any]] = {}
+        self.plugin_load_errors: Dict[str, str] = {}
+        self.plugin_discovery_time: float = 0.0
+        self.plugins_loaded_count: int = 0
+        self.plugins_failed_count: int = 0
+        
+        # Performance tracking and health monitoring
+        self.performance_metrics: Dict[str, Dict[str, Any]] = {}
+        self.health_monitoring_enabled: bool = True
+        self.health_thresholds: Dict[str, float] = {
+            'error_rate': 0.1,      # 10% error rate threshold
+            'timeout_rate': 0.05,   # 5% timeout rate threshold
+            'slow_execution': 2.0,  # 2 seconds threshold for slow execution
+            'memory_usage': 100.0   # 100MB memory usage threshold
+        }
+        self.health_stats: Dict[str, Dict[str, Any]] = {}
+        self.performance_history: Dict[str, List[Dict[str, Any]]] = {}
+        self.last_health_check: float = 0.0
+        self.health_check_interval: float = 60.0  # 60 seconds between health checks
     
     def discover_modules(self, base_path: str = "server/extractor/modules/") -> None:
         """
@@ -129,7 +200,7 @@ class ModuleRegistry:
             dependencies = self._find_module_dependencies(module)
             
             if extraction_functions:
-                self._register_module(module_name, extraction_functions, dependencies)
+                self._register_module(module_name, extraction_functions, dependencies, file_path)
                 self.loaded_count += 1
             else:
                 logger.debug(f"No extraction functions found in module {module_name}")
@@ -206,7 +277,13 @@ class ModuleRegistry:
         
         return dependencies
     
-    def _register_module(self, module_name: str, functions: Dict[str, Callable], dependencies: List[str] = None) -> None:
+    def _register_module(
+        self,
+        module_name: str,
+        functions: Dict[str, Callable],
+        dependencies: List[str] = None,
+        module_path: Optional[Path] = None
+    ) -> None:
         """
         Register a module and its extraction functions.
         
@@ -224,8 +301,12 @@ class ModuleRegistry:
             "category": category,
             "enabled": True,
             "priority": self._determine_priority(module_name, category),
-            "dependencies": dependencies or []
+            "dependencies": dependencies or [],
+            "path": str(module_path) if module_path else None,
         }
+        
+        # Initialize performance tracking for this module
+        self._initialize_performance_tracking(module_name, functions)
         
         # Add to category index
         if category not in self.categories:
@@ -307,6 +388,383 @@ class ModuleRegistry:
         }
         
         return category_priorities.get(category, 25)
+    
+    def _initialize_performance_tracking(self, module_name: str, functions: Dict[str, Callable]) -> None:
+        """
+        Initialize performance tracking for a module.
+        
+        Args:
+            module_name: Name of the module
+            functions: Dictionary of function names to callable functions
+        """
+        if not self.health_monitoring_enabled:
+            return
+            
+        # Initialize performance metrics for the module
+        self.performance_metrics[module_name] = {
+            "total_executions": 0,
+            "successful_executions": 0,
+            "failed_executions": 0,
+            "timeout_executions": 0,
+            "total_execution_time": 0.0,
+            "avg_execution_time": 0.0,
+            "max_execution_time": 0.0,
+            "min_execution_time": float('inf'),
+            "last_execution_time": 0.0,
+            "last_execution_status": "never",
+            "last_execution_timestamp": 0.0,
+            "error_rate": 0.0,
+            "timeout_rate": 0.0,
+            "health_score": 1.0,  # Start with perfect health
+            "health_status": "healthy",
+            "function_metrics": {}
+        }
+        
+        # Initialize metrics for each function
+        for function_name in functions.keys():
+            self.performance_metrics[module_name]["function_metrics"][function_name] = {
+                "executions": 0,
+                "successes": 0,
+                "failures": 0,
+                "timeouts": 0,
+                "total_time": 0.0,
+                "avg_time": 0.0,
+                "max_time": 0.0,
+                "min_time": float('inf'),
+                "last_time": 0.0,
+                "last_status": "never",
+                "last_timestamp": 0.0
+            }
+        
+        # Initialize performance history
+        self.performance_history[module_name] = []
+        
+        logger.debug(f"Initialized performance tracking for module: {module_name}")
+    
+    def track_execution_performance(
+        self,
+        module_name: str,
+        function_name: str,
+        execution_time: float,
+        status: str = "success",
+        error: Optional[str] = None
+    ) -> None:
+        """
+        Track execution performance for a module function.
+        
+        Args:
+            module_name: Name of the module
+            function_name: Name of the function
+            execution_time: Execution time in seconds
+            status: Execution status (success, failure, timeout)
+            error: Error message if applicable
+        """
+        if not self.health_monitoring_enabled or module_name not in self.performance_metrics:
+            return
+            
+        metrics = self.performance_metrics[module_name]
+        func_metrics = metrics["function_metrics"].get(function_name, {})
+        
+        # Update module-level metrics
+        metrics["total_executions"] += 1
+        metrics["total_execution_time"] += execution_time
+        metrics["last_execution_time"] = execution_time
+        metrics["last_execution_status"] = status
+        metrics["last_execution_timestamp"] = time.time()
+        
+        # Update based on status
+        if status == "success":
+            metrics["successful_executions"] += 1
+            func_metrics["successes"] = func_metrics.get("successes", 0) + 1
+        elif status == "failure":
+            metrics["failed_executions"] += 1
+            func_metrics["failures"] = func_metrics.get("failures", 0) + 1
+            logger.warning(f"Function {module_name}.{function_name} failed: {error}")
+        elif status == "timeout":
+            metrics["timeout_executions"] += 1
+            func_metrics["timeouts"] = func_metrics.get("timeouts", 0) + 1
+            logger.warning(f"Function {module_name}.{function_name} timed out")
+        
+        # Update execution time statistics
+        if execution_time > metrics["max_execution_time"]:
+            metrics["max_execution_time"] = execution_time
+        if execution_time < metrics["min_execution_time"]:
+            metrics["min_execution_time"] = execution_time
+            
+        # Update function-level metrics
+        func_metrics["executions"] = func_metrics.get("executions", 0) + 1
+        func_metrics["total_time"] = func_metrics.get("total_time", 0.0) + execution_time
+        func_metrics["last_time"] = execution_time
+        func_metrics["last_status"] = status
+        func_metrics["last_timestamp"] = time.time()
+        
+        if execution_time > func_metrics.get("max_time", 0):
+            func_metrics["max_time"] = execution_time
+        if execution_time < func_metrics.get("min_time", float('inf')):
+            func_metrics["min_time"] = execution_time
+        
+        # Update averages
+        total_executions = metrics["total_executions"]
+        if total_executions > 0:
+            metrics["avg_execution_time"] = metrics["total_execution_time"] / total_executions
+            metrics["error_rate"] = metrics["failed_executions"] / total_executions
+            metrics["timeout_rate"] = metrics["timeout_executions"] / total_executions
+        
+        func_executions = func_metrics.get("executions", 0)
+        if func_executions > 0:
+            func_metrics["avg_time"] = func_metrics.get("total_time", 0.0) / func_executions
+        
+        # Add to performance history
+        self.performance_history[module_name].append({
+            "timestamp": time.time(),
+            "function": function_name,
+            "execution_time": execution_time,
+            "status": status,
+            "error": error
+        })
+        
+        # Keep history size manageable
+        if len(self.performance_history[module_name]) > 1000:  # Keep last 1000 executions
+            self.performance_history[module_name] = self.performance_history[module_name][-1000:]
+        
+        # Update health status
+        self._update_health_status(module_name)
+        
+        logger.debug(f"Tracked execution for {module_name}.{function_name}: {execution_time:.3f}s, status: {status}")
+    
+    def _update_health_status(self, module_name: str) -> None:
+        """
+        Update health status for a module based on performance metrics.
+        
+        Args:
+            module_name: Name of the module
+        """
+        if module_name not in self.performance_metrics:
+            return
+            
+        metrics = self.performance_metrics[module_name]
+        total_executions = metrics["total_executions"]
+        
+        if total_executions == 0:
+            # No executions yet, consider healthy
+            metrics["health_score"] = 1.0
+            metrics["health_status"] = "healthy"
+            return
+            
+        # Calculate health score components
+        error_rate = metrics["error_rate"]
+        timeout_rate = metrics["timeout_rate"]
+        avg_time = metrics["avg_execution_time"]
+        
+        # Calculate component scores (0-1, higher is better)
+        error_score = max(0, 1.0 - (error_rate / self.health_thresholds["error_rate"]))
+        timeout_score = max(0, 1.0 - (timeout_rate / self.health_thresholds["timeout_rate"]))
+        performance_score = max(0, 1.0 - min(1.0, avg_time / self.health_thresholds["slow_execution"]))
+        
+        # Weighted health score
+        health_score = (
+            0.4 * error_score + 
+            0.3 * timeout_score + 
+            0.3 * performance_score
+        )
+        
+        # Determine health status
+        if health_score >= 0.9:
+            health_status = "healthy"
+        elif health_score >= 0.7:
+            health_status = "warning"
+        elif health_score >= 0.5:
+            health_status = "degraded"
+        else:
+            health_status = "critical"
+        
+        metrics["health_score"] = round(health_score, 3)
+        metrics["health_status"] = health_status
+        
+        # Log health changes
+        if health_status != metrics.get("previous_health_status", "healthy"):
+            logger.info(f"Module {module_name} health changed to {health_status} (score: {health_score:.3f})")
+            metrics["previous_health_status"] = health_status
+        
+        # Update health stats
+        self.health_stats[module_name] = {
+            "health_score": health_score,
+            "health_status": health_status,
+            "error_rate": error_rate,
+            "timeout_rate": timeout_rate,
+            "avg_execution_time": avg_time,
+            "last_check": time.time()
+        }
+    
+    def get_performance_metrics(self, module_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get performance metrics for a specific module.
+        
+        Args:
+            module_name: Name of the module
+            
+        Returns:
+            Performance metrics dictionary or None if not found
+        """
+        return self.performance_metrics.get(module_name)
+    
+    def get_all_performance_metrics(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get performance metrics for all modules.
+        
+        Returns:
+            Dictionary of module names to their performance metrics
+        """
+        return self.performance_metrics
+    
+    def get_health_status(self, module_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get health status for a specific module.
+        
+        Args:
+            module_name: Name of the module
+            
+        Returns:
+            Health status dictionary or None if not found
+        """
+        return self.health_stats.get(module_name)
+    
+    def get_all_health_statuses(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get health status for all modules.
+        
+        Returns:
+            Dictionary of module names to their health statuses
+        """
+        return self.health_stats
+    
+    def get_performance_history(self, module_name: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Get performance history for a specific module.
+        
+        Args:
+            module_name: Name of the module
+            limit: Maximum number of history entries to return
+            
+        Returns:
+            List of performance history entries
+        """
+        history = self.performance_history.get(module_name, [])
+        return history[-limit:] if history else []
+    
+    def get_health_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of health statuses across all modules.
+        
+        Returns:
+            Dictionary containing health summary statistics
+        """
+        healthy_count = 0
+        warning_count = 0
+        degraded_count = 0
+        critical_count = 0
+        total_modules = len(self.health_stats)
+        
+        for module_name, health_info in self.health_stats.items():
+            status = health_info.get("health_status", "healthy")
+            if status == "healthy":
+                healthy_count += 1
+            elif status == "warning":
+                warning_count += 1
+            elif status == "degraded":
+                degraded_count += 1
+            elif status == "critical":
+                critical_count += 1
+        
+        avg_health_score = sum(info.get("health_score", 1.0) for info in self.health_stats.values()) / max(1, total_modules)
+        
+        return {
+            "total_modules": total_modules,
+            "healthy": healthy_count,
+            "warning": warning_count,
+            "degraded": degraded_count,
+            "critical": critical_count,
+            "average_health_score": round(avg_health_score, 3),
+            "last_check": time.time(),
+            "health_distribution": {
+                "healthy": healthy_count,
+                "warning": warning_count,
+                "degraded": degraded_count,
+                "critical": critical_count
+            }
+        }
+    
+    def enable_health_monitoring(self, enabled: bool = True) -> None:
+        """
+        Enable or disable health monitoring.
+        
+        Args:
+            enabled: Whether to enable health monitoring
+        """
+        self.health_monitoring_enabled = enabled
+        logger.info(f"Health monitoring {'enabled' if enabled else 'disabled'}")
+    
+    def set_health_thresholds(self, thresholds: Dict[str, float]) -> None:
+        """
+        Set custom health thresholds.
+        
+        Args:
+            thresholds: Dictionary of threshold names to values
+        """
+        self.health_thresholds.update(thresholds)
+        logger.info(f"Updated health thresholds: {self.health_thresholds}")
+    
+    def get_health_thresholds(self) -> Dict[str, float]:
+        """
+        Get current health thresholds.
+        
+        Returns:
+            Dictionary of threshold names to values
+        """
+        return self.health_thresholds.copy()
+    
+    def perform_health_check(self) -> Dict[str, Any]:
+        """
+        Perform a comprehensive health check on all modules.
+        
+        Returns:
+            Dictionary containing health check results
+        """
+        start_time = time.time()
+        
+        # Update health status for all modules
+        for module_name in self.performance_metrics.keys():
+            self._update_health_status(module_name)
+        
+        # Get health summary
+        summary = self.get_health_summary()
+        
+        # Identify problematic modules
+        problematic_modules = []
+        for module_name, health_info in self.health_stats.items():
+            if health_info["health_status"] in ["degraded", "critical"]:
+                problematic_modules.append({
+                    "module": module_name,
+                    "status": health_info["health_status"],
+                    "score": health_info["health_score"],
+                    "error_rate": health_info["error_rate"],
+                    "timeout_rate": health_info["timeout_rate"]
+                })
+        
+        self.last_health_check = time.time()
+        
+        result = {
+            "timestamp": self.last_health_check,
+            "duration_seconds": time.time() - start_time,
+            "summary": summary,
+            "problematic_modules": problematic_modules,
+            "thresholds": self.health_thresholds
+        }
+        
+        logger.info(f"Health check completed: {summary['healthy']} healthy, {summary['warning']} warning, "
+                   f"{summary['degraded']} degraded, {summary['critical']} critical modules")
+        
+        return result
     
     def get_modules_by_category(self, category: str) -> List[str]:
         """
@@ -516,6 +974,8 @@ class ModuleRegistry:
         Args:
             watch_path: Path to watch for changes
         """
+        if WATCHDOG_STUB:
+            logger.warning("watchdog not installed; using stub file watcher")
         try:
             # Create event handler
             event_handler = HotReloadEventHandler(self)
@@ -555,7 +1015,7 @@ class ModuleRegistry:
         except Exception as e:
             logger.error(f"Failed to stop file watcher: {e}")
     
-    def hot_reload_module(self, module_name: str) -> bool:
+    def hot_reload_module(self, module_name: str, enforce_interval: bool = True) -> bool:
         """
         Hot reload a specific module.
         
@@ -571,18 +1031,24 @@ class ModuleRegistry:
         
         # Check minimum reload interval
         current_time = time.time()
-        if current_time - self.last_reload_time < self.min_reload_interval:
+        if enforce_interval and current_time - self.last_reload_time < self.min_reload_interval:
             logger.debug(f"Hot reload skipped: minimum interval {self.min_reload_interval}s not elapsed")
             return False
         
         try:
             with self.hot_reload_lock:
                 # Find the module file
-                modules_dir = Path("server/extractor/modules/")
-                module_file = modules_dir / f"{module_name}.py"
+                module_info = self.modules.get(module_name, {})
+                module_path = module_info.get("path")
+                if module_path:
+                    module_file = Path(module_path)
+                else:
+                    modules_dir = Path("server/extractor/modules/")
+                    module_file = modules_dir / f"{module_name}.py"
                 
                 if not module_file.exists():
                     logger.warning(f"Module file not found: {module_file}")
+                    self.hot_reload_errors += 1
                     return False
                 
                 logger.info(f"Hot reloading module: {module_name}")
@@ -625,15 +1091,14 @@ class ModuleRegistry:
         results = {}
         
         try:
-            with self.hot_reload_lock:
-                # Get all module names
-                module_names = list(self.modules.keys())
-                
-                for module_name in module_names:
-                    success = self.hot_reload_module(module_name)
-                    results[module_name] = success
-                
-                logger.info(f"Hot reloaded {len(results)} modules: {sum(results.values())} successful, {len(results) - sum(results.values())} failed")
+            # Get all module names
+            module_names = list(self.modules.keys())
+            
+            for module_name in module_names:
+                success = self.hot_reload_module(module_name, enforce_interval=False)
+                results[module_name] = success
+            
+            logger.info(f"Hot reloaded {len(results)} modules: {sum(results.values())} successful, {len(results) - sum(results.values())} failed")
                 
         except Exception as e:
             logger.error(f"Failed to hot reload all modules: {e}")
@@ -656,6 +1121,411 @@ class ModuleRegistry:
             "success_rate": self._calculate_hot_reload_success_rate()
         }
     
+    def enable_plugins(self, enabled: bool = True, plugin_paths: Optional[List[str]] = None) -> None:
+        """
+        Enable or disable the plugin system.
+        
+        Args:
+            enabled: Whether to enable plugins
+            plugin_paths: List of paths to search for plugins
+        """
+        if enabled:
+            if not self.plugins_enabled:
+                self.plugins_enabled = True
+                self.plugin_paths = plugin_paths or ["plugins/", "external_plugins/"]
+                logger.info(f"Plugin system enabled with paths: {self.plugin_paths}")
+            else:
+                logger.info("Plugin system already enabled")
+        else:
+            if self.plugins_enabled:
+                self.plugins_enabled = False
+                self.plugin_paths = []
+                logger.info("Plugin system disabled")
+    
+    def discover_and_load_plugins(self) -> None:
+        """
+        Discover and load all plugins from configured paths.
+        """
+        if not self.plugins_enabled:
+            logger.warning("Plugin system is disabled")
+            return
+        
+        start_time = time.time()
+        logger.info(f"Starting plugin discovery in paths: {self.plugin_paths}")
+        
+        # Clear previous plugin data
+        self.loaded_plugins = {}
+        self.plugin_load_errors = {}
+        self.plugins_loaded_count = 0
+        self.plugins_failed_count = 0
+        
+        try:
+            # Discover plugins in each path
+            for plugin_path in self.plugin_paths:
+                self._discover_plugins_in_path(plugin_path)
+            
+            self.plugin_discovery_time = time.time() - start_time
+            logger.info(f"Plugin discovery completed in {self.plugin_discovery_time:.3f}s")
+            logger.info(f"Loaded {self.plugins_loaded_count} plugins, {self.plugins_failed_count} failed")
+            
+        except Exception as e:
+            logger.error(f"Error during plugin discovery: {e}")
+            self.plugin_discovery_time = time.time() - start_time
+    
+    def _discover_plugins_in_path(self, plugin_path: str) -> None:
+        """
+        Discover plugins in a specific path.
+        
+        Args:
+            plugin_path: Path to search for plugins
+        """
+        try:
+            plugins_dir = Path(plugin_path)
+            if not plugins_dir.exists():
+                logger.debug(f"Plugin directory not found: {plugin_path}")
+                return
+            
+            # Find all Python files and directories in the plugin path
+            for item in plugins_dir.iterdir():
+                if item.is_file() and item.suffix == ".py" and not item.name.startswith("_"):
+                    # Single-file plugin
+                    self._load_plugin_file(item)
+                elif item.is_dir() and not item.name.startswith("_"):
+                    # Directory-based plugin
+                    self._load_plugin_directory(item)
+                    
+        except Exception as e:
+            logger.error(f"Error discovering plugins in {plugin_path}: {e}")
+    
+    def _load_plugin_file(self, plugin_file: Path) -> None:
+        """
+        Load a single-file plugin.
+        
+        Args:
+            plugin_file: Path to the plugin file
+        """
+        try:
+            plugin_name = plugin_file.stem
+            logger.info(f"Loading plugin file: {plugin_name}")
+            
+            # Import the plugin module
+            module_spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
+            if module_spec is None:
+                error_msg = f"Could not load spec for plugin {plugin_name}"
+                logger.warning(error_msg)
+                self.plugin_load_errors[plugin_name] = error_msg
+                self.plugins_failed_count += 1
+                return
+            
+            plugin_module = importlib.util.module_from_spec(module_spec)
+            module_spec.loader.exec_module(plugin_module)
+            
+            # Add to sys.modules so it can be imported later
+            sys.modules[plugin_name] = plugin_module
+            
+            # Register the plugin
+            self._register_plugin(plugin_name, plugin_module, plugin_file)
+            
+        except ImportError as e:
+            error_msg = f"Import error in plugin {plugin_file.name}: {e}"
+            logger.warning(error_msg)
+            self.plugin_load_errors[plugin_name] = error_msg
+            self.plugins_failed_count += 1
+        except Exception as e:
+            error_msg = f"Error loading plugin {plugin_file.name}: {e}"
+            logger.error(error_msg)
+            self.plugin_load_errors[plugin_name] = error_msg
+            self.plugins_failed_count += 1
+    
+    def _load_plugin_directory(self, plugin_dir: Path) -> None:
+        """
+        Load a directory-based plugin.
+        
+        Args:
+            plugin_dir: Path to the plugin directory
+        """
+        try:
+            plugin_name = plugin_dir.name
+            logger.info(f"Loading plugin directory: {plugin_name}")
+            
+            # Look for __init__.py or main plugin file
+            init_file = plugin_dir / "__init__.py"
+            main_file = plugin_dir / f"{plugin_name}.py"
+            
+            plugin_file = init_file if init_file.exists() else main_file
+            
+            if not plugin_file.exists():
+                error_msg = f"No plugin file found in directory {plugin_name}"
+                logger.warning(error_msg)
+                self.plugin_load_errors[plugin_name] = error_msg
+                self.plugins_failed_count += 1
+                return
+            
+            # Import the plugin module
+            module_spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
+            if module_spec is None:
+                error_msg = f"Could not load spec for plugin {plugin_name}"
+                logger.warning(error_msg)
+                self.plugin_load_errors[plugin_name] = error_msg
+                self.plugins_failed_count += 1
+                return
+            
+            plugin_module = importlib.util.module_from_spec(module_spec)
+            module_spec.loader.exec_module(plugin_module)
+            
+            # Add to sys.modules so it can be imported later
+            sys.modules[plugin_name] = plugin_module
+            
+            # Register the plugin
+            self._register_plugin(plugin_name, plugin_module, plugin_dir)
+            
+        except ImportError as e:
+            error_msg = f"Import error in plugin {plugin_dir.name}: {e}"
+            logger.warning(error_msg)
+            self.plugin_load_errors[plugin_dir.name] = error_msg
+            self.plugins_failed_count += 1
+        except Exception as e:
+            error_msg = f"Error loading plugin {plugin_dir.name}: {e}"
+            logger.error(error_msg)
+            self.plugin_load_errors[plugin_dir.name] = error_msg
+            self.plugins_failed_count += 1
+    
+    def _register_plugin(self, plugin_name: str, plugin_module: Any, plugin_path: Path) -> None:
+        """
+        Register a loaded plugin.
+        
+        Args:
+            plugin_name: Name of the plugin
+            plugin_module: The loaded plugin module
+            plugin_path: Path to the plugin file/directory
+        """
+        try:
+            # Find extraction functions in the plugin
+            extraction_functions = self._find_extraction_functions(plugin_module)
+            
+            # Find plugin metadata
+            plugin_metadata = self._extract_plugin_metadata(plugin_module)
+            
+            # Find plugin dependencies
+            dependencies = self._find_module_dependencies(plugin_module)
+            
+            # Register the plugin
+            self.loaded_plugins[plugin_name] = {
+                "functions": extraction_functions,
+                "metadata": plugin_metadata,
+                "dependencies": dependencies,
+                "path": str(plugin_path),
+                "type": "directory" if plugin_path.is_dir() else "file",
+                "enabled": True
+            }
+            
+            # Also add to regular modules for execution
+            self._register_module(plugin_name, extraction_functions, dependencies, plugin_path)
+            
+            self.plugins_loaded_count += 1
+            logger.info(f"Successfully loaded plugin: {plugin_name} with {len(extraction_functions)} functions")
+            
+        except Exception as e:
+            error_msg = f"Error registering plugin {plugin_name}: {e}"
+            logger.error(error_msg)
+            self.plugin_load_errors[plugin_name] = error_msg
+            self.plugins_failed_count += 1
+    
+    def _extract_plugin_metadata(self, plugin_module: Any) -> Dict[str, Any]:
+        """
+        Extract metadata from a plugin module.
+        
+        Args:
+            plugin_module: The plugin module to inspect
+            
+        Returns:
+            Dictionary of plugin metadata
+        """
+        metadata = {
+            "version": "1.0.0",
+            "author": "Unknown",
+            "description": "No description",
+            "license": "MIT"
+        }
+        
+        # Look for standard metadata attributes
+        if hasattr(plugin_module, "PLUGIN_VERSION"):
+            metadata["version"] = getattr(plugin_module, "PLUGIN_VERSION")
+        
+        if hasattr(plugin_module, "PLUGIN_AUTHOR"):
+            metadata["author"] = getattr(plugin_module, "PLUGIN_AUTHOR")
+        
+        if hasattr(plugin_module, "PLUGIN_DESCRIPTION"):
+            metadata["description"] = getattr(plugin_module, "PLUGIN_DESCRIPTION")
+        
+        if hasattr(plugin_module, "PLUGIN_LICENSE"):
+            metadata["license"] = getattr(plugin_module, "PLUGIN_LICENSE")
+        
+        # Look for get_plugin_metadata function
+        if hasattr(plugin_module, "get_plugin_metadata") and callable(getattr(plugin_module, "get_plugin_metadata")):
+            try:
+                func_metadata = getattr(plugin_module, "get_plugin_metadata")()
+                if isinstance(func_metadata, dict):
+                    metadata.update(func_metadata)
+            except Exception as e:
+                logger.warning(f"Error getting plugin metadata from function: {e}")
+        
+        return metadata
+    
+    def get_plugin_info(self, plugin_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get information about a specific plugin.
+        
+        Args:
+            plugin_name: Name of the plugin
+            
+        Returns:
+            Plugin information dictionary or None if not found
+        """
+        return self.loaded_plugins.get(plugin_name)
+    
+    def get_all_plugins_info(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get information about all loaded plugins.
+        
+        Returns:
+            Dictionary of plugin names to their information
+        """
+        return self.loaded_plugins
+    
+    def get_discovered_plugins(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get information about all discovered plugins (both modules and plugins).
+        
+        Returns:
+            Dictionary of plugin/module names to their information
+        """
+        # Combine both regular modules and plugins
+        all_plugins = {}
+        
+        # Add regular modules
+        for module_name, module_info in self.modules.items():
+            all_plugins[module_name] = {
+                "type": "module",
+                "module": sys.modules.get(module_name),
+                "path": module_info.get("path"),
+                "category": module_info.get("category"),
+                "functions": list(module_info.get("functions", {}).keys()),
+                "dependencies": module_info.get("dependencies", []),
+                "enabled": module_info.get("enabled", True)
+            }
+        
+        # Add plugins
+        for plugin_name, plugin_info in self.loaded_plugins.items():
+            all_plugins[plugin_name] = {
+                "type": "plugin",
+                "module": sys.modules.get(plugin_name),
+                "path": plugin_info.get("path"),
+                "metadata": plugin_info.get("metadata", {}),
+                "functions": list(plugin_info.get("functions", {}).keys()),
+                "dependencies": plugin_info.get("dependencies", []),
+                "enabled": plugin_info.get("enabled", True)
+            }
+        
+        return all_plugins
+    
+    def get_plugin_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about plugin loading.
+        
+        Returns:
+            Dictionary of plugin statistics
+        """
+        return {
+            "plugins_enabled": self.plugins_enabled,
+            "plugin_paths": self.plugin_paths,
+            "plugins_loaded": self.plugins_loaded_count,
+            "plugins_failed": self.plugins_failed_count,
+            "plugin_discovery_time": self.plugin_discovery_time,
+            "loaded_plugins": list(self.loaded_plugins.keys()),
+            "failed_plugins": list(self.plugin_load_errors.keys()),
+            "success_rate": self._calculate_plugin_success_rate()
+        }
+    
+    def _calculate_plugin_success_rate(self) -> float:
+        """
+        Calculate plugin loading success rate.
+        
+        Returns:
+            Success rate as a float between 0 and 1
+        """
+        total_attempts = self.plugins_loaded_count + self.plugins_failed_count
+        if total_attempts == 0:
+            return 0.0
+        
+        return round(self.plugins_loaded_count / total_attempts, 3)
+    
+    def enable_plugin(self, plugin_name: str) -> bool:
+        """
+        Enable a specific plugin.
+        
+        Args:
+            plugin_name: Name of the plugin to enable
+            
+        Returns:
+            True if plugin was enabled, False if not found
+        """
+        if plugin_name in self.loaded_plugins:
+            self.loaded_plugins[plugin_name]["enabled"] = True
+            logger.info(f"Enabled plugin: {plugin_name}")
+            return True
+        return False
+    
+    def disable_plugin(self, plugin_name: str) -> bool:
+        """
+        Disable a specific plugin.
+        
+        Args:
+            plugin_name: Name of the plugin to disable
+            
+        Returns:
+            True if plugin was disabled, False if not found
+        """
+        if plugin_name in self.loaded_plugins:
+            self.loaded_plugins[plugin_name]["enabled"] = False
+            logger.info(f"Disabled plugin: {plugin_name}")
+            return True
+        return False
+    
+    def reload_plugin(self, plugin_name: str) -> bool:
+        """
+        Reload a specific plugin.
+        
+        Args:
+            plugin_name: Name of the plugin to reload
+            
+        Returns:
+            True if reload was successful, False otherwise
+        """
+        if plugin_name not in self.loaded_plugins:
+            logger.warning(f"Plugin not found: {plugin_name}")
+            return False
+        
+        try:
+            plugin_info = self.loaded_plugins[plugin_name]
+            plugin_path = Path(plugin_info["path"])
+            
+            # Remove from loaded plugins
+            del self.loaded_plugins[plugin_name]
+            
+            # Reload the plugin
+            if plugin_path.is_file():
+                self._load_plugin_file(plugin_path)
+            else:
+                self._load_plugin_directory(plugin_path)
+            
+            logger.info(f"Reloaded plugin: {plugin_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to reload plugin {plugin_name}: {e}")
+            return False
+    
     def _calculate_hot_reload_success_rate(self) -> float:
         """
         Calculate hot reload success rate.
@@ -672,62 +1542,6 @@ class ModuleRegistry:
         
         return round(self.hot_reload_count / total_attempts, 3)
 
-
-class HotReloadEventHandler(watchdog.events.FileSystemEventHandler):
-    """
-    File system event handler for hot reloading modules.
-    """
-    
-    def __init__(self, module_registry: ModuleRegistry):
-        super().__init__()
-        self.registry = module_registry
-        self.last_event_time = 0.0
-        self.debounce_interval = 0.5  # Debounce interval to avoid multiple triggers
-    
-    def on_modified(self, event: watchdog.events.FileSystemEvent):
-        """
-        Handle file modification events.
-        """
-        if not event.is_directory:
-            current_time = time.time()
-            if current_time - self.last_event_time > self.debounce_interval:
-                self.last_event_time = current_time
-                
-                # Extract module name from file path
-                if event.src_path.endswith('.py'):
-                    module_name = os.path.basename(event.src_path)[:-3]  # Remove .py
-                    
-                    # Skip special files
-                    if module_name.startswith('_'):
-                        return
-                    
-                    # Trigger hot reload
-                    threading.Thread(target=self._hot_reload_module, args=(module_name,), daemon=True).start()
-    
-    def _hot_reload_module(self, module_name: str):
-        """
-        Hot reload a module in a separate thread.
-        """
-        try:
-            logger.info(f"Detected change in module: {module_name}, triggering hot reload")
-            success = self.registry.hot_reload_module(module_name)
-            
-            if success:
-                logger.info(f"Successfully hot reloaded module: {module_name}")
-                
-                # Rebuild dependency graph after reload
-                self.registry.build_dependency_graph()
-                
-                # Log dependency stats
-                dependency_stats = self.registry.get_dependency_stats()
-                if dependency_stats["circular_dependencies"]:
-                    logger.warning(f"Circular dependencies after reload: {dependency_stats['circular_dependencies']}")
-            else:
-                logger.warning(f"Failed to hot reload module: {module_name}")
-                
-        except Exception as e:
-            logger.error(f"Error in hot reload thread for {module_name}: {e}")
-    
     def get_discovery_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the module discovery process.
@@ -970,6 +1784,61 @@ class HotReloadEventHandler(watchdog.events.FileSystemEventHandler):
         return round(efficiency, 3)
 
 
+class HotReloadEventHandler(_WatchdogEventHandlerBase):
+    """
+    File system event handler for hot reloading modules.
+    """
+    
+    def __init__(self, module_registry: ModuleRegistry):
+        super().__init__()
+        self.registry = module_registry
+        self.last_event_time = 0.0
+        self.debounce_interval = 0.5  # Debounce interval to avoid multiple triggers
+    
+    def on_modified(self, event: _WatchdogEventType):
+        """
+        Handle file modification events.
+        """
+        if not event.is_directory:
+            current_time = time.time()
+            if current_time - self.last_event_time > self.debounce_interval:
+                self.last_event_time = current_time
+                
+                # Extract module name from file path
+                if event.src_path.endswith('.py'):
+                    module_name = os.path.basename(event.src_path)[:-3]  # Remove .py
+                    
+                    # Skip special files
+                    if module_name.startswith('_'):
+                        return
+                    
+                    # Trigger hot reload
+                    threading.Thread(target=self._hot_reload_module, args=(module_name,), daemon=True).start()
+    
+    def _hot_reload_module(self, module_name: str):
+        """
+        Hot reload a module in a separate thread.
+        """
+        try:
+            logger.info(f"Detected change in module: {module_name}, triggering hot reload")
+            success = self.registry.hot_reload_module(module_name)
+            
+            if success:
+                logger.info(f"Successfully hot reloaded module: {module_name}")
+                
+                # Rebuild dependency graph after reload
+                self.registry.build_dependency_graph()
+                
+                # Log dependency stats
+                dependency_stats = self.registry.get_dependency_stats()
+                if dependency_stats["circular_dependencies"]:
+                    logger.warning(f"Circular dependencies after reload: {dependency_stats['circular_dependencies']}")
+            else:
+                logger.warning(f"Failed to hot reload module: {module_name}")
+                
+        except Exception as e:
+            logger.error(f"Error in hot reload thread for {module_name}: {e}")
+    
 # Global module registry instance
 module_registry = ModuleRegistry()
 
@@ -1137,3 +2006,233 @@ def get_hot_reload_stats_global() -> Dict[str, Any]:
         Dictionary of hot reload statistics
     """
     return module_registry.get_hot_reload_stats()
+
+
+def enable_plugins_global(enabled: bool = True, plugin_paths: Optional[List[str]] = None) -> None:
+    """
+    Enable or disable the plugin system globally.
+    
+    Args:
+        enabled: Whether to enable plugins
+        plugin_paths: List of paths to search for plugins
+    """
+    module_registry.enable_plugins(enabled, plugin_paths)
+
+
+def discover_and_load_plugins_global() -> None:
+    """
+    Discover and load all plugins globally.
+    """
+    module_registry.discover_and_load_plugins()
+
+
+def get_plugin_info_global(plugin_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Get information about a specific plugin globally.
+    
+    Args:
+        plugin_name: Name of the plugin
+        
+    Returns:
+        Plugin information dictionary or None if not found
+    """
+    return module_registry.get_plugin_info(plugin_name)
+
+
+def get_all_plugins_info_global() -> Dict[str, Dict[str, Any]]:
+    """
+    Get information about all loaded plugins globally.
+    
+    Returns:
+        Dictionary of plugin names to their information
+    """
+    return module_registry.get_all_plugins_info()
+
+
+def get_plugin_stats_global() -> Dict[str, Any]:
+    """
+    Get plugin statistics globally.
+    
+    Returns:
+        Dictionary of plugin statistics
+    """
+    return module_registry.get_plugin_stats()
+
+
+def get_discovered_plugins_global() -> Dict[str, Dict[str, Any]]:
+    """
+    Get information about all discovered plugins globally.
+    
+    Returns:
+        Dictionary of plugin/module names to their information
+    """
+    return module_registry.get_discovered_plugins()
+
+
+def enable_plugin_global(plugin_name: str) -> bool:
+    """
+    Enable a specific plugin globally.
+    
+    Args:
+        plugin_name: Name of the plugin to enable
+        
+    Returns:
+        True if plugin was enabled, False if not found
+    """
+    return module_registry.enable_plugin(plugin_name)
+
+
+def disable_plugin_global(plugin_name: str) -> bool:
+    """
+    Disable a specific plugin globally.
+    
+    Args:
+        plugin_name: Name of the plugin to disable
+        
+    Returns:
+        True if plugin was disabled, False if not found
+    """
+    return module_registry.disable_plugin(plugin_name)
+
+
+def reload_plugin_global(plugin_name: str) -> bool:
+    """
+    Reload a specific plugin globally.
+    
+    Args:
+        plugin_name: Name of the plugin to reload
+        
+    Returns:
+        True if reload was successful, False otherwise
+    """
+    return module_registry.reload_plugin(plugin_name)
+
+
+def enable_health_monitoring_global(enabled: bool = True) -> None:
+    """
+    Enable or disable health monitoring globally.
+    
+    Args:
+        enabled: Whether to enable health monitoring
+    """
+    module_registry.enable_health_monitoring(enabled)
+
+
+def set_health_thresholds_global(thresholds: Dict[str, float]) -> None:
+    """
+    Set custom health thresholds globally.
+    
+    Args:
+        thresholds: Dictionary of threshold names to values
+    """
+    module_registry.set_health_thresholds(thresholds)
+
+
+def get_health_thresholds_global() -> Dict[str, float]:
+    """
+    Get current health thresholds globally.
+    
+    Returns:
+        Dictionary of threshold names to values
+    """
+    return module_registry.get_health_thresholds()
+
+
+def get_performance_metrics_global(module_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Get performance metrics for a specific module globally.
+    
+    Args:
+        module_name: Name of the module
+        
+    Returns:
+        Performance metrics dictionary or None if not found
+    """
+    return module_registry.get_performance_metrics(module_name)
+
+
+def get_all_performance_metrics_global() -> Dict[str, Dict[str, Any]]:
+    """
+    Get performance metrics for all modules globally.
+    
+    Returns:
+        Dictionary of module names to their performance metrics
+    """
+    return module_registry.get_all_performance_metrics()
+
+
+def get_health_status_global(module_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Get health status for a specific module globally.
+    
+    Args:
+        module_name: Name of the module
+        
+    Returns:
+        Health status dictionary or None if not found
+    """
+    return module_registry.get_health_status(module_name)
+
+
+def get_all_health_statuses_global() -> Dict[str, Dict[str, Any]]:
+    """
+    Get health status for all modules globally.
+    
+    Returns:
+        Dictionary of module names to their health statuses
+    """
+    return module_registry.get_all_health_statuses()
+
+
+def get_performance_history_global(module_name: str, limit: int = 100) -> List[Dict[str, Any]]:
+    """
+    Get performance history for a specific module globally.
+    
+    Args:
+        module_name: Name of the module
+        limit: Maximum number of history entries to return
+        
+    Returns:
+        List of performance history entries
+    """
+    return module_registry.get_performance_history(module_name, limit)
+
+
+def get_health_summary_global() -> Dict[str, Any]:
+    """
+    Get a summary of health statuses across all modules globally.
+    
+    Returns:
+        Dictionary containing health summary statistics
+    """
+    return module_registry.get_health_summary()
+
+
+def perform_health_check_global() -> Dict[str, Any]:
+    """
+    Perform a comprehensive health check on all modules globally.
+    
+    Returns:
+        Dictionary containing health check results
+    """
+    return module_registry.perform_health_check()
+
+
+def track_execution_performance_global(
+    module_name: str,
+    function_name: str,
+    execution_time: float,
+    status: str = "success",
+    error: Optional[str] = None
+) -> None:
+    """
+    Track execution performance for a module function globally.
+    
+    Args:
+        module_name: Name of the module
+        function_name: Name of the function
+        execution_time: Execution time in seconds
+        status: Execution status (success, failure, timeout)
+        error: Error message if applicable
+    """
+    module_registry.track_execution_performance(module_name, function_name, execution_time, status, error)

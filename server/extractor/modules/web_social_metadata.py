@@ -15,6 +15,7 @@ Extracts metadata from:
 import logging
 import json
 import re
+import os
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from urllib.parse import urlparse
@@ -638,9 +639,6 @@ def extract_web_social_metadata_metadata(filepath: str) -> Dict[str, Any]:
     }
 
     try:
-        # TODO: Implement specific extraction logic for web_social_metadata
-        # This is a template that needs to be customized based on file format
-
         # Basic file validation
         if not filepath or not os.path.exists(filepath):
             result["error"] = "File path not provided or file doesn't exist"
@@ -648,17 +646,16 @@ def extract_web_social_metadata_metadata(filepath: str) -> Dict[str, Any]:
 
         result["is_valid_web_social_metadata"] = True
 
-        # Template structure - customize based on actual format requirements
         try:
-            # Add format-specific extraction logic here
-            # Examples:
-            # - Read file headers
-            # - Parse binary structures
-            # - Extract metadata fields
-            # - Map to registry definitions
+            extracted = extract_web_social_metadata(filepath)
+            if not isinstance(extracted, dict):
+                result["error"] = "web_social_metadata extraction returned invalid data"
+                return result
 
-            pass  # Replace with actual implementation
-
+            registry = extracted.pop("registry", {})
+            result["extracted_fields"] = extracted
+            if isinstance(registry, dict):
+                result["registry_fields"] = registry.get("tags", {})
         except Exception as e:
             result["error"] = f"web_social_metadata extraction failed: {str(e)[:200]}"
 

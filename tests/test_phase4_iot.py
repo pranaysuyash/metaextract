@@ -103,4 +103,25 @@ def test_extract_iot_metadata_xml_config():
     <mqtt broker="broker.iot.com" port="8883"/>
   </network>
   <parameters>
-    <parameter name="interval">30
+    <parameter name="interval">30</parameter>
+  </parameters>
+</iot_config>
+"""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+        f.write(xml_config)
+        temp_path = f.name
+
+    try:
+        result = iot.extract_iot_metadata(temp_path)
+
+        assert isinstance(result, dict)
+        assert result.get('iot_file_detected') is True
+        assert result.get('iot_device_id') == 'device_123'
+        assert result.get('iot_device_type') == 'multi_sensor'
+        assert result.get('iot_firmware_version') == '2.1.0'
+        assert result.get('iot_sensor_count') == 2
+        assert result.get('iot_mqtt_broker') == 'broker.iot.com'
+        assert result.get('iot_mqtt_port') == '8883'
+
+    finally:
+        os.unlink(temp_path)

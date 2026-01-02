@@ -27,6 +27,17 @@ Author: MetaExtract Team
 Version: 4.0.0 - Ultimate Edition
 """
 
+import logging
+import sys
+from typing import Optional
+
+# Configure logging with better formatting
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Import the dynamic module discovery system
 try:
     from .module_discovery import (
@@ -37,7 +48,10 @@ try:
         build_dependency_graph_global,
         get_dependency_stats_global,
         enable_hot_reloading_global,
-        get_hot_reload_stats_global
+        get_hot_reload_stats_global,
+        enable_plugins_global,
+        discover_and_load_plugins_global,
+        get_plugin_stats_global
     )
     MODULE_DISCOVERY_AVAILABLE = True
 except ImportError:
@@ -48,7 +62,6 @@ import os
 import sys
 import json
 import asyncio
-import logging
 import subprocess
 import tempfile
 import struct
@@ -138,11 +151,11 @@ except ImportError:
 # ============================================================================
 
 def safe_extract_module(
-    extraction_func: Callable,
+    extraction_func: Callable[..., Optional[Dict[str, Any]]],
     filepath: str,
     module_name: str,
-    *args,
-    **kwargs
+    *args: Any,
+    **kwargs: Any
 ) -> Optional[Dict[str, Any]]:
     """
     Safely execute a metadata extraction module with comprehensive error handling.
@@ -158,71 +171,131 @@ def safe_extract_module(
     """
     import time
     start_time = time.time()
+    file_size = "unknown"
     try:
-        logger.debug(f"Starting extraction with {module_name} for {filepath}")
+        # Get file size for logging
+        file_size = os.path.getsize(filepath) if os.path.exists(filepath) else "unknown"
+    except:
+        pass  # If we can't get file size, continue with "unknown"
+
+    try:
+        logger.info(f"Starting extraction with {module_name} for {filepath} (size: {file_size} bytes)")
         result = extraction_func(filepath, *args, **kwargs)
         duration = time.time() - start_time
-        logger.debug(f"Successfully completed extraction with {module_name} in {duration:.3f}s")
+        logger.info(f"Successfully completed extraction with {module_name} in {duration:.3f}s for {filepath}")
         # Add performance metrics to result if it's a dict
         if isinstance(result, dict):
             if 'performance' not in result:
                 result['performance'] = {}
             result['performance'][module_name] = {
                 'duration_seconds': duration,
-                'status': 'success'
+                'status': 'success',
+                'file_path': filepath,
+                'file_size': file_size,
+                'module_name': module_name
             }
         return result
     except ImportError as e:
         duration = time.time() - start_time
-        logger.warning(f"Module {module_name} not available: {e} (took {duration:.3f}s)")
+        logger.error(f"Module {module_name} not available for {filepath}: {e} (took {duration:.3f}s)")
+        logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
         return {
             "available": False,
             "error": str(e),
             "error_type": type(e).__name__,
             "module": module_name,
+            "file_path": filepath,
             "performance": {
                 module_name: {
                     "duration_seconds": duration,
                     "status": "failed",
-                    "error_type": type(e).__name__
+                    "error_type": type(e).__name__,
+                    "file_path": filepath,
+                    "file_size": file_size
                 }
             }
         }
     except FileNotFoundError as e:
         duration = time.time() - start_time
-        logger.warning(f"File not found for {module_name}: {e} (took {duration:.3f}s)")
+        logger.warning(f"File not found for {module_name} with {filepath}: {e} (took {duration:.3f}s)")
         return {
             "available": False,
             "error": str(e),
             "error_type": type(e).__name__,
             "module": module_name,
+            "file_path": filepath,
             "performance": {
                 module_name: {
                     "duration_seconds": duration,
                     "status": "failed",
-                    "error_type": type(e).__name__
+                    "error_type": type(e).__name__,
+                    "file_path": filepath,
+                    "file_size": file_size
                 }
             }
         }
     except PermissionError as e:
         duration = time.time() - start_time
-        logger.warning(f"Permission denied for {module_name}: {e} (took {duration:.3f}s)")
+        logger.warning(f"Permission denied for {module_name} with {filepath}: {e} (took {duration:.3f}s)")
         return {
             "available": False,
             "error": str(e),
             "error_type": type(e).__name__,
             "module": module_name,
+            "file_path": filepath,
             "performance": {
                 module_name: {
                     "duration_seconds": duration,
                     "status": "failed",
-                    "error_type": type(e).__name__
+                    "error_type": type(e).__name__,
+                    "file_path": filepath,
+                    "file_size": file_size
+                }
+            }
+        }
+    except MemoryError as e:
+        duration = time.time() - start_time
+        logger.error(f"Memory error during {module_name} extraction for {filepath}: {e} (took {duration:.3f}s)")
+        logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
+        return {
+            "available": False,
+            "error": "Insufficient memory to process file",
+            "error_type": type(e).__name__,
+            "module": module_name,
+            "file_path": filepath,
+            "performance": {
+                module_name: {
+                    "duration_seconds": duration,
+                    "status": "failed",
+                    "error_type": type(e).__name__,
+                    "file_path": filepath,
+                    "file_size": file_size
+                }
+            }
+        }
+    except TimeoutError as e:
+        duration = time.time() - start_time
+        logger.error(f"Timeout during {module_name} extraction for {filepath}: {e} (took {duration:.3f}s)")
+        logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
+        return {
+            "available": False,
+            "error": "Extraction timed out",
+            "error_type": type(e).__name__,
+            "module": module_name,
+            "file_path": filepath,
+            "performance": {
+                module_name: {
+                    "duration_seconds": duration,
+                    "status": "failed",
+                    "error_type": type(e).__name__,
+                    "file_path": filepath,
+                    "file_size": file_size
                 }
             }
         }
     except Exception as e:
         duration = time.time() - start_time
-        logger.error(f"Error in {module_name} extraction: {e} (took {duration:.3f}s)")
+        logger.error(f"Unexpected error in {module_name} extraction for {filepath}: {e} (took {duration:.3f}s)")
         logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
         # Return a structured error response instead of failing completely
         return {
@@ -230,11 +303,14 @@ def safe_extract_module(
             "error": str(e),
             "error_type": type(e).__name__,
             "module": module_name,
+            "file_path": filepath,
             "performance": {
                 module_name: {
                     "duration_seconds": duration,
                     "status": "failed",
-                    "error_type": type(e).__name__
+                    "error_type": type(e).__name__,
+                    "file_path": filepath,
+                    "file_size": file_size
                 }
             }
         }
@@ -408,16 +484,61 @@ except ImportError:
     detect_enhanced_manipulation = None  # type: ignore[assignment]
     detect_enhanced_steganography = None  # type: ignore[assignment]
 
+def log_extraction_event(
+    event_type: str,
+    filepath: str,
+    module_name: str,
+    status: str = "info",
+    details: Optional[Dict[str, Any]] = None,
+    duration: Optional[float] = None
+) -> None:
+    """
+    Log a comprehensive extraction event with detailed information.
+
+    Args:
+        event_type: Type of event (e.g., 'extraction_start', 'extraction_complete', 'error')
+        filepath: Path to the file being processed
+        module_name: Name of the module processing the file
+        status: Log level ('debug', 'info', 'warning', 'error', 'critical')
+        details: Additional details about the event
+        duration: Processing duration in seconds (if applicable)
+    """
+    file_size = "unknown"
+    try:
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+    except:
+        pass
+
+    log_message = f"[{event_type}] File: {filepath}, Module: {module_name}, Size: {file_size}"
+    if duration is not None:
+        log_message += f", Duration: {duration:.3f}s"
+    if details:
+        log_message += f", Details: {details}"
+
+    # Map status to appropriate logger method
+    if status.lower() == 'debug':
+        logger.debug(log_message)
+    elif status.lower() == 'warning':
+        logger.warning(log_message)
+    elif status.lower() == 'error':
+        logger.error(log_message)
+    elif status.lower() == 'critical':
+        logger.critical(log_message)
+    else:  # default to info
+        logger.info(log_message)
+
+
 try:
     from .modules.steganography import analyze_steganography
 except ImportError:
     analyze_steganography = None  # type: ignore[assignment]
 
 try:
-    from .utils.cache import get_cache
+    from .cache import get_cache
 except ImportError:
     try:
-        from utils.cache import get_cache  # type: ignore
+        from cache import get_cache  # type: ignore
     except ImportError:
         get_cache = None  # type: ignore[assignment]
 
@@ -522,10 +643,10 @@ except Exception as e:
     extract_document_metadata = None  # type: ignore[assignment]
 
 try:
-    from .utils.cache import get_cache
+    from .cache import get_cache
 except ImportError:
     try:
-        from utils.cache import get_cache  # type: ignore
+        from cache import get_cache  # type: ignore
     except ImportError:
         get_cache = None  # type: ignore[assignment]
 
@@ -1721,6 +1842,7 @@ class ComprehensiveMetadataExtractor:
     """Ultimate metadata extractor with all specialized engines"""
     
     def __init__(self):
+        global MODULE_DISCOVERY_AVAILABLE
         self.medical_engine = MedicalImagingEngine()
         self.astronomical_engine = AstronomicalDataEngine()
         self.geospatial_engine = GeospatialEngine()
@@ -1745,6 +1867,12 @@ class ComprehensiveMetadataExtractor:
                 
                 logger.info(f"Dynamic module discovery initialized: {self.module_discovery_stats['loaded_count']} modules loaded")
                 logger.info(f"Dependency analysis: {dependency_stats['total_modules_with_dependencies']} modules with dependencies")
+                
+                # Load plugins
+                enable_plugins_global(True)
+                discover_and_load_plugins_global()
+                plugin_stats = get_plugin_stats_global()
+                logger.info(f"Plugin system initialized: {plugin_stats['plugins_loaded']} plugins loaded")
                 
             except Exception as e:
                 logger.error(f"Failed to initialize module discovery: {e}")
@@ -1876,6 +2004,10 @@ class ComprehensiveMetadataExtractor:
             # Add hot reloading statistics
             hot_reload_stats = get_hot_reload_stats_global()
             base_result["extraction_info"]["hot_reloading"] = hot_reload_stats
+            
+            # Add plugin statistics
+            plugin_stats = get_plugin_stats_global()
+            base_result["extraction_info"]["plugins"] = plugin_stats
         else:
             base_result["extraction_info"]["dynamic_modules_enabled"] = False
         
@@ -2086,6 +2218,67 @@ class ComprehensiveMetadataExtractor:
                 ai_result = safe_extract_module(detect_ai_content, filepath, "ai_detection", base_result)
                 if ai_result:
                     base_result["ai_detection"] = ai_result
+
+            # Build advanced analysis summary
+            advanced_modules_run = []
+            advanced_processing_time = 0
+            forensic_score = 0
+            authenticity_assessment = 'authentic'
+
+            # Check steganography results
+            if "steganography_analysis" in base_result:
+                steg_result = base_result["steganography_analysis"]
+                if isinstance(steg_result, dict):
+                    advanced_modules_run.append("steganography")
+                    if "performance" in steg_result:
+                        advanced_processing_time += steg_result["performance"].get("duration_seconds", 0) * 1000
+                    # Add to forensic score based on suspicious score
+                    suspicious_score = steg_result.get("suspicious_score", 0)
+                    forensic_score += suspicious_score * 0.3  # Weight steganography at 30%
+                    if suspicious_score > 0.5:
+                        authenticity_assessment = 'questionable'
+                    if suspicious_score > 0.8:
+                        authenticity_assessment = 'suspicious'
+
+            # Check manipulation detection results
+            if "manipulation_detection" in base_result:
+                manip_result = base_result["manipulation_detection"]
+                if isinstance(manip_result, dict):
+                    advanced_modules_run.append("manipulation_detection")
+                    if "performance" in manip_result:
+                        advanced_processing_time += manip_result["performance"].get("duration_seconds", 0) * 1000
+                    # Add to forensic score based on manipulation probability
+                    manip_prob = manip_result.get("manipulation_probability", 0)
+                    forensic_score += manip_prob * 0.4  # Weight manipulation at 40%
+                    if manip_prob > 0.3:
+                        authenticity_assessment = 'questionable'
+                    if manip_prob > 0.7:
+                        authenticity_assessment = 'suspicious'
+
+            # Check AI detection results
+            if "ai_detection" in base_result:
+                ai_result = base_result["ai_detection"]
+                if isinstance(ai_result, dict):
+                    advanced_modules_run.append("ai_detection")
+                    if "performance" in ai_result:
+                        advanced_processing_time += ai_result["performance"].get("duration_seconds", 0) * 1000
+                    # Add to forensic score based on AI probability
+                    ai_prob = ai_result.get("ai_probability", 0)
+                    forensic_score += ai_prob * 0.3  # Weight AI detection at 30%
+                    if ai_prob > 0.4:
+                        authenticity_assessment = 'questionable'
+                    if ai_prob > 0.8:
+                        authenticity_assessment = 'suspicious'
+
+            # Only add advanced_analysis if any modules were run
+            if advanced_modules_run:
+                base_result["advanced_analysis"] = {
+                    "enabled": True,
+                    "processing_time_ms": advanced_processing_time,
+                    "modules_run": advanced_modules_run,
+                    "forensic_score": min(forensic_score, 1.0),  # Cap at 1.0
+                    "authenticity_assessment": authenticity_assessment
+                }
 
             # Optional: Timeline reconstruction
             if tier_config.timeline_reconstruction and analyze_single_file_timeline:
@@ -2398,22 +2591,89 @@ def get_comprehensive_extractor() -> ComprehensiveMetadataExtractor:
 def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
     """
     Extract comprehensive metadata using all available specialized engines.
-    
+
     This is the main entry point for the ultimate metadata extraction.
     """
+    start_time = time.time()
+
+    # Log the start of the extraction
+    log_extraction_event(
+        event_type="extraction_start",
+        filepath=filepath,
+        module_name="comprehensive_engine",
+        status="info",
+        details={"tier": tier}
+    )
+
     # Check cache first if available
     if get_cache:
         try:
             cache = get_cache()
             cached_result = cache.get(filepath, tier)
             if cached_result:
-                logger.debug(f"Cache hit for {filepath}")
+                duration = time.time() - start_time
+                log_extraction_event(
+                    event_type="cache_hit",
+                    filepath=filepath,
+                    module_name="comprehensive_engine",
+                    status="info",
+                    duration=duration
+                )
                 return cached_result
         except Exception as e:
-            logger.debug(f"Cache lookup failed: {e}")
-    
-    extractor = get_comprehensive_extractor()
-    return extractor.extract_comprehensive_metadata(filepath, tier)
+            logger.warning(f"Cache lookup failed for {filepath}: {e}")
+
+    try:
+        extractor = get_comprehensive_extractor()
+        result = extractor.extract_comprehensive_metadata(filepath, tier)
+
+        # Log successful completion
+        duration = time.time() - start_time
+        log_extraction_event(
+            event_type="extraction_complete",
+            filepath=filepath,
+            module_name="comprehensive_engine",
+            status="info",
+            duration=duration,
+            details={
+                "tier": tier,
+                "fields_extracted": result.get("extraction_info", {}).get("comprehensive_fields_extracted", 0),
+                "success": True
+            }
+        )
+
+        return result
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"Critical error in comprehensive metadata extraction for {filepath}: {e}")
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+
+        # Log the error
+        log_extraction_event(
+            event_type="extraction_error",
+            filepath=filepath,
+            module_name="comprehensive_engine",
+            status="error",
+            duration=duration,
+            details={
+                "tier": tier,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "success": False
+            }
+        )
+
+        # Return a structured error response
+        return {
+            "error": f"Critical error in comprehensive metadata extraction: {str(e)}",
+            "error_type": type(e).__name__,
+            "file": {"path": filepath},
+            "extraction_info": {
+                "comprehensive_version": "4.0.0",
+                "processing_ms": duration * 1000,
+                "tier": tier
+            }
+        }
 
 
 def extract_comprehensive_batch(
@@ -2423,55 +2683,384 @@ def extract_comprehensive_batch(
     store_results: bool = False,
 ) -> Dict[str, Any]:
     """Extract metadata for multiple files with optional storage."""
+    start_time = time.time()
+
+    # Log the start of the batch extraction
+    log_extraction_event(
+        event_type="batch_extraction_start",
+        filepath="batch_operation",
+        module_name="comprehensive_engine",
+        status="info",
+        details={
+            "total_files": len(filepaths),
+            "tier": tier,
+            "max_workers": max_workers
+        }
+    )
+
     extractor = get_comprehensive_extractor()
     results: Dict[str, Any] = {}
     errors = 0
-    start_time = time.time()
 
     def _process(path: str) -> Tuple[str, Dict[str, Any]]:
-        metadata = extractor.extract_comprehensive_metadata(path, tier)
-        if store_results and store_file_metadata and "error" not in metadata:
-            try:
-                store_file_metadata(path, metadata, metadata.get("perceptual_hashes"))
-            except Exception as e:
-                metadata["storage_error"] = str(e)
-        return path, metadata
+        try:
+            metadata = extractor.extract_comprehensive_metadata(path, tier)
+            if store_results and store_file_metadata and "error" not in metadata:
+                try:
+                    store_file_metadata(path, metadata, metadata.get("perceptual_hashes"))
+                except Exception as e:
+                    logger.warning(f"Failed to store metadata for {path}: {e}")
+                    metadata["storage_error"] = str(e)
+            return path, metadata
+        except Exception as e:
+            logger.error(f"Error processing {path} in batch: {e}")
+            return path, {
+                "error": f"Error processing file in batch: {str(e)}",
+                "error_type": type(e).__name__,
+                "file": {"path": path},
+                "extraction_info": {
+                    "comprehensive_version": "4.0.0",
+                    "tier": tier
+                }
+            }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for path, metadata in executor.map(_process, filepaths):
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for path, metadata in executor.map(_process, filepaths):
+                results[path] = metadata
+                if "error" in metadata:
+                    errors += 1
+
+        duration_ms = int((time.time() - start_time) * 1000)
+        batch_payload = {
+            "results": results,
+            "summary": {
+                "total_files": len(filepaths),
+                "successful": len(filepaths) - errors,
+                "failed": errors,
+                "processing_ms": duration_ms,
+                "tier": tier,
+            },
+        }
+
+        # Optional batch comparison
+        if MetadataComparator is not None:
+            try:
+                tier_enum = Tier(tier.lower())
+            except ValueError:
+                tier_enum = Tier.SUPER
+            tier_config = COMPREHENSIVE_TIER_CONFIGS[tier_enum]
+            if tier_config.batch_comparison:
+                try:
+                    comparator = MetadataComparator()
+                    comparable = [meta for meta in results.values() if isinstance(meta, dict) and "error" not in meta]
+                    if len(comparable) >= 2:
+                        batch_payload["batch_comparison"] = comparator.compare_files(comparable, "summary")
+                except Exception as e:
+                    logger.error(f"Batch comparison failed: {e}")
+                    batch_payload["batch_comparison"] = {"error": str(e)}
+
+        # Log successful completion
+        log_extraction_event(
+            event_type="batch_extraction_complete",
+            filepath="batch_operation",
+            module_name="comprehensive_engine",
+            status="info",
+            duration=duration_ms/1000,
+            details={
+                "total_files": len(filepaths),
+                "successful": len(filepaths) - errors,
+                "failed": errors,
+                "tier": tier
+            }
+        )
+
+        return batch_payload
+    except Exception as e:
+        duration_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"Critical error in batch metadata extraction: {e}")
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+
+        # Log the error
+        log_extraction_event(
+            event_type="batch_extraction_error",
+            filepath="batch_operation",
+            module_name="comprehensive_engine",
+            status="error",
+            duration=duration_ms/1000,
+            details={
+                "total_files": len(filepaths),
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "tier": tier
+            }
+        )
+
+        return {
+            "error": f"Critical error in batch metadata extraction: {str(e)}",
+            "error_type": type(e).__name__,
+            "summary": {
+                "total_files": len(filepaths),
+                "successful": 0,
+                "failed": len(filepaths),
+                "processing_ms": duration_ms,
+                "tier": tier,
+            },
+        }
+
+
+async def extract_comprehensive_metadata_async(filepath: str, tier: str = "super") -> Dict[str, Any]:
+    """
+    Asynchronously extract comprehensive metadata using all available specialized engines.
+
+    This is the async entry point for the ultimate metadata extraction.
+    """
+    loop = asyncio.get_event_loop()
+    start_time = time.time()
+
+    # Log the start of the extraction
+    log_extraction_event(
+        event_type="async_extraction_start",
+        filepath=filepath,
+        module_name="comprehensive_engine_async",
+        status="info",
+        details={"tier": tier}
+    )
+
+    # Check cache first if available
+    if get_cache:
+        try:
+            cache = get_cache()
+            cached_result = cache.get(filepath, tier)
+            if cached_result:
+                duration = time.time() - start_time
+                log_extraction_event(
+                    event_type="async_cache_hit",
+                    filepath=filepath,
+                    module_name="comprehensive_engine_async",
+                    status="info",
+                    duration=duration
+                )
+                return cached_result
+        except Exception as e:
+            logger.warning(f"Async cache lookup failed for {filepath}: {e}")
+
+    try:
+        # Run the synchronous extraction in a thread pool to avoid blocking the event loop
+        extractor = get_comprehensive_extractor()
+        result = await loop.run_in_executor(
+            None,
+            extractor.extract_comprehensive_metadata,
+            filepath,
+            tier
+        )
+
+        # Log successful completion
+        duration = time.time() - start_time
+        log_extraction_event(
+            event_type="async_extraction_complete",
+            filepath=filepath,
+            module_name="comprehensive_engine_async",
+            status="info",
+            duration=duration,
+            details={
+                "tier": tier,
+                "fields_extracted": result.get("extraction_info", {}).get("comprehensive_fields_extracted", 0),
+                "success": True
+            }
+        )
+
+        return result
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"Critical error in async comprehensive metadata extraction for {filepath}: {e}")
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+
+        # Log the error
+        log_extraction_event(
+            event_type="async_extraction_error",
+            filepath=filepath,
+            module_name="comprehensive_engine_async",
+            status="error",
+            duration=duration,
+            details={
+                "tier": tier,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "success": False
+            }
+        )
+
+        # Return a structured error response
+        return {
+            "error": f"Critical error in async comprehensive metadata extraction: {str(e)}",
+            "error_type": type(e).__name__,
+            "file": {"path": filepath},
+            "extraction_info": {
+                "comprehensive_version": "4.0.0",
+                "processing_ms": duration * 1000,
+                "tier": tier
+            }
+        }
+
+
+async def extract_comprehensive_batch_async(
+    filepaths: List[str],
+    tier: str = "super",
+    max_workers: int = 4,
+    store_results: bool = False,
+) -> Dict[str, Any]:
+    """
+    Asynchronously extract metadata for multiple files with optional storage.
+
+    This function uses asyncio to process multiple files concurrently.
+    """
+    start_time = time.time()
+
+    # Log the start of the batch extraction
+    log_extraction_event(
+        event_type="async_batch_extraction_start",
+        filepath="batch_operation",
+        module_name="comprehensive_engine_async",
+        status="info",
+        details={
+            "total_files": len(filepaths),
+            "tier": tier,
+            "max_workers": max_workers
+        }
+    )
+
+    results: Dict[str, Any] = {}
+    errors = 0
+
+    # Create a semaphore to limit concurrent operations
+    semaphore = asyncio.Semaphore(max_workers)
+
+    async def _process_async(path: str) -> Tuple[str, Dict[str, Any]]:
+        async with semaphore:
+            try:
+                metadata = await extract_comprehensive_metadata_async(path, tier)
+                if store_results and store_file_metadata and "error" not in metadata:
+                    try:
+                        # Run storage in thread pool to avoid blocking
+                        loop = asyncio.get_event_loop()
+                        await loop.run_in_executor(
+                            None,
+                            store_file_metadata,
+                            path,
+                            metadata,
+                            metadata.get("perceptual_hashes")
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to store metadata for {path}: {e}")
+                        metadata["storage_error"] = str(e)
+                return path, metadata
+            except Exception as e:
+                logger.error(f"Error processing {path} in async batch: {e}")
+                return path, {
+                    "error": f"Error processing file in async batch: {str(e)}",
+                    "error_type": type(e).__name__,
+                    "file": {"path": path},
+                    "extraction_info": {
+                        "comprehensive_version": "4.0.0",
+                        "tier": tier
+                    }
+                }
+
+    try:
+        # Process all files concurrently
+        tasks = [_process_async(path) for path in filepaths]
+        results_list = await asyncio.gather(*tasks, return_exceptions=False)
+
+        # Process results
+        for path, metadata in results_list:
             results[path] = metadata
             if "error" in metadata:
                 errors += 1
 
-    duration_ms = int((time.time() - start_time) * 1000)
-    batch_payload = {
-        "results": results,
-        "summary": {
-            "total_files": len(filepaths),
-            "successful": len(filepaths) - errors,
-            "failed": errors,
-            "processing_ms": duration_ms,
-            "tier": tier,
-        },
-    }
+        duration_ms = int((time.time() - start_time) * 1000)
+        batch_payload = {
+            "results": results,
+            "summary": {
+                "total_files": len(filepaths),
+                "successful": len(filepaths) - errors,
+                "failed": errors,
+                "processing_ms": duration_ms,
+                "tier": tier,
+            },
+        }
 
-    # Optional batch comparison
-    if MetadataComparator is not None:
-        try:
-            tier_enum = Tier(tier.lower())
-        except ValueError:
-            tier_enum = Tier.SUPER
-        tier_config = COMPREHENSIVE_TIER_CONFIGS[tier_enum]
-        if tier_config.batch_comparison:
+        # Optional batch comparison
+        if MetadataComparator is not None:
             try:
-                comparator = MetadataComparator()
-                comparable = [meta for meta in results.values() if isinstance(meta, dict) and "error" not in meta]
-                if len(comparable) >= 2:
-                    batch_payload["batch_comparison"] = comparator.compare_files(comparable, "summary")
-            except Exception as e:
-                batch_payload["batch_comparison"] = {"error": str(e)}
+                tier_enum = Tier(tier.lower())
+            except ValueError:
+                tier_enum = Tier.SUPER
+            tier_config = COMPREHENSIVE_TIER_CONFIGS[tier_enum]
+            if tier_config.batch_comparison:
+                try:
+                    # Run comparison in thread pool to avoid blocking
+                    loop = asyncio.get_event_loop()
+                    comparator = MetadataComparator()
+                    comparable = [meta for meta in results.values() if isinstance(meta, dict) and "error" not in meta]
+                    if len(comparable) >= 2:
+                        batch_payload["batch_comparison"] = await loop.run_in_executor(
+                            None,
+                            comparator.compare_files,
+                            comparable,
+                            "summary"
+                        )
+                except Exception as e:
+                    logger.error(f"Async batch comparison failed: {e}")
+                    batch_payload["batch_comparison"] = {"error": str(e)}
 
-    return batch_payload
+        # Log successful completion
+        log_extraction_event(
+            event_type="async_batch_extraction_complete",
+            filepath="batch_operation",
+            module_name="comprehensive_engine_async",
+            status="info",
+            duration=duration_ms/1000,
+            details={
+                "total_files": len(filepaths),
+                "successful": len(filepaths) - errors,
+                "failed": errors,
+                "tier": tier
+            }
+        )
+
+        return batch_payload
+    except Exception as e:
+        duration_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"Critical error in async batch metadata extraction: {e}")
+        logger.debug(f"Full traceback: {traceback.format_exc()}")
+
+        # Log the error
+        log_extraction_event(
+            event_type="async_batch_extraction_error",
+            filepath="batch_operation",
+            module_name="comprehensive_engine_async",
+            status="error",
+            duration=duration_ms/1000,
+            details={
+                "total_files": len(filepaths),
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "tier": tier
+            }
+        )
+
+        return {
+            "error": f"Critical error in async batch metadata extraction: {str(e)}",
+            "error_type": type(e).__name__,
+            "summary": {
+                "total_files": len(filepaths),
+                "successful": 0,
+                "failed": len(filepaths),
+                "processing_ms": duration_ms,
+                "tier": tier,
+            },
+        }
 
 # ============================================================================
 # CLI Interface

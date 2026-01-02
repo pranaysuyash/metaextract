@@ -402,10 +402,10 @@ export function AdvancedResultsIntegration({
         <TabsContent value='advanced'>
           {advancedAnalysis ? (
             <AdvancedAnalysisResults
-              advancedAnalysis={advancedAnalysis.advanced_analysis}
-              steganographyAnalysis={advancedAnalysis.steganography_analysis}
-              manipulationDetection={advancedAnalysis.manipulation_detection}
-              aiDetection={advancedAnalysis.ai_detection}
+              advancedAnalysis={advancedAnalysis}
+              steganographyAnalysis={metadata.steganography_analysis}
+              manipulationDetection={metadata.manipulation_detection}
+              aiDetection={metadata.ai_detection}
             />
           ) : (
             <Card>

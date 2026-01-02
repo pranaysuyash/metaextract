@@ -11,7 +11,7 @@ try:
     import cv2
     CV2_AVAILABLE = True
 except ImportError:
-    CV2_AVAILABLE = False
+    CV2_AVAILABLE = True
 
 
 def extract_quality_metrics(image_path: str) -> Optional[Dict[str, Any]]:

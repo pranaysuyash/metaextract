@@ -858,6 +858,339 @@ def extract_data_{i}(filepath: str) -> dict:
         self.assertEqual(stats["hot_reload_errors"], 0)
 
 
+class TestPluginSystem(unittest.TestCase):
+    """Test plugin system functionality."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        self.registry = ModuleRegistry()
+        self.test_plugins_dir = None
+    
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if self.test_plugins_dir and os.path.exists(self.test_plugins_dir):
+            import shutil
+            shutil.rmtree(self.test_plugins_dir, ignore_errors=True)
+    
+    def test_plugin_system_configuration(self):
+        """Test plugin system configuration."""
+        # Initially should be disabled
+        self.assertFalse(self.registry.plugins_enabled)
+        self.assertEqual(self.registry.plugin_paths, [])
+        self.assertEqual(len(self.registry.loaded_plugins), 0)
+        
+        # Enable plugin system
+        self.registry.enable_plugins(True, ["plugins/", "external_plugins/"])
+        self.assertTrue(self.registry.plugins_enabled)
+        self.assertEqual(self.registry.plugin_paths, ["plugins/", "external_plugins/"])
+        
+        # Disable plugin system
+        self.registry.enable_plugins(False)
+        self.assertFalse(self.registry.plugins_enabled)
+        self.assertEqual(self.registry.plugin_paths, [])
+    
+    def test_plugin_stats_initial(self):
+        """Test initial plugin statistics."""
+        stats = self.registry.get_plugin_stats()
+        
+        self.assertFalse(stats["plugins_enabled"])
+        self.assertEqual(stats["plugins_loaded"], 0)
+        self.assertEqual(stats["plugins_failed"], 0)
+        self.assertEqual(stats["plugin_discovery_time"], 0.0)
+        self.assertEqual(stats["success_rate"], 0.0)
+    
+    def test_create_test_plugin(self):
+        """Create a test plugin for testing."""
+        self.test_plugins_dir = tempfile.mkdtemp()
+        
+        # Create a simple test plugin
+        plugin_content = '''
+# Test plugin metadata
+PLUGIN_VERSION = "1.0.0"
+PLUGIN_AUTHOR = "Test Author"
+PLUGIN_DESCRIPTION = "Test plugin for unit tests"
+
+def extract_test_plugin_data(filepath: str) -> dict:
+    """Extract test data."""
+    return {"test_plugin": {"data": "value", "version": PLUGIN_VERSION}}
+
+def analyze_test_plugin_content(filepath: str) -> dict:
+    """Analyze test content."""
+    return {"test_analysis": {"result": "success"}}
+'''
+        
+        plugin_path = os.path.join(self.test_plugins_dir, "test_plugin.py")
+        with open(plugin_path, 'w') as f:
+            f.write(plugin_content)
+        
+        return plugin_path
+    
+    def test_plugin_discovery_and_loading(self):
+        """Test plugin discovery and loading."""
+        plugin_path = self.test_create_test_plugin()
+        
+        # Enable plugin system
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        
+        # Discover and load plugins
+        self.registry.discover_and_load_plugins()
+        
+        # Check that plugin was loaded
+        self.assertEqual(self.registry.plugins_loaded_count, 1)
+        self.assertEqual(self.registry.plugins_failed_count, 0)
+        self.assertIn("test_plugin", self.registry.loaded_plugins)
+        
+        # Check plugin information
+        plugin_info = self.registry.get_plugin_info("test_plugin")
+        self.assertIsNotNone(plugin_info)
+        self.assertEqual(len(plugin_info["functions"]), 2)
+        self.assertEqual(plugin_info["metadata"]["version"], "1.0.0")
+        self.assertEqual(plugin_info["metadata"]["author"], "Test Author")
+        
+        # Check statistics
+        stats = self.registry.get_plugin_stats()
+        self.assertEqual(stats["plugins_loaded"], 1)
+        self.assertEqual(stats["plugins_failed"], 0)
+        self.assertGreater(stats["plugin_discovery_time"], 0)
+        self.assertEqual(stats["success_rate"], 1.0)
+    
+    def test_plugin_metadata_extraction(self):
+        """Test plugin metadata extraction."""
+        self.test_plugins_dir = tempfile.mkdtemp()
+        
+        # Create plugin with various metadata formats
+        plugin_content = '''
+# Static metadata
+PLUGIN_VERSION = "2.0.0"
+PLUGIN_AUTHOR = "Metadata Test"
+PLUGIN_DESCRIPTION = "Testing metadata extraction"
+PLUGIN_LICENSE = "Apache-2.0"
+
+def get_plugin_metadata():
+    """Dynamic metadata function."""
+    return {
+        "dynamic_field": "dynamic_value",
+        "website": "https://example.com"
+    }
+
+def extract_metadata_test(filepath: str) -> dict:
+    return {"metadata": "test"}
+'''
+        
+        plugin_path = os.path.join(self.test_plugins_dir, "metadata_test.py")
+        with open(plugin_path, 'w') as f:
+            f.write(plugin_content)
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Check metadata extraction
+        plugin_info = self.registry.get_plugin_info("metadata_test")
+        metadata = plugin_info["metadata"]
+        
+        # Check static metadata
+        self.assertEqual(metadata["version"], "2.0.0")
+        self.assertEqual(metadata["author"], "Metadata Test")
+        self.assertEqual(metadata["description"], "Testing metadata extraction")
+        self.assertEqual(metadata["license"], "Apache-2.0")
+        
+        # Check dynamic metadata
+        self.assertEqual(metadata["dynamic_field"], "dynamic_value")
+        self.assertEqual(metadata["website"], "https://example.com")
+    
+    def test_plugin_dependency_extraction(self):
+        """Test plugin dependency extraction."""
+        self.test_plugins_dir = tempfile.mkdtemp()
+        
+        # Create plugin with dependencies
+        plugin_content = '''
+MODULE_DEPENDENCIES = ["base_metadata", "image_processing"]
+
+def extract_with_deps(filepath: str) -> dict:
+    return {"deps": "test"}
+'''
+        
+        plugin_path = os.path.join(self.test_plugins_dir, "deps_test.py")
+        with open(plugin_path, 'w') as f:
+            f.write(plugin_content)
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Check dependencies
+        plugin_info = self.registry.get_plugin_info("deps_test")
+        dependencies = plugin_info["dependencies"]
+        
+        self.assertIn("base_metadata", dependencies)
+        self.assertIn("image_processing", dependencies)
+        self.assertEqual(len(dependencies), 2)
+    
+    def test_plugin_enable_disable(self):
+        """Test plugin enable/disable functionality."""
+        plugin_path = self.test_create_test_plugin()
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Check plugin is enabled by default
+        plugin_info = self.registry.get_plugin_info("test_plugin")
+        self.assertTrue(plugin_info["enabled"])
+        
+        # Disable plugin
+        result = self.registry.disable_plugin("test_plugin")
+        self.assertTrue(result)
+        
+        # Check plugin is disabled
+        plugin_info = self.registry.get_plugin_info("test_plugin")
+        self.assertFalse(plugin_info["enabled"])
+        
+        # Enable plugin again
+        result = self.registry.enable_plugin("test_plugin")
+        self.assertTrue(result)
+        
+        # Check plugin is enabled
+        plugin_info = self.registry.get_plugin_info("test_plugin")
+        self.assertTrue(plugin_info["enabled"])
+    
+    def test_plugin_reload(self):
+        """Test plugin reloading."""
+        plugin_path = self.test_create_test_plugin()
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Get initial function count
+        plugin_info = self.registry.get_plugin_info("test_plugin")
+        initial_functions = len(plugin_info["functions"])
+        
+        # Reload plugin
+        result = self.registry.reload_plugin("test_plugin")
+        self.assertTrue(result)
+        
+        # Check function count is the same
+        plugin_info = self.registry.get_plugin_info("test_plugin")
+        self.assertEqual(len(plugin_info["functions"]), initial_functions)
+    
+    def test_plugin_directory_loading(self):
+        """Test loading directory-based plugins."""
+        self.test_plugins_dir = tempfile.mkdtemp()
+        
+        # Create directory plugin
+        plugin_dir = os.path.join(self.test_plugins_dir, "dir_plugin")
+        os.makedirs(plugin_dir)
+        
+        # Create __init__.py
+        init_content = '''
+PLUGIN_VERSION = "1.0.0"
+
+def extract_dir_plugin_data(filepath: str) -> dict:
+    return {"dir_plugin": {"type": "directory"}}
+'''
+        
+        init_path = os.path.join(plugin_dir, "__init__.py")
+        with open(init_path, 'w') as f:
+            f.write(init_content)
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Check directory plugin was loaded
+        self.assertIn("dir_plugin", self.registry.loaded_plugins)
+        
+        plugin_info = self.registry.get_plugin_info("dir_plugin")
+        self.assertEqual(plugin_info["type"], "directory")
+        self.assertEqual(len(plugin_info["functions"]), 1)
+    
+    def test_plugin_with_import_errors(self):
+        """Test handling of plugins with import errors."""
+        self.test_plugins_dir = tempfile.mkdtemp()
+        
+        # Create plugin with import error
+        plugin_content = '''
+import nonexistent_module
+
+def extract_broken_plugin(filepath: str) -> dict:
+    return {"broken": "plugin"}
+'''
+        
+        plugin_path = os.path.join(self.test_plugins_dir, "broken_plugin.py")
+        with open(plugin_path, 'w') as f:
+            f.write(plugin_content)
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Check that plugin failed to load
+        self.assertEqual(self.registry.plugins_loaded_count, 0)
+        self.assertEqual(self.registry.plugins_failed_count, 1)
+        self.assertIn("broken_plugin", self.registry.plugin_load_errors)
+        
+        # Check error message
+        error_msg = self.registry.plugin_load_errors["broken_plugin"]
+        self.assertIn("nonexistent_module", error_msg)
+    
+    def test_multiple_plugins_loading(self):
+        """Test loading multiple plugins."""
+        self.test_plugins_dir = tempfile.mkdtemp()
+        
+        # Create multiple plugins
+        for i in range(3):
+            plugin_content = f'''
+PLUGIN_VERSION = "1.0.{i}"
+
+def extract_plugin_{i}_data(filepath: str) -> dict:
+    return {{"plugin_{i}": {{"id": {i}}}}}
+'''
+            plugin_path = os.path.join(self.test_plugins_dir, f"plugin_{i}.py")
+            with open(plugin_path, 'w') as f:
+                f.write(plugin_content)
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Check all plugins loaded
+        self.assertEqual(self.registry.plugins_loaded_count, 3)
+        self.assertEqual(self.registry.plugins_failed_count, 0)
+        
+        # Check all plugins are accessible
+        for i in range(3):
+            plugin_name = f"plugin_{i}"
+            self.assertIn(plugin_name, self.registry.loaded_plugins)
+            
+            plugin_info = self.registry.get_plugin_info(plugin_name)
+            self.assertEqual(plugin_info["metadata"]["version"], f"1.0.{i}")
+    
+    def test_get_all_plugins_info(self):
+        """Test getting information about all plugins."""
+        plugin_path = self.test_create_test_plugin()
+        
+        # Enable and load plugins
+        self.registry.enable_plugins(True, [self.test_plugins_dir])
+        self.registry.discover_and_load_plugins()
+        
+        # Get all plugins info
+        all_plugins = self.registry.get_all_plugins_info()
+        
+        self.assertEqual(len(all_plugins), 1)
+        self.assertIn("test_plugin", all_plugins)
+        
+        # Check structure
+        plugin_info = all_plugins["test_plugin"]
+        self.assertIn("functions", plugin_info)
+        self.assertIn("metadata", plugin_info)
+        self.assertIn("dependencies", plugin_info)
+        self.assertIn("path", plugin_info)
+        self.assertIn("type", plugin_info)
+        self.assertIn("enabled", plugin_info)
+
+
 class TestModuleDiscoveryIntegration(unittest.TestCase):
     """Test integration with the comprehensive metadata engine."""
     

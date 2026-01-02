@@ -46,7 +46,7 @@ def extract_print_publishing_metadata(filepath: str) -> Optional[Dict[str, Any]]
             result["fields_extracted"] = total_fields
 
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug(f"Failed to extract print metadata: {e}")
 
     return result
 

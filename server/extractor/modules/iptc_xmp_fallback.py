@@ -138,7 +138,7 @@ def extract_xmp_fallback(filepath: str) -> Optional[Dict[str, Any]]:
                         result["dc_prefs"][key] = value
         
         except Exception as e:
-            pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+            logger.debug(f"Failed to extract fallback metadata: {e}")
         
         xmpfile.close_file()
         

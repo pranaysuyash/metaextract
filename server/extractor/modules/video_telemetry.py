@@ -282,3 +282,23 @@ def extract_video_telemetry(filepath: str) -> Dict[str, Any]:
     telemetry = _parse_telemetry(raw)
     telemetry["available"] = True
     return telemetry
+
+def get_telemetry_field_count() -> int:
+    """
+    Return the number of video telemetry metadata fields extracted.
+    
+    Returns:
+        Total field count (11 fields)
+    """
+    return 11  # available, telemetry_present, sources, field_counts, gpmf, gopro, dji, quicktime
+
+if __name__ == "__main__":
+    import json
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python video_telemetry.py <video_file_with_telemetry>")
+        sys.exit(1)
+
+    filepath = sys.argv[1]
+    result = extract_video_telemetry(filepath)
+    print(json.dumps(result, indent=2, default=str))

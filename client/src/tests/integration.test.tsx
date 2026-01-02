@@ -3,10 +3,19 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EnhancedUploadZone } from '@/components/enhanced-upload-zone';
-import { MetadataExplorer } from '@/components/metadata-explorer';
+import {
+  MetadataExplorer,
+  convertMetadataToProcessedFile,
+} from '@/components/metadata-explorer';
 import { AdvancedAnalysisResults } from '@/components/AdvancedAnalysisResults';
 
 // Mock fetch API
@@ -72,7 +81,8 @@ describe('Upload to Extraction Workflow Integration', () => {
     },
     file_integrity: {
       md5: 'd41d8cd98f00b204e9800998ecf8427e',
-      sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      sha256:
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     },
     forensic: {
       manipulation_detected: false,
@@ -127,14 +137,16 @@ describe('Upload to Extraction Workflow Integration', () => {
         <div>
           <EnhancedUploadZone
             onResults={onResults}
-            tier="premium"
+            tier='premium'
             maxFiles={10}
           />
         </div>
       );
 
       // Initial state should show upload zone
-      expect(screen.getByText(/Upload files for analysis/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Upload files for analysis/i)
+      ).toBeInTheDocument();
     });
 
     it('should handle single file extraction', async () => {
@@ -145,12 +157,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
     });
 
     it('should handle batch file extraction', async () => {
@@ -168,12 +175,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
     });
   });
 
@@ -183,12 +185,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="free"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='free' />);
     });
 
     it('should handle HTTP error responses', async () => {
@@ -200,36 +197,25 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="free"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='free' />);
     });
 
     it('should handle timeout errors', async () => {
-      (global.fetch as jest.Mock).mockImplementation(() =>
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Request timeout')), 100)
-        )
+      (global.fetch as jest.Mock).mockImplementation(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Request timeout')), 100)
+          )
       );
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="free"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='free' />);
     });
   });
 
   describe('Data Flow Integration', () => {
     it('should pass extraction results to metadata explorer', async () => {
-      const { convertMetadataToProcessedFile } = require('@/components/metadata-explorer');
-
       const processedFile = convertMetadataToProcessedFile(
         mockExtractionResult,
         'file-id-123'
@@ -242,11 +228,14 @@ describe('Upload to Extraction Workflow Integration', () => {
       render(
         <MetadataExplorer
           files={[processedFile]}
-          selectedFileId="file-id-123"
+          selectedFileId='file-id-123'
         />
       );
 
-      expect(screen.getByText('test_image.jpg')).toBeInTheDocument();
+      const fileBrowser = within(screen.getByTestId('metadata-file-browser'));
+      expect(
+        fileBrowser.getByRole('button', { name: /test_image\.jpg/i })
+      ).toBeInTheDocument();
     });
 
     it('should display advanced analysis results', async () => {
@@ -261,6 +250,9 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       expect(screen.getByText('Forensic Analysis')).toBeInTheDocument();
       expect(screen.getByText('No Hidden Data')).toBeInTheDocument();
+
+      // Manipulation status is shown in the Manipulation tab.
+      await userEvent.click(screen.getByText('Manipulation'));
       expect(screen.getByText('No Manipulation')).toBeInTheDocument();
     });
   });
@@ -268,41 +260,25 @@ describe('Upload to Extraction Workflow Integration', () => {
   describe('Tier-Based Functionality', () => {
     it('should enforce file size limits by tier', () => {
       const { rerender } = render(
-        <EnhancedUploadZone
-          onResults={jest.fn()}
-          tier="free"
-        />
+        <EnhancedUploadZone onResults={jest.fn()} tier='free' />
       );
 
       expect(screen.getByText(/10MB per file/i)).toBeInTheDocument();
 
-      rerender(
-        <EnhancedUploadZone
-          onResults={jest.fn()}
-          tier="premium"
-        />
-      );
+      rerender(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
 
       expect(screen.getByText(/500MB per file/i)).toBeInTheDocument();
     });
 
     it('should show appropriate format support by tier', () => {
       const { rerender } = render(
-        <EnhancedUploadZone
-          onResults={jest.fn()}
-          tier="free"
-        />
+        <EnhancedUploadZone onResults={jest.fn()} tier='free' />
       );
 
       // Free tier shows basic formats
       expect(screen.getByText('Images')).toBeInTheDocument();
 
-      rerender(
-        <EnhancedUploadZone
-          onResults={jest.fn()}
-          tier="premium"
-        />
-      );
+      rerender(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
 
       // Premium tier shows advanced formats
       expect(screen.getByText('Medical')).toBeInTheDocument();
@@ -319,54 +295,65 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn((results) => {
         // Convert results to ProcessedFile format
-        const { convertMetadataToProcessedFile } = require('@/components/metadata-explorer');
-        const processedFile = convertMetadataToProcessedFile(results[0], 'file-1');
+        const processedFile = convertMetadataToProcessedFile(
+          results[0],
+          'file-1'
+        );
 
         // Render metadata explorer with results
         render(
-          <MetadataExplorer
-            files={[processedFile]}
-            selectedFileId="file-1"
-          />
+          <MetadataExplorer files={[processedFile]} selectedFileId='file-1' />
         );
 
-        expect(screen.getByText('test_image.jpg')).toBeInTheDocument();
-        expect(screen.getByText('Canon')).toBeInTheDocument();
-        expect(screen.getByText('EOS R5')).toBeInTheDocument();
+        const fileBrowser = within(screen.getByTestId('metadata-file-browser'));
+        expect(
+          fileBrowser.getByRole('button', { name: /test_image\.jpg/i })
+        ).toBeInTheDocument();
+
+        // These values are shown in the metadata tree field rows
+        const tree = within(screen.getByTestId('metadata-tree'));
+        expect(tree.getByText('Canon')).toBeInTheDocument();
+        expect(tree.getByText('EOS R5')).toBeInTheDocument();
       });
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
     });
 
     it('should handle user exploring metadata details', async () => {
-      const { convertMetadataToProcessedFile } = require('@/components/metadata-explorer');
-      const processedFile = convertMetadataToProcessedFile(mockExtractionResult, 'file-1');
+      const processedFile = convertMetadataToProcessedFile(
+        mockExtractionResult,
+        'file-1'
+      );
 
       render(
-        <MetadataExplorer
-          files={[processedFile]}
-          selectedFileId="file-1"
-        />
+        <MetadataExplorer files={[processedFile]} selectedFileId='file-1' />
       );
 
       // Select file
-      expect(screen.getByText('test_image.jpg')).toBeInTheDocument();
+      const fileBrowser = within(screen.getByTestId('metadata-file-browser'));
+      expect(
+        fileBrowser.getByRole('button', { name: /test_image\.jpg/i })
+      ).toBeInTheDocument();
 
       // Click on EXIF category
-      const exifCategory = screen.getByText('Camera & EXIF');
-      await userEvent.click(exifCategory);
+      const tree = within(screen.getByTestId('metadata-tree'));
+      const exifCategory = tree.getByRole('button', { name: /Camera & EXIF/i });
+
+      // Accordion categories may be expanded by default based on user prefs
+      // or sensible defaults. Only click to expand if currently collapsed.
+      const isExpanded = exifCategory.getAttribute('aria-expanded') === 'true';
+      if (!isExpanded) {
+        await userEvent.click(exifCategory);
+      }
 
       // Click on Make field
-      const makeField = screen.getByText('Make');
+      const makeField = tree.getByRole('button', { name: /Make\s+Canon/i });
       await userEvent.click(makeField);
 
       // Verify detail view
-      expect(screen.getByText('Camera manufacturer - useful for identifying device')).toBeInTheDocument();
+      expect(
+        screen.getByText('Camera manufacturer - useful for identifying device')
+      ).toBeInTheDocument();
     });
 
     it('should handle user viewing forensic analysis', async () => {
@@ -390,21 +377,26 @@ describe('Upload to Extraction Workflow Integration', () => {
 
   describe('State Management', () => {
     it('should maintain file selection state', async () => {
-      const { convertMetadataToProcessedFile } = require('@/components/metadata-explorer');
-      const processedFile = convertMetadataToProcessedFile(mockExtractionResult, 'file-1');
+      const processedFile = convertMetadataToProcessedFile(
+        mockExtractionResult,
+        'file-1'
+      );
 
       const onFileSelect = jest.fn();
 
       render(
         <MetadataExplorer
           files={[processedFile]}
-          selectedFileId="file-1"
+          selectedFileId='file-1'
           onFileSelect={onFileSelect}
         />
       );
 
-      const fileButton = screen.getByText('test_image.jpg').closest('button');
-      await userEvent.click(fileButton!);
+      const fileBrowser = within(screen.getByTestId('metadata-file-browser'));
+      const fileButton = fileBrowser.getByRole('button', {
+        name: /test_image\.jpg/i,
+      });
+      await userEvent.click(fileButton);
 
       expect(onFileSelect).toHaveBeenCalledWith('file-1');
     });
@@ -413,13 +405,10 @@ describe('Upload to Extraction Workflow Integration', () => {
       const onViewModeChange = jest.fn();
 
       render(
-        <MetadataExplorer
-          files={[]}
-          onViewModeChange={onViewModeChange}
-        />
+        <MetadataExplorer files={[]} onViewModeChange={onViewModeChange} />
       );
 
-      const simpleTab = screen.getByText('Simple');
+      const simpleTab = screen.getByRole('tab', { name: /Simple/i });
       await userEvent.click(simpleTab);
 
       expect(onViewModeChange).toHaveBeenCalledWith('simple');
@@ -435,16 +424,15 @@ describe('Upload to Extraction Workflow Integration', () => {
         ),
       };
 
-      const { convertMetadataToProcessedFile } = require('@/components/metadata-explorer');
-      const processedFile = convertMetadataToProcessedFile(largeMetadata, 'file-1');
+      const processedFile = convertMetadataToProcessedFile(
+        largeMetadata,
+        'file-1'
+      );
 
       const startTime = performance.now();
 
       render(
-        <MetadataExplorer
-          files={[processedFile]}
-          selectedFileId="file-1"
-        />
+        <MetadataExplorer files={[processedFile]} selectedFileId='file-1' />
       );
 
       const endTime = performance.now();
@@ -463,7 +451,12 @@ describe('Upload to Extraction Workflow Integration', () => {
         />
       );
 
-      const tabs = ['Steganography', 'Manipulation', 'AI Detection', 'Timeline'];
+      const tabs = [
+        'Steganography',
+        'Manipulation',
+        'AI Detection',
+        'Timeline',
+      ];
 
       for (const tab of tabs) {
         const tabButton = screen.getByText(tab);
@@ -477,12 +470,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
   describe('Accessibility Integration', () => {
     it('should maintain keyboard navigation throughout workflow', async () => {
-      render(
-        <EnhancedUploadZone
-          onResults={jest.fn()}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
 
       const uploadZone = screen.getByText(/Upload files for analysis/i);
       expect(uploadZone).toBeVisible();
@@ -501,12 +489,7 @@ describe('Upload to Extraction Workflow Integration', () => {
         json: async () => mockExtractionResult,
       });
 
-      render(
-        <EnhancedUploadZone
-          onResults={jest.fn()}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
 
       // Status changes should be announced
       // This would require checking for aria-live regions
@@ -524,12 +507,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
 
       // First attempt fails
       // User retries
@@ -552,12 +530,7 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(
-        <EnhancedUploadZone
-          onResults={onResults}
-          tier="premium"
-        />
-      );
+      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
     });
   });
 });

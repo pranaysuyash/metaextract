@@ -4,14 +4,67 @@ Comprehensive digital signatures, C2PA/Content Authenticity, blockchain, waterma
 steganography detection, filesystem forensics, and security analysis
 """
 
-from typing import Dict, Any, Optional, List
 import os
 import stat
 import platform
 import subprocess
 import hashlib
 import json
+import logging
 from datetime import datetime
+from typing import Dict, Any, Optional, List, Tuple
+
+# Configure logging with better formatting
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+def log_extraction_event(
+    event_type: str,
+    filepath: str,
+    module_name: str,
+    status: str = "info",
+    details: Optional[Dict[str, Any]] = None,
+    duration: Optional[float] = None
+) -> None:
+    """
+    Log a comprehensive extraction event with detailed information.
+
+    Args:
+        event_type: Type of event (e.g., 'extraction_start', 'extraction_complete', 'error')
+        filepath: Path to the file being processed
+        module_name: Name of the module processing the file
+        status: Log level ('debug', 'info', 'warning', 'error', 'critical')
+        details: Additional details about the event
+        duration: Processing duration in seconds (if applicable)
+    """
+    file_size = "unknown"
+    try:
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+    except:
+        pass
+
+    log_message = f"[{event_type}] File: {filepath}, Module: {module_name}, Size: {file_size}"
+    if duration is not None:
+        log_message += f", Duration: {duration:.3f}s"
+    if details:
+        log_message += f", Details: {details}"
+
+    # Map status to appropriate logger method
+    if status.lower() == 'debug':
+        logger.debug(log_message)
+    elif status.lower() == 'warning':
+        logger.warning(log_message)
+    elif status.lower() == 'error':
+        logger.error(log_message)
+    elif status.lower() == 'critical':
+        logger.critical(log_message)
+    else:  # default to info
+        logger.info(log_message)
 
 
 # C2PA (Content Authenticity Initiative) Tags - Expanded
@@ -520,6 +573,18 @@ def extract_forensic_metadata(filepath: str) -> Optional[Dict[str, Any]]:
     Returns:
         Dictionary with forensic/security metadata
     """
+    import datetime
+    start_time = datetime.datetime.now()
+
+    # Log the start of the extraction
+    log_extraction_event(
+        event_type="forensic_extraction_start",
+        filepath=filepath,
+        module_name="forensic_metadata",
+        status="info",
+        details={"file_path": filepath}
+    )
+
     result = {
         "forensic": {
             "digital_signatures": {},
@@ -536,7 +601,8 @@ def extract_forensic_metadata(filepath: str) -> Optional[Dict[str, Any]]:
             "is_authenticated": False,
             "confidence_score": 0.0,
             "issues": [],
-            "security_flags": []
+            "security_flags": [],
+            "processing_errors": []
         },
         "provenance": {},
         "integrity": {},
@@ -545,53 +611,100 @@ def extract_forensic_metadata(filepath: str) -> Optional[Dict[str, Any]]:
 
     try:
         # Extract filesystem metadata
-        result["forensic"]["filesystem"] = extract_filesystem_forensics(filepath)
+        try:
+            result["forensic"]["filesystem"] = extract_filesystem_forensics(filepath)
+        except Exception as e:
+            logger.warning(f"Filesystem forensics extraction failed for {filepath}: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "filesystem_forensics",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
 
         # Extract device/hardware metadata
-        result["forensic"]["device_hardware"] = extract_device_metadata(filepath)
+        try:
+            result["forensic"]["device_hardware"] = extract_device_metadata(filepath)
+        except Exception as e:
+            logger.warning(f"Device metadata extraction failed for {filepath}: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "device_metadata",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
 
         # Extract network metadata
-        result["forensic"]["network_communication"] = extract_network_metadata(filepath)
+        try:
+            result["forensic"]["network_communication"] = extract_network_metadata(filepath)
+        except Exception as e:
+            logger.warning(f"Network metadata extraction failed for {filepath}: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "network_metadata",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
 
         # Extract email metadata if applicable
-        result["forensic"]["email_communication"] = extract_email_metadata(filepath)
+        try:
+            result["forensic"]["email_communication"] = extract_email_metadata(filepath)
+        except Exception as e:
+            logger.warning(f"Email metadata extraction failed for {filepath}: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "email_metadata",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
 
         # Extract from embedded metadata (EXIF, XMP, etc.)
-        from .exif import extract_exif_metadata
-        from .iptc_xmp import extract_iptc_xmp_metadata
+        try:
+            from .exif import extract_exif_metadata
+            from .iptc_xmp import extract_iptc_xmp_metadata
 
-        all_tags = {}
+            all_tags = {}
 
-        exif_data = extract_exif_metadata(filepath)
-        if exif_data and "error" not in exif_data:
-            for category in ["image", "photo", "gps", "interoperability"]:
-                if category in exif_data and isinstance(exif_data[category], dict):
-                    all_tags.update(exif_data[category])
+            exif_data = extract_exif_metadata(filepath)
+            if exif_data and "error" not in exif_data:
+                for category in ["image", "photo", "gps", "interoperability"]:
+                    if category in exif_data and isinstance(exif_data[category], dict):
+                        all_tags.update(exif_data[category])
 
-        iptc_data = extract_iptc_xmp_metadata(filepath)
-        if iptc_data and "error" not in iptc_data and isinstance(iptc_data, dict):
-            for section in iptc_data.values():
-                if isinstance(section, dict):
-                    all_tags.update(section)
+            iptc_data = extract_iptc_xmp_metadata(filepath)
+            if iptc_data and "error" not in iptc_data and isinstance(iptc_data, dict):
+                for section in iptc_data.values():
+                    if isinstance(section, dict):
+                        all_tags.update(section)
 
-        # Map tags to forensic categories
-        for tag, value in all_tags.items():
-            tag_str = str(tag)
+            # Map tags to forensic categories
+            for tag, value in all_tags.items():
+                tag_str = str(tag)
 
-            if tag_str in C2PA_TAGS:
-                result["forensic"]["c2pa"][C2PA_TAGS[tag_str]] = str(value)
+                if tag_str in C2PA_TAGS:
+                    result["forensic"]["c2pa"][C2PA_TAGS[tag_str]] = str(value)
 
-            elif tag_str in DIGITAL_SIGNATURE_TAGS:
-                result["forensic"]["digital_signatures"][DIGITAL_SIGNATURE_TAGS[tag_str]] = str(value)
+                elif tag_str in DIGITAL_SIGNATURE_TAGS:
+                    result["forensic"]["digital_signatures"][DIGITAL_SIGNATURE_TAGS[tag_str]] = str(value)
 
-            elif tag_str in BLOCKCHAIN_TAGS:
-                result["forensic"]["blockchain_nft"][BLOCKCHAIN_TAGS[tag_str]] = str(value)
+                elif tag_str in BLOCKCHAIN_TAGS:
+                    result["forensic"]["blockchain_nft"][BLOCKCHAIN_TAGS[tag_str]] = str(value)
 
-            elif tag_str in WATERMARK_TAGS:
-                result["forensic"]["watermarking"][WATERMARK_TAGS[tag_str]] = str(value)
+                elif tag_str in WATERMARK_TAGS:
+                    result["forensic"]["watermarking"][WATERMARK_TAGS[tag_str]] = str(value)
 
-            elif tag_str in ADOBE_CREDENTIALS_TAGS:
-                result["forensic"]["adobe_credentials"][ADOBE_CREDENTIALS_TAGS[tag_str]] = str(value)
+                elif tag_str in ADOBE_CREDENTIALS_TAGS:
+                    result["forensic"]["adobe_credentials"][ADOBE_CREDENTIALS_TAGS[tag_str]] = str(value)
+        except ImportError as e:
+            logger.warning(f"Import error during metadata extraction: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "metadata_import",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+        except Exception as e:
+            logger.warning(f"Embedded metadata extraction failed for {filepath}: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "embedded_metadata",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
 
         # Calculate authentication confidence
         has_c2pa = bool(result["forensic"]["c2pa"])
@@ -634,16 +747,79 @@ def extract_forensic_metadata(filepath: str) -> Optional[Dict[str, Any]]:
             result["authentication"]["security_flags"].append("timestamps_modified")
 
         # Calculate integrity hashes
-        result["integrity"] = calculate_file_integrity(filepath)
+        try:
+            result["integrity"] = calculate_file_integrity(filepath)
+        except Exception as e:
+            logger.warning(f"Integrity calculation failed for {filepath}: {e}")
+            result["authentication"]["processing_errors"].append({
+                "component": "integrity_calculation",
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
 
         # Count total fields extracted
         total_fields = sum(len(v) for v in result["forensic"].values() if isinstance(v, dict))
         result["fields_extracted"] = total_fields
 
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        log_extraction_event(
+            event_type="forensic_extraction_complete",
+            filepath=filepath,
+            module_name="forensic_metadata",
+            status="info",
+            duration=duration,
+            details={
+                "success": True,
+                "fields_extracted": total_fields,
+                "confidence_score": result["authentication"]["confidence_score"],
+                "has_authentication": result["authentication"]["is_authenticated"]
+            }
+        )
+
         return result
 
     except Exception as e:
-        return {"error": f"Failed to extract forensic metadata: {str(e)}"}
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        logger.error(f"Critical error in forensic metadata extraction for {filepath}: {e}")
+        logger.debug(f"Full traceback: {__import__('traceback').format_exc()}")
+
+        log_extraction_event(
+            event_type="forensic_extraction_error",
+            filepath=filepath,
+            module_name="forensic_metadata",
+            status="error",
+            duration=duration,
+            details={
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+        )
+
+        return {
+            "error": f"Failed to extract forensic metadata: {str(e)}",
+            "error_type": type(e).__name__,
+            "file": {"path": filepath},
+            "forensic": {
+                "digital_signatures": {},
+                "blockchain_nft": {},
+                "watermarking": {},
+                "c2pa": {},
+                "adobe_credentials": {},
+                "filesystem": {},
+                "device_hardware": {},
+                "network_communication": {},
+                "email_communication": {}
+            },
+            "authentication": {
+                "is_authenticated": False,
+                "confidence_score": 0.0,
+                "issues": ["Critical extraction error"],
+                "security_flags": ["extraction_failed"]
+            },
+            "provenance": {},
+            "integrity": {},
+            "fields_extracted": 0
+        }
 
 
 def analyze_provenance(filepath: str) -> Optional[Dict[str, Any]]:
@@ -741,6 +917,17 @@ def extract_forensic_metadata_metadata(filepath: str) -> Dict[str, Any]:
     Returns:
         Dictionary containing extracted forensic_metadata metadata
     '''
+    import datetime
+    start_time = datetime.datetime.now()
+
+    log_extraction_event(
+        event_type="forensic_metadata_extraction_start",
+        filepath=filepath,
+        module_name="forensic_metadata_main",
+        status="info",
+        details={"file_path": filepath}
+    )
+
     result = {
         "extracted_fields": {},
         "registry_fields": {},
@@ -749,35 +936,184 @@ def extract_forensic_metadata_metadata(filepath: str) -> Dict[str, Any]:
     }
 
     try:
-        # TODO: Implement specific extraction logic for forensic_metadata
-        # This is a template that needs to be customized based on file format
-
         # Basic file validation
         if not filepath or not os.path.exists(filepath):
             result["error"] = "File path not provided or file doesn't exist"
+            log_extraction_event(
+                event_type="forensic_metadata_extraction_complete",
+                filepath=filepath,
+                module_name="forensic_metadata_main",
+                status="warning",
+                duration=(datetime.datetime.now() - start_time).total_seconds(),
+                details={"error": "File not found"}
+            )
             return result
 
         result["is_valid_forensic_metadata"] = True
 
-        # Template structure - customize based on actual format requirements
         try:
-            # Add format-specific extraction logic here
-            # Examples:
-            # - Read file headers
-            # - Parse binary structures
-            # - Extract metadata fields
-            # - Map to registry definitions
+            extracted = extract_forensic_metadata(filepath)
+            if not isinstance(extracted, dict):
+                result["error"] = "forensic_metadata extraction returned invalid data"
+                log_extraction_event(
+                    event_type="forensic_metadata_extraction_complete",
+                    filepath=filepath,
+                    module_name="forensic_metadata_main",
+                    status="error",
+                    duration=(datetime.datetime.now() - start_time).total_seconds(),
+                    details={"error": "Invalid extraction result"}
+                )
+                return result
 
-            pass  # Replace with actual implementation
+            if "error" in extracted:
+                result["error"] = extracted.get("error")
+                log_extraction_event(
+                    event_type="forensic_metadata_extraction_complete",
+                    filepath=filepath,
+                    module_name="forensic_metadata_main",
+                    status="error",
+                    duration=(datetime.datetime.now() - start_time).total_seconds(),
+                    details={"error": extracted.get("error")}
+                )
+                return result
 
+            result["extracted_fields"] = extracted
+            extracted_count = extracted.get("fields_extracted")
+            if isinstance(extracted_count, int):
+                result["fields_extracted"] = extracted_count
         except Exception as e:
             result["error"] = f"forensic_metadata extraction failed: {str(e)[:200]}"
+            logger.error(f"Forensic metadata extraction failed for {filepath}: {e}")
+            log_extraction_event(
+                event_type="forensic_metadata_extraction_error",
+                filepath=filepath,
+                module_name="forensic_metadata_main",
+                status="error",
+                duration=(datetime.datetime.now() - start_time).total_seconds(),
+                details={"error": str(e), "error_type": type(e).__name__}
+            )
 
         # Count extracted fields
-        total_fields = len(result["extracted_fields"]) + len(result["registry_fields"])
-        result["fields_extracted"] = total_fields
+        if result["fields_extracted"] == 0:
+            total_fields = len(result["extracted_fields"]) + len(result["registry_fields"])
+            result["fields_extracted"] = total_fields
+
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        log_extraction_event(
+            event_type="forensic_metadata_extraction_complete",
+            filepath=filepath,
+            module_name="forensic_metadata_main",
+            status="info",
+            duration=duration,
+            details={
+                "success": "error" not in result,
+                "fields_extracted": result["fields_extracted"],
+                "valid_forensic": result["is_valid_forensic_metadata"]
+            }
+        )
 
     except Exception as e:
+        duration = (datetime.datetime.now() - start_time).total_seconds()
         result["error"] = f"forensic_metadata metadata extraction failed: {str(e)[:200]}"
+        logger.error(f"Forensic metadata metadata extraction failed for {filepath}: {e}")
+        log_extraction_event(
+            event_type="forensic_metadata_extraction_error",
+            filepath=filepath,
+            module_name="forensic_metadata_main",
+            status="error",
+            duration=duration,
+            details={"error": str(e), "error_type": type(e).__name__}
+        )
 
     return result
+
+
+async def extract_forensic_metadata_async(filepath: str) -> Dict[str, Any]:
+    """
+    Asynchronously extract comprehensive forensic and security metadata.
+
+    Args:
+        filepath: Path to file
+
+    Returns:
+        Dictionary with forensic/security metadata
+    """
+    import asyncio
+    import datetime
+    start_time = datetime.datetime.now()
+
+    log_extraction_event(
+        event_type="async_forensic_extraction_start",
+        filepath=filepath,
+        module_name="forensic_metadata_async",
+        status="info",
+        details={"file_path": filepath}
+    )
+
+    try:
+        # Run the synchronous extraction in a thread pool to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(
+                executor,
+                extract_forensic_metadata,
+                filepath
+            )
+
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        log_extraction_event(
+            event_type="async_forensic_extraction_complete",
+            filepath=filepath,
+            module_name="forensic_metadata_async",
+            status="info",
+            duration=duration,
+            details={
+                "success": "error" not in result,
+                "has_authentication": result.get("authentication", {}).get("is_authenticated", False),
+                "confidence_score": result.get("authentication", {}).get("confidence_score", 0.0)
+            }
+        )
+
+        return result
+    except Exception as e:
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        logger.error(f"Critical error in async forensic metadata extraction for {filepath}: {e}")
+        logger.debug(f"Full traceback: {__import__('traceback').format_exc()}")
+
+        log_extraction_event(
+            event_type="async_forensic_extraction_error",
+            filepath=filepath,
+            module_name="forensic_metadata_async",
+            status="error",
+            duration=duration,
+            details={
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+        )
+
+        return {
+            "error": f"Critical error in async forensic metadata extraction: {str(e)}",
+            "error_type": type(e).__name__,
+            "file": {"path": filepath},
+            "forensic": {
+                "digital_signatures": {},
+                "blockchain_nft": {},
+                "watermarking": {},
+                "c2pa": {},
+                "adobe_credentials": {},
+                "filesystem": {},
+                "device_hardware": {},
+                "network_communication": {},
+                "email_communication": {}
+            },
+            "authentication": {
+                "is_authenticated": False,
+                "confidence_score": 0.0,
+                "issues": ["Critical async extraction error"],
+                "security_flags": ["async_extraction_failed"]
+            },
+            "provenance": {},
+            "integrity": {},
+            "fields_extracted": 0
+        }

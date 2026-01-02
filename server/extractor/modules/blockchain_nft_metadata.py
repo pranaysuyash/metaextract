@@ -164,7 +164,7 @@ def _detect_blockchain_file_type(filepath: str, filename: str, file_ext: str) ->
 
 def _extract_nft_metadata(filepath: str) -> Dict[str, Any]:
     """Extract NFT metadata from JSON files."""
-    nft_data = {'nft_metadata_present': True}
+    nft_data: Dict[str, Any] = {'nft_metadata_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -224,7 +224,7 @@ def _extract_nft_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_smart_contract_abi(filepath: str) -> Dict[str, Any]:
     """Extract smart contract ABI metadata."""
-    abi_data = {'smart_contract_abi_present': True}
+    abi_data: Dict[str, Any] = {'smart_contract_abi_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -276,7 +276,7 @@ def _extract_smart_contract_abi(filepath: str) -> Dict[str, Any]:
 
 def _extract_smart_contract_source(filepath: str) -> Dict[str, Any]:
     """Extract smart contract source code metadata."""
-    source_data = {'smart_contract_source_present': True}
+    source_data: Dict[str, Any] = {'smart_contract_source_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -330,7 +330,7 @@ def _extract_smart_contract_source(filepath: str) -> Dict[str, Any]:
 
 def _extract_wallet_keystore(filepath: str) -> Dict[str, Any]:
     """Extract wallet keystore metadata."""
-    wallet_data = {'wallet_keystore_present': True}
+    wallet_data: Dict[str, Any] = {'wallet_keystore_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -362,7 +362,7 @@ def _extract_wallet_keystore(filepath: str) -> Dict[str, Any]:
 
 def _extract_transaction_data(filepath: str) -> Dict[str, Any]:
     """Extract blockchain transaction metadata."""
-    tx_data = {'transaction_data_present': True}
+    tx_data: Dict[str, Any] = {'transaction_data_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -395,7 +395,7 @@ def _extract_transaction_data(filepath: str) -> Dict[str, Any]:
 
 def _extract_blockchain_config(filepath: str) -> Dict[str, Any]:
     """Extract blockchain configuration metadata."""
-    config_data = {'blockchain_config_present': True}
+    config_data: Dict[str, Any] = {'blockchain_config_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:

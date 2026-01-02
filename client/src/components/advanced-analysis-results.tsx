@@ -12,8 +12,7 @@ import {
   Zap,
   Clock,
   FileText,
-  TrendingUp,
-  TrendingDown
+  TrendingUp
 } from 'lucide-react';
 
 interface AdvancedAnalysisData {

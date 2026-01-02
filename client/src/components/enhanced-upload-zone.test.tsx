@@ -3,15 +3,14 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { EnhancedUploadZone } from './enhanced-upload-zone';
 
 // Mock react-dropzone
 jest.mock('react-dropzone', () => ({
-  useDropzone: ({ onDrop, onDragEnter, onDragLeave, onDropAccepted, onDropRejected }: any) => ({
+  useDropzone: ({ onDrop, onDragEnter, onDragLeave, onDropAccepted, _onDropRejected }: any) => ({
     getRootProps: () => ({
-      onClick: (e: any) => {
+      onClick: (_e: any) => {
         // Simulate file input click
         const input = document.createElement('input');
         input.type = 'file';
@@ -59,7 +58,7 @@ function createMockFileList(files: File[]): FileList {
   const fileList = {
     length: files.length,
     item: (index: number) => files[index] || null,
-    [Symbol.iterator]: function* () {
+    *[Symbol.iterator] () {
       for (const file of files) {
         yield file;
       }
@@ -315,7 +314,7 @@ describe('EnhancedUploadZone', () => {
     it('should revoke preview URL on file removal', () => {
       render(<EnhancedUploadZone {...defaultProps} tier="free" />, { wrapper: TestWrapper });
 
-      const revokeMock = global.URL.revokeObjectURL as jest.Mock;
+      const _revokeMock = global.URL.revokeObjectURL as jest.Mock;
 
       // Should call revokeObjectURL when removing file with preview
     });
@@ -361,7 +360,7 @@ describe('EnhancedUploadZone', () => {
     it('should highlight dropzone on drag enter', async () => {
       render(<EnhancedUploadZone {...defaultProps} tier="free" />, { wrapper: TestWrapper });
 
-      const dropzone = screen.getByText(/Upload files for analysis/i).closest('div');
+      screen.getByText(/Upload files for analysis/i).closest('div');
 
       // Would need to simulate drag events
     });
@@ -494,7 +493,7 @@ describe('EnhancedUploadZone', () => {
     it('should generate preview for image files', () => {
       render(<EnhancedUploadZone {...defaultProps} tier="free" />, { wrapper: TestWrapper });
 
-      const createObjectURLMock = global.URL.createObjectURL as jest.Mock;
+      const _createObjectURLMock = global.URL.createObjectURL as jest.Mock;
 
       // Should call createObjectURL for image files
     });

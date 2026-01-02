@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Layout } from "@/components/layout";
+import { PublicLayout as Layout } from "@/components/public-layout";
 import { EnhancedUploadZone } from "@/components/enhanced-upload-zone";
 import { PRICING_TIERS, CREDIT_PACKS, CREDIT_EXPLANATION } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 function getSessionId(): string {
   let sessionId = localStorage.getItem("metaextract_session_id");
@@ -46,6 +47,7 @@ export default function Home() {
   const parallaxBg = useParallax(80);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [creditPackLoading, setCreditPackLoading] = useState<string | null>(null);
+  const [advancedMode, setAdvancedMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -128,19 +130,22 @@ export default function Home() {
     }
   };
 
+  // Check if user has access to advanced features
+  const hasAdvancedAccess = user && ['professional', 'forensic', 'enterprise'].includes(user.tier);
+
   return (
-    <Layout>
-      <div ref={containerRef} className="relative min-h-[200vh] bg-[#0B0C10] overflow-hidden selection:bg-primary/30">
+    <Layout showHeader={true} showFooter={true}>
+      <div ref={containerRef} id="main-content" className="relative min-h-[200vh] bg-[#0B0C10] overflow-hidden selection:bg-primary/30">
 
         {/* Global animated background elements */}
-        <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
           <motion.div
             style={{ x: parallaxBg.x, y: parallaxBg.y }}
             className="absolute inset-0 opacity-20"
           >
             <img
               src={generatedBackground}
-              alt="Background"
+              alt=""
               className="w-full h-full object-cover mix-blend-screen scale-110"
             />
           </motion.div>
@@ -228,10 +233,31 @@ export default function Home() {
             >
               <div className="absolute inset-0 border border-white/10 rounded-3xl bg-black/20 backdrop-blur-sm -rotate-6 z-0"></div>
               <div id="enhanced-upload" className="relative z-10 w-full transform rotate-3 transition-transform hover:rotate-0 duration-500">
+                {isAuthenticated && hasAdvancedAccess && (
+                  <div className="mb-4 flex items-center justify-center gap-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg backdrop-blur-sm">
+                    <ShieldAlert className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-purple-300 font-medium">Advanced Forensic Analysis</span>
+                    <Button
+                      onClick={() => setAdvancedMode(!advancedMode)}
+                      variant={advancedMode ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "transition-all duration-200",
+                        advancedMode 
+                          ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" 
+                          : "border-purple-400/50 text-purple-300 hover:text-purple-200 hover:bg-purple-500/10"
+                      )}
+                    >
+                      <Zap className="w-3 h-3 mr-1" />
+                      {advancedMode ? "Enabled" : "Enable"}
+                    </Button>
+                  </div>
+                )}
                 <EnhancedUploadZone 
                   onResults={handleUploadResults}
-                  tier="free"
+                  tier={user?.tier || "free"}
                   maxFiles={1}
+                  advanced={advancedMode && hasAdvancedAccess}
                 />
 
                 {/* Decorative orbiting elements */}

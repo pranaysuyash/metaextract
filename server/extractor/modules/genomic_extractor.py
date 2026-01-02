@@ -431,3 +431,23 @@ if __name__ == "__main__":
     filepath = sys.argv[1]
     result = extract_genomic_metadata(filepath)
     print(json.dumps(result, indent=2, default=str))
+
+def get_genomic_extractor_field_count() -> int:
+    """
+    Return the number of genomic metadata fields extracted.
+    
+    Returns:
+        Total field count (6 fields)
+    """
+    return 6  # source, filepath, format_detected, extraction_success, genomic_metadata, error
+
+if __name__ == "__main__":
+    import json
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python genomic_extractor.py <file.fasta|fastq|vcf>")
+        sys.exit(1)
+
+    filepath = sys.argv[1]
+    result = extract_genomic_metadata(filepath)
+    print(json.dumps(result, indent=2, default=str))

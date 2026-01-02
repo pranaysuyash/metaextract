@@ -12,8 +12,13 @@ import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 import { spawn } from 'child_process';
-import { storage } from '../storage';
+import { storage } from '../storage/index';
 import {
   getTierConfig,
   isFileTypeAllowed,
@@ -25,6 +30,15 @@ import {
   getCreditCost,
 } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
+import {
+  sendFileTooLargeError,
+  sendInvalidFileTypeError,
+  sendTierInsufficientError,
+  sendQuotaExceededError,
+  sendInvalidRequestError,
+  sendInternalServerError,
+  sendServiceUnavailableError,
+} from '../utils/error-response';
 
 // ============================================================================
 // Types
@@ -84,6 +98,13 @@ interface PythonMetadataResponse {
   locked_fields: string[];
   burned_metadata?: Record<string, any> | null;
   metadata_comparison?: Record<string, any> | null;
+  advanced_analysis?: {
+    enabled: boolean;
+    processing_time_ms: number;
+    modules_run: string[];
+    forensic_score: number;
+    authenticity_assessment: string;
+  } | null;
   error?: string;
 }
 
@@ -139,7 +160,13 @@ const upload = multer({
 // Trial Tracking (in-memory; replace with DB for production)
 // ============================================================================
 
-const trialUsageByEmail = new Map<string, { usedAt: number; ip?: string }>();
+// Removed in-memory trial map - now using database-backed storage.hasTrialUsage()
+
+const EXTRACTION_HEALTH_TIMEOUT_MS = Number(
+  process.env.EXTRACTION_HEALTH_TIMEOUT_MS ??
+    process.env.HEALTH_CHECK_TIMEOUT_MS ??
+    (process.env.NODE_ENV === 'test' ? 500 : 10000)
+);
 
 function normalizeEmail(email: string | null | undefined): string | null {
   if (!email || typeof email !== 'string') return null;
@@ -152,10 +179,21 @@ function getSessionId(req: AuthRequest): string | null {
     typeof req.body?.session_id === 'string' ? req.body.session_id : null;
   const querySession =
     typeof req.query?.session_id === 'string' ? req.query.session_id : null;
-  const headerSession = typeof req.headers['x-session-id'] === 'string'
-    ? req.headers['x-session-id']
-    : null;
+  const headerSession =
+    typeof req.headers['x-session-id'] === 'string'
+      ? req.headers['x-session-id']
+      : null;
   return bodySession || querySession || headerSession || null;
+}
+
+function shouldBypassCredits(req: AuthRequest): boolean {
+  // Allow deterministic route testing by bypassing credits gates.
+  // Never enable this in production.
+  if (process.env.NODE_ENV !== 'test') return false;
+  const value = String(
+    req.headers['x-test-bypass-credits'] ?? ''
+  ).toLowerCase();
+  return value === '1' || value === 'true';
 }
 
 // ============================================================================
@@ -263,7 +301,9 @@ async function extractMetadataWithPython(
     }
 
     // Log the Python process startup
-    console.log(`Starting Python extraction process: python3 ${args.join(' ')}`);
+    console.log(
+      `Starting Python extraction process: python3 ${args.join(' ')}`
+    );
 
     const python = spawn('python3', args);
 
@@ -275,7 +315,9 @@ async function extractMetadataWithPython(
       stdout += dataStr;
       // Log large outputs in chunks to avoid overwhelming the console
       if (dataStr.length > 1000) {
-        console.log(`Python stdout (partial): ${dataStr.substring(0, 1000)}...`);
+        console.log(
+          `Python stdout (partial): ${dataStr.substring(0, 1000)}...`
+        );
       }
     });
 
@@ -296,11 +338,13 @@ async function extractMetadataWithPython(
           stdout: stdout || 'No stdout output',
           command: `python3 ${args.join(' ')}`,
           filePath,
-          tier
+          tier,
         };
 
         console.error('Python extraction error details:', errorDetails);
-        reject(new Error(`Python extractor failed: ${stderr || 'Unknown error'}`));
+        reject(
+          new Error(`Python extractor failed: ${stderr || 'Unknown error'}`)
+        );
         return;
       }
 
@@ -313,13 +357,28 @@ async function extractMetadataWithPython(
 
       try {
         const result = JSON.parse(stdout);
-        console.log(`Successfully parsed Python extraction result for ${path.basename(filePath)}, ${result.extraction_info?.fields_extracted || 0} fields extracted`);
+        console.log(
+          `Successfully parsed Python extraction result for ${path.basename(
+            filePath
+          )}, ${result.extraction_info?.fields_extracted || 0} fields extracted`
+        );
         resolve(result);
       } catch (parseError) {
         console.error('Failed to parse Python extraction output:', parseError);
-        console.error('Raw stdout (first 1000 chars):', stdout.substring(0, 1000));
+        console.error(
+          'Raw stdout (first 1000 chars):',
+          stdout.substring(0, 1000)
+        );
         console.error('Raw stderr:', stderr.substring(0, 500));
-        reject(new Error(`Failed to parse metadata extraction result: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`));
+        reject(
+          new Error(
+            `Failed to parse metadata extraction result: ${
+              parseError instanceof Error
+                ? parseError.message
+                : 'Unknown parsing error'
+            }`
+          )
+        );
       }
     });
 
@@ -331,7 +390,9 @@ async function extractMetadataWithPython(
     // Set timeout with detailed logging
     const timeoutMs = 180000; // 3 minutes
     const timeoutId = setTimeout(() => {
-      console.warn(`Python extraction timeout after ${timeoutMs}ms for file: ${filePath}`);
+      console.warn(
+        `Python extraction timeout after ${timeoutMs}ms for file: ${filePath}`
+      );
       if (!python.killed) {
         python.kill();
         console.log(`Killed Python process for file: ${filePath}`);
@@ -373,7 +434,7 @@ export function registerExtractionRoutes(app: Express): void {
 
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return sendInvalidRequestError(res, 'No file uploaded');
       }
 
       const requestedTier = (req.query.tier as string) || 'enterprise';
@@ -384,56 +445,41 @@ export function registerExtractionRoutes(app: Express): void {
       sessionId = getSessionId(req);
       trialEmail = normalizeEmail(req.body?.trial_email);
       creditCost = getCreditCost(mimeType);
+      const bypassCredits = shouldBypassCredits(req);
 
       // Validate file type for tier
       if (!isFileTypeAllowed(normalizedTier, mimeType)) {
         const requiredTier = getRequiredTierForFileType(mimeType);
-        return res.status(403).json({
-          error: 'File type not allowed for your plan',
-          file_type: mimeType,
-          current_tier: normalizedTier,
-          required_tier: requiredTier,
-          upgrade_message: `Upgrade to ${
-            TIER_CONFIGS[requiredTier].displayName
-          } (${TIER_CONFIGS[requiredTier].priceLabel}) to process ${
-            mimeType.split('/')[0]
-          } files`,
-        });
+        return sendInvalidFileTypeError(res, mimeType, requiredTier, normalizedTier);
       }
 
-      const hasTrialAvailable = !!trialEmail && !trialUsageByEmail.has(trialEmail);
+      // Validate file size for tier (do this before any payment gating)
+      if (!isFileSizeAllowed(normalizedTier, req.file.size)) {
+        const fileSizeMB = Math.round((req.file.size / (1024 * 1024)) * 100) / 100;
+        return sendFileTooLargeError(res, fileSizeMB, tierConfig.maxFileSizeMB, normalizedTier);
+      }
 
-      if (!hasTrialAvailable) {
+      const hasTrialAvailable =
+        !!trialEmail && !(await storage.hasTrialUsage(trialEmail));
+
+      if (!bypassCredits && !hasTrialAvailable) {
         if (!sessionId) {
-          return res.status(402).json({
-            error: 'Payment required',
-            message: 'Purchase credits to unlock a full report.',
-            required_credits: creditCost,
-          });
+          return sendQuotaExceededError(
+            res,
+            'Purchase credits to unlock a full report'
+          );
         }
 
         const balance = await storage.getOrCreateCreditBalance(sessionId);
-        creditBalanceId = balance.id;
-        if (balance.credits < creditCost) {
-          return res.status(402).json({
-            error: 'Insufficient credits',
-            required: creditCost,
-            available: balance.credits,
-          });
+        creditBalanceId = balance?.id ?? null;
+        if (!balance || balance.credits < creditCost) {
+          return sendQuotaExceededError(
+            res,
+            `Insufficient credits (required: ${creditCost}, available: ${balance?.credits ?? 0})`
+          );
         }
 
         chargeCredits = true;
-      }
-
-      // Validate file size for tier
-      if (!isFileSizeAllowed(normalizedTier, req.file.size)) {
-        return res.status(403).json({
-          error: 'File size exceeds plan limit',
-          file_size_mb: Math.round((req.file.size / (1024 * 1024)) * 100) / 100,
-          max_size_mb: tierConfig.maxFileSizeMB,
-          current_tier: normalizedTier,
-          upgrade_message: `Upgrade to a higher plan for larger file support`,
-        });
       }
 
       // Write file to temp location
@@ -464,7 +510,7 @@ export function registerExtractionRoutes(app: Express): void {
       );
       metadata.access = {
         trial_email_present: !!trialEmail,
-        trial_granted: hasTrialAvailable ? true : false,
+        trial_granted: bypassCredits ? false : hasTrialAvailable ? true : false,
         credits_charged: chargeCredits ? creditCost : 0,
         credits_required: creditCost,
       };
@@ -488,7 +534,7 @@ export function registerExtractionRoutes(app: Express): void {
           ipAddress: req.ip || req.socket.remoteAddress || null,
           userAgent: req.headers['user-agent'] || null,
         })
-          .catch((err) => console.error('Failed to log usage:', err));
+        .catch((err) => console.error('Failed to log usage:', err));
 
       if (chargeCredits && creditBalanceId) {
         storage
@@ -501,11 +547,18 @@ export function registerExtractionRoutes(app: Express): void {
           .catch((err) => console.error('Failed to use credits:', err));
       }
 
-      if (hasTrialAvailable && trialEmail) {
-        trialUsageByEmail.set(trialEmail, {
-          usedAt: Date.now(),
-          ip: req.ip || req.socket.remoteAddress || undefined,
-        });
+      if (!bypassCredits && hasTrialAvailable && trialEmail) {
+        // Record trial usage in database
+        try {
+          await storage.recordTrialUsage({
+            email: trialEmail,
+            ipAddress: req.ip || req.socket.remoteAddress || undefined,
+            userAgent: req.get('user-agent') || undefined,
+            sessionId: sessionId || undefined,
+          });
+        } catch (err) {
+          console.error('Failed to record trial usage:', err);
+        }
       }
 
       res.json(metadata);
@@ -544,10 +597,11 @@ export function registerExtractionRoutes(app: Express): void {
           .catch((err) => console.error('Failed to log usage:', err));
       }
 
-      res.status(500).json({
-        error: 'Failed to extract metadata',
-        details: failureReason,
-      });
+      sendInternalServerError(
+        res,
+        'Failed to extract metadata',
+        failureReason
+      );
     } finally {
       await cleanupTempFile(tempPath);
     }
@@ -562,12 +616,8 @@ export function registerExtractionRoutes(app: Express): void {
       const tempPaths: string[] = [];
 
       try {
-        if (
-          !req.files ||
-          !Array.isArray(req.files) ||
-          req.files.length === 0
-        ) {
-          return res.status(400).json({ error: 'No files uploaded' });
+        if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+          return sendInvalidRequestError(res, 'No files uploaded');
         }
 
         const requestedTier = (req.query.tier as string) || 'enterprise';
@@ -575,15 +625,8 @@ export function registerExtractionRoutes(app: Express): void {
         const pythonTier = toPythonTier(normalizedTier);
         const tierConfig = getTierConfig(normalizedTier);
 
-        // Check if tier supports batch processing
         if (!tierConfig.features.batchUpload) {
-          return res.status(403).json({
-            error: 'Batch processing not available for your plan',
-            current_tier: normalizedTier,
-            required_tier: 'forensic',
-            upgrade_message:
-              'Upgrade to Forensic or Enterprise for batch processing',
-          });
+          return sendTierInsufficientError(res, 'forensic', normalizedTier);
         }
 
         // Validate all files first
@@ -592,21 +635,12 @@ export function registerExtractionRoutes(app: Express): void {
 
           if (!isFileTypeAllowed(normalizedTier, mimeType)) {
             const requiredTier = getRequiredTierForFileType(mimeType);
-            return res.status(403).json({
-              error: `File type not allowed: ${file.originalname}`,
-              file_type: mimeType,
-              current_tier: normalizedTier,
-              required_tier: requiredTier,
-            });
+            return sendInvalidFileTypeError(res, mimeType, requiredTier);
           }
 
           if (!isFileSizeAllowed(normalizedTier, file.size)) {
-            return res.status(403).json({
-              error: `File size exceeds limit: ${file.originalname}`,
-              file_size_mb:
-                Math.round((file.size / (1024 * 1024)) * 100) / 100,
-              max_size_mb: tierConfig.maxFileSizeMB,
-            });
+            const fileSizeMB = Math.round((file.size / (1024 * 1024)) * 100) / 100;
+            return sendFileTooLargeError(res, fileSizeMB, tierConfig.maxFileSizeMB);
           }
         }
 
@@ -684,7 +718,16 @@ export function registerExtractionRoutes(app: Express): void {
         // Transform results for frontend
         const transformedResults: Record<string, any> = {};
         for (const fileInfo of fileInfos) {
-          const result = batchResults.results[fileInfo.tempPath];
+          const directResult = batchResults.results?.[fileInfo.tempPath];
+          const fallbackKey =
+            !directResult && batchResults.results
+              ? Object.keys(batchResults.results).find((key) =>
+                  key.includes(fileInfo.originalName)
+                )
+              : undefined;
+          const result =
+            directResult ||
+            (fallbackKey ? batchResults.results[fallbackKey] : undefined);
           if (result) {
             transformedResults[fileInfo.originalName] =
               transformMetadataForFrontend(
@@ -731,7 +774,7 @@ export function registerExtractionRoutes(app: Express): void {
 
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        return sendInvalidRequestError(res, 'No file uploaded');
       }
 
       const requestedTier = (req.query.tier as string) || 'enterprise';
@@ -799,10 +842,12 @@ export function registerExtractionRoutes(app: Express): void {
       // Calculate forensic score
       let forensicScore = 100;
       if (rawMetadata.steganography_analysis?.suspicious_score) {
-        forensicScore -= rawMetadata.steganography_analysis.suspicious_score * 30;
+        forensicScore -=
+          rawMetadata.steganography_analysis.suspicious_score * 30;
       }
       if (rawMetadata.manipulation_detection?.manipulation_probability) {
-        forensicScore -= rawMetadata.manipulation_detection.manipulation_probability * 50;
+        forensicScore -=
+          rawMetadata.manipulation_detection.manipulation_probability * 50;
       }
       if (rawMetadata.ai_detection?.ai_probability) {
         forensicScore -= rawMetadata.ai_detection.ai_probability * 20;
@@ -854,102 +899,132 @@ export function registerExtractionRoutes(app: Express): void {
       await fs.mkdir(tempDir, { recursive: true });
       const testFilePath = path.join(tempDir, 'health_check_test.txt');
       await fs.writeFile(testFilePath, 'health check');
-
-      const { spawn } = require('child_process');
       const args = [pythonScript, testFilePath, '--tier', 'free'];
 
       const python = spawn('python3', args);
 
+      let responded = false;
+      const safeRespond = (fn: () => void) => {
+        if (responded) return;
+        responded = true;
+        if (res.headersSent) return;
+        fn();
+      };
+
       let stdout = '';
       let stderr = '';
 
-      python.stdout.on('data', (data) => {
+      python.stdout.on('data', (data: Buffer) => {
         stdout += data.toString();
       });
 
-      python.stderr.on('data', (data) => {
+      python.stderr.on('data', (data: Buffer) => {
         stderr += data.toString();
       });
 
-      python.on('close', async (code) => {
+      python.on('close', async (code: number | null) => {
+        if (responded) return;
         // Clean up the test file
         try {
           await fs.unlink(testFilePath);
         } catch (cleanupError) {
-          console.error('Failed to clean up health check test file:', cleanupError);
+          console.error(
+            'Failed to clean up health check test file:',
+            cleanupError
+          );
         }
 
         if (code === 0) {
           try {
             const result = JSON.parse(stdout);
-            res.json({
-              status: 'healthy',
-              python_engine: 'available',
-              engine_version: result.extraction_info?.engine_version || 'unknown',
-              timestamp: new Date().toISOString(),
-              message: 'Python extraction engine is responding correctly'
-            });
+            safeRespond(() =>
+              res.json({
+                status: 'healthy',
+                python_engine: 'available',
+                engine_version:
+                  result.extraction_info?.engine_version || 'unknown',
+                timestamp: new Date().toISOString(),
+                message: 'Python extraction engine is responding correctly',
+              })
+            );
           } catch (parseError) {
-            res.json({
-              status: 'healthy',
-              python_engine: 'available',
-              timestamp: new Date().toISOString(),
-              message: 'Python extraction engine is responding but output format may be unexpected',
-              warning: 'Could not parse Python output as JSON'
-            });
+            safeRespond(() =>
+              res.json({
+                status: 'healthy',
+                python_engine: 'available',
+                timestamp: new Date().toISOString(),
+                message:
+                  'Python extraction engine is responding but output format may be unexpected',
+                warning: 'Could not parse Python output as JSON',
+              })
+            );
           }
         } else {
-          res.status(503).json({
-            status: 'unhealthy',
-            python_engine: 'unavailable',
-            error_code: code,
-            error_message: stderr || 'Unknown error',
-            timestamp: new Date().toISOString(),
-            message: 'Python extraction engine is not responding correctly'
-          });
+          safeRespond(() =>
+            res.status(503).json({
+              status: 'unhealthy',
+              python_engine: 'unavailable',
+              error_code: code,
+              error_message: stderr || 'Unknown error',
+              timestamp: new Date().toISOString(),
+              message: 'Python extraction engine is not responding correctly',
+            })
+          );
         }
       });
 
-      python.on('error', async (err) => {
+      python.on('error', async (err: Error) => {
+        if (responded) return;
         // Clean up the test file
         try {
           await fs.unlink(testFilePath);
         } catch (cleanupError) {
-          console.error('Failed to clean up health check test file:', cleanupError);
+          console.error(
+            'Failed to clean up health check test file:',
+            cleanupError
+          );
         }
 
-        res.status(503).json({
-          status: 'unhealthy',
-          python_engine: 'unavailable',
-          error: err.message,
-          timestamp: new Date().toISOString(),
-          message: 'Failed to start Python extraction engine'
-        });
+        safeRespond(() =>
+          res.status(503).json({
+            status: 'unhealthy',
+            python_engine: 'unavailable',
+            error: err.message,
+            timestamp: new Date().toISOString(),
+            message: 'Failed to start Python extraction engine',
+          })
+        );
       });
 
       // Set timeout for health check
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (!python.killed) {
           python.kill();
         }
         // Clean up the test file
-        fs.unlink(testFilePath).catch(err => console.error('Failed to clean up health check test file:', err));
+        fs.unlink(testFilePath).catch((err) =>
+          console.error('Failed to clean up health check test file:', err)
+        );
 
-        res.status(503).json({
-          status: 'timeout',
-          python_engine: 'unresponsive',
-          timestamp: new Date().toISOString(),
-          message: 'Python extraction engine did not respond within timeout period'
-        });
-      }, 10000); // 10 second timeout for health check
+        safeRespond(() =>
+          res.status(503).json({
+            status: 'timeout',
+            python_engine: 'unresponsive',
+            timestamp: new Date().toISOString(),
+            message:
+              'Python extraction engine did not respond within timeout period',
+          })
+        );
+      }, EXTRACTION_HEALTH_TIMEOUT_MS);
+
+      python.on('close', () => clearTimeout(timeoutId));
+      python.on('error', () => clearTimeout(timeoutId));
     } catch (error) {
       console.error('Health check error:', error);
-      res.status(503).json({
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
-        message: 'Health check failed with internal error'
-      });
+      sendServiceUnavailableError(
+        res,
+        'Health check failed with internal error'
+      );
     }
   });
 }

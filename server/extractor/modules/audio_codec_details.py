@@ -2121,7 +2121,7 @@ def extract_audio_codec_details(filepath: str) -> Dict[str, Any]:
                         ape_data = f.read(ape_size)
                         result["ape_details"] = _parse_ape_tag_data(ape_data)
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to extract APE tag data from audio file: {e}")
 
         # Generic audio properties
         if primary_stream:
@@ -2266,7 +2266,7 @@ def extract_mp3_details(filepath: str, stream: Dict) -> Dict[str, Any]:
                         result["encoder_padding_samples"] = result["lame_tag"]["encoder_padding_samples"]
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug(f"Failed to extract LAME tag from audio stream: {e}")
     
     # Look for LAME tags in stream tags
     tags = stream.get("tags", {})
@@ -2674,7 +2674,7 @@ def parse_flac_vorbis_comment(data: bytes) -> Dict[str, Any]:
             offset += comment_len
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug(f"Failed to parse FLAC vorbis comments: {e}")
     
     return result
 

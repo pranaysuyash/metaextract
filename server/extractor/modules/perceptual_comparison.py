@@ -227,7 +227,7 @@ def deduplication_workflow(
                         "fingerprint": fp
                     })
             except Exception as e:
-                pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+                logger.debug(f"Failed to compare image hashes: {e}")
 
         fingerprints = [item["fingerprint"] for item in result["fingerprints"]]
 

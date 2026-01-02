@@ -6,13 +6,15 @@
  */
 
 import type { Express } from 'express';
-import { createServer, type Server } from 'http';
+import type { Server } from 'http';
 import { registerExtractionRoutes } from './extraction';
 import { registerForensicRoutes } from './forensic';
 import { registerMetadataRoutes } from './metadata';
 import { registerTierRoutes } from './tiers';
 import { registerAdminRoutes } from './admin';
 import { registerPaymentRoutes } from '../payments';
+import { rateLimitManager } from '../rateLimitRedis';
+import { rateLimitAPI } from '../rateLimitMiddleware';
 
 /**
  * Register all API routes on the Express app.
@@ -29,6 +31,12 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Initialize rate limiter
+  await rateLimitManager.initialize();
+
+  // Apply global API rate limiting to all /api routes
+  app.use('/api', rateLimitAPI());
+
   // Register route modules
   registerExtractionRoutes(app);
   registerForensicRoutes(app);

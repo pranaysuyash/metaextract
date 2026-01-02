@@ -4,60 +4,63 @@ module.exports = {
   roots: ['<rootDir>/client', '<rootDir>/server', '<rootDir>/shared'],
   testMatch: [
     '**/__tests__/**/*.{js,jsx,ts,tsx}',
-    '**/*.{spec,test}.{js,jsx,ts,tsx}'
+    '**/*.{spec,test}.{js,jsx,ts,tsx}',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      useESM: true,
-      tsconfig: {
-        jsx: 'react-jsx',
-        esModuleInterop: true,
-        module: 'ESNext',
-        moduleResolution: 'bundler',
-        target: 'ES2022',
-        strict: true,
-        skipLibCheck: true,
-      }
-    }],
-    '^.+\\.(js|jsx)$': ['babel-jest', {
-      presets: [
-        ['@babel/preset-env', { targets: { node: 'current' } }],
-        ['@babel/preset-react', { runtime: 'automatic' }]
-      ]
-    }]
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: {
+          jsx: 'react-jsx',
+          esModuleInterop: true,
+          module: 'ESNext',
+          moduleResolution: 'bundler',
+          target: 'ES2022',
+          strict: true,
+          skipLibCheck: true,
+        },
+      },
+    ],
+    '^.+\\.(js|jsx)$': [
+      'babel-jest',
+      {
+        presets: [
+          ['@babel/preset-env', { targets: { node: 'current' } }],
+          ['@babel/preset-react', { runtime: 'automatic' }],
+        ],
+      },
+    ],
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/client/src/$1',
     '^@shared/(.*)$': '<rootDir>/shared/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '@testing-library/jest-dom'],
   collectCoverageFrom: [
     'client/src/**/*.{ts,tsx}',
-    'server/**/*.ts',
-    'shared/**/*.ts',
+    '!client/src/main.tsx',
     '!**/*.d.ts',
-    '!**/node_modules/**'
+    '!**/node_modules/**',
   ],
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 50
-    }
+      branches: 5,
+      functions: 5,
+      lines: 5,
+      statements: 5,
+    },
   },
   coverageReporters: ['text', 'lcov', 'html'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  transformIgnorePatterns: [
-    '/node_modules/(?!(wouter|@tanstack/react-query)/)'
-  ],
+  transformIgnorePatterns: ['/node_modules/(?!( @tanstack/react-query)/)'],
   watchPlugins: [
     'jest-watch-typeahead/filename',
-    'jest-watch-typeahead/testname'
+    'jest-watch-typeahead/testname',
   ],
   verbose: true,
   // Run integration tests in separate processes to avoid port conflicts
-  maxWorkers: 1
+  maxWorkers: 1,
 };

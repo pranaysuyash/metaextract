@@ -44,6 +44,7 @@ _video_codec = _load_module('video_codec_details')
 _video_keyframes = _load_module('video_keyframes')
 _video_telemetry = _load_module('video_telemetry')
 _video_advanced = _load_module('advanced_video_ultimate')
+_drone = _load_module('drone_metadata')
 
 
 def extract_video_master(filepath: str) -> Dict[str, Any]:
@@ -77,7 +78,8 @@ def extract_video_master(filepath: str) -> Dict[str, Any]:
     fields_count += _safe_extract('video_keyframes', 'extract_keyframe_metadata', 'keyframes')
     fields_count += _safe_extract('video_telemetry', 'extract_video_telemetry', 'telemetry')
     fields_count += _safe_extract('advanced_video_ultimate', 'extract_advanced_video_metadata', 'advanced_analysis')
-    
+    fields_count += _safe_extract('drone_metadata', 'extract_drone_metadata', 'drone')
+
     result["total_fields_extracted"] = fields_count
     return result
 

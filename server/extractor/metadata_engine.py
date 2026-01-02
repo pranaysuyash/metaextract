@@ -398,8 +398,11 @@ def safe_str(value: Any) -> Optional[str]:
 def detect_mime_type(filepath: str) -> str:
     mime_type = None
     if MAGIC_AVAILABLE:
-        try: mime_type = magic.from_file(filepath, mime=True)
-        except: pass
+        try:
+            mime_type = magic.from_file(filepath, mime=True)
+        except (OSError, Exception) as e:
+            logger.debug(f"Failed to detect MIME type with magic.from_file: {e}")
+            # Fall back to mimetypes.guess_type()
     if not mime_type: mime_type = mimetypes.guess_type(filepath)[0]
     return mime_type or "application/octet-stream"
 
@@ -1090,7 +1093,8 @@ def extract_filesystem_metadata(filepath: str) -> Dict[str, Any]:
                 import pwd, grp
                 owner_name = pwd.getpwuid(stat_info.st_uid).pw_name
                 group_name = grp.getgrgid(stat_info.st_gid).gr_name
-            except: pass
+            except (KeyError, OSError) as e:
+                logger.debug(f"Failed to resolve file owner/group names: {e}")
         file_type = "regular"
         if stat.S_ISDIR(mode):
             file_type = "directory"
@@ -1138,9 +1142,13 @@ def extract_extended_attributes(filepath: str) -> Dict[str, Any]:
             try:
                 value = x.get(key)
                 key_str = key.decode() if isinstance(key, bytes) else key
-                try: attrs[key_str] = value.decode('utf-8')
-                except: attrs[key_str] = f"base64:{base64.b64encode(value).decode('ascii')[:200]}"
-            except: pass
+                try:
+                    attrs[key_str] = value.decode('utf-8')
+                except (UnicodeDecodeError, AttributeError) as e:
+                    logger.debug(f"Failed to decode attribute value, using base64: {e}")
+                    attrs[key_str] = f"base64:{base64.b64encode(value).decode('ascii')[:200]}"
+            except (AttributeError, TypeError) as e:
+                logger.debug(f"Failed to get extended attribute: {e}")
         return {"available": True, "count": len(attrs), "attributes": attrs}
     except: return {"available": False}
 
@@ -1196,7 +1204,8 @@ def extract_gps_metadata(filepath: str) -> Optional[Dict[str, Any]]:
             try:
                 alt = tags["GPS GPSAltitude"].values[0]
                 gps["altitude_meters"] = round(float(alt.num) / float(alt.den), 2)
-            except: pass
+            except (ValueError, ZeroDivisionError, AttributeError, IndexError) as e:
+                logger.debug(f"Failed to parse GPS altitude: {e}")
         gps_fields = {
             "GPS GPSTimeStamp": "timestamp",
             "GPS GPSDateStamp": "datestamp",
@@ -1286,7 +1295,8 @@ def extract_audio_properties(filepath: str) -> Optional[Dict[str, Any]]:
                     if hasattr(value, "text"): tags[tag_name] = str(value.text[0]) if value.text else None
                     elif isinstance(value, list): tags[tag_name] = str(value[0]) if value else None
                     else: tags[tag_name] = safe_str(value)
-                except: pass
+                except (IndexError, AttributeError, TypeError) as e:
+                    logger.debug(f"Failed to extract audio tag {key}: {e}")
         result["tags"] = {
             "title": tags.get("TIT2") or tags.get("TITLE") or tags.get("title"),
             "artist": tags.get("TPE1") or tags.get("ARTIST") or tags.get("artist"),
@@ -1397,7 +1407,8 @@ def calculate_metadata(metadata: Dict[str, Any], current_time: datetime) -> Dict
                 "hours": int(delta.total_seconds() // 3600),
                 "human_readable": human_readable_time_delta(delta),
             }
-        except: pass
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Failed to calculate file age: {e}")
     if fs.get("modified"):
         try:
             modified = datetime.fromisoformat(fs["modified"])
@@ -1407,7 +1418,8 @@ def calculate_metadata(metadata: Dict[str, Any], current_time: datetime) -> Dict
                 "hours": int(delta.total_seconds() // 3600),
                 "human_readable": human_readable_time_delta(delta),
             }
-        except: pass
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Failed to calculate time since modified: {e}")
     if fs.get("accessed"):
         try:
             accessed = datetime.fromisoformat(fs["accessed"])
@@ -1417,7 +1429,8 @@ def calculate_metadata(metadata: Dict[str, Any], current_time: datetime) -> Dict
                 "hours": int(delta.total_seconds() // 3600),
                 "human_readable": human_readable_time_delta(delta),
             }
-        except: pass
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Failed to calculate time since accessed: {e}")
     return calc
 
 # ============================================================================

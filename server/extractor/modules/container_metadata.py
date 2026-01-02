@@ -8,8 +8,11 @@ from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
 import struct
 import json
+import logging
 
 from .shared_utils import count_fields as _count_fields, decode_mp4_data as _decode_mp4_data
+
+logger = logging.getLogger(__name__)
 
 # MP4/MOV Atom Types
 MP4_ATOM_TYPES = {
@@ -614,7 +617,7 @@ def parse_ftyp_atom(f, size: int) -> Dict[str, Any]:
             result["compatible_brands_count"] = len(compatible_brands)
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in parse_ftyp_atom: %s", e)
     
     return result
 
@@ -669,7 +672,7 @@ def parse_mvhd_atom(f, size: int) -> Dict[str, Any]:
             result["next_track_id"] = struct.unpack('>I', data[offset+76:offset+80])[0]
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in parse_mvhd_atom: %s", e)
     
     return result
 
@@ -732,7 +735,7 @@ def parse_tkhd_atom(f, size: int) -> Dict[str, Any]:
             result["track_height"] = height_raw / 65536.0
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in parse_tkhd_atom: %s", e)
     
     return result
 
@@ -776,7 +779,7 @@ def parse_mdhd_atom(f, size: int) -> Dict[str, Any]:
             result["media_language"] = ''.join(lang_chars)
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in parse_mdhd_atom: %s", e)
     
     return result
 
@@ -813,7 +816,7 @@ def parse_hdlr_atom(f, size: int) -> Dict[str, Any]:
             result["handler_name"] = name
     
     except Exception as e:
-        pass  # TODO: Consider logging: logger.debug(f'Handled exception: {e}')
+        logger.debug("Handled exception in parse_hdlr_atom: %s", e)
     
     return result
 

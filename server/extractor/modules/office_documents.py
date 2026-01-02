@@ -290,7 +290,7 @@ def _extract_ooxml_custom_properties(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_odf_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from ODF documents (OpenDocument)."""
-    result = {'office_format': 'odf'}
+    result: Dict[str, Any] = {'office_format': 'odf'}
 
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -349,7 +349,7 @@ def _extract_odf_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_iwork_metadata(filepath: str) -> Dict[str, Any]:
     """Extract basic metadata from Apple iWork documents."""
-    result = {'office_format': 'iwork'}
+    result: Dict[str, Any] = {'office_format': 'iwork'}
 
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
