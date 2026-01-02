@@ -1,6 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "@shared/schema";
+import { config } from 'dotenv';
+
+// Load environment variables
+config({ path: './.env' });
 
 // Check if DATABASE_URL is properly configured
 const isDatabaseConfigured = process.env.DATABASE_URL && 
@@ -17,8 +21,9 @@ if (isDatabaseConfigured) {
 
     // Export a cleanup function for tests
     (db as any).$pool = pool;
+    console.log('✅ Database connected successfully');
   } catch (error) {
-    console.error("Failed to initialize database:", error);
+    console.error("❌ Failed to initialize database:", error);
   }
 }
 

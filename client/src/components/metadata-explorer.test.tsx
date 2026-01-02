@@ -272,7 +272,7 @@ describe('MetadataExplorer', () => {
       render(<MetadataExplorer files={[]} />);
 
       expect(
-        screen.getByText('Select a file to view metadata')
+        screen.getByText('Discover the Power of Metadata')
       ).toBeInTheDocument();
     });
 
@@ -634,7 +634,7 @@ describe('MetadataExplorer', () => {
       render(<MetadataExplorer files={[]} />);
 
       expect(
-        screen.getByText('Select a file to view metadata')
+        screen.getByText('Discover the Power of Metadata')
       ).toBeInTheDocument();
     });
 

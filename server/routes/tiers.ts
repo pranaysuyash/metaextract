@@ -13,8 +13,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// @ts-ignore
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirPath = dirname(currentFilePath);
 import { getTierConfig, TIER_CONFIGS } from '@shared/tierConfig';
 
 // ============================================================================
@@ -274,7 +275,7 @@ export function registerTierRoutes(app: Express): void {
     try {
       const sampleId = req.params.sampleId;
       const samplePath = path.join(
-        __dirname,
+        currentDirPath,
         '..',
         'sample-files',
         `${sampleId}.bin`

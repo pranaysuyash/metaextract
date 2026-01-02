@@ -138,7 +138,7 @@ async function updateProgress(req: Request, res: Response) {
       message: 'Progress updated successfully',
     });
   } catch (_error) {
-    console.error('Failed to update progress:', error);
+    console.error('Failed to update progress:', _error);
     res.status(500).json({ error: 'Failed to update onboarding progress' });
   }
 }
@@ -170,7 +170,7 @@ async function pauseOnboarding(req: Request, res: Response) {
       message: 'Onboarding paused',
     });
   } catch (_error) {
-    console.error('Failed to pause onboarding:', error);
+    console.error('Failed to pause onboarding:', _error);
     res.status(500).json({ error: 'Failed to pause onboarding' });
   }
 }
@@ -202,7 +202,7 @@ async function resumeOnboarding(req: Request, res: Response) {
       message: 'Onboarding resumed',
     });
   } catch (_error) {
-    console.error('Failed to resume onboarding:', error);
+    console.error('Failed to resume onboarding:', _error);
     res.status(500).json({ error: 'Failed to resume onboarding' });
   }
 }
@@ -235,7 +235,7 @@ async function completeOnboarding(req: Request, res: Response) {
       message: 'Onboarding completed',
     });
   } catch (_error) {
-    console.error('Failed to complete onboarding:', error);
+    console.error('Failed to complete onboarding:', _error);
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 }
@@ -280,7 +280,7 @@ async function getOnboardingAnalytics(req: Request, res: Response) {
       },
     });
   } catch (_error) {
-    console.error('Failed to get onboarding analytics:', error);
+    console.error('Failed to get onboarding analytics:', _error);
     res.status(500).json({ error: 'Failed to retrieve analytics' });
   }
 }

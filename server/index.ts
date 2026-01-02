@@ -1,3 +1,7 @@
+// Load environment variables FIRST
+import { config } from 'dotenv';
+config({ path: './.env' });
+
 import express, { type Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import { registerRoutes } from './routes';
@@ -40,11 +44,20 @@ if (isDatabaseAvailable) {
   log('Using database authentication system');
 } else {
   app.use(mockAuthMiddleware);
-  console.log('\x1b[33m%s\x1b[0m', '----------------------------------------------------------------');
+  console.log(
+    '\x1b[33m%s\x1b[0m',
+    '----------------------------------------------------------------'
+  );
   console.log('\x1b[33m%s\x1b[0m', '⚠️  WARNING: DATABASE_URL not configured!');
   console.log('\x1b[33m%s\x1b[0m', '   - Using mock authentication system');
-  console.log('\x1b[33m%s\x1b[0m', '   - Using in-memory storage (DATA WILL BE LOST ON RESTART)');
-  console.log('\x1b[33m%s\x1b[0m', '----------------------------------------------------------------');
+  console.log(
+    '\x1b[33m%s\x1b[0m',
+    '   - Using in-memory storage (DATA WILL BE LOST ON RESTART)'
+  );
+  console.log(
+    '\x1b[33m%s\x1b[0m',
+    '----------------------------------------------------------------'
+  );
 }
 
 export function log(message: string, source = 'express') {
@@ -129,22 +142,24 @@ app.use((req, res, next) => {
   const host = process.env.HOST || '0.0.0.0';
 
   const startServer = (portToUse: number) => {
-    httpServer.listen(
-      {
-        port: portToUse,
-        host,
-      },
-      () => {
-        log(`serving on ${host}:${portToUse}`);
-      }
-    ).on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        log(`Port ${portToUse} is in use, retrying on ${portToUse + 1}...`);
-        startServer(portToUse + 1);
-      } else {
-        console.error('Server failed to start:', err);
-      }
-    });
+    httpServer
+      .listen(
+        {
+          port: portToUse,
+          host,
+        },
+        () => {
+          log(`serving on ${host}:${portToUse}`);
+        }
+      )
+      .on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          log(`Port ${portToUse} is in use, retrying on ${portToUse + 1}...`);
+          startServer(portToUse + 1);
+        } else {
+          console.error('Server failed to start:', err);
+        }
+      });
   };
 
   startServer(port);

@@ -12,6 +12,10 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Results from "@/pages/results";
+import ResultsV2 from "@/pages/results-v2";
+import ImagesMvpLanding from "@/pages/images-mvp";
+import ImagesMvpResults from "@/pages/images-mvp/results";
+import ImagesMvpCreditsSuccess from "@/pages/images-mvp/credits-success";
 import Dashboard from "@/pages/dashboard";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CreditsSuccess from "@/pages/credits-success";
@@ -19,7 +23,7 @@ import CreditsSuccess from "@/pages/credits-success";
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center">
@@ -27,11 +31,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -66,6 +70,7 @@ function AppRouter() {
             }
           />
           <Route path="/results" element={<Results />} />
+          <Route path="/results-v2" element={<ResultsV2 />} />
           <Route
             path="/checkout/success"
             element={
@@ -82,6 +87,9 @@ function AppRouter() {
               </ProtectedRoute>
             }
           />
+          <Route path="/images_mvp" element={<ImagesMvpLanding />} />
+          <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
+          <Route path="/images_mvp/credits/success" element={<ImagesMvpCreditsSuccess />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -9,6 +9,8 @@ import {
   type InsertOnboardingSession,
   type TrialUsage,
   type InsertTrialUsage,
+  type MetadataResult,
+  type InsertMetadataResult,
 } from '@shared/schema';
 
 export interface AnalyticsSummary {
@@ -77,4 +79,8 @@ export interface IStorage {
   hasTrialUsage(email: string): Promise<boolean>;
   recordTrialUsage(data: InsertTrialUsage): Promise<TrialUsage>;
   getTrialUsageByEmail(email: string): Promise<TrialUsage | undefined>;
+
+  // Metadata Persistence
+  saveMetadata(data: InsertMetadataResult): Promise<MetadataResult>;
+  getMetadata(id: string): Promise<MetadataResult | undefined>;
 }

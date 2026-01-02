@@ -51,6 +51,11 @@ export const DODO_CREDIT_PRODUCTS = {
   bulk: process.env.DODO_PRODUCT_CREDITS_BULK || 'pdt_0NV8hsCRYsFDHaVGPITwa',
 } as const;
 
+export const DODO_IMAGES_MVP_PRODUCTS = {
+  starter: process.env.DODO_PRODUCT_IMAGES_STARTER || 'pdt_images_mvp_starter',
+  pro: process.env.DODO_PRODUCT_IMAGES_PRO || 'pdt_images_mvp_pro',
+} as const;
+
 // Credit pack configuration
 export const CREDIT_PACKS = {
   single: {
@@ -76,6 +81,25 @@ export const CREDIT_PACKS = {
     name: 'Bulk Pack',
     description: '200 credits - best value',
     productId: DODO_CREDIT_PRODUCTS.bulk,
+  },
+} as const;
+
+export const IMAGES_MVP_CREDIT_PACKS = {
+  starter: {
+    credits: 25,
+    price: 300,
+    priceDisplay: '$3.00',
+    name: 'Starter Pack',
+    description: '25 images',
+    productId: DODO_IMAGES_MVP_PRODUCTS.starter,
+  },
+  pro: {
+    credits: 100,
+    price: 900,
+    priceDisplay: '$9.00',
+    name: 'Pro Pack',
+    description: '100 images',
+    productId: DODO_IMAGES_MVP_PRODUCTS.pro,
   },
 } as const;
 
@@ -433,8 +457,53 @@ export function registerPaymentRoutes(app: Express) {
       const webhookSignature = req.headers['webhook-signature'] as string;
       const webhookTimestamp = req.headers['webhook-timestamp'] as string;
 
+      // CRITICAL: Validate webhook signature to prevent fake payment events
+      if (!webhookId || !webhookSignature || !webhookTimestamp) {
+        console.error('Missing webhook signature headers');
+        return res.status(400).json({ error: 'Invalid webhook signature' });
+      }
+
+      if (!DODO_WEBHOOK_SECRET) {
+        console.error('DODO_WEBHOOK_SECRET not configured');
+        return res.status(500).json({ error: 'Webhook secret not configured' });
+      }
+
+      // Verify timestamp is recent (within 5 minutes)
+      const timestamp = parseInt(webhookTimestamp);
+      const now = Math.floor(Date.now() / 1000);
+      if (Math.abs(now - timestamp) > 300) {
+        // 5 minutes
+        console.error('Webhook timestamp too old');
+        return res.status(400).json({ error: 'Webhook timestamp expired' });
+      }
+
+      // Verify signature using Standard Webhooks format
+      const crypto = await import('crypto');
+      const signedPayload = `${webhookId}.${webhookTimestamp}.${JSON.stringify(req.body)}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', DODO_WEBHOOK_SECRET)
+        .update(signedPayload, 'utf8')
+        .digest('base64');
+
+      // Standard Webhooks uses v1,signature format
+      const signatureParts = webhookSignature.split(',');
+      const signature = signatureParts
+        .find(part => part.startsWith('v1,'))
+        ?.replace('v1,', '');
+
+      if (
+        !signature ||
+        !crypto.timingSafeEqual(
+          Buffer.from(signature, 'base64'),
+          Buffer.from(expectedSignature, 'base64')
+        )
+      ) {
+        console.error('Invalid webhook signature');
+        return res.status(400).json({ error: 'Invalid webhook signature' });
+      }
+
       // Log webhook receipt
-      console.log('Webhook received:', {
+      console.log('Webhook received and verified:', {
         id: webhookId,
         type: req.body?.type,
         timestamp: webhookTimestamp,
@@ -609,7 +678,7 @@ async function handleSubscriptionFailed(subscription: any) {
       .update(users)
       .set({
         subscriptionStatus: 'failed',
-        tier: 'enterprise',
+        tier: 'free', // FIXED: Failed subscriptions should downgrade to free, not upgrade to enterprise
       })
       .where(eq(users.id, sub.userId));
   }
@@ -661,7 +730,7 @@ async function handleSubscriptionCancelled(subscription: any) {
       .update(users)
       .set({
         subscriptionStatus: 'cancelled',
-        tier: 'enterprise',
+        tier: 'free', // FIXED: Cancelled subscriptions should downgrade to free, not upgrade to enterprise
       })
       .where(eq(users.id, sub.userId));
   }

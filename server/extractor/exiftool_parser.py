@@ -227,17 +227,59 @@ XMP_NAMESPACES = {
 def run_exiftool(filepath: str, args: List[str] = None) -> Optional[Dict[str, Any]]:
     """
     Run exiftool and return parsed JSON output.
-    
+
     Args:
         filepath: Path to file
         args: Additional exiftool arguments
-        
+
     Returns:
         Dictionary with extracted metadata
     """
     if not EXIFTOOL_AVAILABLE:
         return None
-    
+
+    # Validate and sanitize filepath to prevent command injection and path traversal
+    try:
+        path_obj = Path(filepath)
+
+        # Resolve to absolute path to normalize it
+        resolved_path = path_obj.resolve()
+
+        # Verify the file exists and is a regular file (not a directory)
+        if not resolved_path.exists():
+            logger.error(f"File does not exist: {resolved_path}")
+            return None
+
+        if not resolved_path.is_file():
+            logger.error(f"Path is not a file: {resolved_path}")
+            return None
+
+        # Check file size to prevent memory exhaustion (100MB limit)
+        file_size = resolved_path.stat().st_size
+        max_file_size = 100 * 1024 * 1024  # 100MB in bytes
+        if file_size > max_file_size:
+            logger.error(f"File too large: {file_size} bytes (max: {max_file_size}) for {resolved_path}")
+            return None
+
+        # Additional security check - ensure file is in allowed location
+        # This prevents access to sensitive system files
+        allowed_base_path = Path.cwd().resolve()  # Use current working directory as base
+        try:
+            resolved_path.relative_to(allowed_base_path)
+        except ValueError:
+            logger.error(f"Path traversal attempt detected: {filepath} (resolved: {resolved_path})")
+            return None
+
+        # Additional check: ensure the path doesn't contain any unusual characters
+        # that might indicate an attempt to inject shell commands
+        if any(char in str(resolved_path) for char in [';', '&', '|', '`', '$', '>', '<', '(', ')', '{', '}']):
+            logger.error(f"Invalid characters in file path: {filepath}")
+            return None
+
+    except Exception as e:
+        logger.error(f"Invalid file path: {filepath} - {e}")
+        return None
+
     try:
         cmd = [
             EXIFTOOL_PATH,
@@ -249,34 +291,36 @@ def run_exiftool(filepath: str, args: List[str] = None) -> Optional[Dict[str, An
             "-u",           # Unknown tags
             "-f",           # Force processing
         ]
-        
+
         if args:
             cmd.extend(args)
-        
-        cmd.append(filepath)
-        
+
+        # Use the validated and resolved path to prevent path traversal
+        cmd.append(str(resolved_path))
+
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=120,  # 2 minute timeout for large files
+            check=False,  # Don't raise exception on non-zero exit
         )
-        
+
         if result.returncode != 0:
-            logger.error(f"exiftool error: {result.stderr}")
+            logger.error(f"exiftool error for {resolved_path}: {result.stderr} (return code: {result.returncode})")
             return None
-        
+
         data = json.loads(result.stdout)
         return data[0] if data else None
-        
+
     except subprocess.TimeoutExpired:
-        logger.error("exiftool timed out")
+        logger.error(f"exiftool timed out for {resolved_path}")
         return None
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse exiftool output: {e}")
+        logger.error(f"Failed to parse exiftool output for {resolved_path}: {e}")
         return None
     except Exception as e:
-        logger.error(f"exiftool error: {e}")
+        logger.error(f"exiftool error for {resolved_path}: {e}")
         return None
 
 

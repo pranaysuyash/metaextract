@@ -13,8 +13,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// @ts-ignore
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirPath = dirname(currentFilePath);
 import { spawn } from 'child_process';
 import { storage } from '../storage/index';
 import { getRateLimitMetrics, resetRateLimit } from '../rateLimitMiddleware';
@@ -62,7 +63,7 @@ export function registerAdminRoutes(app: Express): void {
     try {
       // Get cache statistics if Redis is available
       const pythonScript = path.join(
-        __dirname,
+        currentDirPath,
         '..',
         'extractor',
         'utils',
@@ -117,7 +118,7 @@ print(json.dumps(get_cache_stats()))
       const pattern = req.body.pattern || 'metadata:*';
 
       const pythonScript = path.join(
-        __dirname,
+        currentDirPath,
         '..',
         'extractor',
         'utils',

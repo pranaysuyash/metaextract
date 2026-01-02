@@ -332,14 +332,26 @@ export class MemStorage implements IStorage {
 
   async hasTrialUsage(email: string): Promise<boolean> {
     const normalizedEmail = email.trim().toLowerCase();
-    return this.trialUsagesMap.has(normalizedEmail);
+    const usage = this.trialUsagesMap.get(normalizedEmail);
+    return !!usage && usage.uses > 0;
   }
 
   async recordTrialUsage(data: InsertTrialUsage): Promise<TrialUsage> {
     const normalizedEmail = data.email.trim().toLowerCase();
+    const existing = this.trialUsagesMap.get(normalizedEmail);
+    if (existing) {
+      existing.uses += 1;
+      existing.usedAt = new Date();
+      existing.ipAddress = data.ipAddress ?? null;
+      existing.userAgent = data.userAgent ?? null;
+      existing.sessionId = data.sessionId ?? null;
+      return existing;
+    }
+
     const usage: TrialUsage = {
       id: randomUUID(),
       email: normalizedEmail,
+      uses: 1,
       usedAt: new Date(),
       ipAddress: data.ipAddress ?? null,
       userAgent: data.userAgent ?? null,
@@ -696,11 +708,29 @@ export class DatabaseStorage implements IStorage {
   async recordTrialUsage(data: InsertTrialUsage): Promise<TrialUsage> {
     if (!this.db) throw new Error('Database not available');
     try {
+      const normalizedEmail = data.email.toLowerCase();
+      const [updated] = await this.db
+        .update(trialUsages)
+        .set({
+          uses: sql`${trialUsages.uses} + 1`,
+          usedAt: new Date(),
+          ipAddress: data.ipAddress ?? null,
+          userAgent: data.userAgent ?? null,
+          sessionId: data.sessionId ?? null,
+        })
+        .where(eq(trialUsages.email, normalizedEmail))
+        .returning();
+
+      if (updated) {
+        return updated;
+      }
+
       const [trialUsage] = await this.db
         .insert(trialUsages)
         .values({
           ...data,
-          email: data.email.toLowerCase(),
+          email: normalizedEmail,
+          uses: 1,
         })
         .returning();
       return trialUsage;

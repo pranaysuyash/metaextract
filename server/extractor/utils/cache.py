@@ -326,6 +326,7 @@ class AdvancedMetadataCache:
             savings = len(serialized) - len(compressed)
             self._stats['compression_savings_bytes'] += savings
             
+            # Always return compressed data when compression is enabled
             return compressed, compression_ratio
         except Exception as e:
             logger.error(f"Failed to compress metadata: {e}")
@@ -335,11 +336,11 @@ class AdvancedMetadataCache:
     def _decompress_metadata(self, compressed_data: bytes, compression_ratio: float) -> Dict[str, Any]:
         """Decompress metadata"""
         try:
-            if compression_ratio < 1.0:  # Was compressed
+            if compression_ratio == 1.0:  # Was not compressed
+                return pickle.loads(compressed_data)
+            else:  # Was compressed (regardless of ratio)
                 decompressed = gzip.decompress(compressed_data)
                 return pickle.loads(decompressed)
-            else:
-                return pickle.loads(compressed_data)
         except Exception as e:
             logger.error(f"Failed to decompress metadata: {e}")
             return {}
@@ -471,117 +472,6 @@ class AdvancedMetadataCache:
             logger.error(f"Failed to cache metadata for {file_path}: {e}")
             return False
 
-def get_file_hash_quick(filepath: str) -> str:
-    """
-    Generate a quick hash for file identification.
-    Uses file size + first/last 1KB for speed on large files.
-    """
-    try:
-        stat_info = os.stat(filepath)
-        file_size = stat_info.st_size
-        
-        # For small files, hash the entire content
-        if file_size < 1024 * 1024:  # 1MB
-            with open(filepath, 'rb') as f:
-                content = f.read()
-                return hashlib.md5(content).hexdigest()
-        
-        # For large files, hash size + first/last 1KB
-        hasher = hashlib.md5()
-        hasher.update(str(file_size).encode())
-        hasher.update(str(stat_info.st_mtime).encode())
-        
-        with open(filepath, 'rb') as f:
-            # First 1KB
-            first_chunk = f.read(1024)
-            hasher.update(first_chunk)
-            
-            # Last 1KB
-            if file_size > 1024:
-                f.seek(-1024, 2)
-                last_chunk = f.read(1024)
-                hasher.update(last_chunk)
-        
-        return hasher.hexdigest()
-        
-    except Exception as e:
-        logger.warning(f"Error generating file hash: {e}")
-        return hashlib.md5(filepath.encode()).hexdigest()
-
-def get_from_cache(cache_key: str) -> Optional[Dict[str, Any]]:
-    """Get metadata from cache if available."""
-    if not REDIS_AVAILABLE:
-        return None
-    
-    try:
-        cached_data = redis_client.get(cache_key)
-        if cached_data:
-            result = json.loads(cached_data)
-            logger.debug(f"Cache hit: {cache_key}")
-            return result
-    except Exception as e:
-        logger.warning(f"Cache read error: {e}")
-    
-    return None
-
-def set_cache(cache_key: str, data: Dict[str, Any], ttl_hours: int = 24) -> bool:
-    """Store metadata in cache."""
-    if not REDIS_AVAILABLE:
-        return False
-    
-    try:
-        # Add cache metadata
-        data["cache_info"] = {
-            "cached_at": datetime.now().isoformat(),
-            "ttl_hours": ttl_hours
-        }
-        
-        json_data = json.dumps(data, default=str)
-        ttl_seconds = ttl_hours * 3600
-        
-        redis_client.setex(cache_key, ttl_seconds, json_data)
-        logger.debug(f"Cache set: {cache_key} (TTL: {ttl_hours}h)")
-        return True
-        
-    except Exception as e:
-        logger.warning(f"Cache write error: {e}")
-        return False
-
-def clear_cache_pattern(pattern: str) -> int:
-    """Clear cache entries matching pattern."""
-    if not REDIS_AVAILABLE:
-        return 0
-    
-    try:
-        keys = redis_client.keys(pattern)
-        if keys:
-            deleted = redis_client.delete(*keys)
-            logger.info(f"Cleared {deleted} cache entries matching: {pattern}")
-            return deleted
-    except Exception as e:
-        logger.warning(f"Cache clear error: {e}")
-    
-    return 0
-
-def get_cache_stats() -> Dict[str, Any]:
-    """Get cache statistics."""
-    if not REDIS_AVAILABLE:
-        return {"available": False}
-    
-    try:
-        info = redis_client.info()
-        return {
-            "available": True,
-            "connected_clients": info.get("connected_clients", 0),
-            "used_memory_human": info.get("used_memory_human", "0B"),
-            "keyspace_hits": info.get("keyspace_hits", 0),
-            "keyspace_misses": info.get("keyspace_misses", 0),
-            "hit_rate": info.get("keyspace_hits", 0) / max(1, info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0))
-        }
-    except Exception as e:
-        logger.warning(f"Cache stats error: {e}")
-        return {"available": False, "error": str(e)}
-    
     def _save_to_redis(self, cache_key: str, entry: CacheEntry) -> bool:
         """Save entry to Redis cache"""
         if not self.enable_redis:
@@ -1083,6 +973,121 @@ def get_cache_stats() -> Dict[str, Any]:
             self._cleanup_thread.join(timeout=5)
         
         logger.info("Cache system shutdown complete")
+
+# ============================================================================
+# Legacy API Compatibility
+# ============================================================================
+
+def get_file_hash_quick(filepath: str) -> str:
+    """
+    Generate a quick hash for file identification.
+    Uses file size + first/last 1KB for speed on large files.
+    """
+    try:
+        stat_info = os.stat(filepath)
+        file_size = stat_info.st_size
+        
+        # For small files, hash the entire content
+        if file_size < 1024 * 1024:  # 1MB
+            with open(filepath, 'rb') as f:
+                content = f.read()
+                return hashlib.md5(content).hexdigest()
+        
+        # For large files, hash size + first/last 1KB
+        hasher = hashlib.md5()
+        hasher.update(str(file_size).encode())
+        hasher.update(str(stat_info.st_mtime).encode())
+        
+        with open(filepath, 'rb') as f:
+            # First 1KB
+            first_chunk = f.read(1024)
+            hasher.update(first_chunk)
+            
+            # Last 1KB
+            if file_size > 1024:
+                f.seek(-1024, 2)
+                last_chunk = f.read(1024)
+                hasher.update(last_chunk)
+        
+        return hasher.hexdigest()
+        
+    except Exception as e:
+        logger.warning(f"Error generating file hash: {e}")
+        return hashlib.md5(filepath.encode()).hexdigest()
+
+def get_from_cache(cache_key: str) -> Optional[Dict[str, Any]]:
+    """Get metadata from cache if available."""
+    if not REDIS_AVAILABLE:
+        return None
+    
+    try:
+        cached_data = redis_client.get(cache_key)
+        if cached_data:
+            result = json.loads(cached_data)
+            logger.debug(f"Cache hit: {cache_key}")
+            return result
+    except Exception as e:
+        logger.warning(f"Cache read error: {e}")
+    
+    return None
+
+def set_cache(cache_key: str, data: Dict[str, Any], ttl_hours: int = 24) -> bool:
+    """Store metadata in cache."""
+    if not REDIS_AVAILABLE:
+        return False
+    
+    try:
+        # Add cache metadata
+        data["cache_info"] = {
+            "cached_at": datetime.now().isoformat(),
+            "ttl_hours": ttl_hours
+        }
+        
+        json_data = json.dumps(data, default=str)
+        ttl_seconds = ttl_hours * 3600
+        
+        redis_client.setex(cache_key, ttl_seconds, json_data)
+        logger.debug(f"Cache set: {cache_key} (TTL: {ttl_hours}h)")
+        return True
+        
+    except Exception as e:
+        logger.warning(f"Cache write error: {e}")
+        return False
+
+def clear_cache_pattern(pattern: str) -> int:
+    """Clear cache entries matching pattern."""
+    if not REDIS_AVAILABLE:
+        return 0
+    
+    try:
+        keys = redis_client.keys(pattern)
+        if keys:
+            deleted = redis_client.delete(*keys)
+            logger.info(f"Cleared {deleted} cache entries matching: {pattern}")
+            return deleted
+    except Exception as e:
+        logger.warning(f"Cache clear error: {e}")
+    
+    return 0
+
+def get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics."""
+    if not REDIS_AVAILABLE:
+        return {"available": False}
+    
+    try:
+        info = redis_client.info()
+        return {
+            "available": True,
+            "connected_clients": info.get("connected_clients", 0),
+            "used_memory_human": info.get("used_memory_human", "0B"),
+            "keyspace_hits": info.get("keyspace_hits", 0),
+            "keyspace_misses": info.get("keyspace_misses", 0),
+            "hit_rate": info.get("keyspace_hits", 0) / max(1, info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0))
+        }
+    except Exception as e:
+        logger.warning(f"Cache stats error: {e}")
+        return {"available": False, "error": str(e)}
 
 # ============================================================================
 # Legacy API Compatibility

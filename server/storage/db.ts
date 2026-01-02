@@ -11,25 +11,23 @@ import {
   onboardingSessions,
   type OnboardingSession,
   type InsertOnboardingSession,
-  trialUsages,
-  type TrialUsage,
   type InsertTrialUsage,
+  type TrialUsage,
+  trialUsages,
+  metadataResults,
+  type MetadataResult,
+  type InsertMetadataResult,
 } from '@shared/schema';
 import { desc, sql, eq } from 'drizzle-orm';
+import { db } from '../db';
 import { IStorage, AnalyticsSummary } from './types';
 
 export class DatabaseStorage implements IStorage {
   private db: any;
 
   constructor() {
-    // Lazy load database connection
-    try {
-      const { db } = require('../db');
-      this.db = db;
-    } catch (error) {
-      console.error('Failed to connect to database:', error);
-      this.db = null;
-    }
+    // Use the imported db connection
+    this.db = db;
   }
 
   async getUser(_id: string): Promise<User | undefined> {
@@ -239,22 +237,24 @@ export class DatabaseStorage implements IStorage {
   ): Promise<CreditTransaction | null> {
     if (!this.db) return null;
     try {
-      const [balance] = await this.db
-        .select()
-        .from(creditBalances)
-        .where(eq(creditBalances.id, balanceId))
-        .limit(1);
-
-      if (!balance || balance.credits < amount) return null;
-
-      await this.db
+      // ✅ ATOMIC: Check balance and deduct in single UPDATE statement
+      // This prevents race conditions where concurrent requests could both
+      // see sufficient balance and deduct, resulting in negative credits
+      const updateResult = await this.db
         .update(creditBalances)
         .set({
           credits: sql`${creditBalances.credits} - ${amount}`,
           updatedAt: new Date(),
         })
-        .where(eq(creditBalances.id, balanceId));
+        .where(
+          sql`${eq(creditBalances.id, balanceId)} AND ${creditBalances.credits} >= ${amount}`
+        )
+        .returning();
 
+      // If no rows updated, balance was insufficient
+      if (updateResult.length === 0) return null;
+
+      // Only now create the transaction record (deduction succeeded)
       const [tx] = await this.db
         .insert(creditTransactions)
         .values({
@@ -358,11 +358,29 @@ export class DatabaseStorage implements IStorage {
   async recordTrialUsage(data: InsertTrialUsage): Promise<TrialUsage> {
     if (!this.db) throw new Error('Database not available');
     try {
+      const normalizedEmail = data.email.toLowerCase();
+      const [updated] = await this.db
+        .update(trialUsages)
+        .set({
+          uses: sql`${trialUsages.uses} + 1`,
+          usedAt: new Date(),
+          ipAddress: data.ipAddress ?? null,
+          userAgent: data.userAgent ?? null,
+          sessionId: data.sessionId ?? null,
+        })
+        .where(eq(trialUsages.email, normalizedEmail))
+        .returning();
+
+      if (updated) {
+        return updated;
+      }
+
       const [trialUsage] = await this.db
         .insert(trialUsages)
         .values({
           ...data,
-          email: data.email.toLowerCase(),
+          email: normalizedEmail,
+          uses: 1,
         })
         .returning();
       return trialUsage;
@@ -383,6 +401,36 @@ export class DatabaseStorage implements IStorage {
       return trialUsage;
     } catch (error) {
       console.error('Failed to get trial usage:', error);
+      return undefined;
+    }
+  }
+
+  // Metadata Persistence
+  async saveMetadata(data: InsertMetadataResult): Promise<MetadataResult> {
+    if (!this.db) throw new Error('Database not available');
+    try {
+      const [result] = await this.db
+        .insert(metadataResults)
+        .values(data)
+        .returning();
+      return result;
+    } catch (error) {
+      console.error('Failed to save metadata:', error);
+      throw error;
+    }
+  }
+
+  async getMetadata(id: string): Promise<MetadataResult | undefined> {
+    if (!this.db) return undefined;
+    try {
+      const [result] = await this.db
+        .select()
+        .from(metadataResults)
+        .where(eq(metadataResults.id, id))
+        .limit(1);
+      return result;
+    } catch (error) {
+      console.error('Failed to get metadata:', error);
       return undefined;
     }
   }

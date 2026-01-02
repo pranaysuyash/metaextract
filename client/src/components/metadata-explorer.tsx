@@ -90,6 +90,22 @@ interface MetadataField {
   highlightedValue?: string; // HTML string with <mark> tags
 }
 
+/**
+ * Runtime type guard for MetadataField
+ * Validates that an object has all required fields of MetadataField
+ */
+const isMetadataField = (obj: unknown): obj is MetadataField => {
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    'key' in obj &&
+    typeof (obj as any).key === 'string' &&
+    'value' in obj &&
+    'category' in obj &&
+    typeof (obj as any).category === 'string'
+  );
+};
+
 interface MetadataCategory {
   name: string;
   displayName: string;
@@ -296,8 +312,8 @@ function FileBrowser({
               key={file.id}
               onClick={() => onFileSelect(file.id)}
               className={`mb-1 flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${selectedFileId === file.id
-                  ? 'bg-primary/10 text-primary'
-                  : 'hover:bg-muted'
+                ? 'bg-primary/10 text-primary'
+                : 'hover:bg-muted'
                 }`}
             >
               <div className='shrink-0'>{getFileIcon(file.type)}</div>
@@ -457,7 +473,7 @@ function MetadataTree({
             highlightedKey: result.highlightedField,
             highlightedValue: result.highlightedValue
           };
-        }).filter((f): f is MetadataField => f !== null && typeof f === 'object' && 'key' in f);
+        }).filter(isMetadataField);
 
         return {
           ...category,
@@ -552,106 +568,109 @@ function MetadataTree({
               </AccordionTrigger>
               <AccordionContent>
                 <div className='space-y-1 pl-4'>
-                  {category.fields.map((field) => (
-                    <button
-                      key={field.key}
-                      onClick={() => onFieldSelect(field)}
-                      className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm transition-colors ${selectedField?.key === field.key
+                  {category.fields.map((field) => {
+                    if (!field) return null;
+                    return (
+                      <button
+                        key={field.key}
+                        onClick={() => onFieldSelect(field)}
+                        className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm transition-colors ${selectedField?.key === field.key
                           ? 'bg-primary/10 text-primary'
                           : 'hover:bg-muted'
-                        }`}
-                    >
-                      <div className='flex items-center gap-2'>
-                        {field.highlightedKey ? (
-                          <HighlightedText
-                            text={field.highlightedKey}
-                            className="font-medium [&>mark]:bg-yellow-200 [&>mark]:text-black dark:[&>mark]:bg-yellow-800 dark:[&>mark]:text-white"
-                          />
-                        ) : (
-                          <span className='font-medium'>{field.key}</span>
-                        )}
-                        {(hasExplanation(field.key) || field.significance) && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className='inline-flex items-center'>
-                                  <Info className='h-3 w-3 text-muted-foreground' />
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent className='max-w-sm'>
-                                {(() => {
-                                  const explanation = getFieldExplanation(
-                                    field.key
-                                  );
-                                  if (explanation) {
-                                    return (
-                                      <div className='space-y-2'>
-                                        <div>
-                                          <p className='font-semibold'>
-                                            {explanation.title}
-                                          </p>
-                                          <p className='text-sm mt-1'>
-                                            {explanation.description}
-                                          </p>
-                                        </div>
-                                        {explanation.details &&
-                                          explanation.details.length > 0 && (
-                                            <div>
-                                              <p className='text-xs font-semibold mb-1'>
-                                                Details:
-                                              </p>
-                                              <ul className='text-xs space-y-1'>
-                                                {explanation.details.map(
-                                                  (detail, idx) => (
-                                                    <li key={idx}>
-                                                      • {detail}
-                                                    </li>
-                                                  )
-                                                )}
-                                              </ul>
-                                            </div>
-                                          )}
-                                        {explanation.useCases &&
-                                          explanation.useCases.length > 0 && (
-                                            <div>
-                                              <p className='text-xs font-semibold mb-1'>
-                                                Use Cases:
-                                              </p>
-                                              <ul className='text-xs space-y-1'>
-                                                {explanation.useCases.map(
-                                                  (useCase, idx) => (
-                                                    <li key={idx}>
-                                                      • {useCase}
-                                                    </li>
-                                                  )
-                                                )}
-                                              </ul>
-                                            </div>
-                                          )}
-                                      </div>
+                          }`}
+                      >
+                        <div className='flex items-center gap-2'>
+                          {field.highlightedKey ? (
+                            <HighlightedText
+                              text={field.highlightedKey}
+                              className="font-medium [&>mark]:bg-yellow-200 [&>mark]:text-black dark:[&>mark]:bg-yellow-800 dark:[&>mark]:text-white"
+                            />
+                          ) : (
+                            <span className='font-medium'>{field.key}</span>
+                          )}
+                          {(hasExplanation(field.key) || field.significance) && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className='inline-flex items-center'>
+                                    <Info className='h-3 w-3 text-muted-foreground' />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className='max-w-sm'>
+                                  {(() => {
+                                    const explanation = getFieldExplanation(
+                                      field.key
                                     );
-                                  } else if (field.significance) {
-                                    return <p>{field.significance}</p>;
-                                  }
-                                  return null;
-                                })()}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </div>
-                      <span className='truncate text-muted-foreground max-w-30'>
-                        {field.highlightedValue ? (
-                          <HighlightedText
-                            text={field.highlightedValue}
-                            className="[&>mark]:bg-yellow-200 [&>mark]:text-black dark:[&>mark]:bg-yellow-800 dark:[&>mark]:text-white"
-                          />
-                        ) : (
-                          formatValue(field.value)
-                        )}
-                      </span>
-                    </button>
-                  ))}
+                                    if (explanation) {
+                                      return (
+                                        <div className='space-y-2'>
+                                          <div>
+                                            <p className='font-semibold'>
+                                              {explanation.title}
+                                            </p>
+                                            <p className='text-sm mt-1'>
+                                              {explanation.description}
+                                            </p>
+                                          </div>
+                                          {explanation.details &&
+                                            explanation.details.length > 0 && (
+                                              <div>
+                                                <p className='text-xs font-semibold mb-1'>
+                                                  Details:
+                                                </p>
+                                                <ul className='text-xs space-y-1'>
+                                                  {explanation.details.map(
+                                                    (detail, idx) => (
+                                                      <li key={idx}>
+                                                        • {detail}
+                                                      </li>
+                                                    )
+                                                  )}
+                                                </ul>
+                                              </div>
+                                            )}
+                                          {explanation.useCases &&
+                                            explanation.useCases.length > 0 && (
+                                              <div>
+                                                <p className='text-xs font-semibold mb-1'>
+                                                  Use Cases:
+                                                </p>
+                                                <ul className='text-xs space-y-1'>
+                                                  {explanation.useCases.map(
+                                                    (useCase, idx) => (
+                                                      <li key={idx}>
+                                                        • {useCase}
+                                                      </li>
+                                                    )
+                                                  )}
+                                                </ul>
+                                              </div>
+                                            )}
+                                        </div>
+                                      );
+                                    } else if (field.significance) {
+                                      return <p>{field.significance}</p>;
+                                    }
+                                    return null;
+                                  })()}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                        <span className='truncate text-muted-foreground max-w-30'>
+                          {field.highlightedValue ? (
+                            <HighlightedText
+                              text={field.highlightedValue}
+                              className="[&>mark]:bg-yellow-200 [&>mark]:text-black dark:[&>mark]:bg-yellow-800 dark:[&>mark]:text-white"
+                            />
+                          ) : (
+                            formatValue(field.value)
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </AccordionContent>
             </AccordionItem>

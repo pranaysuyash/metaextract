@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
 import { Layout } from '@/components/layout';
 import { MOCK_METADATA } from '@/lib/mockData';
 import { PaymentModal } from '@/components/payment-modal';
 import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
 import { MetadataComparisonDisplay } from '@/components/metadata-comparison-display';
 import { AdvancedResultsIntegration } from '@/components/advanced-results-integration';
+import { MedicalAnalysisResult } from '@/components/medical-analysis-result';
 import { MetadataExplorer, convertMetadataToProcessedFile } from '@/components/metadata-explorer';
 import { UIAdaptationProvider, ContextBanner, ContextIndicator } from '@/components/ui-adaptation-controller';
 import { ErrorBoundary, MetadataErrorBoundary } from '@/components/error-boundary';
@@ -95,10 +98,19 @@ interface MetadataResponse {
   filetype: string;
   mime_type: string;
   tier: string;
-  fields_returned: number;
+  fields_extracted: number;
   fields_available: number;
   file_integrity: { md5: string; sha256: string };
+  hashes?: { md5: string; sha256: string };
   hash?: string;
+  file?: { created?: string; modified?: string };
+  advanced_analysis?: {
+    enabled: boolean;
+    processing_time_ms: number;
+    modules_run: string[];
+    forensic_score: number;
+    authenticity_assessment: string;
+  };
   filesystem: Record<string, any>;
   calculated: Record<string, any>;
   gps: Record<string, any> | null;
@@ -151,17 +163,63 @@ interface MetadataResponse {
 }
 
 export default function Results() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const resultId = searchParams.get('id');
+  const { toast } = useToast();
+
   const [metadata, setMetadata] = useState<MetadataResponse>(() => {
+    // Priority 1: Navigation State (In-Memory, handles large payloads)
+    if (location.state?.metadata) {
+      // Handle both array and object formats
+      const metadataObj = Array.isArray(location.state.metadata) 
+        ? location.state.metadata[0] 
+        : location.state.metadata;
+      
+      return metadataObj;
+    }
+
+    // Priority 2: Session Storage (might be truncated or missing if quota exceeded)
     const stored = sessionStorage.getItem('currentMetadata');
     if (stored) {
       try {
-        return JSON.parse(stored);
-      } catch {
+        const parsed = JSON.parse(stored);
+        console.log('[Results] Loaded metadata from session storage:', parsed);
+        return parsed;
+      } catch (e) {
+        console.error('[Results] Failed to parse session storage:', e);
+        console.warn('[Results] Falling back to MOCK_METADATA');
         return MOCK_METADATA as any;
       }
     }
+    console.warn('[Results] No metadata in session storage. Falling back to MOCK_METADATA');
     return MOCK_METADATA as any;
   });
+
+  // Fetch from DB if ID is present and we don't have fresh data
+  useEffect(() => {
+    if (resultId && (metadata === MOCK_METADATA || !metadata.filename)) {
+      console.log(`[Results] ID found in URL: ${resultId}. Fetching from DB...`);
+      fetch(`/api/extract/results/${resultId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Result not found');
+          return res.json();
+        })
+        .then(data => {
+          console.log('[Results] Loaded metadata from DB');
+          setMetadata(data);
+        })
+        .catch(err => {
+          console.error('[Results] Failed to fetch by ID:', err);
+          toast({
+            title: 'Error loading result',
+            description: 'Could not load saved analysis. Using mock data.',
+            variant: 'destructive'
+          });
+        });
+    }
+  }, [resultId, metadata, toast]);
 
   const [showPayment, setShowPayment] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -184,7 +242,7 @@ export default function Results() {
     if (metadata) {
       const processedFile = convertMetadataToProcessedFile(metadata, 'current-file');
       setProcessedFiles([processedFile]);
-      
+
       // Extract advanced analysis from metadata if available
       if (metadata.advanced_analysis) {
         setAdvancedAnalysis(metadata.advanced_analysis);
@@ -296,15 +354,21 @@ export default function Results() {
     yPosition += 10;
 
     // Extract some key metadata fields for the report
+    const captureDate = metadata.calculated?.capture_date;
+    const modifiedDate =
+      metadata.filesystem?.modified ||
+      metadata.file?.modified ||
+      metadata.calculated?.file_modified;
+
     const keyFields = [
-      { label: 'MD5 Hash', value: metadata.hashes?.md5 },
-      { label: 'SHA256 Hash', value: metadata.hashes?.sha256 },
-      { label: 'Created Date', value: metadata.file?.created },
-      { label: 'Modified Date', value: metadata.file?.modified },
-      { label: 'GPS Location', value: metadata.gps ? `${metadata.gps.latitude}, ${metadata.gps.longitude}` : null },
-      { label: 'Camera Make', value: metadata.exif?.Make },
-      { label: 'Camera Model', value: metadata.exif?.Model },
-    ].filter(field => field.value);
+      { label: 'MD5 Hash', value: metadata.hashes?.md5 || metadata.file_integrity?.md5 },
+      { label: 'SHA256 Hash', value: metadata.hashes?.sha256 || metadata.file_integrity?.sha256 },
+      { label: 'Capture Date', value: captureDate || 'Not embedded' },
+      { label: 'Modified Date (server file)', value: modifiedDate || 'Not available' },
+      { label: 'GPS Location', value: gpsCoords ? `${gpsCoords.latitude}, ${gpsCoords.longitude}` : 'Not embedded' },
+      { label: 'Camera Make', value: metadata.exif?.Make || 'Not embedded' },
+      { label: 'Camera Model', value: metadata.exif?.Model || 'Not embedded' },
+    ];
 
     doc.setFontSize(9);
     keyFields.forEach(field => {
@@ -348,7 +412,7 @@ export default function Results() {
 
       formData.append('file', file);
 
-      const analysisResponse = await fetch('/api/extract/advanced?tier=professional', {
+      const analysisResponse = await fetch(`/api/extract/advanced?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`, {
         method: 'POST',
         body: formData,
       });
@@ -374,7 +438,7 @@ export default function Results() {
         formData.append('files', file);
       });
 
-      const response = await fetch('/api/compare/batch?tier=professional', {
+      const response = await fetch(`/api/compare/batch?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`, {
         method: 'POST',
         body: formData,
       });
@@ -398,7 +462,7 @@ export default function Results() {
         formData.append('files', file);
       });
 
-      const response = await fetch('/api/timeline/reconstruct?tier=professional', {
+      const response = await fetch(`/api/timeline/reconstruct?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`, {
         method: 'POST',
         body: formData,
       });
@@ -479,6 +543,9 @@ export default function Results() {
   };
 
   const totalFields = useMemo(() => {
+    if (metadata.fields_extracted && metadata.fields_extracted > 0) {
+      return metadata.fields_extracted;
+    }
     return (
       Object.keys(metadata.summary || {}).length +
       Object.keys(metadata.forensic || {}).length +
@@ -548,9 +615,30 @@ export default function Results() {
     return flattenForDisplay(metadata.video.telemetry);
   }, [metadata.video]);
 
-  const hasGPS =
-    metadata.gps &&
-    (metadata.gps.latitude_decimal || metadata.gps.coordinates_formatted);
+  const getGpsCoords = (gps: Record<string, any> | null | undefined) => {
+    if (!gps || typeof gps !== 'object') return null;
+    const latRaw =
+      gps.latitude ??
+      gps.lat ??
+      gps.latitude_decimal ??
+      gps.GPSLatitude ??
+      gps.gps_latitude ??
+      gps.Latitude;
+    const lonRaw =
+      gps.longitude ??
+      gps.lon ??
+      gps.longitude_decimal ??
+      gps.GPSLongitude ??
+      gps.gps_longitude ??
+      gps.Longitude;
+    const lat = typeof latRaw === 'number' ? latRaw : parseFloat(String(latRaw));
+    const lon = typeof lonRaw === 'number' ? lonRaw : parseFloat(String(lonRaw));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return { latitude: lat, longitude: lon };
+  };
+
+  const gpsCoords = getGpsCoords(metadata.gps as any);
+  const hasGPS = !!gpsCoords;
 
   const isFieldLocked = (value: any): boolean => {
     if (typeof value === 'string') {
@@ -747,6 +835,16 @@ export default function Results() {
                       PDF
                     </Button>
                   )}
+                  {import.meta.env.DEV && (
+                    <Button
+                      onClick={() => navigate('/results-v2', { state: { metadata } })}
+                      variant="outline"
+                      className='gap-2 font-mono text-xs tracking-wider border-blue-500/50 text-blue-300 hover:bg-blue-500/10'
+                    >
+                      <Cpu className='w-4 h-4' />
+                      V2
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -787,7 +885,7 @@ export default function Results() {
                             className={`w-3 h-3 ${hasGPS ? 'text-primary' : 'text-slate-600'
                               }`}
                           />
-                          {hasGPS ? 'Present' : 'Not Found'}
+                          {hasGPS ? 'Present' : 'Not Embedded'}
                         </div>
                       </div>
                       {metadata.calculated && (
@@ -827,11 +925,11 @@ export default function Results() {
                       <div className='space-y-2 font-mono text-xs'>
                         <div className='text-slate-400'>
                           <span className='text-slate-600'>LAT:</span>{' '}
-                          {metadata.gps.latitude_decimal?.toFixed(6)}
+                          {gpsCoords?.latitude.toFixed(6)}
                         </div>
                         <div className='text-slate-400'>
                           <span className='text-slate-600'>LON:</span>{' '}
-                          {metadata.gps.longitude_decimal?.toFixed(6)}
+                          {gpsCoords?.longitude.toFixed(6)}
                         </div>
                         <a
                           href={metadata.gps.google_maps_url}
@@ -843,6 +941,20 @@ export default function Results() {
                           <MapPin className='w-3 h-3' /> View on Maps{' '}
                           <ExternalLink className='w-3 h-3' />
                         </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PROMINENT DEBUG WARNING */}
+                  {metadata === MOCK_METADATA && (
+                    <div className="mb-4 p-4 bg-red-600 text-white rounded-lg shadow-xl border-4 border-red-800 animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-8 h-8" />
+                        <div>
+                          <h3 className="text-xl font-bold">⚠️ USING MOCK DATA</h3>
+                          <p className="font-mono text-sm">Real extraction failed or data was lost.</p>
+                          <p className="text-xs opacity-75 mt-1">Check console logs for details.</p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -884,6 +996,15 @@ export default function Results() {
                           EXPLORER
                           <div className='absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full'></div>
                         </TabsTrigger>
+                        {metadata.medical_imaging?.available && (
+                          <TabsTrigger
+                            value='medical'
+                            className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
+                          >
+                            MEDICAL
+                            <div className='absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full'></div>
+                          </TabsTrigger>
+                        )}
                         <TabsTrigger
                           value='advanced'
                           className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
@@ -946,654 +1067,495 @@ export default function Results() {
                               />
                             </MetadataErrorBoundary>
                           </TabsContent>
-                      <TabsContent value='all' className='mt-0 space-y-6'>
-                        {metadata.file_integrity && (
-                          <section>
-                            <SectionHeader
-                              icon={Hash}
-                              title='File Integrity'
-                              color='text-amber-500'
-                              count={2}
+
+                          <TabsContent value='medical' className='mt-0'>
+                            <MedicalAnalysisResult
+                              data={metadata.medical_imaging}
+                              isUnlocked={isUnlocked}
                             />
-                            <div className='grid grid-cols-1 gap-y-1'>
-                              <FieldRow
-                                label='MD5'
-                                value={metadata.file_integrity.md5}
-                                copyable
-                                index={0}
-                              />
-                              <FieldRow
-                                label='SHA256'
-                                value={metadata.file_integrity.sha256}
-                                copyable
-                                index={1}
-                              />
-                            </div>
-                          </section>
-                        )}
+                          </TabsContent>
 
-                        {metadata.metadata_comparison && (
-                          <section>
-                            <MetadataComparisonDisplay
-                              comparison={metadata.metadata_comparison}
-                            />
-                          </section>
-                        )}
-
-                        {metadata.burned_metadata &&
-                          metadata.burned_metadata.has_burned_metadata && (
-                            <section>
-                              <BurnedMetadataDisplay
-                                burned_metadata={metadata.burned_metadata}
-                                isUnlocked={isUnlocked}
-                              />
-                            </section>
-                          )}
-
-                        <section>
-                          <SectionHeader
-                            icon={ShieldCheck}
-                            title='Forensic Evidence'
-                            color='text-emerald-500'
-                            count={filterFields(metadata.forensic || {}).length}
-                          />
-                          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                            {filterFields(metadata.forensic || {}).map(
-                              ([key, val], i) => (
-                                <FieldRow
-                                  key={key}
-                                  label={key}
-                                  value={val}
-                                  index={i}
-                                  locked={key.includes('Serial') && !isUnlocked}
-                                  copyable
+                          <TabsContent value='all' className='mt-0 space-y-6'>
+                            {metadata.file_integrity && (
+                              <section>
+                                <SectionHeader
+                                  icon={Hash}
+                                  title='File Integrity'
+                                  color='text-amber-500'
+                                  count={2}
                                 />
-                              )
-                            )}
-                          </div>
-                        </section>
-
-                        <section>
-                          <SectionHeader
-                            icon={FileText}
-                            title='File Summary'
-                            color='text-primary'
-                            count={filterFields(metadata.summary || {}).length}
-                          />
-                          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                            {filterFields(metadata.summary || {}).map(
-                              ([key, val], i) => (
-                                <FieldRow
-                                  key={key}
-                                  label={key}
-                                  value={val}
-                                  index={i}
-                                />
-                              )
-                            )}
-                          </div>
-                        </section>
-
-                        {metadata.calculated && (
-                          <section>
-                            <SectionHeader
-                              icon={Calculator}
-                              title='Calculated Fields'
-                              color='text-cyan-500'
-                              count={
-                                filterFields(metadata.calculated || {}).length
-                              }
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(metadata.calculated || {}).map(
-                                ([key, val], i) => (
+                                <div className='grid grid-cols-1 gap-y-1'>
                                   <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                    locked={!isUnlocked}
-                                  />
-                                )
-                              )}
-                            </div>
-                          </section>
-                        )}
-
-                        <section>
-                          <SectionHeader
-                            icon={Camera}
-                            title='Camera & EXIF'
-                            color='text-purple-400'
-                            count={filterFields(metadata.exif || {}).length}
-                          />
-                          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                            {filterFields(metadata.exif || {}).map(
-                              ([key, val], i) => (
-                                <FieldRow
-                                  key={key}
-                                  label={key}
-                                  value={val}
-                                  index={i}
-                                />
-                              )
-                            )}
-                          </div>
-                        </section>
-
-                        {hasGPS && metadata.gps && (
-                          <section>
-                            <SectionHeader
-                              icon={MapPin}
-                              title='GPS Location'
-                              color='text-rose-500'
-                              count={filterFields(metadata.gps || {}).length}
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(metadata.gps || {}).map(
-                                ([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
+                                    label='MD5'
+                                    value={metadata.file_integrity.md5}
                                     copyable
+                                    index={0}
                                   />
-                                )
+                                  <FieldRow
+                                    label='SHA256'
+                                    value={metadata.file_integrity.sha256}
+                                    copyable
+                                    index={1}
+                                  />
+                                </div>
+                              </section>
+                            )}
+
+                            {metadata.metadata_comparison &&
+                              (metadata.fields_extracted === 0 ||
+                                metadata.metadata_comparison.summary?.overall_status !== 'no_metadata' ||
+                                metadata.metadata_comparison.has_both) && (
+                                <section>
+                                  <MetadataComparisonDisplay
+                                    comparison={metadata.metadata_comparison}
+                                  />
+                                </section>
                               )}
-                            </div>
-                          </section>
-                        )}
 
-                        {!isUnlocked && (
-                          <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                            <p className='text-xs text-slate-400 font-mono mb-2'>
-                              {Object.keys(metadata.makernote || {}).length +
-                                Object.keys(metadata.extended || {})
-                                  .length}{' '}
-                              ADDITIONAL FIELDS AVAILABLE
-                            </p>
-                            <Button
-                              variant='link'
-                              onClick={() => setShowPayment(true)}
-                              className='text-primary text-xs h-auto p-0'
-                              data-testid='button-unlock-fields'
-                            >
-                              UNLOCK_ALL_FIELDS
-                            </Button>
-                          </div>
-                        )}
-                      </TabsContent>
+                            {metadata.burned_metadata &&
+                              metadata.burned_metadata.has_burned_metadata && (
+                                <section>
+                                  <BurnedMetadataDisplay
+                                    burned_metadata={metadata.burned_metadata}
+                                    isUnlocked={isUnlocked}
+                                  />
+                                </section>
+                              )}
 
-                      <TabsContent value='advanced' className='mt-0'>
-                        <AdvancedResultsIntegration
-                          metadata={metadata}
-                          advancedAnalysis={advancedAnalysis}
-                          comparisonResult={comparisonResult}
-                          timelineResult={timelineResult}
-                          forensicReport={forensicReport}
-                          tier={metadata.tier || 'free'}
-                          onUpgrade={() => setShowPayment(true)}
-                          onRunAdvancedAnalysis={runAdvancedAnalysis}
-                          onRunComparison={runComparison}
-                          onRunTimeline={runTimeline}
-                          onGenerateReport={generateReport}
-                        />
-                      </TabsContent>
-
-                      <TabsContent value='forensic' className='mt-0 space-y-6'>
-                        {metadata.metadata_comparison && (
-                          <section>
-                            <MetadataComparisonDisplay
-                              comparison={metadata.metadata_comparison}
-                            />
-                          </section>
-                        )}
-
-                        {metadata.burned_metadata &&
-                          metadata.burned_metadata.has_burned_metadata && (
-                            <section>
-                              <BurnedMetadataDisplay
-                                burned_metadata={metadata.burned_metadata}
-                                isUnlocked={isUnlocked}
-                              />
-                            </section>
-                          )}
-
-                        <section>
-                          <SectionHeader
-                            icon={Hash}
-                            title='File Integrity Hashes'
-                            color='text-amber-500'
-                          />
-                          <div className='space-y-1'>
-                            <FieldRow
-                              label='MD5'
-                              value={metadata.file_integrity?.md5 || 'N/A'}
-                              locked={!isUnlocked}
-                              copyable
-                              index={0}
-                            />
-                            <FieldRow
-                              label='SHA256'
-                              value={metadata.file_integrity?.sha256 || 'N/A'}
-                              locked={!isUnlocked}
-                              copyable
-                              index={1}
-                            />
-                          </div>
-                        </section>
-
-                        <section>
-                          <SectionHeader
-                            icon={ShieldCheck}
-                            title='Chain of Custody'
-                            color='text-emerald-500'
-                          />
-                          <div className='space-y-1'>
-                            {filterFields(metadata.forensic || {}).map(
-                              ([key, val], i) => (
-                                <FieldRow
-                                  key={key}
-                                  label={key}
-                                  value={val}
-                                  index={i}
-                                  copyable
-                                />
-                              )
-                            )}
-                          </div>
-                        </section>
-
-                        <section>
-                          <SectionHeader
-                            icon={Folder}
-                            title='Filesystem Metadata'
-                            color='text-blue-400'
-                          />
-                          <div className='space-y-1'>
-                            {filterFields(metadata.filesystem || {}).map(
-                              ([key, val], i) => (
-                                <FieldRow
-                                  key={key}
-                                  label={key}
-                                  value={val}
-                                  index={i}
-                                />
-                              )
-                            )}
-                          </div>
-                        </section>
-                      </TabsContent>
-
-                      <TabsContent value='technical' className='mt-0 space-y-6'>
-                        <section>
-                          <SectionHeader
-                            icon={Camera}
-                            title='Camera Settings'
-                            color='text-purple-400'
-                          />
-                          <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                            {filterFields(metadata.exif || {}).map(
-                              ([key, val], i) => (
-                                <FieldRow
-                                  key={key}
-                                  label={key}
-                                  value={val}
-                                  index={i}
-                                />
-                              )
-                            )}
-                          </div>
-                        </section>
-
-                        {Object.keys(metadata.interoperability || {}).length >
-                          0 && (
                             <section>
                               <SectionHeader
-                                icon={Tag}
-                                title='Interoperability (IFD)'
-                                color='text-cyan-400'
-                                count={
-                                  Object.keys(metadata.interoperability || {})
-                                    .length
-                                }
+                                icon={ShieldCheck}
+                                title='Forensic Evidence'
+                                color='text-emerald-500'
+                                count={filterFields(metadata.forensic || {}).length}
                               />
                               <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                {filterFields(
-                                  metadata.interoperability || {}
-                                ).map(([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                  />
-                                ))}
+                                {filterFields(metadata.forensic || {}).map(
+                                  ([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                      locked={key.includes('Serial') && !isUnlocked}
+                                      copyable
+                                    />
+                                  )
+                                )}
                               </div>
                             </section>
-                          )}
 
-                        {(metadata.makernote?._count > 0 ||
-                          Object.keys(metadata.makernote || {}).length > 1) && (
-                            <section>
-                              <SectionHeader
-                                icon={Tag}
-                                title='MakerNote (Vendor-Specific)'
-                                color='text-orange-400'
-                                count={
-                                  metadata.makernote?._count ||
-                                  Object.keys(metadata.makernote || {}).length
-                                }
-                              />
-                              {!isSectionLocked(metadata.makernote) &&
-                                isUnlocked ? (
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                  {filterFields(metadata.makernote || {})
-                                    .slice(0, 50)
-                                    .map(([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    ))}
-                                </div>
-                              ) : (
-                                <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                  <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                  <p className='text-xs text-slate-400 font-mono mb-2'>
-                                    {metadata.makernote?._count || 0}{' '}
-                                    VENDOR-SPECIFIC FIELDS LOCKED
-                                  </p>
-                                  <Button
-                                    variant='link'
-                                    onClick={() => setShowPayment(true)}
-                                    className='text-primary text-xs h-auto p-0'
-                                  >
-                                    UNLOCK_MAKERNOTES
-                                  </Button>
-                                </div>
-                              )}
-                            </section>
-                          )}
-
-                        {Object.keys(metadata.iptc || {}).length > 0 && (
-                          <section>
-                            <SectionHeader
-                              icon={Tag}
-                              title='IPTC Metadata'
-                              color='text-indigo-400'
-                              count={Object.keys(metadata.iptc || {}).length}
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(metadata.iptc || {}).map(
-                                ([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                    locked={!isUnlocked}
-                                  />
-                                )
-                              )}
-                            </div>
-                          </section>
-                        )}
-
-                        {Object.keys(metadata.xmp || {}).length > 0 && (
-                          <section>
-                            <SectionHeader
-                              icon={Tag}
-                              title='XMP Metadata'
-                              color='text-pink-400'
-                              count={Object.keys(metadata.xmp || {}).length}
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(metadata.xmp || {}).map(
-                                ([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                    locked={!isUnlocked}
-                                  />
-                                )
-                              )}
-                            </div>
-                          </section>
-                        )}
-
-                        {(metadata.xmp_namespaces?._locked ||
-                          Object.keys(flatXmpNamespaces).length > 0) && (
-                            <section>
-                              <SectionHeader
-                                icon={Tag}
-                                title='XMP Namespaces'
-                                color='text-fuchsia-400'
-                                count={
-                                  metadata.xmp_namespaces?._count ||
-                                  Object.keys(flatXmpNamespaces).length
-                                }
-                              />
-                              {!isSectionLocked(metadata.xmp_namespaces) &&
-                                isUnlocked ? (
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                  {filterFields(flatXmpNamespaces)
-                                    .slice(0, 80)
-                                    .map(([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    ))}
-                                </div>
-                              ) : (
-                                <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                  <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                  <p className='text-xs text-slate-400 font-mono mb-2'>
-                                    {metadata.xmp_namespaces?._count || 0}{' '}
-                                    NAMESPACE FIELDS LOCKED
-                                  </p>
-                                  <Button
-                                    variant='link'
-                                    onClick={() => setShowPayment(true)}
-                                    className='text-primary text-xs h-auto p-0'
-                                  >
-                                    UNLOCK_XMP_NAMESPACES
-                                  </Button>
-                                </div>
-                              )}
-                            </section>
-                          )}
-
-                        {Object.keys(metadata.icc_profile || {}).length > 0 && (
-                          <section>
-                            <SectionHeader
-                              icon={Tag}
-                              title='ICC Profile'
-                              color='text-emerald-400'
-                              count={
-                                Object.keys(metadata.icc_profile || {}).length
-                              }
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(metadata.icc_profile || {}).map(
-                                ([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                  />
-                                )
-                              )}
-                            </div>
-                          </section>
-                        )}
-
-                        {Object.keys(metadata.thumbnail_metadata || {}).length >
-                          0 && (
-                            <section>
-                              <SectionHeader
-                                icon={Tag}
-                                title='Thumbnail Metadata'
-                                color='text-amber-400'
-                                count={
-                                  Object.keys(metadata.thumbnail_metadata || {})
-                                    .length
-                                }
-                              />
-                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                {filterFields(
-                                  metadata.thumbnail_metadata || {}
-                                ).map(([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                  />
-                                ))}
-                              </div>
-                            </section>
-                          )}
-
-                        {(metadata.embedded_thumbnails?._locked ||
-                          Object.keys(flatEmbeddedThumbnails).length > 0) && (
-                            <section>
-                              <SectionHeader
-                                icon={ImageIcon}
-                                title='Embedded Thumbnails'
-                                color='text-yellow-400'
-                                count={
-                                  metadata.embedded_thumbnails?._count ||
-                                  Object.keys(flatEmbeddedThumbnails).length
-                                }
-                              />
-                              {!isSectionLocked(metadata.embedded_thumbnails) &&
-                                isUnlocked ? (
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                  {filterFields(flatEmbeddedThumbnails).map(
-                                    ([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                  <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                  <p className='text-xs text-slate-400 font-mono mb-2'>
-                                    {metadata.embedded_thumbnails?._count || 0}{' '}
-                                    EMBEDDED THUMBNAILS LOCKED
-                                  </p>
-                                  <Button
-                                    variant='link'
-                                    onClick={() => setShowPayment(true)}
-                                    className='text-primary text-xs h-auto p-0'
-                                  >
-                                    UNLOCK_EMBEDDED_THUMBNAILS
-                                  </Button>
-                                </div>
-                              )}
-                            </section>
-                          )}
-
-                        {Object.keys(metadata.image_container || {}).length >
-                          0 && (
-                            <section>
-                              <SectionHeader
-                                icon={Tag}
-                                title='Image Container'
-                                color='text-blue-400'
-                                count={
-                                  Object.keys(metadata.image_container || {})
-                                    .length
-                                }
-                              />
-                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                {filterFields(
-                                  metadata.image_container || {}
-                                ).map(([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                  />
-                                ))}
-                              </div>
-                            </section>
-                          )}
-
-                        {(metadata.scientific?._locked ||
-                          Object.keys(flatScientific).length > 0) && (
-                            <section>
-                              <SectionHeader
-                                icon={Database}
-                                title='Scientific Metadata'
-                                color='text-sky-400'
-                                count={
-                                  metadata.scientific?._count ||
-                                  Object.keys(flatScientific).length
-                                }
-                              />
-                              {!isSectionLocked(metadata.scientific) ? (
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                  {filterFields(flatScientific).map(
-                                    ([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                  <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                  <p className='text-xs text-slate-400 font-mono mb-2'>
-                                    SCIENTIFIC_METADATA_LOCKED
-                                  </p>
-                                  <Button
-                                    variant='link'
-                                    onClick={() => setShowPayment(true)}
-                                    className='text-primary text-xs h-auto p-0'
-                                  >
-                                    UNLOCK_SCIENTIFIC_METADATA
-                                  </Button>
-                                </div>
-                              )}
-                            </section>
-                          )}
-
-                        {(metadata.scientific_data?._locked ||
-                          Object.keys(flatScientificData).length > 0) && (
                             <section>
                               <SectionHeader
                                 icon={FileText}
-                                title='Scientific Data (HDF5/NetCDF)'
-                                color='text-emerald-400'
-                                count={
-                                  metadata.scientific_data?._count ||
-                                  Object.keys(flatScientificData).length
-                                }
+                                title='File Summary'
+                                color='text-primary'
+                                count={filterFields(metadata.summary || {}).length}
                               />
-                              {!isSectionLocked(metadata.scientific_data) ? (
+                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                {filterFields(metadata.summary || {}).map(
+                                  ([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </section>
+
+                            {metadata.calculated && (
+                              <section>
+                                <SectionHeader
+                                  icon={Calculator}
+                                  title='Calculated Fields'
+                                  color='text-cyan-500'
+                                  count={
+                                    filterFields(metadata.calculated || {}).length
+                                  }
+                                />
                                 <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                  {filterFields(flatScientificData).map(
+                                  {filterFields(metadata.calculated || {}).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                        locked={!isUnlocked}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </section>
+                            )}
+
+                            <section>
+                              <SectionHeader
+                                icon={Camera}
+                                title='Camera & EXIF'
+                                color='text-purple-400'
+                                count={filterFields(metadata.exif || {}).length}
+                              />
+                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                {filterFields(metadata.exif || {}).map(
+                                  ([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </section>
+
+                            {hasGPS && metadata.gps && (
+                              <section>
+                                <SectionHeader
+                                  icon={MapPin}
+                                  title='GPS Location'
+                                  color='text-rose-500'
+                                  count={filterFields(metadata.gps || {}).length}
+                                />
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                  {filterFields(metadata.gps || {}).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                        copyable
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </section>
+                            )}
+
+                            {!isUnlocked && (
+                              <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
+                                <p className='text-xs text-slate-400 font-mono mb-2'>
+                                  {Object.keys(metadata.makernote || {}).length +
+                                    Object.keys(metadata.extended || {})
+                                      .length}{' '}
+                                  ADDITIONAL FIELDS AVAILABLE
+                                </p>
+                                <Button
+                                  variant='link'
+                                  onClick={() => setShowPayment(true)}
+                                  className='text-primary text-xs h-auto p-0'
+                                  data-testid='button-unlock-fields'
+                                >
+                                  UNLOCK_ALL_FIELDS
+                                </Button>
+                              </div>
+                            )}
+                          </TabsContent>
+
+                          <TabsContent value='advanced' className='mt-0'>
+                            <AdvancedResultsIntegration
+                              metadata={metadata}
+                              advancedAnalysis={advancedAnalysis}
+                              comparisonResult={comparisonResult}
+                              timelineResult={timelineResult}
+                              forensicReport={forensicReport}
+                              tier={import.meta.env.DEV ? 'enterprise' : (metadata.tier || 'free')}
+                              onUpgrade={() => setShowPayment(true)}
+                              onRunAdvancedAnalysis={runAdvancedAnalysis}
+                              onRunComparison={runComparison}
+                              onRunTimeline={runTimeline}
+                              onGenerateReport={generateReport}
+                            />
+                          </TabsContent>
+
+                          <TabsContent value='forensic' className='mt-0 space-y-6'>
+                            {metadata.metadata_comparison && (
+                              <section>
+                                <MetadataComparisonDisplay
+                                  comparison={metadata.metadata_comparison}
+                                />
+                              </section>
+                            )}
+
+                            {metadata.burned_metadata &&
+                              metadata.burned_metadata.has_burned_metadata && (
+                                <section>
+                                  <BurnedMetadataDisplay
+                                    burned_metadata={metadata.burned_metadata}
+                                    isUnlocked={isUnlocked}
+                                  />
+                                </section>
+                              )}
+
+                            <section>
+                              <SectionHeader
+                                icon={Hash}
+                                title='File Integrity Hashes'
+                                color='text-amber-500'
+                              />
+                              <div className='space-y-1'>
+                                <FieldRow
+                                  label='MD5'
+                                  value={metadata.file_integrity?.md5 || 'N/A'}
+                                  locked={!isUnlocked}
+                                  copyable
+                                  index={0}
+                                />
+                                <FieldRow
+                                  label='SHA256'
+                                  value={metadata.file_integrity?.sha256 || 'N/A'}
+                                  locked={!isUnlocked}
+                                  copyable
+                                  index={1}
+                                />
+                              </div>
+                            </section>
+
+                            <section>
+                              <SectionHeader
+                                icon={ShieldCheck}
+                                title='Chain of Custody'
+                                color='text-emerald-500'
+                              />
+                              <div className='space-y-1'>
+                                {filterFields(metadata.forensic || {}).map(
+                                  ([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                      copyable
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </section>
+
+                            <section>
+                              <SectionHeader
+                                icon={Folder}
+                                title='Filesystem Metadata'
+                                color='text-blue-400'
+                              />
+                              <div className='space-y-1'>
+                                {filterFields(metadata.filesystem || {}).map(
+                                  ([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </section>
+                          </TabsContent>
+
+                          <TabsContent value='technical' className='mt-0 space-y-6'>
+                            <section>
+                              <SectionHeader
+                                icon={Camera}
+                                title='Camera Settings'
+                                color='text-purple-400'
+                              />
+                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                {filterFields(metadata.exif || {}).map(
+                                  ([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </section>
+
+                            {Object.keys(metadata.interoperability || {}).length >
+                              0 && (
+                                <section>
+                                  <SectionHeader
+                                    icon={Tag}
+                                    title='Interoperability (IFD)'
+                                    color='text-cyan-400'
+                                    count={
+                                      Object.keys(metadata.interoperability || {})
+                                        .length
+                                    }
+                                  />
+                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                    {filterFields(
+                                      metadata.interoperability || {}
+                                    ).map(([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    ))}
+                                  </div>
+                                </section>
+                              )}
+
+                            {(metadata.makernote?._count > 0 ||
+                              Object.keys(metadata.makernote || {}).length > 1) && (
+                                <section>
+                                  <SectionHeader
+                                    icon={Tag}
+                                    title='MakerNote (Vendor-Specific)'
+                                    color='text-orange-400'
+                                    count={
+                                      metadata.makernote?._count ||
+                                      Object.keys(metadata.makernote || {}).length
+                                    }
+                                  />
+                                  {!isSectionLocked(metadata.makernote) &&
+                                    isUnlocked ? (
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                      {filterFields(metadata.makernote || {})
+                                        .slice(0, 50)
+                                        .map(([key, val], i) => (
+                                          <FieldRow
+                                            key={key}
+                                            label={key}
+                                            value={val}
+                                            index={i}
+                                          />
+                                        ))}
+                                    </div>
+                                  ) : (
+                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
+                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
+                                      <p className='text-xs text-slate-400 font-mono mb-2'>
+                                        {metadata.makernote?._count || 0}{' '}
+                                        VENDOR-SPECIFIC FIELDS LOCKED
+                                      </p>
+                                      <Button
+                                        variant='link'
+                                        onClick={() => setShowPayment(true)}
+                                        className='text-primary text-xs h-auto p-0'
+                                      >
+                                        UNLOCK_MAKERNOTES
+                                      </Button>
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                            {Object.keys(metadata.iptc || {}).length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title='IPTC Metadata'
+                                  color='text-indigo-400'
+                                  count={Object.keys(metadata.iptc || {}).length}
+                                />
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                  {filterFields(metadata.iptc || {}).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                        locked={!isUnlocked}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </section>
+                            )}
+
+                            {Object.keys(metadata.xmp || {}).length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title='XMP Metadata'
+                                  color='text-pink-400'
+                                  count={Object.keys(metadata.xmp || {}).length}
+                                />
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                  {filterFields(metadata.xmp || {}).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                        locked={!isUnlocked}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </section>
+                            )}
+
+                            {(metadata.xmp_namespaces?._locked ||
+                              Object.keys(flatXmpNamespaces).length > 0) && (
+                                <section>
+                                  <SectionHeader
+                                    icon={Tag}
+                                    title='XMP Namespaces'
+                                    color='text-fuchsia-400'
+                                    count={
+                                      metadata.xmp_namespaces?._count ||
+                                      Object.keys(flatXmpNamespaces).length
+                                    }
+                                  />
+                                  {!isSectionLocked(metadata.xmp_namespaces) &&
+                                    isUnlocked ? (
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                      {filterFields(flatXmpNamespaces)
+                                        .slice(0, 80)
+                                        .map(([key, val], i) => (
+                                          <FieldRow
+                                            key={key}
+                                            label={key}
+                                            value={val}
+                                            index={i}
+                                          />
+                                        ))}
+                                    </div>
+                                  ) : (
+                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
+                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
+                                      <p className='text-xs text-slate-400 font-mono mb-2'>
+                                        {metadata.xmp_namespaces?._count || 0}{' '}
+                                        NAMESPACE FIELDS LOCKED
+                                      </p>
+                                      <Button
+                                        variant='link'
+                                        onClick={() => setShowPayment(true)}
+                                        className='text-primary text-xs h-auto p-0'
+                                      >
+                                        UNLOCK_XMP_NAMESPACES
+                                      </Button>
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                            {Object.keys(metadata.icc_profile || {}).length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title='ICC Profile'
+                                  color='text-emerald-400'
+                                  count={
+                                    Object.keys(metadata.icc_profile || {}).length
+                                  }
+                                />
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                  {filterFields(metadata.icc_profile || {}).map(
                                     ([key, val], i) => (
                                       <FieldRow
                                         key={key}
@@ -1604,139 +1566,309 @@ export default function Results() {
                                     )
                                   )}
                                 </div>
-                              ) : (
-                                <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                  <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                  <p className='text-xs text-slate-400 font-mono mb-2'>
-                                    SCIENTIFIC_DATA_LOCKED
-                                  </p>
-                                  <Button
-                                    variant='link'
-                                    onClick={() => setShowPayment(true)}
-                                    className='text-primary text-xs h-auto p-0'
-                                  >
-                                    UNLOCK_SCIENTIFIC_DATA
-                                  </Button>
-                                </div>
-                              )}
-                            </section>
-                          )}
+                              </section>
+                            )}
 
-                        {Object.keys(flatTelemetry).length > 0 && (
-                          <section>
-                            <SectionHeader
-                              icon={Zap}
-                              title='Video Telemetry'
-                              color='text-rose-400'
-                              count={Object.keys(flatTelemetry).length}
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(flatTelemetry).map(
-                                ([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
+                            {Object.keys(metadata.thumbnail_metadata || {}).length >
+                              0 && (
+                                <section>
+                                  <SectionHeader
+                                    icon={Tag}
+                                    title='Thumbnail Metadata'
+                                    color='text-amber-400'
+                                    count={
+                                      Object.keys(metadata.thumbnail_metadata || {})
+                                        .length
+                                    }
                                   />
-                                )
-                              )}
-                            </div>
-                          </section>
-                        )}
-
-                        {Object.keys(flatCamera360).length > 0 && (
-                          <section>
-                            <SectionHeader
-                              icon={Camera}
-                              title='360° / Panorama'
-                              color='text-teal-400'
-                              count={Object.keys(flatCamera360).length}
-                            />
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                              {filterFields(flatCamera360).map(
-                                ([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                  />
-                                )
-                              )}
-                            </div>
-                          </section>
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value='raw' className='mt-0'>
-                        {isUnlocked ? (
-                          <div className='font-mono text-xs text-slate-400'>
-                            <div className='mb-4 text-xs text-slate-500 uppercase tracking-widest'>
-                              Extended Fields:{' '}
-                              {Object.keys(metadata.extended || {}).length}
-                            </div>
-                            <div className='space-y-1'>
-                              {filterFields(metadata.extended || {})
-                                .slice(0, 200)
-                                .map(([key, val], i) => (
-                                  <FieldRow
-                                    key={key}
-                                    label={key}
-                                    value={val}
-                                    index={i}
-                                  />
-                                ))}
-                              {filterFields(metadata.extended || {}).length >
-                                200 && (
-                                  <div className='py-4 text-center text-slate-600 italic'>
-                                    ...{' '}
-                                    {Object.keys(metadata.extended || {}).length -
-                                      200}{' '}
-                                    more fields in JSON export ...
+                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                    {filterFields(
+                                      metadata.thumbnail_metadata || {}
+                                    ).map(([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    ))}
                                   </div>
-                                )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className='flex flex-col items-center justify-center h-[400px] text-center'>
-                            <Database className='w-16 h-16 text-white/5 mb-4' />
-                            <h3 className='text-lg font-bold text-white font-mono mb-2'>
-                              RAW_DATA_LOCKED
-                            </h3>
-                            <p className='text-slate-500 max-w-sm mb-6 text-sm'>
-                              Access to{' '}
-                              {Object.keys(metadata.extended || {}).length}{' '}
-                              extended metadata fields including MakerNotes,
-                              IPTC, XMP, and proprietary tags requires a
-                              license.
-                            </p>
-                            <Button
-                              onClick={() => setShowPayment(true)}
-                              className='bg-primary text-black'
-                              data-testid='button-purchase-raw'
-                            >
-                              PURCHASE_LICENSE ($5.00)
-                            </Button>
-                          </div>
-                        )}
-                      </TabsContent>
+                                </section>
+                              )}
+
+                            {(metadata.embedded_thumbnails?._locked ||
+                              Object.keys(flatEmbeddedThumbnails).length > 0) && (
+                                <section>
+                                  <SectionHeader
+                                    icon={ImageIcon}
+                                    title='Embedded Thumbnails'
+                                    color='text-yellow-400'
+                                    count={
+                                      metadata.embedded_thumbnails?._count ||
+                                      Object.keys(flatEmbeddedThumbnails).length
+                                    }
+                                  />
+                                  {!isSectionLocked(metadata.embedded_thumbnails) &&
+                                    isUnlocked ? (
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                      {filterFields(flatEmbeddedThumbnails).map(
+                                        ([key, val], i) => (
+                                          <FieldRow
+                                            key={key}
+                                            label={key}
+                                            value={val}
+                                            index={i}
+                                          />
+                                        )
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
+                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
+                                      <p className='text-xs text-slate-400 font-mono mb-2'>
+                                        {metadata.embedded_thumbnails?._count || 0}{' '}
+                                        EMBEDDED THUMBNAILS LOCKED
+                                      </p>
+                                      <Button
+                                        variant='link'
+                                        onClick={() => setShowPayment(true)}
+                                        className='text-primary text-xs h-auto p-0'
+                                      >
+                                        UNLOCK_EMBEDDED_THUMBNAILS
+                                      </Button>
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                            {Object.keys(metadata.image_container || {}).length >
+                              0 && (
+                                <section>
+                                  <SectionHeader
+                                    icon={Tag}
+                                    title='Image Container'
+                                    color='text-blue-400'
+                                    count={
+                                      Object.keys(metadata.image_container || {})
+                                        .length
+                                    }
+                                  />
+                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                    {filterFields(
+                                      metadata.image_container || {}
+                                    ).map(([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    ))}
+                                  </div>
+                                </section>
+                              )}
+
+                            {(metadata.scientific?._locked ||
+                              Object.keys(flatScientific).length > 0) && (
+                                <section>
+                                  <SectionHeader
+                                    icon={Database}
+                                    title='Scientific Metadata'
+                                    color='text-sky-400'
+                                    count={
+                                      metadata.scientific?._count ||
+                                      Object.keys(flatScientific).length
+                                    }
+                                  />
+                                  {!isSectionLocked(metadata.scientific) ? (
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                      {filterFields(flatScientific).map(
+                                        ([key, val], i) => (
+                                          <FieldRow
+                                            key={key}
+                                            label={key}
+                                            value={val}
+                                            index={i}
+                                          />
+                                        )
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
+                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
+                                      <p className='text-xs text-slate-400 font-mono mb-2'>
+                                        SCIENTIFIC_METADATA_LOCKED
+                                      </p>
+                                      <Button
+                                        variant='link'
+                                        onClick={() => setShowPayment(true)}
+                                        className='text-primary text-xs h-auto p-0'
+                                      >
+                                        UNLOCK_SCIENTIFIC_METADATA
+                                      </Button>
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                            {(metadata.scientific_data?._locked ||
+                              Object.keys(flatScientificData).length > 0) && (
+                                <section>
+                                  <SectionHeader
+                                    icon={FileText}
+                                    title='Scientific Data (HDF5/NetCDF)'
+                                    color='text-emerald-400'
+                                    count={
+                                      metadata.scientific_data?._count ||
+                                      Object.keys(flatScientificData).length
+                                    }
+                                  />
+                                  {!isSectionLocked(metadata.scientific_data) ? (
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                      {filterFields(flatScientificData).map(
+                                        ([key, val], i) => (
+                                          <FieldRow
+                                            key={key}
+                                            label={key}
+                                            value={val}
+                                            index={i}
+                                          />
+                                        )
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
+                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
+                                      <p className='text-xs text-slate-400 font-mono mb-2'>
+                                        SCIENTIFIC_DATA_LOCKED
+                                      </p>
+                                      <Button
+                                        variant='link'
+                                        onClick={() => setShowPayment(true)}
+                                        className='text-primary text-xs h-auto p-0'
+                                      >
+                                        UNLOCK_SCIENTIFIC_DATA
+                                      </Button>
+                                    </div>
+                                  )}
+                                </section>
+                              )}
+
+                            {Object.keys(flatTelemetry).length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Zap}
+                                  title='Video Telemetry'
+                                  color='text-rose-400'
+                                  count={Object.keys(flatTelemetry).length}
+                                />
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                  {filterFields(flatTelemetry).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </section>
+                            )}
+
+                            {Object.keys(flatCamera360).length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Camera}
+                                  title='360° / Panorama'
+                                  color='text-teal-400'
+                                  count={Object.keys(flatCamera360).length}
+                                />
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                  {filterFields(flatCamera360).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              </section>
+                            )}
+                          </TabsContent>
+
+                          <TabsContent value='raw' className='mt-0'>
+                            {isUnlocked ? (
+                              <div className='font-mono text-xs text-slate-400'>
+                                <div className='mb-4 text-xs text-slate-500 uppercase tracking-widest'>
+                                  Extended Fields:{' '}
+                                  {Object.keys(metadata.extended || {}).length}
+                                </div>
+                                <div className='space-y-1'>
+                                  {filterFields(metadata.extended || {})
+                                    .slice(0, 200)
+                                    .map(([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    ))}
+                                  {filterFields(metadata.extended || {}).length >
+                                    200 && (
+                                      <div className='py-4 text-center text-slate-600 italic'>
+                                        ...{' '}
+                                        {Object.keys(metadata.extended || {}).length -
+                                          200}{' '}
+                                        more fields in JSON export ...
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className='flex flex-col items-center justify-center h-[400px] text-center'>
+                                <Database className='w-16 h-16 text-white/5 mb-4' />
+                                <h3 className='text-lg font-bold text-white font-mono mb-2'>
+                                  RAW_DATA_LOCKED
+                                </h3>
+                                <p className='text-slate-500 max-w-sm mb-6 text-sm'>
+                                  Access to{' '}
+                                  {Object.keys(metadata.extended || {}).length}{' '}
+                                  extended metadata fields including MakerNotes,
+                                  IPTC, XMP, and proprietary tags requires a
+                                  license.
+                                </p>
+                                <Button
+                                  onClick={() => setShowPayment(true)}
+                                  className='bg-primary text-black'
+                                  data-testid='button-purchase-raw'
+                                >
+                                  PURCHASE_LICENSE ($5.00)
+                                </Button>
+                              </div>
+                            )}
+                          </TabsContent>
+                        </div>
+                      </ScrollArea>
                     </div>
-                  </ScrollArea>
+                  </Tabs>
                 </div>
-              </Tabs>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <PaymentModal
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        onSuccess={onPaymentSuccess}
-      />
-    </ErrorBoundary>
-    </Layout>
-    </UIAdaptationProvider>
+          <PaymentModal
+            isOpen={showPayment}
+            onClose={() => setShowPayment(false)}
+            onSuccess={onPaymentSuccess}
+          />
+        </ErrorBoundary>
+      </Layout >
+    </UIAdaptationProvider >
   );
 }

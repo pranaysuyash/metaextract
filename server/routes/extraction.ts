@@ -12,12 +12,18 @@ import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 import { spawn } from 'child_process';
+import {
+  PythonMetadataResponse,
+  FrontendMetadataResponse,
+  normalizeEmail,
+  getSessionId,
+  transformMetadataForFrontend,
+  extractMetadataWithPython,
+  cleanupTempFile,
+  pythonExecutable,
+  PYTHON_SCRIPT_PATH
+} from '../utils/extraction-helpers';
 import { storage } from '../storage/index';
 import {
   getTierConfig,
@@ -40,110 +46,7 @@ import {
   sendServiceUnavailableError,
 } from '../utils/error-response';
 
-// ============================================================================
-// Types
-// ============================================================================
 
-interface PythonMetadataResponse {
-  extraction_info: {
-    timestamp: string;
-    tier: string;
-    engine_version: string;
-    libraries: Record<string, boolean>;
-    fields_extracted: number;
-    locked_categories: number;
-    processing_ms?: number;
-  };
-  file: {
-    path: string;
-    name: string;
-    stem: string;
-    extension: string;
-    mime_type: string;
-  };
-  summary: Record<string, any>;
-  filesystem: Record<string, any>;
-  hashes: Record<string, any>;
-  image: Record<string, any> | null;
-  exif: Record<string, any> | null;
-  gps: Record<string, any> | null;
-  video: Record<string, any> | null;
-  audio: Record<string, any> | null;
-  pdf: Record<string, any> | null;
-  svg: Record<string, any> | null;
-  extended_attributes: Record<string, any> | null;
-  calculated: Record<string, any>;
-  forensic: Record<string, any>;
-  makernote: Record<string, any> | null;
-  iptc: Record<string, any> | null;
-  xmp: Record<string, any> | null;
-  normalized?: Record<string, any> | null;
-  web_metadata?: Record<string, any> | null;
-  social_media?: Record<string, any> | null;
-  mobile_metadata?: Record<string, any> | null;
-  forensic_security?: Record<string, any> | null;
-  action_camera?: Record<string, any> | null;
-  print_publishing?: Record<string, any> | null;
-  workflow_dam?: Record<string, any> | null;
-  audio_advanced?: Record<string, any> | null;
-  video_advanced?: Record<string, any> | null;
-  steganography_analysis?: Record<string, any> | null;
-  manipulation_detection?: Record<string, any> | null;
-  ai_detection?: Record<string, any> | null;
-  timeline_analysis?: Record<string, any> | null;
-  iptc_raw?: Record<string, any> | null;
-  xmp_raw?: Record<string, any> | null;
-  thumbnail?: Record<string, any> | null;
-  perceptual_hashes?: Record<string, any> | null;
-  locked_fields: string[];
-  burned_metadata?: Record<string, any> | null;
-  metadata_comparison?: Record<string, any> | null;
-  advanced_analysis?: {
-    enabled: boolean;
-    processing_time_ms: number;
-    modules_run: string[];
-    forensic_score: number;
-    authenticity_assessment: string;
-  } | null;
-  error?: string;
-}
-
-interface FrontendMetadataResponse {
-  filename: string;
-  filesize: string;
-  filetype: string;
-  mime_type: string;
-  tier: string;
-  fields_extracted: number;
-  fields_available: number;
-  processing_ms: number;
-  file_integrity: Record<string, string>;
-  filesystem: Record<string, any>;
-  calculated: Record<string, any>;
-  gps: Record<string, any> | null;
-  summary: Record<string, any>;
-  forensic: Record<string, any>;
-  exif: Record<string, any>;
-  image: Record<string, any> | null;
-  video: Record<string, any> | null;
-  audio: Record<string, any> | null;
-  pdf: Record<string, any> | null;
-  svg: Record<string, any> | null;
-  makernote: Record<string, any> | null;
-  iptc: Record<string, any> | null;
-  xmp: Record<string, any> | null;
-  normalized?: Record<string, any> | null;
-  locked_fields: string[];
-  extraction_info: Record<string, any>;
-  advanced_analysis?: {
-    enabled: boolean;
-    processing_time_ms: number;
-    modules_run: string[];
-    forensic_score: number;
-    authenticity_assessment: string;
-  };
-  [key: string]: any;
-}
 
 // ============================================================================
 // Multer Configuration
@@ -168,25 +71,12 @@ const EXTRACTION_HEALTH_TIMEOUT_MS = Number(
     (process.env.NODE_ENV === 'test' ? 500 : 10000)
 );
 
-function normalizeEmail(email: string | null | undefined): string | null {
-  if (!email || typeof email !== 'string') return null;
-  const trimmed = email.trim().toLowerCase();
-  return trimmed.length > 3 && trimmed.includes('@') ? trimmed : null;
-}
 
-function getSessionId(req: AuthRequest): string | null {
-  const bodySession =
-    typeof req.body?.session_id === 'string' ? req.body.session_id : null;
-  const querySession =
-    typeof req.query?.session_id === 'string' ? req.query.session_id : null;
-  const headerSession =
-    typeof req.headers['x-session-id'] === 'string'
-      ? req.headers['x-session-id']
-      : null;
-  return bodySession || querySession || headerSession || null;
-}
 
 function shouldBypassCredits(req: AuthRequest): boolean {
+  // DEV MODE: Always bypass credits for development testing
+  if (process.env.NODE_ENV === 'development') return true;
+  
   // Allow deterministic route testing by bypassing credits gates.
   // Never enable this in production.
   if (process.env.NODE_ENV !== 'test') return false;
@@ -196,226 +86,7 @@ function shouldBypassCredits(req: AuthRequest): boolean {
   return value === '1' || value === 'true';
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
-function transformMetadataForFrontend(
-  raw: PythonMetadataResponse,
-  originalFilename: string,
-  tier: string
-): FrontendMetadataResponse {
-  const normalizedTier = normalizeTier(tier);
-  const fieldsAvailableByTier: Record<string, number> = {
-    free: 200,
-    professional: 1000,
-    forensic: 15000,
-    enterprise: 45000,
-  };
-  const fieldsAvailable = fieldsAvailableByTier[normalizedTier] ?? 45000;
-
-  return {
-    filename: originalFilename,
-    filesize: raw.filesystem?.size_human || raw.summary?.filesize || 'Unknown',
-    filetype:
-      raw.file?.extension?.toUpperCase().replace('.', '') ||
-      raw.summary?.filetype ||
-      'Unknown',
-    mime_type:
-      raw.file?.mime_type ||
-      raw.summary?.mime_type ||
-      'application/octet-stream',
-    tier,
-    fields_extracted: raw.extraction_info?.fields_extracted || 0,
-    fields_available: fieldsAvailable,
-    processing_ms: raw.extraction_info?.processing_ms || 0,
-    file_integrity: raw.hashes?._locked ? { _locked: true } : raw.hashes || {},
-    filesystem: raw.filesystem || {},
-    calculated: raw.calculated || {},
-    gps: raw.gps,
-    summary: { ...raw.summary, filename: originalFilename },
-    forensic: raw.forensic || {},
-    exif: raw.exif || {},
-    image: raw.image,
-    video: raw.video,
-    audio: raw.audio,
-    pdf: raw.pdf,
-    svg: raw.svg,
-    makernote: raw.makernote,
-    iptc: raw.iptc,
-    xmp: raw.xmp,
-    normalized: raw.normalized,
-    web_metadata: raw.web_metadata ?? null,
-    social_media: raw.social_media ?? null,
-    mobile_metadata: raw.mobile_metadata ?? null,
-    forensic_security: raw.forensic_security ?? null,
-    action_camera: raw.action_camera ?? null,
-    print_publishing: raw.print_publishing ?? null,
-    workflow_dam: raw.workflow_dam ?? null,
-    audio_advanced: raw.audio_advanced ?? null,
-    video_advanced: raw.video_advanced ?? null,
-    steganography_analysis: raw.steganography_analysis ?? null,
-    manipulation_detection: raw.manipulation_detection ?? null,
-    ai_detection: raw.ai_detection ?? null,
-    timeline_analysis: raw.timeline_analysis ?? null,
-    iptc_raw: raw.iptc_raw,
-    xmp_raw: raw.xmp_raw,
-    thumbnail: raw.thumbnail,
-    perceptual_hashes: raw.perceptual_hashes,
-    extended_attributes: raw.extended_attributes,
-    extended: raw.extended_attributes,
-    burned_metadata: raw.burned_metadata ?? null,
-    metadata_comparison: raw.metadata_comparison ?? null,
-    locked_fields: raw.locked_fields || [],
-    extraction_info: raw.extraction_info || {},
-  };
-}
-
-async function extractMetadataWithPython(
-  filePath: string,
-  tier: string,
-  includePerformanceMetrics: boolean = false,
-  enableAdvancedAnalysis: boolean = false,
-  storeMetadata: boolean = false
-): Promise<PythonMetadataResponse> {
-  return new Promise((resolve, reject) => {
-    const pythonScript = path.join(
-      __dirname,
-      '..',
-      'extractor',
-      'comprehensive_metadata_engine.py'
-    );
-
-    const args = [pythonScript, filePath, '--tier', tier];
-
-    if (includePerformanceMetrics) {
-      args.push('--performance');
-    }
-
-    if (enableAdvancedAnalysis) {
-      args.push('--advanced');
-    }
-
-    if (storeMetadata) {
-      args.push('--store');
-    }
-
-    // Log the Python process startup
-    console.log(
-      `Starting Python extraction process: python3 ${args.join(' ')}`
-    );
-
-    const python = spawn('python3', args);
-
-    let stdout = '';
-    let stderr = '';
-
-    python.stdout.on('data', (data) => {
-      const dataStr = data.toString();
-      stdout += dataStr;
-      // Log large outputs in chunks to avoid overwhelming the console
-      if (dataStr.length > 1000) {
-        console.log(
-          `Python stdout (partial): ${dataStr.substring(0, 1000)}...`
-        );
-      }
-    });
-
-    python.stderr.on('data', (data) => {
-      const dataStr = data.toString();
-      stderr += dataStr;
-      // Log errors immediately
-      console.error(`Python stderr: ${dataStr}`);
-    });
-
-    python.on('close', (code) => {
-      console.log(`Python extraction process exited with code: ${code}`);
-
-      if (code !== 0) {
-        const errorDetails = {
-          message: `Python extractor failed with code ${code}`,
-          stderr: stderr || 'No stderr output',
-          stdout: stdout || 'No stdout output',
-          command: `python3 ${args.join(' ')}`,
-          filePath,
-          tier,
-        };
-
-        console.error('Python extraction error details:', errorDetails);
-        reject(
-          new Error(`Python extractor failed: ${stderr || 'Unknown error'}`)
-        );
-        return;
-      }
-
-      if (!stdout) {
-        const error = 'Python extractor returned empty output';
-        console.error(error, { stderr, command: `python3 ${args.join(' ')}` });
-        reject(new Error(error));
-        return;
-      }
-
-      try {
-        const result = JSON.parse(stdout);
-        console.log(
-          `Successfully parsed Python extraction result for ${path.basename(
-            filePath
-          )}, ${result.extraction_info?.fields_extracted || 0} fields extracted`
-        );
-        resolve(result);
-      } catch (parseError) {
-        console.error('Failed to parse Python extraction output:', parseError);
-        console.error(
-          'Raw stdout (first 1000 chars):',
-          stdout.substring(0, 1000)
-        );
-        console.error('Raw stderr:', stderr.substring(0, 500));
-        reject(
-          new Error(
-            `Failed to parse metadata extraction result: ${
-              parseError instanceof Error
-                ? parseError.message
-                : 'Unknown parsing error'
-            }`
-          )
-        );
-      }
-    });
-
-    python.on('error', (err) => {
-      console.error('Failed to spawn Python extraction process:', err);
-      reject(new Error(`Failed to start Python extractor: ${err.message}`));
-    });
-
-    // Set timeout with detailed logging
-    const timeoutMs = 180000; // 3 minutes
-    const timeoutId = setTimeout(() => {
-      console.warn(
-        `Python extraction timeout after ${timeoutMs}ms for file: ${filePath}`
-      );
-      if (!python.killed) {
-        python.kill();
-        console.log(`Killed Python process for file: ${filePath}`);
-      }
-      reject(new Error(`Metadata extraction timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    // Clear timeout on completion
-    python.on('close', () => {
-      clearTimeout(timeoutId);
-    });
-  });
-}
-
-async function cleanupTempFile(tempPath: string | null): Promise<void> {
-  if (tempPath) {
-    try {
-      await fs.unlink(tempPath);
-    } catch (error) {
-      console.error('Failed to delete temp file:', error);
-    }
-  }
-}
 
 // ============================================================================
 // Route Registration
@@ -508,6 +179,16 @@ export function registerExtractionRoutes(app: Express): void {
         req.file.originalname,
         normalizedTier
       );
+
+      const clientLastModifiedRaw = req.body?.client_last_modified;
+      const clientLastModifiedMs = clientLastModifiedRaw
+        ? Number(clientLastModifiedRaw)
+        : null;
+      if (clientLastModifiedMs && Number.isFinite(clientLastModifiedMs)) {
+        metadata.client_last_modified_iso = new Date(
+          clientLastModifiedMs
+        ).toISOString();
+      }
       metadata.access = {
         trial_email_present: !!trialEmail,
         trial_granted: bypassCredits ? false : hasTrialAvailable ? true : false,
@@ -561,7 +242,23 @@ export function registerExtractionRoutes(app: Express): void {
         }
       }
 
-      res.json(metadata);
+      // Persist results to database (Fix for QuotaExceededError)
+      try {
+        const savedRecord = await storage.saveMetadata({
+          userId: req.user?.id,
+          fileName: metadata.filename,
+          fileSize: metadata.filesize,
+          mimeType: metadata.mime_type,
+          metadata,
+        });
+        metadata.id = savedRecord.id;
+        console.log(`[Extraction] Saved metadata to DB with ID: ${savedRecord.id}`);
+      } catch (dbError) {
+        console.error('[Extraction] Failed to save metadata to DB:', dbError);
+        // Continue anyway - frontend will use memory fallback
+      }
+
+      res.json([metadata]);
     } catch (error) {
       const processingMs = Date.now() - startTime;
       const failureReason =
@@ -665,12 +362,7 @@ export function registerExtractionRoutes(app: Express): void {
         }
 
         // Process batch using Python engine
-        const pythonScript = path.join(
-          __dirname,
-          '..',
-          'extractor',
-          'comprehensive_metadata_engine.py'
-        );
+        const pythonScript = PYTHON_SCRIPT_PATH;
         const batchResults = await new Promise<any>((resolve, reject) => {
           const pythonArgs = [
             pythonScript,
@@ -682,7 +374,7 @@ export function registerExtractionRoutes(app: Express): void {
           if (req.query.store === 'true') {
             pythonArgs.push('--store');
           }
-          const python = spawn('python3', pythonArgs);
+          const python = spawn(pythonExecutable, pythonArgs);
 
           let stdout = '';
           let stderr = '';
@@ -783,8 +475,8 @@ export function registerExtractionRoutes(app: Express): void {
       const mimeType = req.file.mimetype || 'application/octet-stream';
       const tierConfig = getTierConfig(normalizedTier);
 
-      // Advanced analysis requires Forensic+ tier
-      if (!['forensic', 'enterprise'].includes(normalizedTier)) {
+      // Advanced analysis requires Forensic+ tier (bypass in development)
+      if (process.env.NODE_ENV !== 'development' && !['forensic', 'enterprise'].includes(normalizedTier)) {
         return res.status(403).json({
           error: 'Advanced analysis requires Forensic or Enterprise tier',
           current_tier: normalizedTier,
@@ -887,12 +579,7 @@ export function registerExtractionRoutes(app: Express): void {
   app.get('/api/extract/health', async (_req, res) => {
     try {
       // Test the Python extraction engine by running a simple check
-      const pythonScript = path.join(
-        __dirname,
-        '..',
-        'extractor',
-        'comprehensive_metadata_engine.py'
-      );
+      const pythonScript = PYTHON_SCRIPT_PATH;
 
       // Create a temporary empty file to test with
       const tempDir = '/tmp/metaextract';
@@ -901,7 +588,7 @@ export function registerExtractionRoutes(app: Express): void {
       await fs.writeFile(testFilePath, 'health check');
       const args = [pythonScript, testFilePath, '--tier', 'free'];
 
-      const python = spawn('python3', args);
+      const python = spawn(pythonExecutable, args);
 
       let responded = false;
       const safeRespond = (fn: () => void) => {
@@ -1026,7 +713,22 @@ export function registerExtractionRoutes(app: Express): void {
         'Health check failed with internal error'
       );
     }
+    // Retrieve saved extraction result
+  app.get('/api/extract/results/:id', async (req, res) => {
+    try {
+      const result = await storage.getMetadata(req.params.id);
+      if (!result) {
+        return res.status(404).json({ error: 'Result not found' });
+      }
+      res.json(result.metadata);
+    } catch (error) {
+      console.error('Failed to retrieve metadata:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
+
+  return app;
+});
 }
 
 export { extractMetadataWithPython, transformMetadataForFrontend };

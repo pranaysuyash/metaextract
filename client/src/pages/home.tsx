@@ -54,9 +54,18 @@ export default function Home() {
 
   const handleUploadResults = (results: any[]) => {
     if (results.length > 0) {
-      // Store the first result in session storage and navigate to results
-      sessionStorage.setItem('currentMetadata', JSON.stringify(results[0]));
-      navigate('/results');
+      // Try to store in session storage (might fail if too large)
+      try {
+        sessionStorage.setItem('currentMetadata', JSON.stringify(results[0]));
+      } catch (e) {
+        console.warn('Metadata too large for session storage, using navigation state only', e);
+        // Clear old data to prevent confusion
+        sessionStorage.removeItem('currentMetadata');
+      }
+      // Navigate with state AND ID param for persistence
+      const result = results[0];
+      const search = result.id ? `?id=${result.id}` : '';
+      navigate(`/results${search}`, { state: { metadata: result } });
     }
   };
 
@@ -131,7 +140,7 @@ export default function Home() {
   };
 
   // Check if user has access to advanced features
-  const hasAdvancedAccess = user && ['professional', 'forensic', 'enterprise'].includes(user.tier);
+  const hasAdvancedAccess = !!(user && ['professional', 'forensic', 'enterprise'].includes(user.tier));
 
   return (
     <Layout showHeader={true} showFooter={true}>
@@ -243,8 +252,8 @@ export default function Home() {
                       size="sm"
                       className={cn(
                         "transition-all duration-200",
-                        advancedMode 
-                          ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" 
+                        advancedMode
+                          ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
                           : "border-purple-400/50 text-purple-300 hover:text-purple-200 hover:bg-purple-500/10"
                       )}
                     >
@@ -253,12 +262,45 @@ export default function Home() {
                     </Button>
                   </div>
                 )}
-                <EnhancedUploadZone 
+                <EnhancedUploadZone
                   onResults={handleUploadResults}
-                  tier={user?.tier || "free"}
+                  tier={import.meta.env.DEV ? 'enterprise' : (user?.tier || 'free')}
                   maxFiles={1}
                   advanced={advancedMode && hasAdvancedAccess}
                 />
+
+                {/* V2 Experimental UI Button */}
+                {import.meta.env.DEV && (
+                  <Button
+                    onClick={() => {
+                      const stored = sessionStorage.getItem('currentMetadata');
+                      if (!stored) {
+                        toast({
+                          title: "No result in memory",
+                          description: "Upload a file first, then click V2 to view it.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      try {
+                        const parsed = JSON.parse(stored);
+                        navigate('/results-v2', { state: { metadata: parsed } });
+                      } catch (e) {
+                        console.error('Failed to parse stored metadata for V2', e);
+                        toast({
+                          title: "Corrupted metadata",
+                          description: "Please re-upload the file to view in V2.",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    variant="outline"
+                    className="mt-4 border-2 border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                  >
+                    <Cpu className="w-4 h-4 mr-2" />
+                    V2 Experimental UI
+                  </Button>
+                )}
 
                 {/* Decorative orbiting elements */}
                 <motion.div
@@ -306,16 +348,16 @@ export default function Home() {
                         {user.tier.toUpperCase()}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex gap-3">
-                      <Button 
+                      <Button
                         onClick={() => navigate('/dashboard')}
                         className="bg-[#6366f1] hover:bg-[#5855eb] text-white"
                       >
                         <User className="w-4 h-4 mr-2" />
                         Go to Dashboard
                       </Button>
-                      <Button 
+                      <Button
                         onClick={() => navigate('/results')}
                         variant="outline"
                         className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
@@ -331,7 +373,7 @@ export default function Home() {
                       <p className="text-sm text-slate-400 mb-4">
                         Use these test credentials to login and explore different subscription tiers:
                       </p>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                         <div className="p-3 bg-white/5 rounded border border-white/10">
                           <p className="text-xs font-mono text-blue-400 mb-1">PROFESSIONAL</p>
@@ -350,9 +392,9 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-3">
-                      <Button 
+                      <Button
                         onClick={() => {
                           // Trigger login modal - this will be handled by the Layout component
                           const loginButton = document.querySelector('[data-auth="login"]') as HTMLButtonElement;
@@ -363,7 +405,7 @@ export default function Home() {
                         <LogIn className="w-4 h-4 mr-2" />
                         Sign In
                       </Button>
-                      <Button 
+                      <Button
                         onClick={() => {
                           // Trigger register modal
                           const registerButton = document.querySelector('[data-auth="register"]') as HTMLButtonElement;

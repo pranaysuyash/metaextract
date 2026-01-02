@@ -18,8 +18,8 @@ import { TrialAccessModal } from '@/components/trial-access-modal';
 
 // File validation configuration
 const FILE_CONFIG = {
-  maxSizeBytes: 100 * 1024 * 1024, // 100MB
-  maxSizeMB: 100,
+  maxSizeBytes: 2000 * 1024 * 1024, // 2GB for development testing
+  maxSizeMB: 2000,
   supportedCategories: {
     images: [
       'image/jpeg',
@@ -176,9 +176,8 @@ function validateFile(file: File): ValidationResult {
   if (!mimeSupported && !extensionSupported) {
     return {
       valid: false,
-      error: `Unsupported file type: ${
-        file.type || extension
-      }. We support images, videos, audio, PDFs, and specialized formats (DICOM, FITS, etc.)`,
+      error: `Unsupported file type: ${file.type || extension
+        }. We support images, videos, audio, PDFs, and specialized formats (DICOM, FITS, etc.)`,
     };
   }
 
@@ -362,8 +361,8 @@ export function UploadZone() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error ||
-            errorData.message ||
-            `Server error: ${response.status}`
+          errorData.message ||
+          `Server error: ${response.status}`
         );
       }
 

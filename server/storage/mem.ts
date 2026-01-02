@@ -9,6 +9,10 @@ import {
   type InsertOnboardingSession,
   type TrialUsage,
   type InsertTrialUsage,
+  type InsertTrialUsage,
+  metadataResults,
+  type MetadataResult,
+  type InsertMetadataResult,
 } from '@shared/schema';
 import { randomUUID } from 'crypto';
 import { IStorage, AnalyticsSummary } from './types';
@@ -19,7 +23,11 @@ export class MemStorage implements IStorage {
   private creditBalancesMap: Map<string, CreditBalance> = new Map();
   private creditTransactionsList: CreditTransaction[] = [];
   private onboardingSessionsMap: Map<string, OnboardingSession> = new Map();
+  private creditBalancesMap: Map<string, CreditBalance> = new Map();
+  private creditTransactionsList: CreditTransaction[] = [];
+  private onboardingSessionsMap: Map<string, OnboardingSession> = new Map();
   private trialUsagesMap: Map<string, TrialUsage> = new Map();
+  private metadataMap: Map<string, MetadataResult> = new Map();
 
   constructor() {
     this.users = new Map();
@@ -32,7 +40,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username
+      user => user.username === username
     );
   }
 
@@ -41,7 +49,7 @@ export class MemStorage implements IStorage {
     const user: User = {
       ...insertUser,
       id,
-      tier: 'enterprise',
+      tier: 'free',
       subscriptionId: null,
       subscriptionStatus: null,
       customerId: null,
@@ -54,7 +62,7 @@ export class MemStorage implements IStorage {
   async logExtractionUsage(data: InsertExtractionAnalytics): Promise<void> {
     const entry: ExtractionAnalytics = {
       id: randomUUID(),
-      tier: data.tier || 'enterprise',
+      tier: data.tier || 'free',
       fileExtension: data.fileExtension,
       mimeType: data.mimeType,
       fileSizeBytes: data.fileSizeBytes,
@@ -140,7 +148,7 @@ export class MemStorage implements IStorage {
     userId?: string
   ): Promise<CreditBalance> {
     const existing = Array.from(this.creditBalancesMap.values()).find(
-      (b) => b.sessionId === sessionId
+      b => b.sessionId === sessionId
     );
     if (existing) return existing;
 
@@ -195,6 +203,8 @@ export class MemStorage implements IStorage {
     fileType?: string
   ): Promise<CreditTransaction | null> {
     const balance = this.creditBalancesMap.get(balanceId);
+    // ✅ Atomic check: Verify balance is sufficient before deducting
+    // This prevents negative credits even if async operations interleave
     if (!balance || balance.credits < amount) return null;
 
     balance.credits -= amount;
@@ -219,7 +229,7 @@ export class MemStorage implements IStorage {
     limit: number = 50
   ): Promise<CreditTransaction[]> {
     return this.creditTransactionsList
-      .filter((t) => t.balanceId === balanceId)
+      .filter(t => t.balanceId === balanceId)
       .slice(-limit)
       .reverse();
   }
@@ -228,7 +238,7 @@ export class MemStorage implements IStorage {
     userId: string
   ): Promise<OnboardingSession | undefined> {
     return Array.from(this.onboardingSessionsMap.values())
-      .filter((s) => s.userId === userId)
+      .filter(s => s.userId === userId)
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
   }
 
@@ -265,14 +275,26 @@ export class MemStorage implements IStorage {
 
   async hasTrialUsage(email: string): Promise<boolean> {
     const normalizedEmail = email.trim().toLowerCase();
-    return this.trialUsagesMap.has(normalizedEmail);
+    const usage = this.trialUsagesMap.get(normalizedEmail);
+    return !!usage && usage.uses > 0;
   }
 
   async recordTrialUsage(data: InsertTrialUsage): Promise<TrialUsage> {
     const normalizedEmail = data.email.trim().toLowerCase();
+    const existing = this.trialUsagesMap.get(normalizedEmail);
+    if (existing) {
+      existing.uses += 1;
+      existing.usedAt = new Date();
+      existing.ipAddress = data.ipAddress ?? null;
+      existing.userAgent = data.userAgent ?? null;
+      existing.sessionId = data.sessionId ?? null;
+      return existing;
+    }
+
     const usage: TrialUsage = {
       id: randomUUID(),
       email: normalizedEmail,
+      uses: 1,
       usedAt: new Date(),
       ipAddress: data.ipAddress ?? null,
       userAgent: data.userAgent ?? null,
@@ -286,5 +308,21 @@ export class MemStorage implements IStorage {
   async getTrialUsageByEmail(email: string): Promise<TrialUsage | undefined> {
     const normalizedEmail = email.trim().toLowerCase();
     return this.trialUsagesMap.get(normalizedEmail);
+  }
+
+  // Metadata Persistence
+  async saveMetadata(data: InsertMetadataResult): Promise<MetadataResult> {
+    const id = randomUUID();
+    const result: MetadataResult = {
+      ...data,
+      id,
+      createdAt: new Date(),
+    };
+    this.metadataMap.set(id, result);
+    return result;
+  }
+
+  async getMetadata(id: string): Promise<MetadataResult | undefined> {
+    return this.metadataMap.get(id);
   }
 }

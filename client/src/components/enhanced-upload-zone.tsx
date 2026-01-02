@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,7 @@ interface EnhancedUploadZoneProps {
   maxFiles?: number;
   className?: string;
   advanced?: boolean;
+  useV2?: boolean; // New prop to enable V2 navigation
 }
 
 const ACCEPTED_TYPES = {
@@ -170,8 +172,10 @@ export function EnhancedUploadZone({
   tier,
   maxFiles = 10,
   className,
-  advanced = false
+  advanced = false,
+  useV2 = false
 }: EnhancedUploadZoneProps) {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<FileState[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -257,6 +261,9 @@ export function EnhancedUploadZone({
 
         const formData = new FormData();
         formData.append('file', fileState.file);
+        if (fileState.file.lastModified) {
+          formData.append('client_last_modified', String(fileState.file.lastModified));
+        }
 
         const endpoint = advanced ? '/api/extract/advanced' : '/api/extract';
         const response = await fetch(`${endpoint}?tier=${tier}`, {
@@ -272,6 +279,7 @@ export function EnhancedUploadZone({
         setFiles(prev => prev.map(f => f.id === fileState.id ? { ...f, status: 'processing', progress: 50 } : f));
 
         const result = await response.json();
+        console.log('[EnhancedUploadZone] extracted result:', result);
 
         setFiles(prev => prev.map(f => f.id === fileState.id ? {
           ...f,
@@ -282,11 +290,19 @@ export function EnhancedUploadZone({
 
         results.push(result);
 
+        // V2 Navigation: Navigate immediately for single file
+        if (useV2) {
+          navigate('/results-v2', { state: { results, metadata: result } });
+        }
+
       } else {
         // Batch processing
         const formData = new FormData();
         files.forEach(fileState => {
           formData.append('files', fileState.file);
+          if (fileState.file.lastModified) {
+            formData.append('client_last_modified', String(fileState.file.lastModified));
+          }
         });
 
         setFiles(prev => prev.map(f => ({ ...f, status: 'uploading', progress: 0 })));
@@ -320,7 +336,16 @@ export function EnhancedUploadZone({
         results.push(...Object.values(batchResult.results));
       }
 
-      onResults(results);
+      // V2 Navigation: Navigate to V2 results page instead of calling onResults
+      console.log('[EnhancedUploadZone] useV2 flag:', useV2);
+      if (useV2) {
+        console.log('[EnhancedUploadZone] Navigating to V2 results');
+        navigate('/results-v2', { state: { results, metadata: results[0] } });
+      } else {
+        console.log('[EnhancedUploadZone] Calling onResults with', results.length, 'results');
+        // Pass single result object, not array
+        onResults(results);
+      }
 
       toast({
         title: "Processing complete",

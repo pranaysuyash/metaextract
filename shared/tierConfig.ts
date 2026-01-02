@@ -434,6 +434,11 @@ export function getTierConfig(tier: string): TierConfig {
 }
 
 export function isFileTypeAllowed(tier: string, mimeType: string): boolean {
+  // DEV MODE: Allow all file types for development testing
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+    return true;
+  }
+
   const config = getTierConfig(tier);
 
   // Enterprise allows all
@@ -455,6 +460,11 @@ export function isFileTypeAllowed(tier: string, mimeType: string): boolean {
 }
 
 export function isFileSizeAllowed(tier: string, sizeBytes: number): boolean {
+  // DEV MODE: Allow unlimited file size for development testing
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+    return true;
+  }
+
   const config = getTierConfig(tier);
   const sizeMB = sizeBytes / (1024 * 1024);
   return sizeMB <= config.maxFileSizeMB;

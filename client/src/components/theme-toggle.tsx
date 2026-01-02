@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/lib/theme-provider';
+import { useTheme, type ThemeMode } from '@/lib/theme-provider';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import {
   DropdownMenu,
@@ -67,7 +67,7 @@ export function ThemeToggle() {
       >
         <DropdownMenuRadioGroup
           value={mode}
-          onValueChange={setMode}
+          onValueChange={(v) => setMode(v as ThemeMode)}
         >
           <DropdownMenuRadioItem
             value="light"

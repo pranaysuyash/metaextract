@@ -7,6 +7,7 @@
 
 import type { Express } from 'express';
 import type { Server } from 'http';
+import { registerImagesMvpRoutes } from './images-mvp';
 import { registerExtractionRoutes } from './extraction';
 import { registerForensicRoutes } from './forensic';
 import { registerMetadataRoutes } from './metadata';
@@ -38,6 +39,7 @@ export async function registerRoutes(
   app.use('/api', rateLimitAPI());
 
   // Register route modules
+  registerImagesMvpRoutes(app);
   registerExtractionRoutes(app);
   registerForensicRoutes(app);
   registerMetadataRoutes(app);

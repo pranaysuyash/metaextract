@@ -56,10 +56,10 @@ export function AdvancedResultsIntegration({
   const [activeTab, setActiveTab] = useState('standard');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const canUseAdvanced =
-    process.env.NODE_ENV === 'development' || tier !== 'free';
-  const canUseReports =
-    process.env.NODE_ENV === 'development' || tier === 'enterprise';
+  // DEV MODE: Always enable all features in development
+  const isDev = import.meta.env.DEV;
+  const canUseAdvanced = isDev || tier !== 'free';
+  const canUseReports = isDev || tier === 'enterprise';
 
   const handleFileUpload = (action: 'comparison' | 'timeline' | 'report') => {
     const input = document.createElement('input');
@@ -505,18 +505,18 @@ export function AdvancedResultsIntegration({
         comparisonResult ||
         timelineResult ||
         forensicReport) && (
-        <Alert className='border-green-200 bg-green-50'>
-          <CheckCircle className='h-4 w-4 text-green-600' />
-          <AlertDescription className='text-green-800'>
-            <strong>Advanced Analysis Complete:</strong>
-            {advancedAnalysis && ' Forensic analysis'}
-            {comparisonResult && ' • Batch comparison'}
-            {timelineResult && ' • Timeline reconstruction'}
-            {forensicReport && ' • Professional report'}
-            {' completed successfully.'}
-          </AlertDescription>
-        </Alert>
-      )}
+          <Alert className='border-green-200 bg-green-50'>
+            <CheckCircle className='h-4 w-4 text-green-600' />
+            <AlertDescription className='text-green-800'>
+              <strong>Advanced Analysis Complete:</strong>
+              {advancedAnalysis && ' Forensic analysis'}
+              {comparisonResult && ' • Batch comparison'}
+              {timelineResult && ' • Timeline reconstruction'}
+              {forensicReport && ' • Professional report'}
+              {' completed successfully.'}
+            </AlertDescription>
+          </Alert>
+        )}
     </div>
   );
 }

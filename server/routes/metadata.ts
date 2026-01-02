@@ -15,8 +15,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// @ts-ignore
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirPath = dirname(currentFilePath);
 
 // ============================================================================
 // Helper Functions
@@ -25,7 +26,7 @@ const __dirname = dirname(__filename);
 async function runMetadataDbCli(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
     const pythonScript = path.join(
-      __dirname,
+      currentDirPath,
       '..',
       'extractor',
       'metadata_db_cli.py'
@@ -33,7 +34,7 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
 
     // Prefer a configured Python executable (e.g., project's venv) when available
     const configuredPython = process.env.PYTHON_EXECUTABLE;
-    const venvPython = path.join(__dirname, '..', '.venv', 'bin', 'python');
+    const venvPython = path.join(currentDirPath, '..', '.venv', 'bin', 'python');
     const pythonExec =
       configuredPython ||
       (require('fs').existsSync(venvPython) ? venvPython : 'python3');

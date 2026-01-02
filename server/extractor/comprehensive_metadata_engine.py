@@ -196,124 +196,117 @@ def safe_extract_module(
             }
         return result
     except ImportError as e:
-        duration = time.time() - start_time
-        logger.error(f"Module {module_name} not available for {filepath}: {e} (took {duration:.3f}s)")
+        logger.error(f"Module {module_name} not available for {filepath}: {e}")
         logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
-        return {
-            "available": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "module": module_name,
-            "file_path": filepath,
-            "performance": {
-                module_name: {
-                    "duration_seconds": duration,
-                    "status": "failed",
-                    "error_type": type(e).__name__,
-                    "file_path": filepath,
-                    "file_size": file_size
-                }
+        
+        return create_standardized_error(
+            exception=e,
+            module_name=module_name,
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_MODULE_IMPORT",
+            severity="high",
+            recoverable=False,
+            custom_message="Required module not available",
+            suggested_action="Install required module or check dependencies",
+            error_context={
+                "module_attempted": module_name,
+                "file_size": file_size
             }
-        }
+        )
     except FileNotFoundError as e:
-        duration = time.time() - start_time
-        logger.warning(f"File not found for {module_name} with {filepath}: {e} (took {duration:.3f}s)")
-        return {
-            "available": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "module": module_name,
-            "file_path": filepath,
-            "performance": {
-                module_name: {
-                    "duration_seconds": duration,
-                    "status": "failed",
-                    "error_type": type(e).__name__,
-                    "file_path": filepath,
-                    "file_size": file_size
-                }
+        logger.warning(f"File not found for {module_name} with {filepath}: {e}")
+        
+        return create_standardized_error(
+            exception=e,
+            module_name=module_name,
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_FILE_NOT_FOUND",
+            severity="medium",
+            recoverable=True,
+            custom_message="Input file not found",
+            suggested_action="Verify file path and permissions",
+            error_context={
+                "file_exists": False,
+                "expected_path": filepath
             }
-        }
+        )
     except PermissionError as e:
-        duration = time.time() - start_time
-        logger.warning(f"Permission denied for {module_name} with {filepath}: {e} (took {duration:.3f}s)")
-        return {
-            "available": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "module": module_name,
-            "file_path": filepath,
-            "performance": {
-                module_name: {
-                    "duration_seconds": duration,
-                    "status": "failed",
-                    "error_type": type(e).__name__,
-                    "file_path": filepath,
-                    "file_size": file_size
-                }
+        logger.warning(f"Permission denied for {module_name} with {filepath}: {e}")
+        
+        return create_standardized_error(
+            exception=e,
+            module_name=module_name,
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_PERMISSION_DENIED",
+            severity="medium",
+            recoverable=True,
+            custom_message="Permission denied",
+            suggested_action="Check file permissions and access rights",
+            error_context={
+                "permission_type": "file_access",
+                "required_permission": "read"
             }
-        }
+        )
     except MemoryError as e:
-        duration = time.time() - start_time
-        logger.error(f"Memory error during {module_name} extraction for {filepath}: {e} (took {duration:.3f}s)")
+        logger.error(f"Memory error during {module_name} extraction for {filepath}: {e}")
         logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
-        return {
-            "available": False,
-            "error": "Insufficient memory to process file",
-            "error_type": type(e).__name__,
-            "module": module_name,
-            "file_path": filepath,
-            "performance": {
-                module_name: {
-                    "duration_seconds": duration,
-                    "status": "failed",
-                    "error_type": type(e).__name__,
-                    "file_path": filepath,
-                    "file_size": file_size
-                }
+        
+        return create_standardized_error(
+            exception=e,
+            module_name=module_name,
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_MEMORY_LIMIT",
+            severity="critical",
+            recoverable=False,
+            custom_message="Insufficient memory to process file",
+            suggested_action="Close other applications or increase system memory",
+            error_context={
+                "memory_issue": "insufficient",
+                "file_size_mb": file_size / (1024 * 1024) if isinstance(file_size, (int, float)) else "unknown"
             }
-        }
+        )
     except TimeoutError as e:
-        duration = time.time() - start_time
-        logger.error(f"Timeout during {module_name} extraction for {filepath}: {e} (took {duration:.3f}s)")
+        logger.error(f"Timeout during {module_name} extraction for {filepath}: {e}")
         logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
-        return {
-            "available": False,
-            "error": "Extraction timed out",
-            "error_type": type(e).__name__,
-            "module": module_name,
-            "file_path": filepath,
-            "performance": {
-                module_name: {
-                    "duration_seconds": duration,
-                    "status": "failed",
-                    "error_type": type(e).__name__,
-                    "file_path": filepath,
-                    "file_size": file_size
-                }
+        
+        return create_standardized_error(
+            exception=e,
+            module_name=module_name,
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_OPERATION_TIMEOUT",
+            severity="medium",
+            recoverable=True,
+            custom_message="Operation timed out",
+            suggested_action="Check network connectivity or increase timeout",
+            error_context={
+                "timeout_type": "processing",
+                "duration_before_timeout": duration
             }
-        }
+        )
     except Exception as e:
-        duration = time.time() - start_time
-        logger.error(f"Unexpected error in {module_name} extraction for {filepath}: {e} (took {duration:.3f}s)")
+        logger.error(f"Unexpected error in {module_name} extraction for {filepath}: {e}")
         logger.debug(f"Full traceback for {module_name}: {traceback.format_exc()}")
-        # Return a structured error response instead of failing completely
-        return {
-            "available": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "module": module_name,
-            "file_path": filepath,
-            "performance": {
-                module_name: {
-                    "duration_seconds": duration,
-                    "status": "failed",
-                    "error_type": type(e).__name__,
-                    "file_path": filepath,
-                    "file_size": file_size
-                }
+        
+        return create_standardized_error(
+            exception=e,
+            module_name=module_name,
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_PROCESSING_FAILED",
+            severity="high",
+            recoverable=False,
+            custom_message="Unexpected error occurred during processing",
+            suggested_action="Check logs for details and report to support",
+            error_context={
+                "exception_type": type(e).__name__,
+                "unexpected_error": True
             }
-        }
+        )
 
 try:
     from .modules.metadata_db import store_file_metadata
@@ -324,6 +317,203 @@ except ImportError:
         # Create a dummy function if module not available
         def store_file_metadata(*args, **kwargs):
             pass
+
+# Cache import - consolidated to single location
+try:
+    from .cache import get_cache
+except ImportError:
+    try:
+        from cache import get_cache  # type: ignore
+    except ImportError:
+        get_cache = None  # type: ignore[assignment]
+
+# ============================================================================
+# Error Handling Utilities
+# ============================================================================
+
+# Error message catalog for user-friendly messages
+ERROR_MESSAGES = {
+    "ERR_IMPORTERROR": "Required module not available",
+    "ERR_FILENOTFOUNDERROR": "Input file not found",
+    "ERR_PERMISSIONERROR": "Permission denied",
+    "ERR_MEMORYERROR": "Insufficient memory to process file",
+    "ERR_TIMEOUTERROR": "Operation timed out",
+    "ERR_EXCEPTION": "Unexpected error occurred",
+    "ERR_MODULE_IMPORT": "Required module not available",
+    "ERR_FILE_ACCESS": "Cannot access the specified file",
+    "ERR_PROCESSING": "Error processing file data",
+    "ERR_SYSTEM": "System error occurred",
+    "ERR_CONFIGURATION": "Configuration error detected"
+}
+
+# Suggested actions for common error types
+SUGGESTED_ACTIONS = {
+    "ERR_IMPORTERROR": "Check module installation or dependencies",
+    "ERR_FILENOTFOUNDERROR": "Verify file path and permissions",
+    "ERR_PERMISSIONERROR": "Check file permissions and access rights",
+    "ERR_MEMORYERROR": "Close other applications or increase system memory",
+    "ERR_TIMEOUTERROR": "Check network connectivity or increase timeout",
+    "ERR_EXCEPTION": "Check logs for details and report to support",
+    "ERR_MODULE_IMPORT": "Install required module or check dependencies",
+    "ERR_FILE_ACCESS": "Verify file exists and has proper permissions",
+    "ERR_PROCESSING": "Check file format and try again",
+    "ERR_SYSTEM": "Check system resources and try again later",
+    "ERR_CONFIGURATION": "Review configuration settings"
+}
+
+def get_user_friendly_message(error_code: str, exception: Exception) -> str:
+    """
+    Get user-friendly message for an error code.
+    
+    Args:
+        error_code: The error code to look up
+        exception: The original exception (fallback)
+        
+    Returns:
+        User-friendly error message
+    """
+    return ERROR_MESSAGES.get(error_code, str(exception))
+
+def get_suggested_action(error_code: str) -> str:
+    """
+    Get suggested action for an error code.
+    
+    Args:
+        error_code: The error code to look up
+        
+    Returns:
+        Suggested action or None
+    """
+    return SUGGESTED_ACTIONS.get(error_code, "Check logs and try again")
+
+def get_system_context() -> Dict[str, Any]:
+    """
+    Get system context information for error reporting.
+    
+    Returns:
+        Dictionary with system information
+    """
+    import platform
+    import psutil  # type: ignore
+    
+    system_info = {
+        "platform": platform.system(),
+        "platform_version": platform.version(),
+        "python_version": platform.python_version()
+    }
+    
+    try:
+        # Get memory information
+        memory = psutil.virtual_memory()
+        system_info["memory"] = {
+            "total_gb": round(memory.total / (1024 ** 3), 2),
+            "available_gb": round(memory.available / (1024 ** 3), 2),
+            "percent_used": memory.percent
+        }
+        
+        # Get CPU information
+        system_info["cpu"] = {
+            "logical_cores": psutil.cpu_count(logical=True),
+            "physical_cores": psutil.cpu_count(logical=False),
+            "usage_percent": psutil.cpu_percent(interval=0.1)
+        }
+        
+        # Get disk information
+        disk = psutil.disk_usage('/')
+        system_info["disk"] = {
+            "total_gb": round(disk.total / (1024 ** 3), 2),
+            "free_gb": round(disk.free / (1024 ** 3), 2),
+            "percent_used": disk.percent
+        }
+        
+    except ImportError:
+        # psutil not available, provide basic info
+        system_info["memory"] = "psutil not available"
+        system_info["cpu"] = "psutil not available"
+        system_info["disk"] = "psutil not available"
+    except Exception as e:
+        system_info["system_error"] = str(e)
+    
+    return system_info
+
+def create_standardized_error(
+    exception: Exception,
+    module_name: str,
+    filepath: str,
+    start_time: float,
+    error_context: Dict[str, Any] = None,
+    custom_message: str = None,
+    error_code: str = None,
+    severity: str = "medium",
+    recoverable: bool = False,
+    suggested_action: str = None
+) -> Dict[str, Any]:
+    """
+    Create a standardized error response with comprehensive information.
+    
+    Args:
+        exception: The original exception
+        module_name: Name of the module where error occurred
+        filepath: Path to the file being processed
+        start_time: Start time for duration calculation
+        error_context: Additional context information
+        custom_message: Custom user-friendly message
+        error_code: Standardized error code
+        severity: Error severity (low/medium/high/critical)
+        recoverable: Whether the error is recoverable
+        suggested_action: Suggested recovery action
+        
+    Returns:
+        Standardized error response dictionary
+    """
+    duration = time.time() - start_time
+    
+    # Determine file information
+    file_size = "unknown"
+    file_type = "unknown"
+    try:
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+            file_type = mimetypes.guess_type(filepath)[0] or "unknown"
+    except:
+        pass
+    
+    # Determine error code if not provided
+    if not error_code:
+        error_code = f"ERR_{type(exception).__name__.upper()}"
+    
+    # Build standardized error response
+    error_response = {
+        "success": False,
+        "error": {
+            "code": error_code,
+            "message": custom_message or get_user_friendly_message(error_code, exception),
+            "technical_message": str(exception),
+            "type": type(exception).__name__,
+            "severity": severity,
+            "recoverable": recoverable,
+            "suggested_action": suggested_action or get_suggested_action(error_code)
+        },
+        "context": {
+            "module": module_name,
+            "file_path": filepath,
+            "file_size": file_size,
+            "file_type": file_type,
+            "system_info": get_system_context()
+        },
+        "performance": {
+            "duration_seconds": duration,
+            "status": "failed",
+            "error_code": error_code
+        },
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+    
+    # Add additional context if provided
+    if error_context:
+        error_response["context"].update(error_context)
+    
+    return error_response
 
 # ============================================================================
 # Specialized Library Availability Checks
@@ -529,18 +719,46 @@ def log_extraction_event(
         logger.info(log_message)
 
 
+def _check_cache_and_return_if_found(filepath: str, tier: str, start_time: float, is_async: bool = False) -> Optional[Dict[str, Any]]:
+    """
+    Check cache for existing result and return if found.
+    
+    Args:
+        filepath: Path to the file being processed
+        tier: Tier level for cache lookup
+        start_time: Start time for duration calculation
+        is_async: Whether this is an async operation (for logging)
+        
+    Returns:
+        Cached result if found, None otherwise
+    """
+    if not get_cache:
+        return None
+        
+    try:
+        cache = get_cache()
+        cached_result = cache.get(filepath, tier)
+        if cached_result:
+            duration = time.time() - start_time
+            log_prefix = "async_" if is_async else ""
+            log_extraction_event(
+                event_type=f"{log_prefix}cache_hit",
+                filepath=filepath,
+                module_name="comprehensive_engine",
+                status="info",
+                duration=duration
+            )
+            return cached_result
+    except Exception as e:
+        logger.warning(f"{'Async ' if is_async else ''}Cache lookup failed for {filepath}: {e}")
+    
+    return None
+
+
 try:
     from .modules.steganography import analyze_steganography
 except ImportError:
     analyze_steganography = None  # type: ignore[assignment]
-
-try:
-    from .cache import get_cache
-except ImportError:
-    try:
-        from cache import get_cache  # type: ignore
-    except ImportError:
-        get_cache = None  # type: ignore[assignment]
 
 try:
     import sys
@@ -641,14 +859,6 @@ try:
 except Exception as e:
     logger.warning(f"Could not import document metadata module: {e}")
     extract_document_metadata = None  # type: ignore[assignment]
-
-try:
-    from .cache import get_cache
-except ImportError:
-    try:
-        from cache import get_cache  # type: ignore
-    except ImportError:
-        get_cache = None  # type: ignore[assignment]
 
 try:
     import sys
@@ -1966,16 +2176,24 @@ class ComprehensiveMetadataExtractor:
                 base_result["extraction_info"]["processing_ms"] = duration_ms
                 return base_result
         except Exception as e:
-            duration_ms = (time.time() - start_time) * 1000
-            logger.error(f"Critical error in base metadata extraction: {e}")
-            return {
-                "error": f"Critical error in base metadata extraction: {str(e)}",
-                "error_type": type(e).__name__,
-                "extraction_info": {
-                    "comprehensive_version": "4.0.0",
-                    "processing_ms": duration_ms
+            logger.error(f"Error in base metadata extraction for {filepath}: {e}")
+            logger.debug(f"Full traceback for base extraction: {traceback.format_exc()}")
+            
+            return create_standardized_error(
+                exception=e,
+                module_name="comprehensive_engine",
+                filepath=filepath,
+                start_time=start_time,
+                error_code="ERR_BASE_EXTRACTION_FAILED",
+                severity="critical",
+                recoverable=False,
+                custom_message="Failed to extract base metadata",
+                suggested_action="Check file format and integrity",
+                error_context={
+                    "phase": "base_extraction",
+                    "tier": tier
                 }
-            }
+            )
         
         # Get tier configuration
         try:
@@ -2386,32 +2604,32 @@ class ComprehensiveMetadataExtractor:
                     base_result["gaming_entertainment"] = gaming_result
 
         except Exception as e:
-            logger.error(f"Error in comprehensive extraction process: {e}")
-            logger.debug(f"Full traceback: {traceback.format_exc()}")
-            # Add error to results but continue with other processing
+            logger.warning(f"Error during comprehensive extraction for {filepath}: {e}")
+            logger.debug(f"Full traceback for comprehensive extraction: {traceback.format_exc()}")
+            
             if "extraction_errors" not in base_result:
                 base_result["extraction_errors"] = []
-            base_result["extraction_errors"].append({
-                "error": str(e),
-                "error_type": type(e).__name__,
-                "module": "comprehensive_extraction_process"
-            })
+            
+            base_result["extraction_errors"].append(
+                create_standardized_error(
+                    exception=e,
+                    module_name="comprehensive_engine",
+                    filepath=filepath,
+                    start_time=start_time,
+                    error_code="ERR_COMPREHENSIVE_EXTRACTION_FAILED",
+                    severity="medium",
+                    recoverable=True,
+                    custom_message="Error during comprehensive metadata extraction",
+                    suggested_action="Some modules may have partial results",
+                    error_context={
+                        "phase": "comprehensive_extraction",
+                        "tier": tier,
+                        "non_critical": True
+                    }
+                )
+            )
 
-        # Cache the result if caching is available (disabled for now due to implementation issues)
-        # if get_cache:
-        #     try:
-        #         cache = get_cache()
-        #         cache.put(filepath, base_result, tier, int(base_result["extraction_info"].get("extraction_time_ms", 0)))
-        #     except Exception as e:
-        #         logger.debug(f"Cache storage failed: {e}")
 
-        # Cache the result if caching is available (disabled for now due to implementation issues)
-        # if get_cache:
-        #     try:
-        #         cache = get_cache()
-        #         cache.put(filepath, base_result, tier, int(base_result["extraction_info"].get("extraction_time_ms", 0)))
-        #     except Exception as e:
-        #         logger.debug(f"Cache storage failed: {e}")
 
         # Update field count
         def count_comprehensive_fields(obj):
@@ -2464,7 +2682,30 @@ class ComprehensiveMetadataExtractor:
                 self._execute_dynamic_modules(filepath, base_result, tier_config)
                 logger.info(f"Dynamic module execution completed for {filepath}")
             except Exception as e:
-                logger.error(f"Error in dynamic module execution: {e}")
+                logger.error(f"Error in dynamic module execution for {filepath}: {e}")
+                logger.debug(f"Full traceback for dynamic modules: {traceback.format_exc()}")
+                
+                # Add to extraction errors if they exist, otherwise log separately
+                error_info = create_standardized_error(
+                    exception=e,
+                    module_name="comprehensive_engine",
+                    filepath=filepath,
+                    start_time=start_time,
+                    error_code="ERR_DYNAMIC_MODULE_FAILED",
+                    severity="medium",
+                    recoverable=True,
+                    custom_message="Dynamic module execution failed",
+                    suggested_action="Check module discovery configuration",
+                    error_context={
+                        "phase": "dynamic_modules",
+                        "tier": tier
+                    }
+                )
+                
+                if "extraction_errors" in base_result:
+                    base_result["extraction_errors"].append(error_info)
+                else:
+                    logger.warning(f"Dynamic module error (no extraction_errors array): {error_info['error']['message']}")
         
         # Calculate performance summary
         # Collect performance data from all module results
@@ -2588,7 +2829,7 @@ def get_comprehensive_extractor() -> ComprehensiveMetadataExtractor:
         _comprehensive_extractor = ComprehensiveMetadataExtractor()
     return _comprehensive_extractor
 
-def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
+def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[str, Any]:
     """
     Extract comprehensive metadata using all available specialized engines.
 
@@ -2606,22 +2847,9 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[s
     )
 
     # Check cache first if available
-    if get_cache:
-        try:
-            cache = get_cache()
-            cached_result = cache.get(filepath, tier)
-            if cached_result:
-                duration = time.time() - start_time
-                log_extraction_event(
-                    event_type="cache_hit",
-                    filepath=filepath,
-                    module_name="comprehensive_engine",
-                    status="info",
-                    duration=duration
-                )
-                return cached_result
-        except Exception as e:
-            logger.warning(f"Cache lookup failed for {filepath}: {e}")
+    cached_result = _check_cache_and_return_if_found(filepath, tier, start_time, is_async=False)
+    if cached_result:
+        return cached_result
 
     try:
         extractor = get_comprehensive_extractor()
@@ -2645,10 +2873,25 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[s
         return result
     except Exception as e:
         duration = time.time() - start_time
-        logger.error(f"Critical error in comprehensive metadata extraction for {filepath}: {e}")
-        logger.debug(f"Full traceback: {traceback.format_exc()}")
-
-        # Log the error
+        logger.error(f"Critical error in main extraction interface for {filepath}: {e}")
+        logger.debug(f"Full traceback for main interface: {traceback.format_exc()}")
+        
+        error_response = create_standardized_error(
+            exception=e,
+            module_name="comprehensive_engine",
+            filepath=filepath,
+            start_time=start_time,
+            error_code="ERR_MAIN_EXTRACTION_FAILED",
+            severity="critical",
+            recoverable=False,
+            custom_message="Critical error in comprehensive metadata extraction",
+            suggested_action="Check file and system requirements",
+            error_context={
+                "phase": "main_interface",
+                "tier": tier
+            }
+        )
+        
         log_extraction_event(
             event_type="extraction_error",
             filepath=filepath,
@@ -2657,23 +2900,16 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[s
             duration=duration,
             details={
                 "tier": tier,
-                "error": str(e),
-                "error_type": type(e).__name__,
+                "error_code": error_response["error"]["code"],
+                "error": error_response["error"]["message"],
+                "error_type": error_response["error"]["type"],
+                "severity": error_response["error"]["severity"],
+                "recoverable": error_response["error"]["recoverable"],
                 "success": False
             }
         )
-
-        # Return a structured error response
-        return {
-            "error": f"Critical error in comprehensive metadata extraction: {str(e)}",
-            "error_type": type(e).__name__,
-            "file": {"path": filepath},
-            "extraction_info": {
-                "comprehensive_version": "4.0.0",
-                "processing_ms": duration * 1000,
-                "tier": tier
-            }
-        }
+        
+        return error_response
 
 
 def extract_comprehensive_batch(
@@ -2809,7 +3045,7 @@ def extract_comprehensive_batch(
         }
 
 
-async def extract_comprehensive_metadata_async(filepath: str, tier: str = "super") -> Dict[str, Any]:
+async def extract_comprehensive_metadata_async(filepath: str, tier: str = "free") -> Dict[str, Any]:
     """
     Asynchronously extract comprehensive metadata using all available specialized engines.
 
@@ -2828,22 +3064,9 @@ async def extract_comprehensive_metadata_async(filepath: str, tier: str = "super
     )
 
     # Check cache first if available
-    if get_cache:
-        try:
-            cache = get_cache()
-            cached_result = cache.get(filepath, tier)
-            if cached_result:
-                duration = time.time() - start_time
-                log_extraction_event(
-                    event_type="async_cache_hit",
-                    filepath=filepath,
-                    module_name="comprehensive_engine_async",
-                    status="info",
-                    duration=duration
-                )
-                return cached_result
-        except Exception as e:
-            logger.warning(f"Async cache lookup failed for {filepath}: {e}")
+    cached_result = _check_cache_and_return_if_found(filepath, tier, start_time, is_async=True)
+    if cached_result:
+        return cached_result
 
     try:
         # Run the synchronous extraction in a thread pool to avoid blocking the event loop
@@ -3071,7 +3294,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="MetaExtract Comprehensive Engine v4.0 - Ultimate Metadata Extraction")
     parser.add_argument("files", nargs="+", help="File(s) to extract metadata from")
-    parser.add_argument("--tier", "-t", default="super", choices=["free", "starter", "premium", "super"])
+    parser.add_argument("--tier", "-t", default="free", choices=["free", "starter", "premium", "super"])
     parser.add_argument("--output", "-o", help="Output JSON file")
     parser.add_argument("--engines", action="store_true", help="Show available specialized engines")
     parser.add_argument("--batch", action="store_true", help="Process files in batch mode")

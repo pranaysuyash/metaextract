@@ -40,6 +40,8 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  // Cache busting for development
+  cacheDir: 'node_modules/.vite-cache-v2-update',
   server: {
     host: "0.0.0.0",
     allowedHosts: true,
