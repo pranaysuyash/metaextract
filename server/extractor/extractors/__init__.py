@@ -7,7 +7,9 @@ scientific formats.
 """
 
 from .image_extractor import ImageExtractor
+from .video_extractor import VideoExtractor
 
 __all__ = [
-    'ImageExtractor'
+    'ImageExtractor',
+    'VideoExtractor'
 ]

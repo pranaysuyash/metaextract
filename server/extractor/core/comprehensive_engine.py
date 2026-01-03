@@ -38,8 +38,11 @@ class NewComprehensiveMetadataExtractor:
         # Add image extractor
         self.orchestrator.add_extractor(ImageExtractor())
         
+        # Add video extractor
+        from ..extractors.video_extractor import VideoExtractor
+        self.orchestrator.add_extractor(VideoExtractor())
+        
         # TODO: Add other extractors as they are created
-        # self.orchestrator.add_extractor(VideoExtractor())
         # self.orchestrator.add_extractor(AudioExtractor())
         # self.orchestrator.add_extractor(DocumentExtractor())
         # self.orchestrator.add_extractor(ScientificExtractor())
@@ -75,7 +78,8 @@ class NewComprehensiveMetadataExtractor:
                 "engine_version": "4.1.0-refactored",
                 "architecture": "modular",
                 "processing_time_ms": processing_time,
-                "compatibility_mode": True
+                "compatibility_mode": True,
+                "processing_ms": processing_time  # For frontend compatibility
             })
             
             return result
@@ -136,11 +140,13 @@ class NewComprehensiveMetadataExtractor:
             }
         
         # Video registry summary (when video extractor is added)
-        if 'video' in metadata:
+        if any(key in metadata for key in ['basic_properties', 'format', 'streams', 'chapters', 'codec_details', 'telemetry']):
+            video_data = metadata.get('basic_properties', {}) or metadata.get('format', {}) or metadata.get('streams', {}) or {}
             registry_summary['video'] = {
-                'format': len(metadata.get('video', {})),
-                'codec': 0,
-                'telemetry': 0,
+                'format': len(metadata.get('format', {})),
+                'streams': len(metadata.get('streams', {}).get('video_streams', [])),
+                'codec': len(metadata.get('codec_details', {})),
+                'telemetry': len(metadata.get('telemetry', {}))
             }
         
         # Audio registry summary (when audio extractor is added)
