@@ -200,13 +200,14 @@ class ImageExtractionRegistry:
         """
         # Define extension priority by tier
         tier_priority = {
-            "complete_gps": ["complete_gps", "specialized_modules", "comprehensive", "enhanced_basic", "advanced", "exif", "master", "basic"],
-            "specialized": ["specialized_modules", "complete_gps", "comprehensive", "enhanced_basic", "advanced", "basic"],
-            "comprehensive": ["comprehensive", "complete_gps", "specialized_modules", "enhanced_basic", "advanced", "exif", "master", "basic"],
-            "enhanced": ["enhanced_basic", "complete_gps", "advanced", "exif", "master", "basic"],
-            "advanced": ["enhanced_basic", "complete_gps", "advanced", "exif", "master", "basic"],
-            "basic": ["basic", "complete_gps", "enhanced_basic", "fallback"],
-            "fallback": ["fallback", "universal"]
+            "enhanced_master": ["enhanced_master", "complete_gps", "specialized_modules", "comprehensive", "enhanced_basic", "advanced", "exif", "master", "basic"],
+            "complete_gps": ["enhanced_master", "complete_gps", "specialized_modules", "comprehensive", "enhanced_basic", "advanced", "exif", "master", "basic"],
+            "specialized": ["enhanced_master", "specialized_modules", "complete_gps", "comprehensive", "enhanced_basic", "advanced", "basic"],
+            "comprehensive": ["enhanced_master", "comprehensive", "complete_gps", "specialized_modules", "enhanced_basic", "advanced", "exif", "master", "basic"],
+            "enhanced": ["enhanced_master", "enhanced_basic", "complete_gps", "advanced", "exif", "master", "basic"],
+            "advanced": ["enhanced_master", "enhanced_basic", "complete_gps", "advanced", "exif", "master", "basic"],
+            "basic": ["enhanced_master", "basic", "complete_gps", "enhanced_basic", "fallback"],
+            "fallback": ["enhanced_master", "fallback", "universal"]
         }
 
         priority_list = tier_priority.get(preferred_tier, tier_priority["advanced"])

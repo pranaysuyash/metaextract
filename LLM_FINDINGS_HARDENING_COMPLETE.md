@@ -67,6 +67,7 @@ Comprehensive hardening of the `/api/metadata/findings` endpoint to address 8 cr
 ## Code Structure
 
 ### Handler Function
+
 ```typescript
 POST /api/metadata/findings
 
@@ -88,17 +89,21 @@ Response Errors:
 ```
 
 ### Configuration Constants
+
 ```typescript
-const MAX_METADATA_SIZE = 500 * 1024;        // 500 KB
-const LLM_TIMEOUT_MS = 15000;                // 15 seconds
-const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1';
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+const MAX_METADATA_SIZE = 500 * 1024; // 500 KB
+const LLM_TIMEOUT_MS = 15000; // 15 seconds
+const ANTHROPIC_BASE_URL =
+  process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1';
+const ANTHROPIC_MODEL =
+  process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 ```
 
 ### Logging
+
 ```typescript
-safeLog('[LLM Findings] Message', optionalData)
+safeLog('[LLM Findings] Message', optionalData);
 // Development: Full data logged
 // Production: Sensitive fields redacted as [REDACTED]
 ```
@@ -110,7 +115,7 @@ safeLog('[LLM Findings] Message', optionalData)
 ✅ **Maintainable**: Env-driven config, no hardcoded values  
 ✅ **Secure**: Metadata redaction in logs, API key validation  
 ✅ **Resilient**: Graceful fallback to rule-based extraction  
-✅ **Type Safe**: Full TypeScript compliance, no `any` types  
+✅ **Type Safe**: Full TypeScript compliance, no `any` types
 
 ## Testing Checklist
 
@@ -141,27 +146,33 @@ safeLog('[LLM Findings] Message', optionalData)
 ## Example Error Responses
 
 ### Metadata Too Large
+
 ```json
 {
   "error": "Metadata too large",
   "details": "Maximum 500KB allowed"
 }
 ```
+
 HTTP 413
 
 ### API Timeout
+
 ```json
 {
   "error": "LLM request timeout",
   "findings": null
 }
 ```
+
 HTTP 504
 
 ### Missing API Key (Graceful Fallback)
+
 ```json
 {
   "findings": null
 }
 ```
+
 HTTP 200

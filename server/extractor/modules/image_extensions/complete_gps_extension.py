@@ -147,6 +147,21 @@ class CompleteGPSImageExtension(ImageExtensionBase):
             # Extract forensic metadata
             self._extract_forensic_metadata(filepath, result)
 
+            # Extract ICC color profile
+            self._extract_icc_profile(filepath, result)
+
+            # Extract IPTC metadata
+            self._extract_iptc_metadata(filepath, result)
+
+            # Extract XMP metadata
+            self._extract_xmp_metadata(filepath, result)
+
+            # Extract thumbnail
+            self._extract_thumbnail(filepath, result)
+
+            # Extract burned-in GPS text using OCR
+            self._extract_burned_gps_text(filepath, result)
+
             final_result = result.finalize()
             self.log_extraction_summary(final_result)
             return final_result
@@ -353,3 +368,408 @@ class CompleteGPSImageExtension(ImageExtensionBase):
 
         except Exception as e:
             result.add_warning(f"Forensic extraction failed: {str(e)[:100]}")
+
+    def _extract_burned_gps_text(self, filepath: str, result: ImageExtractionResult):
+        """Extract GPS coordinates from burned-in text using OCR"""
+        try:
+            from PIL import Image
+            import re
+
+            # Try to use OCR if available
+            try:
+                import pytesseract
+                ocr_available = True
+            except ImportError:
+                ocr_available = False
+
+            if not ocr_available:
+                # Fallback: check filename for GPS patterns
+                return self._extract_gps_from_filename(filepath, result)
+
+            # Open image and extract text
+            with Image.open(filepath) as img:
+                # Extract text using OCR
+                text = pytesseract.image_to_string(img)
+
+                # Look for GPS coordinate patterns
+                gps_patterns = [
+                    r'Lat\s*([+-]?\d+\.?\d*)\s*[°d]?\s*Long\s*([+-]?\d+\.?\d*)\s*[°d]?',
+                    r'Latitude[:\s]+([+-]?\d+\.?\d*)\s*Longitude[:\s]+([+-]?\d+\.?\d*)',
+                    r'GPS[:\s]+([+-]?\d+\.?\d*)[,:\s]+([+-]?\d+\.?\d*)',
+                    r'(\d{1,3})[°d]\s*(\d+\.?\d*)?[\'m]?\s*([NS])[\s,]+(\d{1,3})[°d]\s*(\d+\.?\d*)?[\'m]?\s*([EW])'
+                ]
+
+                for pattern in gps_patterns:
+                    match = re.search(pattern, text, re.IGNORECASE)
+                    if match:
+                        try:
+                            if len(match.groups()) == 2:  # Decimal format
+                                lat = float(match.group(1))
+                                lon = float(match.group(2))
+                            elif len(match.groups()) == 6:  # DMS format
+                                lat_deg = float(match.group(1))
+                                lat_min = float(match.group(2))
+                                lat_dir = match.group(3)
+                                lon_deg = float(match.group(4))
+                                lon_min = float(match.group(5))
+                                lon_dir = match.group(6)
+
+                                lat = lat_deg + (lat_min / 60.0)
+                                lon = lon_deg + (lon_min / 60.0)
+
+                                if lat_dir.upper() == 'S':
+                                    lat = -lat
+                                if lon_dir.upper() == 'W':
+                                    lon = -lon
+
+                            # Validate coordinates
+                            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                                # Only set if GPS not already populated
+                                existing_gps = result.metadata.get('gps', {})
+                                if not existing_gps.get('latitude') or not existing_gps.get('longitude'):
+                                    gps_data = {
+                                        "latitude": round(lat, 6),
+                                        "longitude": round(lon, 6),
+                                        "source": "burned_text_ocr",
+                                        "confidence": "high"
+                                    }
+
+                                    # Add Google Maps URL
+                                    gps_data["google_maps_url"] = f"https://www.google.com/maps?q={lat},{lon}"
+                                    gps_data["openstreetmap_url"] = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}&zoom=15"
+
+                                    result.add_metadata("gps", gps_data)
+                                    logger.info(f"Extracted GPS from burned text: {lat}, {lon}")
+                                    return
+
+                        except (ValueError, IndexError) as e:
+                            logger.debug(f"Failed to parse GPS pattern {pattern}: {e}")
+                            continue
+
+        except Exception as e:
+            result.add_warning(f"Burned GPS extraction failed: {str(e)[:100]}")
+
+    def _extract_gps_from_filename(self, filepath: str, result: ImageExtractionResult):
+        """Extract GPS from filename patterns (fallback method)"""
+        try:
+            import re
+            from pathlib import Path
+
+            filename = Path(filepath).name
+
+            # Common GPS Map Camera patterns: 12_923974_77_625419
+            gps_pattern = r'(\d{1,3})_(\d{3,6})_(\d{1,3})_(\d{3,6})'
+            match = re.search(gps_pattern, filename)
+
+            if match:
+                try:
+                    lat_deg = int(match.group(1))
+                    lat_dec = int(match.group(2))
+                    lon_deg = int(match.group(3))
+                    lon_dec = int(match.group(4))
+
+                    # Combine degrees and decimals
+                    lat = float(f"{lat_deg}.{lat_dec}")
+                    lon = float(f"{lon_deg}.{lon_dec}")
+
+                    # Validate coordinates
+                    if -90 <= lat <= 90 and -180 <= lon <= 180:
+                        # Only set if GPS not already populated
+                        existing_gps = result.metadata.get('gps', {})
+                        if not existing_gps.get('latitude') or not existing_gps.get('longitude'):
+                            gps_data = {
+                                "latitude": round(lat, 6),
+                                "longitude": round(lon, 6),
+                                "source": "filename_pattern",
+                                "confidence": "medium"
+                            }
+
+                            # Add Google Maps URL
+                            gps_data["google_maps_url"] = f"https://www.google.com/maps?q={lat},{lon}"
+                            gps_data["openstreetmap_url"] = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}&zoom=15"
+
+                            result.add_metadata("gps", gps_data)
+                            logger.info(f"Extracted GPS from filename: {lat}, {lon}")
+
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"Failed to parse filename GPS: {e}")
+
+        except Exception as e:
+            logger.debug(f"Filename GPS extraction failed: {e}")
+
+    def _extract_icc_profile(self, filepath: str, result: ImageExtractionResult):
+        """Extract ICC color profile information"""
+        try:
+            from PIL import Image
+            import io
+
+            with Image.open(filepath) as img:
+                icc_profile = {}
+
+                # Check for ICC profile
+                if hasattr(img, 'info') and 'icc_profile' in img.info:
+                    icc_data = img.info['icc_profile']
+
+                    try:
+                        from PIL import ImageCms
+                        profile = ImageCms.ImageCmsProfile(io.BytesIO(icc_data))
+
+                        icc_profile = {
+                            "profile_name": profile.profile.profile_name if hasattr(profile.profile, 'profile_name') else 'Unknown',
+                            "profile_class": profile.profile.profile_class if hasattr(profile.profile, 'profile_class') else 'Unknown',
+                            "color_space": profile.profile.color_space if hasattr(profile.profile, 'color_space') else 'Unknown',
+                            "pcs_illuminant": profile.profile.pcs_illuminant if hasattr(profile.profile, 'pcs_illuminant') else 'Unknown',
+                            "creator": profile.profile.creator if hasattr(profile.profile, 'creator') else 'Unknown',
+                            "has_icc": True,
+                            "icc_size_bytes": len(icc_data)
+                        }
+
+                        # Add rendering intent if available
+                        if hasattr(profile, 'rendering_intent'):
+                            rendering_intents = {
+                                0: 'perceptual',
+                                1: 'relative',
+                                2: 'saturation',
+                                3: 'absolute'
+                            }
+                            icc_profile["rendering_intent"] = rendering_intents.get(profile.rendering_intent, 'unknown')
+
+                    except ImportError:
+                        # PIL doesn't have ImageCms, provide basic info
+                        icc_profile = {
+                            "has_icc": True,
+                            "icc_size_bytes": len(icc_data),
+                            "profile_name": "ICC Profile (detailed analysis requires PIL.ImageCms)"
+                        }
+                else:
+                    icc_profile = {
+                        "has_icc": False,
+                        "note": "No embedded ICC profile found"
+                    }
+
+                # Add color space info
+                if hasattr(img, 'mode'):
+                    icc_profile["image_mode"] = img.mode
+                    color_space_map = {
+                        'RGB': 'sRGB',
+                        'RGBA': 'sRGB with alpha',
+                        'CMYK': 'CMYK',
+                        'L': 'Grayscale',
+                        'LA': 'Grayscale with alpha',
+                        'P': 'Palette-based',
+                        'LAB': 'CIELAB',
+                        'HSV': 'HSV'
+                    }
+                    icc_profile["color_space_detected"] = color_space_map.get(img.mode, img.mode)
+
+                if icc_profile:
+                    result.add_metadata("icc_profile", icc_profile)
+
+        except Exception as e:
+            result.add_warning(f"ICC profile extraction failed: {str(e)[:100]}")
+
+    def _extract_iptc_metadata(self, filepath: str, result: ImageExtractionResult):
+        """Extract IPTC metadata"""
+        try:
+            from PIL import Image
+            from PIL.IptcImagePlugin import IptcImagePlugin
+
+            with Image.open(filepath) as img:
+                iptc_data = {}
+
+                # Try to get IPTC data
+                if hasattr(img, 'info') and 'iptc' in img.info:
+                    iptc_dict = img.info['iptc']
+
+                    # Map common IPTC tags to readable names
+                    iptc_mapping = {
+                        (2, 5): 'object_name',
+                        (2, 25): 'keywords',
+                        (2, 120): 'caption',
+                        (2, 122): 'caption_writer',
+                        (2, 105): 'headline',
+                        (2, 110): 'credit',
+                        (2, 115): 'source',
+                        (2, 116): 'copyright_notice',
+                        (2, 90): 'city',
+                        (2, 92): 'sublocation',
+                        (2, 95): 'province_state',
+                        (2, 101): 'country',
+                        (2, 103): 'original_transmission_reference',
+                        (2, 15): 'category',
+                        (2, 20): 'supplemental_categories',
+                        (2, 25): 'keywords',
+                        (2, 40): 'special_instructions',
+                        (2, 80): 'byline',
+                        (2, 85): 'byline_title',
+                        (2, 100): 'affiliation',
+                    }
+
+                    for (tag_group, tag_key), value in iptc_dict.items():
+                        field_name = iptc_mapping.get((tag_group, tag_key), f'iptc_{tag_group}_{tag_key}')
+
+                        # Decode bytes if needed
+                        if isinstance(value, bytes):
+                            try:
+                                value = value.decode('utf-8', errors='ignore')
+                            except:
+                                value = str(value)[:100]
+
+                        iptc_data[field_name] = value
+
+                else:
+                    # Try alternative IPTC extraction
+                    try:
+                        iptc = IptcImagePlugin.getiptc(img)
+                        if iptc:
+                            for key, value in iptc.items():
+                                if isinstance(value, bytes):
+                                    try:
+                                        value = value.decode('utf-8', errors='ignore')
+                                    except:
+                                        value = str(value)[:100]
+                                iptc_data[str(key)] = value
+                    except:
+                        iptc_data = {"note": "No IPTC metadata found"}
+
+                if iptc_data:
+                    result.add_metadata("iptc", iptc_data)
+
+        except Exception as e:
+            result.add_warning(f"IPTC extraction failed: {str(e)[:100]}")
+
+    def _extract_xmp_metadata(self, filepath: str, result: ImageExtractionResult):
+        """Extract XMP metadata"""
+        try:
+            from PIL import Image
+
+            with Image.open(filepath) as img:
+                xmp_data = {}
+
+                # Try to get XMP data
+                if hasattr(img, 'info') and 'xmp' in img.info:
+                    xmp_raw = img.info['xmp']
+
+                    # Parse XMP data
+                    if isinstance(xmp_raw, bytes):
+                        try:
+                            xmp_string = xmp_raw.decode('utf-8', errors='ignore')
+                        except:
+                            xmp_string = str(xmp_raw)
+                    else:
+                        xmp_string = str(xmp_raw)
+
+                    # Extract common XMP fields
+                    xmp_fields = {
+                        'CreatorTool': 'creator_tool',
+                        'CreateDate': 'creation_date',
+                        'ModifyDate': 'modification_date',
+                        'MetadataDate': 'metadata_date',
+                        'Format': 'format',
+                        'Rating': 'rating',
+                        'Label': 'label',
+                        'Rights::Certificate': 'rights_certificate',
+                        'Rights::Marked': 'copyright_status',
+                        'Rights::WebStatement': 'copyright_url',
+                        'Rights::UsageTerms': 'usage_terms',
+                        'Adobe::JobRef': 'job_reference',
+                        'Photoshop::AuthorsPosition': 'author_position',
+                        'Photoshop::CaptionWriter': 'caption_writer',
+                        'Photoshop::City': 'city',
+                        'Photoshop::Country': 'country',
+                        'Photoshop::Credit': 'credit',
+                        'Photoshop::Source': 'source',
+                        'Photoshop::Headline': 'headline',
+                        'Photoshop::Instructions': 'instructions',
+                        'Photoshop::State': 'state_province',
+                        'Photoshop::TransmissionReference': 'transmission_reference',
+                    }
+
+                    for xmp_field, field_name in xmp_fields.items():
+                        # Look for patterns like "FieldName: Value"
+                        pattern = f'{xmp_field}="([^"]*)"'
+                        import re
+                        match = re.search(pattern, xmp_string)
+                        if match:
+                            xmp_data[field_name] = match.group(1)
+
+                    # Add raw XMP data for reference
+                    xmp_data['raw_xmp_length'] = len(xmp_string)
+                    xmp_data['has_xmp'] = True
+
+                else:
+                    xmp_data = {
+                        "has_xmp": False,
+                        "note": "No XMP metadata found"
+                    }
+
+                if xmp_data:
+                    result.add_metadata("xmp", xmp_data)
+
+        except Exception as e:
+            result.add_warning(f"XMP extraction failed: {str(e)[:100]}")
+
+    def _extract_thumbnail(self, filepath: str, result: ImageExtractionResult):
+        """Extract embedded thumbnail information"""
+        try:
+            from PIL import Image
+            import io
+
+            with Image.open(filepath) as img:
+                thumbnail_info = {}
+
+                # Check for EXIF thumbnail
+                if hasattr(img, '_getexif'):
+                    exif = img._getexif()
+                    if exif:
+                        # Thumbnail offset and length
+                        from PIL.ExifTags import TAGS
+                        thumb_offset = exif.get(0x0201)  # JPEGInterchangeFormat
+                        thumb_length = exif.get(0x0202)  # JPEGInterchangeFormatLength
+
+                        if thumb_offset and thumb_length:
+                            thumbnail_info = {
+                                "has_thumbnail": True,
+                                "thumbnail_offset": thumb_offset,
+                                "thumbnail_length": thumb_length,
+                                "thumbnail_size_kb": round(thumb_length / 1024, 2)
+                            }
+
+                            # Try to extract the thumbnail
+                            try:
+                                # Read thumbnail data
+                                with open(filepath, 'rb') as f:
+                                    f.seek(thumb_offset)
+                                    thumb_data = f.read(thumb_length)
+
+                                    # Try to load thumbnail
+                                    thumb_img = Image.open(io.BytesIO(thumb_data))
+                                    thumbnail_info.update({
+                                        "thumbnail_width": thumb_img.width,
+                                        "thumbnail_height": thumb_img.height,
+                                        "thumbnail_format": thumb_img.format,
+                                        "thumbnail_mode": thumb_img.mode
+                                    })
+                            except Exception as e:
+                                thumbnail_info["thumbnail_extraction_error"] = str(e)[:100]
+
+                # Check for PIL thumbnail
+                if not thumbnail_info:
+                    try:
+                        # PIL has a built-in thumbnail extraction method
+                        thumb = img.thumbnail((128, 128))  # This modifies in place
+                        thumbnail_info = {
+                            "has_thumbnail": False,
+                            "note": "No embedded EXIF thumbnail found"
+                        }
+                    except:
+                        thumbnail_info = {
+                            "has_thumbnail": False,
+                            "note": "No thumbnail data found"
+                        }
+
+                if thumbnail_info:
+                    result.add_metadata("thumbnail", thumbnail_info)
+
+        except Exception as e:
+            result.add_warning(f"Thumbnail extraction failed: {str(e)[:100]}")

@@ -20,6 +20,7 @@ from .advanced_image_extension import AdvancedImageExtension
 from .universal_image_extension import UniversalImageExtension
 from .complete_gps_extension import CompleteGPSImageExtension
 from .specialized_modules_extension import SpecializedModulesExtension
+from .enhanced_master_extension import EnhancedMasterExtension
 
 __all__ = [
     "ImageExtensionBase",
@@ -35,6 +36,7 @@ __all__ = [
     "UniversalImageExtension",
     "CompleteGPSImageExtension",
     "SpecializedModulesExtension",
+    "EnhancedMasterExtension",
 ]
 
 # Version and compatibility
@@ -54,6 +56,7 @@ def _register_extensions():
         UniversalImageExtension,
         CompleteGPSImageExtension,
         SpecializedModulesExtension,
+        EnhancedMasterExtension,
     ]
 
     for ext_class in extensions:

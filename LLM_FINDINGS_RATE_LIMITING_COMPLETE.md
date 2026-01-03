@@ -11,28 +11,32 @@ Added specific rate limiting to the `/api/metadata/findings` endpoint to protect
 ### 🔴 Critical Protection Added
 
 **Rate Limiting Implementation** ✅
+
 - Applied `rateLimitExtraction()` middleware with custom limits
 - **10 requests per minute** (vs default 60 for regular API)
-- **100 requests per day** (vs default 1000 for regular API)  
+- **100 requests per day** (vs default 1000 for regular API)
 - **2 burst limit** (vs default 10 for regular API)
 - Protects Claude API costs and prevents quota exhaustion
 
 ### Code Changes
 
 **Import Added**:
+
 ```typescript
 import { rateLimitExtraction } from '../rateLimitMiddleware';
 ```
 
 **Route Registration Updated**:
+
 ```typescript
-app.post('/api/metadata/findings',
+app.post(
+  '/api/metadata/findings',
   rateLimitExtraction({
     enabled: true,
     endpoints: {
-      requestsPerMinute: 10,  // Stricter than default
-      requestsPerDay: 100,    // Conservative daily limit
-      burstLimit: 2,          // Very low burst protection
+      requestsPerMinute: 10, // Stricter than default
+      requestsPerDay: 100, // Conservative daily limit
+      burstLimit: 2, // Very low burst protection
     },
   }),
   async (req, res) => {
@@ -43,21 +47,23 @@ app.post('/api/metadata/findings',
 
 ### Why These Limits?
 
-| Limit Type | Value | Reasoning |
-|------------|-------|-----------|
-| **Per Minute** | 10 | Claude API calls are expensive (~$0.01-0.02 each). 10/min prevents runaway costs |
-| **Per Day** | 100 | Conservative daily limit for production safety |
-| **Burst** | 2 | Low burst prevents API abuse spikes |
+| Limit Type     | Value | Reasoning                                                                        |
+| -------------- | ----- | -------------------------------------------------------------------------------- |
+| **Per Minute** | 10    | Claude API calls are expensive (~$0.01-0.02 each). 10/min prevents runaway costs |
+| **Per Day**    | 100   | Conservative daily limit for production safety                                   |
+| **Burst**      | 2     | Low burst prevents API abuse spikes                                              |
 
 ### Rate Limit Behavior
 
 **When Limits Exceeded**:
+
 - HTTP 429 "Too Many Requests"
 - Includes `Retry-After` header
 - Shows upgrade messaging for tier limits
 - Decrements counters on rejection (prevents gaming)
 
 **Headers Added**:
+
 ```
 X-RateLimit-Limit: 10
 X-RateLimit-Remaining: 8
@@ -70,7 +76,7 @@ X-RateLimit-Tier: professional
 The endpoint now has **3 layers** of protection:
 
 1. **Global API Rate Limiting** (`rateLimitAPI()`) - Applied to all `/api/*` routes
-2. **LLM-Specific Rate Limiting** (`rateLimitExtraction()`) - Stricter limits for expensive operations  
+2. **LLM-Specific Rate Limiting** (`rateLimitExtraction()`) - Stricter limits for expensive operations
 3. **Input Validation** - Size limits, timeout protection, error handling
 
 ### Testing Checklist
@@ -115,5 +121,6 @@ The endpoint now has **3 layers** of protection:
   "upgrade_message": "Upgrade to Forensic for higher rate limits"
 }
 ```
+
 HTTP 429</content>
 <parameter name="filePath">/Users/pranay/Projects/metaextract/LLM_FINDINGS_RATE_LIMITING_COMPLETE.md

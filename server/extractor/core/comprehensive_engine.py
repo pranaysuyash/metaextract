@@ -50,8 +50,9 @@ class NewComprehensiveMetadataExtractor:
         from ..extractors.document_extractor import DocumentExtractor
         self.orchestrator.add_extractor(DocumentExtractor())
         
-        # TODO: Add scientific extractor
-        # self.orchestrator.add_extractor(ScientificExtractor())
+        # Add scientific extractor
+        from ..extractors.scientific_extractor import ScientificExtractor
+        self.orchestrator.add_extractor(ScientificExtractor())
     
     def extract_comprehensive_metadata(self, filepath: str, tier: str = "super") -> Dict[str, Any]:
         """

@@ -1,0 +1,197 @@
+{
+  "generated_at": "2026-01-03T17:08:13.520509",
+  "generator": "ScientificTestDatasetGenerator",
+  "version": "1.0.0",
+  "datasets": {
+    "dicom": {
+      "ct_scan": {
+        "type": "dicom",
+        "modality": "CT",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/dicom/ct_scan/ct_scan.dcm"
+        ],
+        "description": "Synthetic CT abdomen/pelvis scan with contrast",
+        "metadata": {
+          "patient": "DOE^JOHN",
+          "study_date": "20240101",
+          "modality": "CT",
+          "manufacturer": "SIEMENS",
+          "slice_thickness": 5.0,
+          "kvp": 120.0
+        }
+      },
+      "mri_scan": {
+        "type": "dicom",
+        "modality": "MR",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/dicom/mri_scan/mri_scan.dcm"
+        ],
+        "description": "Synthetic MRI brain T1-weighted scan",
+        "metadata": {
+          "patient": "SMITH^JANE",
+          "study_date": "20240102",
+          "modality": "MR",
+          "manufacturer": "GE MEDICAL SYSTEMS",
+          "magnetic_field": 3.0,
+          "repetition_time": 500.0,
+          "echo_time": 15.0
+        }
+      },
+      "ultrasound": {
+        "type": "dicom",
+        "modality": "US",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/dicom/ultrasound/ultrasound.dcm"
+        ],
+        "description": "Synthetic ultrasound abdomen/liver scan",
+        "metadata": {
+          "patient": "JOHNSON^BOB",
+          "study_date": "20240103",
+          "modality": "US",
+          "manufacturer": "PHILIPS",
+          "body_part": "ABDOMEN",
+          "scan_options": "B_MODE"
+        }
+      }
+    },
+    "fits": {
+      "hst_observation": {
+        "type": "fits",
+        "survey": "HST",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/fits/hst_observation/hst_observation.fits"
+        ],
+        "description": "Synthetic Hubble Space Telescope ACS F606W observation",
+        "metadata": {
+          "telescope": "HST",
+          "instrument": "ACS",
+          "filter": "F606W",
+          "exposure_time": 1200.0,
+          "target": "NGC 1234",
+          "ra": 150.0,
+          "dec": 2.0,
+          "date_obs": "2024-01-01T12:00:00"
+        }
+      },
+      "chandra_observation": {
+        "type": "fits",
+        "survey": "Chandra",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/fits/chandra_observation/chandra_observation.fits"
+        ],
+        "description": "Synthetic Chandra ACIS X-ray observation",
+        "metadata": {
+          "telescope": "CHANDRA",
+          "instrument": "ACIS",
+          "exposure_time": 50000.0,
+          "target": "CXOU J123456.7+123456",
+          "ra": 12.5,
+          "dec": -5.0,
+          "date_obs": "2024-01-02T06:00:00"
+        }
+      },
+      "sdss_spectrum": {
+        "type": "fits",
+        "survey": "SDSS",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/fits/sdss_spectrum/sdss_spectrum.fits"
+        ],
+        "description": "Synthetic SDSS spectroscopic observation of a galaxy",
+        "metadata": {
+          "telescope": "SDSS 2.5-M",
+          "instrument": "SDSS Spectrograph",
+          "plate_id": 1234,
+          "mjd": 56789,
+          "fiber_id": 567,
+          "ra": 180.0,
+          "dec": 0.0,
+          "object_type": "GALAXY",
+          "redshift": 0.05
+        }
+      }
+    },
+    "hdf5_netcdf": {
+      "climate_model": {
+        "type": "netcdf",
+        "domain": "climate",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/hdf5_netcdf/climate_model/climate_model.nc"
+        ],
+        "description": "Synthetic climate model output with temperature and precipitation",
+        "metadata": {
+          "title": "Synthetic Climate Model Output",
+          "institution": "Test Climate Research Institute",
+          "variables": [
+            "temperature",
+            "precipitation"
+          ],
+          "dimensions": {
+            "time": "unlimited",
+            "lat": 180,
+            "lon": 360
+          },
+          "time_range": "10 years monthly",
+          "conventions": "CF-1.8"
+        }
+      },
+      "weather_radar": {
+        "type": "hdf5",
+        "domain": "meteorological",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/hdf5_netcdf/weather_radar/weather_radar.h5"
+        ],
+        "description": "Synthetic weather radar data with reflectivity, velocity, and quality flags",
+        "metadata": {
+          "title": "Synthetic Weather Radar Data",
+          "institution": "Test Meteorological Service",
+          "radar_type": "Doppler Weather Radar",
+          "frequency": 2700000000.0,
+          "variables": [
+            "reflectivity",
+            "radial_velocity",
+            "spectrum_width",
+            "quality_flag"
+          ],
+          "dimensions": {
+            "time": 12,
+            "altitude": 50,
+            "latitude": 100,
+            "longitude": 100
+          }
+        }
+      },
+      "oceanographic": {
+        "type": "netcdf",
+        "domain": "oceanographic",
+        "files": [
+          "/Users/pranay/Projects/metaextract/tests/scientific-test-datasets/scientific-test-datasets/hdf5_netcdf/oceanographic/oceanographic.nc"
+        ],
+        "description": "Synthetic oceanographic model with temperature, salinity, and currents",
+        "metadata": {
+          "title": "Synthetic Oceanographic Model Output",
+          "institution": "Test Ocean Research Institute",
+          "variables": [
+            "temperature",
+            "salinity",
+            "u",
+            "v"
+          ],
+          "dimensions": {
+            "time": "unlimited",
+            "depth": 50,
+            "lat": 100,
+            "lon": 120
+          },
+          "time_range": "30 days 6-hourly",
+          "conventions": "CF-1.8"
+        }
+      }
+    }
+  },
+  "summary": {
+    "total_datasets": 9,
+    "dicom_datasets": 3,
+    "fits_datasets": 3,
+    "hdf5_netcdf_datasets": 3
+  }
+}
