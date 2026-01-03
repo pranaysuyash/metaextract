@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, Share2, CheckCircle2, Hash, Fingerprint, Search, Info, Clipboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -71,6 +71,10 @@ export default function ImagesMvpResults() {
     const [showPricingModal, setShowPricingModal] = useState(false);
     const navigate = useNavigate();
     const { toast } = useToast();
+    const purposePromptLogged = useRef(false);
+    const formatHintLogged = useRef(false);
+    const paywallLogged = useRef(false);
+    const resultsLogged = useRef(false);
 
     useEffect(() => {
         const stored = sessionStorage.getItem('currentMetadata');
@@ -80,8 +84,7 @@ export default function ImagesMvpResults() {
         }
         try {
             setMetadata(JSON.parse(stored));
-        } catch (e) {
-            console.error("Failed to parse metadata", e);
+        } catch {
             navigate('/images_mvp');
         }
     }, [navigate]);
@@ -97,6 +100,76 @@ export default function ImagesMvpResults() {
         if (value === "photography") return "photography";
         return "privacy";
     };
+
+    const getFormatHint = (mimeType: string, filename: string) => {
+        const normalizedMime = (mimeType || "").toLowerCase();
+        const filenameLower = (filename || "").toLowerCase();
+        if (normalizedMime.includes("heic") || normalizedMime.includes("heif")) {
+            return {
+                title: "HEIC photo detected",
+                body: "HEIC photos (common on iPhones) usually include rich metadata such as capture settings and device details.",
+                tone: "emerald",
+            };
+        }
+        if (normalizedMime.includes("webp")) {
+            return {
+                title: "WebP image detected",
+                body: "WebP metadata support varies by source. Some uploads may only include basic file details.",
+                tone: "amber",
+            };
+        }
+        if (normalizedMime.includes("png")) {
+            const screenshotHint = filenameLower.includes("screenshot") || filenameLower.includes("screen shot");
+            return {
+                title: screenshotHint ? "Screenshot detected" : "PNG image detected",
+                body: screenshotHint
+                    ? "Screenshots often contain minimal metadata. For richer data, try the original photo."
+                    : "PNG files (especially graphics) often contain minimal metadata compared to camera photos.",
+                tone: "amber",
+            };
+        }
+        if (normalizedMime.includes("jpeg") || normalizedMime.includes("jpg")) {
+            return {
+                title: "JPEG photo detected",
+                body: "JPEG photos usually include camera metadata such as device, timestamps, and settings.",
+                tone: "emerald",
+            };
+        }
+        return null;
+    };
+
+    const getSessionId = () => {
+        if (typeof window === "undefined") return null;
+        let sessionId = localStorage.getItem('metaextract_session_id');
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            localStorage.setItem('metaextract_session_id', sessionId);
+        }
+        return sessionId;
+    };
+
+    const trackEvent = useCallback((event: string, properties: Record<string, unknown> = {}) => {
+        if (typeof window === "undefined") return;
+        const payload = {
+            event,
+            properties,
+            sessionId: getSessionId(),
+        };
+        const body = JSON.stringify(payload);
+        if (navigator.sendBeacon) {
+            const blob = new Blob([body], { type: "application/json" });
+            navigator.sendBeacon("/api/images_mvp/analytics/track", blob);
+            return;
+        }
+        fetch("/api/images_mvp/analytics/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            keepalive: true,
+        }).catch(() => {
+            // Analytics is best-effort.
+        });
+    }, []);
 
     useEffect(() => {
         if (!metadata) return;
@@ -119,6 +192,57 @@ export default function ImagesMvpResults() {
         }
     }, [densityMode, activeTab]);
 
+    useEffect(() => {
+        if (!showPurposeModal || purposePromptLogged.current) return;
+        trackEvent("purpose_prompt_shown", { location: "results" });
+        purposePromptLogged.current = true;
+    }, [showPurposeModal, trackEvent]);
+
+    useEffect(() => {
+        if (!metadata) return;
+        trackEvent("tab_changed", {
+            tab: activeTab,
+            density: densityMode,
+            purpose: purpose || "unset",
+        });
+    }, [activeTab, densityMode, metadata, purpose, trackEvent]);
+
+    useEffect(() => {
+        if (!metadata || formatHintLogged.current) return;
+        const hint = getFormatHint(metadata.mime_type, metadata.filename);
+        if (!hint) return;
+        trackEvent("format_hint_shown", {
+            mime_type: metadata.mime_type,
+            hint: hint.title,
+        });
+        formatHintLogged.current = true;
+    }, [metadata, trackEvent]);
+
+    useEffect(() => {
+        if (!metadata || resultsLogged.current) return;
+        trackEvent("results_viewed", {
+            filetype: metadata.filetype,
+            mime_type: metadata.mime_type,
+        });
+        resultsLogged.current = true;
+    }, [metadata, trackEvent]);
+
+    useEffect(() => {
+        if (!metadata || paywallLogged.current) return;
+        const trialLimited = metadata._trial_limited || metadata.access?.trial_granted;
+        const summary = metadata.registry_summary?.image as
+            | { exif?: number; iptc?: number; xmp?: number }
+            | undefined;
+        const lockedTotal =
+            (summary?.exif ?? 0) + (summary?.iptc ?? 0) + (summary?.xmp ?? 0);
+        if (trialLimited && lockedTotal > 0) {
+            trackEvent("paywall_preview_shown", {
+                locked_total: lockedTotal,
+            });
+            paywallLogged.current = true;
+        }
+    }, [metadata, trackEvent]);
+
     if (!metadata) return null;
 
     const isTrialLimited = metadata._trial_limited || (metadata.access?.trial_granted);
@@ -128,6 +252,11 @@ export default function ImagesMvpResults() {
         if (!canExport) {
             return;
         }
+        trackEvent("export_json_downloaded", {
+            filetype: metadata.filetype,
+            mime_type: metadata.mime_type,
+            purpose: purpose || "unset",
+        });
         const payload = JSON.stringify(metadata, null, 2);
         const blob = new Blob([payload], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -137,6 +266,23 @@ export default function ImagesMvpResults() {
         link.download = `${baseName}.json`;
         link.click();
         URL.revokeObjectURL(url);
+    };
+
+    const handleDownloadSummary = () => {
+        const payload = buildSummaryLines();
+        const blob = new Blob([payload], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const baseName = metadata.filename?.replace(/\.[^/.]+$/, "") || "metadata";
+        link.href = url;
+        link.download = `${baseName}-summary.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+        trackEvent("export_summary_downloaded", {
+            filetype: metadata.filetype,
+            mime_type: metadata.mime_type,
+            purpose: purpose || "unset",
+        });
     };
 
 
@@ -233,42 +379,7 @@ export default function ImagesMvpResults() {
     const fieldsExtracted = metadata.fields_extracted ?? null;
     const processingMs = metadata.processing_ms ?? null;
     const software = (metadata.exif?.Software as string | undefined) || null;
-    const normalizedMime = (metadata.mime_type || "").toLowerCase();
-    const filenameLower = (metadata.filename || "").toLowerCase();
-    const formatHint = (() => {
-        if (normalizedMime.includes("heic") || normalizedMime.includes("heif")) {
-            return {
-                title: "HEIC photo detected",
-                body: "HEIC photos (common on iPhones) usually include rich metadata such as capture settings and device details.",
-                tone: "emerald",
-            };
-        }
-        if (normalizedMime.includes("webp")) {
-            return {
-                title: "WebP image detected",
-                body: "WebP metadata support varies by source. Some uploads may only include basic file details.",
-                tone: "amber",
-            };
-        }
-        if (normalizedMime.includes("png")) {
-            const screenshotHint = filenameLower.includes("screenshot") || filenameLower.includes("screen shot");
-            return {
-                title: screenshotHint ? "Screenshot detected" : "PNG image detected",
-                body: screenshotHint
-                    ? "Screenshots often contain minimal metadata. For richer data, try the original photo."
-                    : "PNG files (especially graphics) often contain minimal metadata compared to camera photos.",
-                tone: "amber",
-            };
-        }
-        if (normalizedMime.includes("jpeg") || normalizedMime.includes("jpg")) {
-            return {
-                title: "JPEG photo detected",
-                body: "JPEG photos usually include camera metadata such as device, timestamps, and settings.",
-                tone: "emerald",
-            };
-        }
-        return null;
-    })();
+    const formatHint = getFormatHint(metadata.mime_type, metadata.filename);
     const formatToneClass =
         formatHint?.tone === "emerald"
             ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-100"
@@ -506,7 +617,12 @@ export default function ImagesMvpResults() {
                 title: "Summary copied",
                 description: "Highlights copied to your clipboard.",
             });
-        } catch (error) {
+            trackEvent("summary_copied", {
+                filetype: metadata.filetype,
+                mime_type: metadata.mime_type,
+                purpose: purpose || "unset",
+            });
+        } catch {
             toast({
                 title: "Unable to copy",
                 description: "Clipboard access was blocked by your browser.",
@@ -518,9 +634,13 @@ export default function ImagesMvpResults() {
     const handlePurposeSelect = (value: PurposeValue) => {
         setPurpose(value);
         localStorage.setItem(PURPOSE_STORAGE_KEY, value);
+        trackEvent("purpose_selected", {
+            purpose: value,
+        });
         if (value === "explore") {
             setDensityMode("advanced");
             localStorage.setItem(DENSITY_STORAGE_KEY, "advanced");
+            trackEvent("density_changed", { mode: "advanced", source: "purpose_select" });
         }
         setActiveTab(mapPurposeToTab(value));
         setShowPurposeModal(false);
@@ -530,6 +650,7 @@ export default function ImagesMvpResults() {
         if (value !== "normal" && value !== "advanced") return;
         setDensityMode(value);
         localStorage.setItem(DENSITY_STORAGE_KEY, value);
+        trackEvent("density_changed", { mode: value });
     };
 
     const isAdvanced = densityMode === "advanced";
@@ -682,7 +803,10 @@ export default function ImagesMvpResults() {
                                 <Button
                                     variant="ghost"
                                     className="text-slate-400 hover:text-white"
-                                    onClick={() => setShowPurposeModal(false)}
+                                    onClick={() => {
+                                        trackEvent("purpose_skipped", { location: "results" });
+                                        setShowPurposeModal(false);
+                                    }}
                                 >
                                     Skip for now
                                 </Button>
@@ -719,6 +843,14 @@ export default function ImagesMvpResults() {
                             </Button>
                             <Button
                                 variant="outline"
+                                onClick={handleDownloadSummary}
+                                className="border-white/10 hover:bg-white/5"
+                            >
+                                <ArrowRight className="w-4 h-4 mr-2" />
+                                Download Summary
+                            </Button>
+                            <Button
+                                variant="outline"
                                 onClick={handleDownloadJson}
                                 disabled={!canExport}
                                 className="border-white/10 hover:bg-white/5"
@@ -730,7 +862,7 @@ export default function ImagesMvpResults() {
                     </div>
                     {!canExport && (
                         <p className="text-xs text-slate-500 mb-6">
-                            JSON export is available after the trial. Unlock credits to download the full report.
+                            JSON export is available after the trial. Summary export stays available.
                         </p>
                     )}
 
@@ -782,7 +914,10 @@ export default function ImagesMvpResults() {
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
-                                        onClick={() => setShowPricingModal(true)}
+                                        onClick={() => {
+                                            trackEvent("paywall_cta_clicked", { locked_total: lockedTotal });
+                                            setShowPricingModal(true);
+                                        }}
                                         className="bg-primary text-black hover:bg-primary/90"
                                     >
                                         Get credits
@@ -848,7 +983,10 @@ export default function ImagesMvpResults() {
                             <Button
                                 variant="ghost"
                                 className="text-slate-400 hover:text-white h-7 px-2"
-                                onClick={() => setShowPurposeModal(true)}
+                                onClick={() => {
+                                    trackEvent("purpose_prompt_opened", { location: "results" });
+                                    setShowPurposeModal(true);
+                                }}
                             >
                                 Change focus
                             </Button>

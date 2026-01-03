@@ -1,14 +1,15 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
 
-const currentFilePath = fileURLToPath(import.meta.url);
-const currentDirPath = dirname(currentFilePath);
+// Get the server directory - resolve from project root
+// During tests, use process.cwd() which is the project root
+// During runtime, the app will be at the project root
+const projectRoot = process.cwd();
+const currentDirPath = path.join(projectRoot, 'server');
 
 // Python executable: prefer project venv, fall back to system python3
 const venvPython = path.join(
@@ -25,7 +26,6 @@ export const pythonExecutable =
 
 export const PYTHON_SCRIPT_PATH = path.join(
   currentDirPath,
-  '..',
   'extractor',
   'comprehensive_metadata_engine.py'
 );
@@ -464,14 +464,7 @@ export async function extractMetadataWithPython(
   storeMetadata: boolean = false
 ): Promise<PythonMetadataResponse> {
   return new Promise((resolve, reject) => {
-    const pythonScript = path.join(
-      currentDirPath,
-      '..',
-      'extractor',
-      'comprehensive_metadata_engine.py'
-    );
-
-    const args = [pythonScript, filePath, '--tier', tier];
+    const args = [PYTHON_SCRIPT_PATH, filePath, '--tier', tier];
 
     if (includePerformanceMetrics) {
       args.push('--performance');

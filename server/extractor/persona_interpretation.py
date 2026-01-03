@@ -351,6 +351,22 @@ class PersonaInterpreter:
                     if key in self.metadata[category]:
                         return self.metadata[category][key]
 
+            # Try comprehensive engine structure (e.g., "exif.DateTimeOriginal")
+            # Remove the category prefix if present
+            base_field = field_name.split(":")[-1]  # Get last part after ":"
+
+            # Check in common nested structures
+            for section in ["exif", "gps", "iptc", "xmp"]:
+                if section in self.metadata and isinstance(self.metadata[section], dict):
+                    if base_field in self.metadata[section]:
+                        return self.metadata[section][base_field]
+
+            # Try the field name directly in common sections
+            for section in ["exif", "gps", "iptc", "xmp"]:
+                if section in self.metadata and isinstance(self.metadata[section], dict):
+                    if field_name in self.metadata[section]:
+                        return self.metadata[section][field_name]
+
         return None
 
     def _is_exif_intact(self) -> bool:

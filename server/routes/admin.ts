@@ -10,13 +10,11 @@
 
 import type { Express, Response } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// @ts-ignore
-const currentFilePath = fileURLToPath(import.meta.url);
-const currentDirPath = dirname(currentFilePath);
 import { spawn } from 'child_process';
+
+// Get the routes directory - compatible with both ESM and CommonJS
+const projectRoot = process.cwd();
+const currentDirPath = path.join(projectRoot, 'server', 'routes');
 import { storage } from '../storage/index';
 import { getRateLimitMetrics, resetRateLimit } from '../rateLimitMiddleware';
 

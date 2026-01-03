@@ -5,6 +5,8 @@ import {
   type ExtractionAnalytics,
   type CreditBalance,
   type CreditTransaction,
+  type InsertUiEvent,
+  type UiEvent,
   type OnboardingSession,
   type InsertOnboardingSession,
   type TrialUsage,
@@ -41,6 +43,12 @@ export interface IStorage {
   logExtractionUsage(data: InsertExtractionAnalytics): Promise<void>;
   getAnalyticsSummary(): Promise<AnalyticsSummary>;
   getRecentExtractions(limit?: number): Promise<ExtractionAnalytics[]>;
+  logUiEvent(data: InsertUiEvent): Promise<void>;
+  getUiEvents(params?: {
+    product?: string;
+    since?: Date;
+    limit?: number;
+  }): Promise<UiEvent[]>;
 
   // Credits system
   getOrCreateCreditBalance(

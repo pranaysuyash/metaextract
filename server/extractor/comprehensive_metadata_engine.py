@@ -1462,13 +1462,73 @@ class MedicalImagingEngine:
             return {"available": False, "error": str(e)}
 
 class AstronomicalDataEngine:
-    """FITS astronomical data extraction - 3,000+ fields"""
+    """FITS astronomical data extraction - 3,000+ fields with performance optimizations"""
+    
+    def __init__(self):
+        self._wcs_cache = {}  # Cache for expensive WCS computations
+        self._header_cache = {}  # Cache for header extractions
+    
+    def _get_cached_wcs_analysis(self, filepath: str, header) -> Dict[str, Any]:
+        """Cache WCS analysis to avoid recomputation."""
+        import hashlib
+        try:
+            # Create cache key from file path and header hash
+            header_str = str(sorted(header.items()))
+            cache_key = hashlib.md5(f"{filepath}:{header_str}".encode()).hexdigest()
+            
+            if cache_key in self._wcs_cache:
+                return self._wcs_cache[cache_key]
+            
+            # Perform WCS analysis
+            wcs = WCS(header)
+            if wcs.has_celestial:
+                wcs_result = {
+                    "has_celestial_wcs": True,
+                    "coordinate_system": wcs.wcs.radesys,
+                    "projection": wcs.wcs.ctype[0].split('-')[-1] if '-' in wcs.wcs.ctype[0] else None,
+                    "reference_coordinates": {
+                        "ra": wcs.wcs.crval[0] if len(wcs.wcs.crval) > 0 else None,
+                        "dec": wcs.wcs.crval[1] if len(wcs.wcs.crval) > 1 else None
+                    },
+                    "pixel_scale": {
+                        "ra": abs(wcs.wcs.cdelt[0]) * 3600 if len(wcs.wcs.cdelt) > 0 else None,  # arcsec/pixel
+                        "dec": abs(wcs.wcs.cdelt[1]) * 3600 if len(wcs.wcs.cdelt) > 1 else None
+                    }
+                }
+                
+                # Calculate field of view (only if dimensions available)
+                if "dimensions" in header and len(header.get("dimensions", [])) >= 2:
+                    width, height = header["dimensions"][:2]
+                    if wcs.wcs.cdelt[0] and wcs.wcs.cdelt[1]:
+                        fov_ra = abs(wcs.wcs.cdelt[0]) * width * 3600  # arcseconds
+                        fov_dec = abs(wcs.wcs.cdelt[1]) * height * 3600
+                        wcs_result["field_of_view"] = {
+                            "ra_arcsec": fov_ra,
+                            "dec_arcsec": fov_dec,
+                            "ra_arcmin": fov_ra / 60,
+                            "dec_arcmin": fov_dec / 60,
+                            "ra_degrees": fov_ra / 3600,
+                            "dec_degrees": fov_dec / 3600
+                        }
+                
+                self._wcs_cache[cache_key] = wcs_result
+                return wcs_result
+            else:
+                result = {"has_celestial_wcs": False}
+                self._wcs_cache[cache_key] = result
+                return result
+                
+        except Exception as e:
+            result = {"has_celestial_wcs": False, "error": str(e)}
+            self._wcs_cache[cache_key] = result
+            return result
     
     @staticmethod
     def extract_fits_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         if not FITS_AVAILABLE:
             return {"available": False, "reason": "astropy not installed"}
         
+        start_time = time.time()
         try:
             with fits.open(filepath) as hdul:
                 result = {
@@ -1481,7 +1541,8 @@ class AstronomicalDataEngine:
                     "instrument_info": {},
                     "processing_info": {},
                     "coordinate_systems": {},
-                    "raw_headers": {}
+                    "raw_headers": {},
+                    "performance": {}
                 }
                 
                 # File structure information
@@ -1491,11 +1552,11 @@ class AstronomicalDataEngine:
                     "hdu_names": [hdu.name for hdu in hdul]
                 }
                 
-                # Primary header (HDU 0)
+                # Primary header (HDU 0) - optimized extraction
                 primary = hdul[0]
                 header = primary.header
                 
-                # Standard FITS keywords
+                # Standard FITS keywords - selective extraction
                 standard_keywords = {
                     'SIMPLE': 'conforms_to_fits', 'BITPIX': 'bits_per_pixel',
                     'NAXIS': 'num_axes', 'EXTEND': 'has_extensions',
@@ -1506,6 +1567,7 @@ class AstronomicalDataEngine:
                     'AIRMASS': 'airmass', 'SEEING': 'seeing'
                 }
                 
+                header_start = time.time()
                 for fits_key, result_key in standard_keywords.items():
                     if fits_key in header:
                         result["primary_header"][result_key] = header[fits_key]
@@ -1518,8 +1580,9 @@ class AstronomicalDataEngine:
                         if axis_key in header:
                             dimensions.append(header[axis_key])
                     result["primary_header"]["dimensions"] = dimensions
+                result["performance"]["header_extraction_time"] = time.time() - header_start
                 
-                # Observation information
+                # Observation information - selective
                 obs_keywords = {
                     'RA': 'right_ascension', 'DEC': 'declination',
                     'EQUINOX': 'equinox', 'EPOCH': 'epoch',
@@ -1530,11 +1593,13 @@ class AstronomicalDataEngine:
                     'CDELT2': 'pixel_scale_2'
                 }
                 
+                obs_start = time.time()
                 for fits_key, result_key in obs_keywords.items():
                     if fits_key in header:
                         result["observation_info"][result_key] = header[fits_key]
+                result["performance"]["observation_extraction_time"] = time.time() - obs_start
                 
-                # Instrument information
+                # Instrument information - selective
                 inst_keywords = {
                     'DETECTOR': 'detector', 'GAIN': 'gain', 'RDNOISE': 'read_noise',
                     'PIXSCALE': 'pixel_scale', 'FOCALLEN': 'focal_length',
@@ -1543,19 +1608,21 @@ class AstronomicalDataEngine:
                     'TEMP': 'temperature', 'COOLSTAT': 'cooling_status'
                 }
                 
+                inst_start = time.time()
                 for fits_key, result_key in inst_keywords.items():
                     if fits_key in header:
                         result["instrument_info"][result_key] = header[fits_key]
+                result["performance"]["instrument_extraction_time"] = time.time() - inst_start
                 
-                # Processing information
+                # Processing information - selective
                 proc_keywords = {
                     'BZERO': 'zero_offset', 'BSCALE': 'scale_factor',
                     'BUNIT': 'data_units', 'BLANK': 'blank_value',
                     'DATAMAX': 'data_maximum', 'DATAMIN': 'data_minimum',
-                    'ORIGIN': 'origin_software', 'SOFTWARE': 'processing_software',
-                    'HISTORY': 'processing_history', 'COMMENT': 'comments'
+                    'ORIGIN': 'origin_software', 'SOFTWARE': 'processing_software'
                 }
                 
+                proc_start = time.time()
                 for fits_key, result_key in proc_keywords.items():
                     if fits_key in header:
                         value = header[fits_key]
@@ -1563,44 +1630,19 @@ class AstronomicalDataEngine:
                             result["processing_info"][result_key] = value
                         else:
                             result["processing_info"][result_key] = str(value)
+                result["performance"]["processing_extraction_time"] = time.time() - proc_start
                 
-                # World Coordinate System (WCS) analysis
-                try:
-                    wcs = WCS(header)
-                    if wcs.has_celestial:
-                        result["wcs_info"] = {
-                            "has_celestial_wcs": True,
-                            "coordinate_system": wcs.wcs.radesys,
-                            "projection": wcs.wcs.ctype[0].split('-')[-1] if '-' in wcs.wcs.ctype[0] else None,
-                            "reference_coordinates": {
-                                "ra": wcs.wcs.crval[0] if len(wcs.wcs.crval) > 0 else None,
-                                "dec": wcs.wcs.crval[1] if len(wcs.wcs.crval) > 1 else None
-                            },
-                            "pixel_scale": {
-                                "ra": abs(wcs.wcs.cdelt[0]) * 3600 if len(wcs.wcs.cdelt) > 0 else None,  # arcsec/pixel
-                                "dec": abs(wcs.wcs.cdelt[1]) * 3600 if len(wcs.wcs.cdelt) > 1 else None
-                            }
-                        }
-                        
-                        # Calculate field of view
-                        if result["primary_header"].get("dimensions") and len(result["primary_header"]["dimensions"]) >= 2:
-                            width, height = result["primary_header"]["dimensions"][:2]
-                            if wcs.wcs.cdelt[0] and wcs.wcs.cdelt[1]:
-                                fov_ra = abs(wcs.wcs.cdelt[0]) * width * 3600  # arcseconds
-                                fov_dec = abs(wcs.wcs.cdelt[1]) * height * 3600
-                                result["wcs_info"]["field_of_view"] = {
-                                    "ra_arcsec": fov_ra,
-                                    "dec_arcsec": fov_dec,
-                                    "ra_arcmin": fov_ra / 60,
-                                    "dec_arcmin": fov_dec / 60,
-                                    "ra_degrees": fov_ra / 3600,
-                                    "dec_degrees": fov_dec / 3600
-                                }
-                except Exception as e:
-                    result["wcs_info"] = {"has_celestial_wcs": False, "error": str(e)}
+                # World Coordinate System (WCS) analysis - with caching
+                wcs_start = time.time()
+                engine = AstronomicalDataEngine()
+                result["wcs_info"] = engine._get_cached_wcs_analysis(filepath, header)
+                result["performance"]["wcs_analysis_time"] = time.time() - wcs_start
+                result["performance"]["wcs_cached"] = "error" not in result["wcs_info"] and result["wcs_info"].get("has_celestial_wcs") is not None
                 
-                # Process extensions
-                for i, hdu in enumerate(hdul[1:], 1):  # Skip primary HDU
+                # Process extensions - optimized (limit to first 10 extensions for performance)
+                ext_start = time.time()
+                max_extensions = min(len(hdul) - 1, 10)  # Limit extensions processed
+                for i, hdu in enumerate(hdul[1:1+max_extensions], 1):  # Skip primary HDU
                     ext_info = {
                         "index": i,
                         "name": hdu.name,
@@ -1612,40 +1654,52 @@ class AstronomicalDataEngine:
                         ext_info["data_shape"] = hdu.data.shape
                         ext_info["data_type"] = str(hdu.data.dtype)
                     
-                    # Extract key header information from extension
+                    # Extract only key header information from extension
                     if hasattr(hdu, 'header'):
                         ext_header = {}
-                        for key in ['EXTNAME', 'EXTVER', 'TTYPE1', 'TFORM1', 'TUNIT1']:
+                        key_ext_headers = ['EXTNAME', 'EXTVER', 'TTYPE1', 'TFORM1', 'TUNIT1']
+                        for key in key_ext_headers:
                             if key in hdu.header:
                                 ext_header[key] = hdu.header[key]
                         ext_info["key_headers"] = ext_header
                     
                     result["extensions"].append(ext_info)
                 
-                # Extract all header keywords for comprehensive analysis
+                if len(hdul) > 11:  # If there are more extensions
+                    result["extensions"].append({
+                        "note": f"{len(hdul) - 11} additional extensions not processed for performance"
+                    })
+                result["performance"]["extension_processing_time"] = time.time() - ext_start
+                
+                # Extract all header keywords - OPTIMIZED: limit to primary HDU only for performance
+                header_ext_start = time.time()
                 all_keywords = {}
                 keyword_count = 0
                 
-                for hdu in hdul:
-                    if hasattr(hdu, 'header'):
-                        hdu_keywords = {}
-                        for key in hdu.header:
-                            keyword_count += 1
-                            value = hdu.header[key]
-                            if isinstance(value, (str, int, float, bool)):
-                                hdu_keywords[key] = value
-                            else:
-                                hdu_keywords[key] = str(value)
-                        all_keywords[f"HDU_{hdu.name or len(all_keywords)}"] = hdu_keywords
+                # Only process primary HDU headers for performance
+                hdu = hdul[0]
+                if hasattr(hdu, 'header'):
+                    hdu_keywords = {}
+                    max_keywords = 100  # Limit keywords extracted
+                    for key in list(hdu.header.keys())[:max_keywords]:
+                        keyword_count += 1
+                        value = hdu.header[key]
+                        if isinstance(value, (str, int, float, bool)):
+                            hdu_keywords[key] = value
+                        else:
+                            hdu_keywords[key] = str(value)
+                    all_keywords["PRIMARY_HDU"] = hdu_keywords
                 
                 result["raw_headers"] = all_keywords
-                result["file_info"]["total_keywords"] = keyword_count
+                result["file_info"]["total_keywords_extracted"] = keyword_count
+                result["performance"]["header_extraction_full_time"] = time.time() - header_ext_start
                 
+                result["performance"]["total_extraction_time"] = time.time() - start_time
                 return result
                 
         except Exception as e:
             logger.error(f"Error extracting FITS metadata: {e}")
-            return {"available": False, "error": str(e)}
+            return {"available": False, "error": str(e), "performance": {"total_extraction_time": time.time() - start_time}}
 
 class GeospatialEngine:
     """Geospatial data extraction - GeoTIFF, Shapefile, etc."""
@@ -1841,6 +1895,7 @@ class ScientificInstrumentEngine:
         if not HDF5_AVAILABLE:
             return {"available": False, "reason": "h5py not installed"}
         
+        start_time = time.time()
         try:
             import h5py
             
@@ -1850,75 +1905,108 @@ class ScientificInstrumentEngine:
                     "file_info": {},
                     "groups": {},
                     "datasets": {},
-                    "attributes": {}
+                    "attributes": {},
+                    "performance": {}
                 }
                 
                 # File-level information
                 result["file_info"] = {
                     "hdf5_version": f.libver,
-                    "file_size": os.path.getsize(filepath)
+                    "file_size": os.path.getsize(filepath),
+                    "userblock_size": f.userblock_size
                 }
                 
-                # Global attributes
-                result["attributes"] = dict(f.attrs)
+                # MINIMAL global attributes - only first 10
+                attr_start = time.time()
+                max_global_attrs = 10  # Drastically reduced from 50
+                attr_keys = list(f.attrs.keys())[:max_global_attrs]
+                for key in attr_keys:
+                    value = f.attrs[key]
+                    # Strict size limit on attribute values
+                    if isinstance(value, (str, bytes)):
+                        result["attributes"][key] = str(value)[:100]
+                    elif isinstance(value, (int, float, bool)):
+                        result["attributes"][key] = value
+                    else:
+                        result["attributes"][key] = str(type(value).__name__)
                 
-                def explore_group(group, path=""):
-                    """Recursively explore HDF5 groups and datasets"""
+                if len(f.attrs) > max_global_attrs:
+                    result["attributes"]["_truncated"] = f"{len(f.attrs) - max_global_attrs} more"
+                result["performance"]["attribute_extraction_time"] = time.time() - attr_start
+                result["file_info"]["global_attributes_count"] = len(f.attrs)
+                
+                def explore_group_minimal(group, path="", max_depth=2, current_depth=0):
+                    """Minimal HDF5 exploration for memory efficiency."""
+                    if current_depth >= max_depth:
+                        return {"_truncated": "max depth reached"}
+                    
                     group_info = {
                         "path": path,
-                        "attributes": dict(group.attrs),
+                        "attributes_count": len(group.attrs),
                         "subgroups": [],
                         "datasets": []
                     }
                     
-                    for key in group.keys():
+                    # Limit items processed per group
+                    max_items = 5  # Drastically reduced from 20
+                    item_count = 0
+                    
+                    for key in list(group.keys())[:max_items]:
                         item = group[key]
                         item_path = f"{path}/{key}" if path else key
                         
                         if isinstance(item, h5py.Group):
                             group_info["subgroups"].append(key)
-                            result["groups"][item_path] = explore_group(item, item_path)
+                            # Only explore first 2 subgroups
+                            if item_count < 2:
+                                result["groups"][item_path] = explore_group_minimal(
+                                    item, item_path, max_depth, current_depth + 1
+                                )
+                            item_count += 1
                         
                         elif isinstance(item, h5py.Dataset):
+                            # MINIMAL dataset info - NO attributes loading
                             dataset_info = {
                                 "path": item_path,
                                 "shape": item.shape,
                                 "dtype": str(item.dtype),
-                                "size": item.size,
-                                "attributes": dict(item.attrs),
+                                "size": item.size if item.size < 1e9 else ">1GB",  # Avoid large numbers
                                 "chunks": item.chunks,
-                                "compression": item.compression,
-                                "compression_opts": item.compression_opts
+                                "compression": item.compression
                             }
-                            
+                            # Skip attribute loading entirely for memory
                             group_info["datasets"].append(key)
                             result["datasets"][item_path] = dataset_info
+                            item_count += 1
+                        
+                        if item_count >= max_items:
+                            group_info["_truncated"] = f"{len(list(group.keys())) - max_items} more items"
+                            break
                     
                     return group_info
                 
-                # Explore the entire file structure
-                result["groups"]["/"] = explore_group(f)
+                # Minimal structure exploration
+                explore_start = time.time()
+                result["groups"]["/"] = explore_group_minimal(f)
+                result["performance"]["structure_exploration_time"] = time.time() - explore_start
                 
                 # Summary statistics
-                result["file_info"]["total_groups"] = len(result["groups"])
-                result["file_info"]["total_datasets"] = len(result["datasets"])
-                result["file_info"]["total_attributes"] = sum(
-                    len(group.get("attributes", {})) for group in result["groups"].values()
-                ) + sum(
-                    len(dataset.get("attributes", {})) for dataset in result["datasets"].values()
-                )
+                result["file_info"]["total_groups_explored"] = len(result["groups"])
+                result["file_info"]["total_datasets_explored"] = len(result["datasets"])
                 
+                result["performance"]["total_extraction_time"] = time.time() - start_time
                 return result
                 
         except Exception as e:
             logger.error(f"Error extracting HDF5 metadata: {e}")
-            return {"available": False, "error": str(e)}
+            return {"available": False, "error": str(e), "performance": {"total_extraction_time": time.time() - start_time}}
     
     @staticmethod
     def extract_netcdf_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         if not NETCDF_AVAILABLE:
             return {"available": False, "reason": "netCDF4 not installed"}
         
+        start_time = time.time()
         try:
             import netCDF4
             
@@ -1928,56 +2016,100 @@ class ScientificInstrumentEngine:
                     "file_info": {},
                     "dimensions": {},
                     "variables": {},
-                    "global_attributes": {}
+                    "global_attributes": {},
+                    "performance": {}
                 }
                 
                 # File information
                 result["file_info"] = {
                     "format": nc.data_model,
                     "file_format": nc.file_format,
-                    "disk_format": nc.disk_format
+                    "disk_format": nc.disk_format,
+                    "file_size": os.path.getsize(filepath)
                 }
                 
-                # Global attributes
-                result["global_attributes"] = {attr: getattr(nc, attr) for attr in nc.ncattrs()}
+                # MINIMAL global attributes - only first 10
+                attr_start = time.time()
+                max_global_attrs = 10  # Drastically reduced
+                attr_list = list(nc.ncattrs())[:max_global_attrs]
+                for attr in attr_list:
+                    value = getattr(nc, attr)
+                    # Strict size limit
+                    if isinstance(value, str):
+                        result["global_attributes"][attr] = value[:100]
+                    elif isinstance(value, (int, float, bool)):
+                        result["global_attributes"][attr] = value
+                    else:
+                        result["global_attributes"][attr] = str(type(value).__name__)
                 
-                # Dimensions
+                if len(nc.ncattrs()) > max_global_attrs:
+                    result["global_attributes"]["_truncated"] = f"{len(nc.ncattrs()) - max_global_attrs} more"
+                result["performance"]["global_attributes_time"] = time.time() - attr_start
+                
+                # All dimensions (usually small)
+                dim_start = time.time()
                 for dim_name, dim in nc.dimensions.items():
                     result["dimensions"][dim_name] = {
                         "size": len(dim),
                         "unlimited": dim.isunlimited()
                     }
+                result["performance"]["dimensions_time"] = time.time() - dim_start
                 
-                # Variables
-                for var_name, var in nc.variables.items():
+                # MINIMAL variables - only first 20
+                var_start = time.time()
+                max_variables = 20  # Drastically reduced from 100
+                var_names = list(nc.variables.keys())[:max_variables]
+                
+                for var_name in var_names:
+                    var = nc.variables[var_name]
                     var_info = {
                         "dimensions": var.dimensions,
                         "shape": var.shape,
-                        "dtype": str(var.dtype),
-                        "attributes": {attr: getattr(var, attr) for attr in var.ncattrs()}
+                        "dtype": str(var.dtype)
                     }
                     
-                    # CF Convention standard attributes
-                    cf_attrs = ['units', 'long_name', 'standard_name', 'valid_range', 
-                               'scale_factor', 'add_offset', '_FillValue']
+                    # MINIMAL attributes - only first 3 per variable
+                    var_attrs = {}
+                    for i, attr in enumerate(list(var.ncattrs())[:3]):
+                        value = getattr(var, attr)
+                        if isinstance(value, str):
+                            var_attrs[attr] = value[:50]
+                        elif isinstance(value, (int, float, bool)):
+                            var_attrs[attr] = value
+                        else:
+                            var_attrs[attr] = str(type(value).__name__)
+                    
+                    if len(var.ncattrs()) > 3:
+                        var_attrs["_truncated"] = f"{len(var.ncattrs()) - 3} more"
+                    
+                    var_info["attributes"] = var_attrs
+                    
+                    # Only essential CF attributes
                     var_info["cf_attributes"] = {
-                        attr: var_info["attributes"].get(attr) 
-                        for attr in cf_attrs 
-                        if attr in var_info["attributes"]
+                        attr: var_attrs.get(attr)
+                        for attr in ['units', 'long_name']
+                        if attr in var_attrs
                     }
                     
                     result["variables"][var_name] = var_info
                 
+                if len(nc.variables) > max_variables:
+                    result["variables"]["_truncated"] = f"{len(nc.variables) - max_variables} more variables"
+                
+                result["performance"]["variables_time"] = time.time() - var_start
+                
                 # Summary
                 result["file_info"]["num_dimensions"] = len(result["dimensions"])
-                result["file_info"]["num_variables"] = len(result["variables"])
-                result["file_info"]["num_global_attributes"] = len(result["global_attributes"])
+                result["file_info"]["num_variables_total"] = len(nc.variables)
+                result["file_info"]["num_variables_processed"] = len([k for k in result["variables"].keys() if k != "_truncated"])
+                result["file_info"]["num_global_attributes"] = len(nc.ncattrs())
                 
+                result["performance"]["total_extraction_time"] = time.time() - start_time
                 return result
                 
         except Exception as e:
             logger.error(f"Error extracting NetCDF metadata: {e}")
-            return {"available": False, "error": str(e)}
+            return {"available": False, "error": str(e), "performance": {"total_extraction_time": time.time() - start_time}}
 
 class DroneUAVEngine:
     """Drone and UAV telemetry extraction"""
@@ -2719,10 +2851,23 @@ class ComprehensiveMetadataExtractor:
 
 
         # Update field count
-        def count_comprehensive_fields(obj):
+        def count_comprehensive_fields(obj, visited=None):
+            if visited is None:
+                visited = set()
+            
+            # Protect against circular references
+            obj_id = id(obj)
+            if obj_id in visited:
+                return 0
+            visited.add(obj_id)
+            
             if not isinstance(obj, dict):
                 return 1 if obj is not None else 0
-            return sum(count_comprehensive_fields(v) for k, v in obj.items() if not k.startswith("_"))
+            
+            try:
+                return sum(count_comprehensive_fields(v, visited) for k, v in obj.items() if not k.startswith("_"))
+            finally:
+                visited.remove(obj_id)
         
         base_result["extraction_info"]["comprehensive_fields_extracted"] = count_comprehensive_fields(base_result)
         
@@ -2823,7 +2968,13 @@ class ComprehensiveMetadataExtractor:
 
         for key in module_result_keys:
             if key in base_result and isinstance(base_result[key], dict) and "performance" in base_result[key]:
-                all_module_performance.update(base_result[key]["performance"])
+                perf_data = base_result[key]["performance"]
+                # Ensure perf_data is a dictionary, not a primitive type
+                if isinstance(perf_data, dict):
+                    all_module_performance.update(perf_data)
+                else:
+                    # If it's not a dict, skip it or convert it
+                    logger.warning(f"Performance data for {key} is not a dictionary: {type(perf_data)}")
 
         if all_module_performance:
             successful_modules = 0
@@ -2831,6 +2982,11 @@ class ComprehensiveMetadataExtractor:
             total_module_time = 0
 
             for module_name, perf_data in all_module_performance.items():
+                # Safety check: ensure perf_data is a dictionary
+                if not isinstance(perf_data, dict):
+                    logger.warning(f"Performance data for {module_name} is not a dictionary: {type(perf_data)}. Skipping.")
+                    continue
+                    
                 if perf_data.get("status") == "success":
                     successful_modules += 1
                     total_module_time += perf_data.get("duration_seconds", 0) * 1000

@@ -7,6 +7,8 @@ import logging
 import time
 from typing import Dict, Any, List
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 from .base import ImageExtensionBase, ImageExtractionResult, safe_extract_image_field, get_image_file_info
 
@@ -48,6 +50,78 @@ class EnhancedMasterExtension(ImageExtensionBase):
         from . import get_global_registry
         self.registry = get_global_registry()
 
+        # Smart caching system to avoid redundant operations
+        self._cache_lock = threading.Lock()
+        self._image_cache = {}  # Cache for basic image data
+        self._exif_cache = {}  # Cache for EXIF data
+        self._cache_hits = 0
+        self._cache_misses = 0
+
+    def _get_cached_image_data(self, filepath: str):
+        """Get cached basic image data or extract and cache it"""
+        with self._cache_lock:
+            if filepath in self._image_cache:
+                self._cache_hits += 1
+                return self._image_cache[filepath]
+
+            self._cache_misses += 1
+
+            # Extract basic image data
+            try:
+                from PIL import Image
+                with Image.open(filepath) as img:
+                    image_data = {
+                        "format": img.format,
+                        "mode": img.mode,
+                        "width": img.width,
+                        "height": img.height,
+                        "megapixels": round((img.width * img.height) / 1_000_000, 2),
+                        "has_icc": hasattr(img, 'info') and 'icc_profile' in img.info,
+                        "has_exif": hasattr(img, '_getexif'),
+                        "size_bytes": len(open(filepath, 'rb').read())
+                    }
+
+                    self._image_cache[filepath] = image_data
+                    return image_data
+            except Exception as e:
+                logger.warning(f"Failed to cache image data: {e}")
+                return None
+
+    def _get_cached_exif_data(self, filepath: str):
+        """Get cached EXIF data or extract and cache it"""
+        with self._cache_lock:
+            if filepath in self._exif_cache:
+                self._cache_hits += 1
+                return self._exif_cache[filepath]
+
+            self._cache_misses += 1
+
+            # Extract EXIF data
+            try:
+                from PIL import Image
+                with Image.open(filepath) as img:
+                    exif = img._getexif()
+                    if exif:
+                        from PIL.ExifTags import TAGS
+                        exif_dict = {}
+                        for tag_id, value in exif.items():
+                            tag = TAGS.get(tag_id, tag_id)
+                            if isinstance(value, bytes):
+                                try:
+                                    value = value.decode('utf-8', errors='ignore')
+                                except:
+                                    value = str(value)[:100]
+                            exif_dict[str(tag)] = value
+
+                        self._exif_cache[filepath] = exif_dict
+                        return exif_dict
+                    else:
+                        self._exif_cache[filepath] = {}
+                        return {}
+            except Exception as e:
+                logger.warning(f"Failed to cache EXIF data: {e}")
+                return {}
+
     def get_field_definitions(self) -> List[str]:
         """Get list of all enhanced master field names"""
         return [
@@ -86,7 +160,7 @@ class EnhancedMasterExtension(ImageExtensionBase):
 
     def extract_specialty_metadata(self, filepath: str) -> Dict[str, Any]:
         """
-        Extract metadata using enhanced master capabilities.
+        Extract metadata using enhanced master capabilities with parallel execution.
 
         Args:
             filepath: Path to image file
@@ -102,42 +176,103 @@ class EnhancedMasterExtension(ImageExtensionBase):
             if not self.validate_image_file(filepath):
                 result.add_warning("File may not be a valid image format")
 
-            # Step 1: Use best GPS extraction (complete_gps)
-            gps_result = self._extract_with_extension("complete_gps", filepath)
-            if gps_result and gps_result.get("success"):
-                result.metadata.update(gps_result.get("metadata", {}))
-                logger.info("Enhanced master: Used complete GPS extraction")
+            # Step 1: Use cached data for basic image info (FAST)
+            cached_image = self._get_cached_image_data(filepath)
+            if cached_image:
+                result.add_metadata("format", cached_image.get("format"))
+                result.add_metadata("mode", cached_image.get("mode"))
+                result.add_metadata("width", cached_image.get("width"))
+                result.add_metadata("height", cached_image.get("height"))
+                result.add_metadata("megapixels", cached_image.get("megapixels"))
 
-            # Step 2: Add comprehensive EXIF data
-            self._extract_comprehensive_exif_enhanced(filepath, result)
+            # Step 2: Use cached EXIF data (FAST)
+            cached_exif = self._get_cached_exif_data(filepath)
+            if cached_exif:
+                result.add_metadata("exif", cached_exif)
 
-            # Step 3: Add all specialized modules
-            specialized_result = self._extract_with_extension("specialized_modules", filepath)
-            if specialized_result and specialized_result.get("success"):
-                # Add all specialized module data
-                for key, value in specialized_result.get("metadata", {}).items():
-                    if key not in result.metadata:  # Don't override GPS data
-                        result.add_metadata(key, value)
-                logger.info("Enhanced master: Added all specialized modules")
+            # Step 3: Parallel execution of independent extractions
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {}
 
-            # Step 4: Add advanced analysis categories
-            self._add_advanced_analysis(filepath, result)
+                # Submit GPS extraction (high priority)
+                gps_future = executor.submit(self._extract_with_extension, "complete_gps", filepath)
+                futures['gps'] = gps_future
 
-            # Step 5: Add perceptual hashing
-            self._add_perceptual_hashes(filepath, result)
+                # Submit specialized modules (can run in parallel)
+                specialized_future = executor.submit(self._extract_with_extension, "specialized_modules", filepath)
+                futures['specialized'] = specialized_future
 
-            # Step 6: Add advanced EXIF lens data
-            self._add_advanced_exif_lens_data(filepath, result)
+                # Submit advanced analysis
+                analysis_future = executor.submit(self._add_advanced_analysis_fast, filepath, result)
+                futures['analysis'] = analysis_future
+
+                # Submit perceptual hashing
+                hash_future = executor.submit(self._add_perceptual_hashes_fast, filepath, result)
+                futures['hashing'] = hash_future
+
+                # Submit AI/ML scene recognition and quality assessment
+                ai_future = executor.submit(self._add_ai_ml_analysis, filepath, result)
+                futures['ai_ml'] = ai_future
+
+                # Collect results as they complete
+                for future_name, future in futures.items():
+                    try:
+                        if future_name == 'gps':
+                            gps_result = future.result(timeout=5)
+                            if gps_result and gps_result.get("success"):
+                                gps_metadata = gps_result.get("metadata", {})
+                                for key, value in gps_metadata.items():
+                                    if key != 'exif':  # Don't duplicate cached EXIF
+                                        result.add_metadata(key, value)
+                                logger.info("Enhanced master: Parallel GPS extraction complete")
+
+                        elif future_name == 'specialized':
+                            specialized_result = future.result(timeout=5)
+                            if specialized_result and specialized_result.get("success"):
+                                specialized_metadata = specialized_result.get("metadata", {})
+                                for key, value in specialized_metadata.items():
+                                    if key not in result.metadata:  # Don't override GPS data
+                                        result.add_metadata(key, value)
+                                logger.info("Enhanced master: Parallel specialized modules complete")
+
+                        elif future_name == 'analysis':
+                            analysis_result = future.result(timeout=3)
+                            # Analysis was added directly to result
+
+                        elif future_name == 'hashing':
+                            hashing_result = future.result(timeout=3)
+                            # Hashing was added directly to result
+
+                        elif future_name == 'ai_ml':
+                            ai_result = future.result(timeout=3)
+                            # AI/ML analysis was added directly to result
+                            logger.info("Enhanced master: Parallel AI/ML analysis complete")
+                            # Hashing was added directly to result
+
+                    except Exception as e:
+                        logger.warning(f"Parallel extraction failed for {future_name}: {e}")
+
+            # Step 4: Add advanced EXIF lens data using cached EXIF (FAST)
+            if cached_exif:
+                self._add_advanced_exif_lens_data_fast(cached_exif, result)
 
             # Step 5: Calculate performance metrics
             extraction_time = time.time() - start_time
+
+            # Cache statistics
+            cache_total = self._cache_hits + self._cache_misses
+            cache_hit_rate = (self._cache_hits / cache_total * 100) if cache_total > 0 else 0
+
             performance_data = {
                 "extraction_time_seconds": round(extraction_time, 4),
                 "fields_extracted": len(result.metadata),
                 "field_coverage_percent": round((len(result.metadata) / self.FIELD_COUNT) * 100, 1),
-                "extraction_method": "enhanced_master",
-                "extensions_used": ["complete_gps", "specialized_modules", "advanced_analysis"],
-                "performance_score": self._calculate_performance_score(result.metadata, extraction_time)
+                "extraction_method": "enhanced_master_parallel",
+                "extensions_used": ["complete_gps", "specialized_modules", "advanced_analysis", "perceptual_hashing"],
+                "performance_score": self._calculate_performance_score(result.metadata, extraction_time),
+                "cache_hit_rate": round(cache_hit_rate, 1),
+                "cache_hits": self._cache_hits,
+                "cache_misses": self._cache_misses
             }
             result.add_metadata("extraction_performance", performance_data)
 
@@ -148,6 +283,142 @@ class EnhancedMasterExtension(ImageExtensionBase):
         except Exception as e:
             logger.error(f"Enhanced master extraction failed for {filepath}: {e}")
             return result.to_error_result(f"Extraction failed: {str(e)[:200]}")
+
+    def _add_advanced_analysis_fast(self, filepath: str, result: ImageExtractionResult):
+        """Fast version of advanced analysis using cached data"""
+        try:
+            # Use cached image data if available
+            cached_image = self._get_cached_image_data(filepath)
+            if not cached_image:
+                return
+
+            # Image quality analysis
+            quality_analysis = {
+                "resolution_quality": self._assess_resolution_quality(cached_image.get("width", 0), cached_image.get("height", 0)),
+                "file_size_optimized": self._check_file_size_optimization_fast(cached_image.get("size_bytes", 0), cached_image.get("width", 0) * cached_image.get("height", 0)),
+                "color_depth": self._get_color_depth_fast(cached_image.get("mode", "unknown")),
+                "compression_estimated": self._estimate_compression_fast(cached_image.get("format", "unknown"))
+            }
+            result.add_metadata("image_quality_analysis", quality_analysis)
+
+            # Data completeness score
+            has_gps = 'gps' in result.metadata and result.metadata['gps'].get('latitude')
+            has_exif = 'exif' in result.metadata
+            has_camera = 'exif' in result.metadata and any(key in result.metadata['exif'] for key in ['Make', 'Model', 'make', 'model'])
+
+            completeness = {
+                "gps_data_complete": bool(has_gps),
+                "exif_data_complete": bool(has_exif),
+                "camera_data_complete": bool(has_camera),
+                "overall_completeness": round((sum([bool(has_gps), bool(has_exif), bool(has_camera)]) / 3) * 100, 1)
+            }
+            result.add_metadata("data_completeness", completeness)
+
+        except Exception as e:
+            result.add_warning(f"Fast advanced analysis failed: {str(e)[:100]}")
+
+    def _add_perceptual_hashes_fast(self, filepath: str, result: ImageExtractionResult):
+        """Ultra-fast version of perceptual hashing - only 1 hash"""
+        try:
+            from PIL import Image
+            import imagehash
+
+            with Image.open(filepath) as img:
+                # Convert to RGB if necessary
+                if img.mode != 'RGB':
+                    img_rgb = img.convert('RGB')
+                else:
+                    img_rgb = img
+
+                # Calculate only perceptual hash (best balance of speed/accuracy)
+                try:
+                    phash = imagehash.phash(img_rgb)
+
+                    perceptual_hashes = {
+                        "perceptual_hash": str(phash),
+                        "hashing_success": True,
+                        "hash_count": 1,
+                        "ultra_fast_mode": True
+                    }
+
+                    result.add_metadata("perceptual_hashes", perceptual_hashes)
+
+                except Exception as e:
+                    result.add_warning(f"Ultra-fast perceptual hashing failed: {str(e)[:100]}")
+
+        except ImportError:
+            # Skip hashing if library not available
+            pass
+        except Exception as e:
+            # Skip hashing on error to avoid breaking extraction
+            pass
+
+    def _add_advanced_exif_lens_data_fast(self, cached_exif: Dict[str, Any], result: ImageExtractionResult):
+        """Fast version using cached EXIF data"""
+        try:
+            lens_data = {}
+            shooting_data = {}
+            camera_data = {}
+
+            # Key EXIF tags for lens/camera data
+            lens_tags = {
+                'LensModel': 'lens_model',
+                'LensSerialNumber': 'lens_serial_number',
+                'FocalLengthIn35mmFilm': 'focal_length_35mm_format',
+                'FocalLength': 'focal_length',
+                'FNumber': 'fnumber',
+            }
+
+            camera_tags = {
+                'Make': 'make',
+                'Model': 'model',
+                'Software': 'software',
+            }
+
+            # Extract from cached EXIF
+            for exif_key, value in cached_exif.items():
+                if exif_key in lens_tags:
+                    lens_data[lens_tags[exif_key]] = value
+                elif exif_key in camera_tags:
+                    camera_data[camera_tags[exif_key]] = value
+
+            # Add categorized data
+            if lens_data:
+                result.add_metadata("lens_data", lens_data)
+            if camera_data:
+                result.add_metadata("camera_data", camera_data)
+
+        except Exception as e:
+            result.add_warning(f"Fast EXIF lens data extraction failed: {str(e)[:100]}")
+
+    def _check_file_size_optimization_fast(self, file_size: int, pixels: int) -> bool:
+        """Fast file size optimization check"""
+        if pixels == 0:
+            return False
+        bytes_per_pixel = file_size / pixels
+        return 0.5 <= bytes_per_pixel <= 5.0
+
+    def _get_color_depth_fast(self, mode: str) -> str:
+        """Fast color depth detection"""
+        mode_mapping = {
+            'RGB': '24-bit',
+            'RGBA': '32-bit',
+            'CMYK': '32-bit',
+            'L': '8-bit grayscale',
+            'LA': '16-bit grayscale',
+            'P': '8-bit palette'
+        }
+        return mode_mapping.get(mode, 'unknown')
+
+    def _estimate_compression_fast(self, format_type: str) -> str:
+        """Fast compression estimation"""
+        format_mapping = {
+            'JPEG': 'lossy JPEG',
+            'PNG': 'lossless PNG',
+            'GIF': 'lossless GIF',
+            'WEBP': 'modern WEBP'
+        }
+        return format_mapping.get(format_type, 'unknown')
 
     def _extract_with_extension(self, extension_name: str, filepath: str) -> Dict[str, Any]:
         """Helper to extract using a specific extension"""

@@ -13,29 +13,31 @@ describe('Rate Limiting - Race Condition Prevention', () => {
    * Test: Concurrent requests should not bypass rate limit
    *
    * Scenario:
-   * - Rate limit: 10 requests/minute
-   * - Send 15 concurrent requests at the same millisecond
-   * - Expected: 10 pass, 5 rejected
-   * - Not allowed: All 15 pass (race condition)
+   * - Rate limit: 3 requests/minute for free tier
+   * - Send 10 concurrent requests at the same millisecond
+   * - Expected: 3 pass, 7 rejected
+   * - Not allowed: All 10 pass (race condition)
    */
-  it('should prevent 15 concurrent requests from bypassing limit of 10', async () => {
+  it('should prevent 10 concurrent requests from bypassing limit of 3', async () => {
     const limiter = createRateLimiter({ windowMs: 60000 });
     let acceptCount = 0;
     let rejectCount = 0;
 
     // Mock request and response
     const mockReq = {
-      user: { id: 'test_user', tier: 'free' },
+      user: { id: 'test_user_' + Date.now(), tier: 'free' },
       ip: '127.0.0.1',
     } as any as Request;
 
-    // Fire 15 concurrent requests
-    const promises = Array.from({ length: 15 }, (_, i) => {
+    // Fire 10 concurrent requests
+    const promises = Array.from({ length: 10 }, (_, i) => {
       return new Promise<void>((resolve) => {
+        let wasRejected = false;
         const mockRes = {
           status: function (code: number) {
             if (code === 429) {
               rejectCount++;
+              wasRejected = true;
             }
             return {
               json: () => resolve(),
@@ -46,27 +48,23 @@ describe('Rate Limiting - Race Condition Prevention', () => {
           end: () => {},
         } as any as Response;
 
-        let nextCalled = false;
         const next = () => {
-          nextCalled = true;
+          if (!wasRejected) {
+            acceptCount++;
+          }
           resolve();
         };
 
         limiter(mockReq, mockRes, next);
-
-        // If next was called, request was accepted
-        if (nextCalled) {
-          acceptCount++;
-        }
       });
     });
 
     await Promise.all(promises);
 
-    // Should allow exactly 10 (limit), reject 5
-    expect(acceptCount + rejectCount).toBe(15);
-    expect(acceptCount).toBeLessThanOrEqual(10);
-    expect(rejectCount).toBeGreaterThanOrEqual(5);
+    // Should allow exactly 3 (limit), reject 7
+    expect(acceptCount + rejectCount).toBe(10);
+    expect(acceptCount).toBe(3);
+    expect(rejectCount).toBe(7);
   });
 
   /**
@@ -84,15 +82,20 @@ describe('Rate Limiting - Race Condition Prevention', () => {
     let rejectCount = 0;
 
     const mockReq = {
-      user: { id: 'atomic_test', tier: 'free' },
+      user: { id: 'atomic_test_' + Date.now(), tier: 'free' },
       ip: '127.0.0.1',
     } as any as Request;
 
-    // Send exactly 5 requests (matching limit)
-    for (let i = 0; i < 5; i++) {
+    // Free tier has 3 requests/minute
+    // Send exactly 3 requests (matching limit)
+    for (let i = 0; i < 3; i++) {
+      let wasRejected = false;
       const mockRes = {
         status: (code: number) => {
-          if (code === 429) rejectCount++;
+          if (code === 429) {
+            rejectCount++;
+            wasRejected = true;
+          }
           return { json: () => {} };
         },
         setHeader: () => {},
@@ -100,21 +103,21 @@ describe('Rate Limiting - Race Condition Prevention', () => {
         end: () => {},
       } as any as Response;
 
-      let nextCalled = false;
       limiter(mockReq, mockRes, () => {
-        nextCalled = true;
+        if (!wasRejected) {
+          acceptCount++;
+        }
       });
-
-      if (nextCalled) acceptCount++;
     }
 
-    expect(acceptCount).toBe(5);
+    expect(acceptCount).toBe(3);
     expect(rejectCount).toBe(0);
 
-    // 6th request should be rejected
+    // 4th request should be rejected
+    let rejected = false;
     const mockRes = {
       status: (code: number) => {
-        expect(code).toBe(429);
+        if (code === 429) rejected = true;
         return { json: () => {} };
       },
       setHeader: () => {},
@@ -124,15 +127,17 @@ describe('Rate Limiting - Race Condition Prevention', () => {
 
     limiter(mockReq, mockRes, () => {
       // Next should not be called (request rejected)
-      fail('6th request should be rejected');
+      fail('4th request should be rejected');
     });
+
+    expect(rejected).toBe(true);
   });
 
   /**
    * Test: Failed request decrement works correctly
    *
    * Scenario:
-   * - Rate limit: 10 requests/minute
+   * - Rate limit: 3 requests/minute for free tier
    * - With skipFailedRequests: true
    * - Send 5 requests, 3 fail
    * - Expected: Only 2 count against limit
@@ -144,34 +149,45 @@ describe('Rate Limiting - Race Condition Prevention', () => {
     });
 
     const mockReq = {
-      user: { id: 'failed_test', tier: 'free' },
+      user: { id: 'failed_test_' + Date.now(), tier: 'free' },
       ip: '127.0.0.1',
     } as any as Request;
 
     // Simulate 5 requests, 3 fail (400+)
     for (let i = 0; i < 5; i++) {
-      let statusCode = 200;
-      if (i < 3) statusCode = 400; // First 3 fail
+      const isFailed = i < 3;
+      const statusCode = isFailed ? 400 : 200;
 
       const mockRes = {
         status: (code: number) => ({ json: () => {} }),
         setHeader: () => {},
         statusCode,
         end: function (...args: any[]) {
-          // Called by skipFailedRequests logic
+          // Simulating response end to trigger skipFailedRequests logic
+          // The middleware wraps res.end and decrements count if status >= 400
         },
       } as any as Response;
 
-      limiter(mockReq, mockRes, () => {});
+      limiter(mockReq, mockRes, () => {
+        // Simulate end being called (which happens after next() in real Express)
+        if (isFailed) {
+          (mockRes.end as any)();
+        }
+      });
     }
 
     // After 5 requests (3 failed, 2 succeeded), counter should be at 2
-    // So next 8 requests should succeed, 9th should fail
+    // Limit is 3, so next 1 request should succeed, 2nd should fail
     let acceptCount = 0;
-    for (let i = 0; i < 10; i++) {
+    let rejectCount = 0;
+    for (let i = 0; i < 3; i++) {
+      let wasRejected = false;
       const mockRes = {
         status: (code: number) => {
-          if (code !== 429) acceptCount++;
+          if (code === 429) {
+            rejectCount++;
+            wasRejected = true;
+          }
           return { json: () => {} };
         },
         setHeader: () => {},
@@ -180,11 +196,14 @@ describe('Rate Limiting - Race Condition Prevention', () => {
       } as any as Response;
 
       limiter(mockReq, mockRes, () => {
-        acceptCount++;
+        if (!wasRejected) {
+          acceptCount++;
+        }
       });
     }
 
-    // 8 should pass (10 - 2 already used), 2 should fail
-    expect(acceptCount).toBe(8);
+    // 1 should pass (3 - 2 already used), 2 should fail
+    expect(acceptCount).toBe(1);
+    expect(rejectCount).toBe(2);
   });
 });

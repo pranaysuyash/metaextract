@@ -1,0 +1,55 @@
+{
+  "format_type": "dicom",
+  "summary": {
+    "total_datasets": 3,
+    "successful_extractions": 3,
+    "failed_extractions": 0,
+    "success_rate": 100.0,
+    "average_extraction_time": 0.004061301549275716,
+    "total_fields_extracted": 196
+  },
+  "performance_metrics": {
+    "success_rate": 100.0,
+    "fastest_extraction": 0.003064870834350586,
+    "slowest_extraction": 0.005519866943359375,
+    "median_extraction_time": 0.0035991668701171875
+  },
+  "results": [
+    {
+      "dataset_name": "type",
+      "success": true,
+      "extraction_time": 0.005519866943359375,
+      "fields_extracted": 65,
+      "error_message": null,
+      "validation_details": {
+        "modality": "unknown",
+        "manufacturer": "unknown",
+        "has_valid_dicom": true
+      }
+    },
+    {
+      "dataset_name": "type",
+      "success": true,
+      "extraction_time": 0.003064870834350586,
+      "fields_extracted": 73,
+      "error_message": null,
+      "validation_details": {
+        "modality": "unknown",
+        "manufacturer": "unknown",
+        "has_valid_dicom": true
+      }
+    },
+    {
+      "dataset_name": "type",
+      "success": true,
+      "extraction_time": 0.0035991668701171875,
+      "fields_extracted": 58,
+      "error_message": null,
+      "validation_details": {
+        "modality": "unknown",
+        "manufacturer": "unknown",
+        "has_valid_dicom": true
+      }
+    }
+  ]
+}

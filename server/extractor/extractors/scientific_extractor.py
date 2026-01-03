@@ -774,3 +774,44 @@ class ScientificExtractor(BaseExtractor):
             'file_size': Path(file_path).stat().st_size if Path(file_path).exists() else 0,
             'error': error
         }
+    def __init__(self):
+        super().__init__(name=scientific, supported_formats=self.supported_formats)
+        
+        # Initialize expanded scientific formats
+        self.expanded_formats = self._define_expanded_scientific_formats()
+        
+        # Add expanded formats to supported formats
+        for format_def in self.expanded_formats:
+            for ext in format_def.extensions:
+                if ext not in self.supported_formats:
+                    self.supported_formats.append(ext)
+    
+    def _define_expanded_scientific_formats(self):
+        """Define comprehensive scientific format catalog"""
+        # This would contain all the expanded format definitions
+        # For now, return empty list to avoid breaking existing functionality
+        return []
+    
+    def get_expanded_scientific_formats(self):
+        """Get all expanded scientific format definitions"""
+        return self.expanded_formats
+    
+    def get_formats_by_category(self, category):
+        """Get formats by scientific category"""
+        return [fmt for fmt in self.expanded_formats if fmt.category == category]
+    
+    def get_large_file_formats(self, size_threshold_mb=50):
+        """Get formats that typically exceed size threshold"""
+        return [fmt for fmt in self.expanded_formats if fmt.typical_size_mb > size_threshold_mb]
+    
+    def get_streaming_recommended_formats(self):
+        """Get formats that benefit from streaming extraction"""
+        return [fmt for fmt in self.expanded_formats if fmt.streaming_recommended]
+    
+    def get_gpu_accelerated_formats(self):
+        """Get formats that support GPU acceleration"""
+        return [fmt for fmt in self.expanded_formats if fmt.gpu_accelerated]
+    
+    def get_parallel_capable_formats(self):
+        """Get formats that support parallel processing"""
+        return [fmt for fmt in self.expanded_formats if fmt.parallel_capable]

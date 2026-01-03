@@ -848,8 +848,7 @@ def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
                 except Exception:
                     pass
 
-            # Extract general metadata
-            # Extract general metadata
+                # Extract general metadata
                 info = audio_file.info
                 if hasattr(info, 'length'):
                     result["duration"] = info.length
@@ -870,12 +869,6 @@ def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
                 )
                 result["fields_extracted"] = total_fields
 
-        except ImportError:
-            result["error"] = "Mutagen library not available"
-            return result
-    except Exception as e:
-        result["error"] = f"ID3 frames extraction failed: {str(e)[:200]}"
-        return result
 
     return result
 

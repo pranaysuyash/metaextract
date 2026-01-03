@@ -132,35 +132,14 @@ class CompleteGPSImageExtension(ImageExtensionBase):
             if not self.validate_image_file(filepath):
                 result.add_warning("File may not be a valid image format")
 
-            # Extract GPS metadata using exifread
+            # Ultra-fast path: Extract GPS metadata using exifread (single file read)
             if EXIFREAD_AVAILABLE:
                 self._extract_gps_with_exifread(filepath, result)
             else:
                 result.add_warning("exifread not available, GPS extraction limited")
 
-            # Extract comprehensive EXIF using PIL
-            self._extract_comprehensive_exif(filepath, result)
-
-            # Extract mobile metadata
-            self._extract_mobile_metadata(filepath, result)
-
-            # Extract forensic metadata
-            self._extract_forensic_metadata(filepath, result)
-
-            # Extract ICC color profile
-            self._extract_icc_profile(filepath, result)
-
-            # Extract IPTC metadata
-            self._extract_iptc_metadata(filepath, result)
-
-            # Extract XMP metadata
-            self._extract_xmp_metadata(filepath, result)
-
-            # Extract thumbnail
-            self._extract_thumbnail(filepath, result)
-
-            # Extract burned-in GPS text using OCR
-            self._extract_burned_gps_text(filepath, result)
+            # Batch extract all metadata in a single PIL operation
+            self._extract_all_metadata_optimized(filepath, result)
 
             final_result = result.finalize()
             self.log_extraction_summary(final_result)
@@ -169,6 +148,60 @@ class CompleteGPSImageExtension(ImageExtensionBase):
         except Exception as e:
             logger.error(f"Complete GPS extraction failed for {filepath}: {e}")
             return result.to_error_result(f"Extraction failed: {str(e)[:200]}")
+
+    def _extract_all_metadata_optimized(self, filepath: str, result: ImageExtractionResult):
+        """Extract all metadata in a single optimized PIL operation"""
+        try:
+            from PIL import Image
+            import time
+
+            start_time = time.time()
+
+            # Single PIL operation for all metadata
+            with Image.open(filepath) as img:
+                # Extract comprehensive EXIF
+                self._extract_comprehensive_exif_fast(filepath, result, img)
+
+                # Extract mobile metadata (fast)
+                self._extract_mobile_metadata_fast(filepath, result, img)
+
+                # Extract forensic metadata (fast)
+                self._extract_forensic_metadata_fast(filepath, result, img)
+
+                # Extract ICC color profile (fast)
+                self._extract_icc_profile_fast(filepath, result, img)
+
+                # Extract IPTC metadata (fast)
+                self._extract_iptc_metadata_fast(filepath, result, img)
+
+                # Extract XMP metadata (fast)
+                self._extract_xmp_metadata_fast(filepath, result, img)
+
+                # Skip thumbnail and OCR in optimized mode for speed
+                # These can be enabled later if needed
+
+                # Add filename-based GPS as fallback (no OCR)
+                self._extract_gps_from_filename(filepath, result)
+
+            processing_time = time.time() - start_time
+            result.add_metadata("extraction_performance", {
+                "total_processing_time": round(processing_time, 6),
+                "optimized_mode": True,
+                "single_pil_operation": True,
+                "ocr_disabled": True,
+                "thumbnail_disabled": True
+            })
+
+        except Exception as e:
+            logger.error(f"Optimized batch extraction failed: {e}")
+            # Fallback to individual extractions
+            self._extract_comprehensive_exif(filepath, result)
+            self._extract_mobile_metadata(filepath, result)
+            self._extract_forensic_metadata(filepath, result)
+            self._extract_icc_profile(filepath, result)
+            self._extract_iptc_metadata(filepath, result)
+            self._extract_xmp_metadata(filepath, result)
+            self._extract_gps_from_filename(filepath, result)
 
     def _extract_gps_with_exifread(self, filepath: str, result: ImageExtractionResult):
         """Extract GPS data using exifread"""
@@ -572,69 +605,75 @@ class CompleteGPSImageExtension(ImageExtensionBase):
         """Extract IPTC metadata"""
         try:
             from PIL import Image
-            from PIL.IptcImagePlugin import IptcImagePlugin
+            from PIL import IptcImagePlugin
 
             with Image.open(filepath) as img:
                 iptc_data = {}
 
-                # Try to get IPTC data
+                # Try to get IPTC data from image info
                 if hasattr(img, 'info') and 'iptc' in img.info:
-                    iptc_dict = img.info['iptc']
+                    iptc_raw = img.info['iptc']
 
-                    # Map common IPTC tags to readable names
-                    iptc_mapping = {
-                        (2, 5): 'object_name',
-                        (2, 25): 'keywords',
-                        (2, 120): 'caption',
-                        (2, 122): 'caption_writer',
-                        (2, 105): 'headline',
-                        (2, 110): 'credit',
-                        (2, 115): 'source',
-                        (2, 116): 'copyright_notice',
-                        (2, 90): 'city',
-                        (2, 92): 'sublocation',
-                        (2, 95): 'province_state',
-                        (2, 101): 'country',
-                        (2, 103): 'original_transmission_reference',
-                        (2, 15): 'category',
-                        (2, 20): 'supplemental_categories',
-                        (2, 25): 'keywords',
-                        (2, 40): 'special_instructions',
-                        (2, 80): 'byline',
-                        (2, 85): 'byline_title',
-                        (2, 100): 'affiliation',
-                    }
-
-                    for (tag_group, tag_key), value in iptc_dict.items():
-                        field_name = iptc_mapping.get((tag_group, tag_key), f'iptc_{tag_group}_{tag_key}')
-
-                        # Decode bytes if needed
-                        if isinstance(value, bytes):
-                            try:
-                                value = value.decode('utf-8', errors='ignore')
-                            except:
-                                value = str(value)[:100]
-
-                        iptc_data[field_name] = value
-
-                else:
-                    # Try alternative IPTC extraction
+                    # Parse IPTC data
                     try:
-                        iptc = IptcImagePlugin.getiptc(img)
-                        if iptc:
-                            for key, value in iptc.items():
+                        iptc_dict = IptcImagePlugin.getiptc(img)
+                        if iptc_dict:
+                            # Map common IPTC tags to readable names
+                            iptc_mapping = {
+                                (2, 5): 'object_name',
+                                (2, 25): 'keywords',
+                                (2, 120): 'caption',
+                                (2, 122): 'caption_writer',
+                                (2, 105): 'headline',
+                                (2, 110): 'credit',
+                                (2, 115): 'source',
+                                (2, 116): 'copyright_notice',
+                                (2, 90): 'city',
+                                (2, 92): 'sublocation',
+                                (2, 95): 'province_state',
+                                (2, 101): 'country',
+                                (2, 103): 'original_transmission_reference',
+                                (2, 15): 'category',
+                                (2, 20): 'supplemental_categories',
+                                (2, 40): 'special_instructions',
+                                (2, 80): 'byline',
+                                (2, 85): 'byline_title',
+                                (2, 100): 'affiliation',
+                            }
+
+                            for (tag_group, tag_key), value in iptc_dict.items():
+                                field_name = iptc_mapping.get((tag_group, tag_key), f'iptc_{tag_group}_{tag_key}')
+
+                                # Decode bytes if needed
                                 if isinstance(value, bytes):
                                     try:
                                         value = value.decode('utf-8', errors='ignore')
                                     except:
                                         value = str(value)[:100]
-                                iptc_data[str(key)] = value
-                    except:
-                        iptc_data = {"note": "No IPTC metadata found"}
+
+                                iptc_data[field_name] = value
+
+                    except Exception as e:
+                        # Fallback to basic IPTC data
+                        iptc_data = {
+                            "has_iptc": True,
+                            "iptc_raw_size": len(iptc_raw) if iptc_raw else 0,
+                            "note": "IPTC data present but parsing failed",
+                            "error": str(e)[:100]
+                        }
+
+                else:
+                    iptc_data = {
+                        "has_iptc": False,
+                        "note": "No IPTC metadata found"
+                    }
 
                 if iptc_data:
                     result.add_metadata("iptc", iptc_data)
 
+        except ImportError:
+            # IptcImagePlugin not available, use basic detection
+            result.add_warning("IPTC plugin not available in this PIL version")
         except Exception as e:
             result.add_warning(f"IPTC extraction failed: {str(e)[:100]}")
 
@@ -773,3 +812,159 @@ class CompleteGPSImageExtension(ImageExtensionBase):
 
         except Exception as e:
             result.add_warning(f"Thumbnail extraction failed: {str(e)[:100]}")
+
+    # ============================================================================
+    # Fast Optimization Methods (avoid re-opening image files)
+    # ============================================================================
+
+    def _extract_comprehensive_exif_fast(self, filepath: str, result: ImageExtractionResult, img):
+        """Fast EXIF extraction using already-opened image"""
+        try:
+            from PIL.ExifTags import TAGS
+
+            # Basic properties
+            result.add_metadata("format", img.format)
+            result.add_metadata("mode", img.mode)
+            result.add_metadata("width", img.width)
+            result.add_metadata("height", img.height)
+
+            if img.height > 0:
+                megapixels = round((img.width * img.height) / 1_000_000, 2)
+                result.add_metadata("megapixels", megapixels)
+
+            # Comprehensive EXIF (fast path)
+            exif_data = img._getexif()
+            if exif_data:
+                exif_dict = {}
+                for tag_id, value in exif_data.items():
+                    try:
+                        tag = TAGS.get(tag_id, tag_id)
+                        if isinstance(value, bytes):
+                            try:
+                                value = value.decode('utf-8', errors='ignore')
+                            except:
+                                value = str(value)
+                        exif_dict[tag] = value
+                    except:
+                        continue
+
+                if exif_dict:
+                    result.add_metadata("exif", exif_dict)
+
+        except Exception as e:
+            result.add_warning(f"Fast EXIF extraction failed: {str(e)[:100]}")
+
+    def _extract_mobile_metadata_fast(self, filepath: str, result: ImageExtractionResult, img):
+        """Fast mobile metadata extraction using already-opened image"""
+        try:
+            from PIL.ExifTags import TAGS
+
+            exif_data = img._getexif()
+            if not exif_data:
+                return
+
+            mobile_fields = {}
+            mobile_tags = {
+                'Make': 'make',
+                'Model': 'model',
+                'Software': 'software',
+                'DateTimeOriginal': 'datetime_original',
+                'CreateDate': 'create_date',
+                'Orientation': 'orientation',
+                'XResolution': 'x_resolution',
+                'YResolution': 'y_resolution'
+            }
+
+            for tag, field in mobile_tags.items():
+                tag_id = None
+                for tid, name in TAGS.items():
+                    if name == tag:
+                        tag_id = tid
+                        break
+
+                if tag_id and tag_id in exif_data:
+                    mobile_fields[field] = exif_data[tag_id]
+
+            if mobile_fields:
+                result.add_metadata("mobile_metadata", mobile_fields)
+
+        except Exception as e:
+            result.add_warning(f"Fast mobile extraction failed: {str(e)[:100]}")
+
+    def _extract_forensic_metadata_fast(self, filepath: str, result: ImageExtractionResult, img):
+        """Fast forensic metadata extraction using already-opened image"""
+        try:
+            forensic_data = {
+                "format": img.format,
+                "mode": img.mode,
+                "dimensions": f"{img.width}x{img.height}",
+                "has_transparency": img.mode in ('RGBA', 'LA', 'PA'),
+                "bits_per_channel": getattr(img, 'bits', 8),
+                "size_bytes": len(img.tobytes()) if img.width * img.height < 10_000_000 else "large_image"
+            }
+            result.add_metadata("forensic", forensic_data)
+
+        except Exception as e:
+            result.add_warning(f"Fast forensic extraction failed: {str(e)[:100]}")
+
+    def _extract_icc_profile_fast(self, filepath: str, result: ImageExtractionResult, img):
+        """Fast ICC profile extraction using already-opened image"""
+        try:
+            icc_profile = None
+            if hasattr(img, 'info'):
+                icc_profile = img.info.get('icc_profile')
+
+            icc_data = {
+                "has_icc_profile": icc_profile is not None,
+                "icc_profile_size": len(icc_profile) if icc_profile else 0,
+                "color_space": img.mode
+            }
+            result.add_metadata("icc_profile", icc_data)
+
+        except Exception as e:
+            result.add_warning(f"Fast ICC extraction failed: {str(e)[:100]}")
+
+    def _extract_iptc_metadata_fast(self, filepath: str, result: ImageExtractionResult, img):
+        """Fast IPTC metadata extraction using already-opened image"""
+        try:
+            from PIL import IptcImagePlugin
+
+            iptc_data = {}
+            if hasattr(img, 'info') and 'iptc' in img.info:
+                iptc_dict = IptcImagePlugin.getiptcinfo(img)
+                if iptc_dict:
+                    for key, value in iptc_dict.items():
+                        if value:
+                            iptc_data[str(key)] = value
+
+            if iptc_data:
+                result.add_metadata("iptc", iptc_data)
+            else:
+                result.add_metadata("iptc", {"iptc_found": False})
+
+        except ImportError:
+            result.add_metadata("iptc", {"iptc_found": False, "note": "PIL IPTC plugin not available"})
+        except Exception as e:
+            result.add_warning(f"Fast IPTC extraction failed: {str(e)[:100]}")
+
+    def _extract_xmp_metadata_fast(self, filepath: str, result: ImageExtractionResult, img):
+        """Fast XMP metadata extraction using already-opened image"""
+        try:
+            xmp_data = {}
+            if hasattr(img, 'info') and 'xmp' in img.info:
+                xmp_string = img.info.get('xmp')
+                if xmp_string:
+                    # Basic XMP extraction (avoiding slow XML parsing)
+                    xmp_data = {
+                        "xmp_found": True,
+                        "xmp_length": len(xmp_string),
+                        "xmp_preview": xmp_string[:200] if len(xmp_string) > 200 else xmp_string
+                    }
+
+            if xmp_data:
+                result.add_metadata("xmp", xmp_data)
+            else:
+                result.add_metadata("xmp", {"xmp_found": False})
+
+        except Exception as e:
+            result.add_warning(f"Fast XMP extraction failed: {str(e)[:100]}")

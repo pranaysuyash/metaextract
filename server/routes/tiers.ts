@@ -10,13 +10,11 @@
 import type { Express } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// @ts-ignore
-const currentFilePath = fileURLToPath(import.meta.url);
-const currentDirPath = dirname(currentFilePath);
 import { getTierConfig, TIER_CONFIGS } from '@shared/tierConfig';
+
+// Get the routes directory - compatible with both ESM and CommonJS
+const projectRoot = process.cwd();
+const currentDirPath = path.join(projectRoot, 'server', 'routes');
 
 // ============================================================================
 // Route Registration

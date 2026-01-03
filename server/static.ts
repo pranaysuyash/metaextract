@@ -1,12 +1,10 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-// @ts-ignore
-const currentFilePath = fileURLToPath(import.meta.url);
-const currentDirPath = dirname(currentFilePath);
+// Get the server directory - compatible with both ESM and CommonJS
+const projectRoot = process.cwd();
+const currentDirPath = path.join(projectRoot, 'server');
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(currentDirPath, "public");

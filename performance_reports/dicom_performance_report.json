@@ -1,0 +1,55 @@
+{
+  "format_type": "dicom",
+  "summary": {
+    "dataset_count": 3,
+    "total_file_size_mb": 0.8774604797363281,
+    "total_extraction_time": 0.030755996704101562,
+    "total_memory_used_mb": 3.796875,
+    "avg_cpu_percent": 8.433333333333334
+  },
+  "performance_analysis": {
+    "success_rate": 100.0,
+    "avg_extraction_time": 0.010251998901367188,
+    "avg_memory_delta": 1.265625,
+    "avg_fields_per_second": 6372.74096124031,
+    "memory_efficiency": 19.371811224489797,
+    "performance_consistency": 8.678507879150255,
+    "bottlenecks": [],
+    "recommendations": []
+  },
+  "metrics": [
+    {
+      "dataset_name": "type",
+      "file_size_bytes": 525156,
+      "extraction_time": 0.010988950729370117,
+      "memory_peak_mb": 195.234375,
+      "memory_delta_mb": 2.671875,
+      "cpu_percent_avg": 10.3,
+      "fields_extracted": 65,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "dataset_name": "type",
+      "file_size_bytes": 131988,
+      "extraction_time": 0.010766744613647461,
+      "memory_peak_mb": 197.890625,
+      "memory_delta_mb": 0.40625,
+      "cpu_percent_avg": 7.3,
+      "fields_extracted": 73,
+      "success": true,
+      "error_message": null
+    },
+    {
+      "dataset_name": "type",
+      "file_size_bytes": 262940,
+      "extraction_time": 0.009000301361083984,
+      "memory_peak_mb": 198.296875,
+      "memory_delta_mb": 0.71875,
+      "cpu_percent_avg": 7.7,
+      "fields_extracted": 58,
+      "success": true,
+      "error_message": null
+    }
+  ]
+}

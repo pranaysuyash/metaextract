@@ -94,6 +94,32 @@ export type InsertExtractionAnalytics = z.infer<
 >;
 export type ExtractionAnalytics = typeof extractionAnalytics.$inferSelect;
 
+// =====================================================================
+// UI / Product Analytics Events
+// =====================================================================
+
+export const uiEvents = pgTable('ui_events', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  product: text('product').notNull().default('core'),
+  eventName: text('event_name').notNull(),
+  sessionId: text('session_id'),
+  userId: varchar('user_id').references(() => users.id),
+  properties: jsonb('properties').notNull().default(sql`'{}'::jsonb`),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const insertUiEventSchema = createInsertSchema(uiEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUiEvent = z.infer<typeof insertUiEventSchema>;
+export type UiEvent = typeof uiEvents.$inferSelect;
+
 // Credits system for pay-as-you-go
 export const creditBalances = pgTable('credit_balances', {
   id: varchar('id')

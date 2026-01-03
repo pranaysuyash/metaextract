@@ -4,6 +4,8 @@ import {
   type InsertExtractionAnalytics,
   type ExtractionAnalytics,
   extractionAnalytics,
+  uiEvents,
+  type InsertUiEvent,
   creditBalances,
   creditTransactions,
   type CreditBalance,
@@ -48,6 +50,15 @@ export class DatabaseStorage implements IStorage {
       await this.db.insert(extractionAnalytics).values(data);
     } catch (error) {
       console.error('Failed to log extraction usage:', error);
+    }
+  }
+
+  async logUiEvent(data: InsertUiEvent): Promise<void> {
+    if (!this.db) return;
+    try {
+      await this.db.insert(uiEvents).values(data);
+    } catch (error) {
+      console.error('Failed to log UI event:', error);
     }
   }
 

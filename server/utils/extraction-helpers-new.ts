@@ -7,15 +7,14 @@
 
 import path from 'path';
 import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
 
-const currentFilePath = fileURLToPath(import.meta.url);
-const currentDirPath = dirname(currentFilePath);
+// Get the utils directory - compatible with both ESM and CommonJS
+const projectRoot = process.cwd();
+const currentDirPath = path.join(projectRoot, 'server', 'utils');
 
 // Import the new refactored engine
 import { extract_comprehensive_metadata_new } from '../extractor/core/comprehensive_engine';

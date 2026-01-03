@@ -1,0 +1,172 @@
+{
+  "benchmark_timestamp": "2026-01-03T19:16:34.794508",
+  "system_info": {
+    "platform": "darwin",
+    "python_version": "3.11.12 (main, Apr  8 2025, 14:15:29) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "cpu_count": 14,
+    "cpu_count_logical": 14,
+    "memory_total_gb": 96.0,
+    "benchmark_timestamp": "2026-01-03T19:16:33.369587"
+  },
+  "overall_performance": {
+    "total_datasets": 9,
+    "total_file_size_mb": 1348.1138887405396,
+    "total_extraction_time": 0.1753683090209961,
+    "total_memory_used_mb": 19.296875,
+    "avg_time_per_dataset": 0.019485367668999568,
+    "avg_memory_per_dataset": 2.1440972222222223,
+    "overall_success_rate": 100.0,
+    "performance_insights": [
+      "Performance varies significantly by format: hdf5_netcdf is 5.3x faster than fits",
+      "Exceptional reliability with near-perfect success rates"
+    ]
+  },
+  "format_results": {
+    "dicom": {
+      "dataset_count": 3,
+      "total_file_size_mb": 0.8774604797363281,
+      "total_extraction_time": 0.030755996704101562,
+      "total_memory_used_mb": 3.796875,
+      "avg_cpu_percent": 8.433333333333334,
+      "performance_analysis": {
+        "success_rate": 100.0,
+        "avg_extraction_time": 0.010251998901367188,
+        "avg_memory_delta": 1.265625,
+        "avg_fields_per_second": 6372.74096124031,
+        "memory_efficiency": 19.371811224489797,
+        "performance_consistency": 8.678507879150255,
+        "bottlenecks": [],
+        "recommendations": []
+      },
+      "metrics": [
+        {
+          "dataset_name": "type",
+          "file_size_mb": 0.5008277893066406,
+          "extraction_time": 0.010988950729370117,
+          "memory_delta_mb": 2.671875,
+          "cpu_percent_avg": 10.3,
+          "fields_extracted": 65,
+          "success": true
+        },
+        {
+          "dataset_name": "type",
+          "file_size_mb": 0.12587356567382812,
+          "extraction_time": 0.010766744613647461,
+          "memory_delta_mb": 0.40625,
+          "cpu_percent_avg": 7.3,
+          "fields_extracted": 73,
+          "success": true
+        },
+        {
+          "dataset_name": "type",
+          "file_size_mb": 0.2507591247558594,
+          "extraction_time": 0.009000301361083984,
+          "memory_delta_mb": 0.71875,
+          "cpu_percent_avg": 7.7,
+          "fields_extracted": 58,
+          "success": true
+        }
+      ]
+    },
+    "fits": {
+      "dataset_count": 3,
+      "total_file_size_mb": 5.06744384765625,
+      "total_extraction_time": 0.12148928642272949,
+      "total_memory_used_mb": 0.96875,
+      "avg_cpu_percent": 36.0,
+      "performance_analysis": {
+        "success_rate": 100.0,
+        "avg_extraction_time": 0.0404964288075765,
+        "avg_memory_delta": 0.3229166666666667,
+        "avg_fields_per_second": 1209.9832366164733,
+        "memory_efficiency": 6.5901360544217695,
+        "performance_consistency": 76.67249555605464,
+        "bottlenecks": [
+          "Inconsistent performance (>50% variation)"
+        ],
+        "recommendations": [
+          "Investigate performance variability and optimize caching"
+        ]
+      },
+      "metrics": [
+        {
+          "dataset_name": "type",
+          "file_size_mb": 4.00726318359375,
+          "extraction_time": 0.020744800567626953,
+          "memory_delta_mb": 0.734375,
+          "cpu_percent_avg": 17.3,
+          "fields_extracted": 61,
+          "success": true
+        },
+        {
+          "dataset_name": "type",
+          "file_size_mb": 1.00799560546875,
+          "extraction_time": 0.016408681869506836,
+          "memory_delta_mb": 0.171875,
+          "cpu_percent_avg": 15.0,
+          "fields_extracted": 61,
+          "success": true
+        },
+        {
+          "dataset_name": "type",
+          "file_size_mb": 0.05218505859375,
+          "extraction_time": 0.0843358039855957,
+          "memory_delta_mb": 0.0625,
+          "cpu_percent_avg": 75.7,
+          "fields_extracted": 25,
+          "success": true
+        }
+      ]
+    },
+    "hdf5_netcdf": {
+      "dataset_count": 3,
+      "total_file_size_mb": 1342.168984413147,
+      "total_extraction_time": 0.02312302589416504,
+      "total_memory_used_mb": 14.53125,
+      "avg_cpu_percent": 5.2,
+      "performance_analysis": {
+        "success_rate": 100.0,
+        "avg_extraction_time": 0.007707675298055013,
+        "avg_memory_delta": 4.84375,
+        "avg_fields_per_second": 1946.1120791875032,
+        "memory_efficiency": 322.9166666666667,
+        "performance_consistency": 14.577805089949186,
+        "bottlenecks": [
+          "High memory usage (>50MB per 1000 fields)"
+        ],
+        "recommendations": [
+          "Review memory management and consider streaming for large files"
+        ]
+      },
+      "metrics": [
+        {
+          "dataset_name": "type",
+          "file_size_mb": 60.35675811767578,
+          "extraction_time": 0.007908821105957031,
+          "memory_delta_mb": 9.3125,
+          "cpu_percent_avg": 5.1,
+          "fields_extracted": 14,
+          "success": true
+        },
+        {
+          "dataset_name": "type",
+          "file_size_mb": 183.11727905273438,
+          "extraction_time": 0.00897216796875,
+          "memory_delta_mb": 1.125,
+          "cpu_percent_avg": 5.7,
+          "fields_extracted": 13,
+          "success": true
+        },
+        {
+          "dataset_name": "type",
+          "file_size_mb": 1098.6949472427368,
+          "extraction_time": 0.006242036819458008,
+          "memory_delta_mb": 4.09375,
+          "cpu_percent_avg": 4.8,
+          "fields_extracted": 18,
+          "success": true
+        }
+      ]
+    }
+  }
+}

@@ -188,14 +188,25 @@ export async function closeDatabase(): Promise<void> {
 
 /**
  * For backward compatibility with code using `db` directly
- * Prefer using getDatabase() instead
- * @deprecated Use getDatabase() instead
+ * Returns the Drizzle ORM client that can be used for queries
  */
-export const db = {
-  get client() {
-    return getDatabase();
+export function getDb(): ReturnType<typeof drizzle> {
+  return getDatabase();
+}
+
+/**
+ * Direct export for code that imports `db` directly
+ * This is the actual Drizzle client instance
+ */
+let _db: ReturnType<typeof drizzle> | null = null;
+
+export const db = new Proxy({} as any, {
+  get: (target, prop) => {
+    if (!dbInstance) {
+      throw new Error(
+        'Database is not initialized. Check console for initialization errors.'
+      );
+    }
+    return (dbInstance.client as any)[prop];
   },
-  get pool() {
-    return getDatabasePool();
-  },
-};
+});

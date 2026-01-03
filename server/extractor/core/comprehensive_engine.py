@@ -73,7 +73,10 @@ class NewComprehensiveMetadataExtractor:
             
             # Add registry summary for frontend compatibility
             result = self._add_registry_summary(result)
-            
+
+            # Add persona-friendly interpretation layer for image files
+            result = self._add_persona_interpretation(result, filepath)
+
             # Add compatibility layer information
             processing_time = (time.time() - start_time) * 1000
             
@@ -182,7 +185,57 @@ class NewComprehensiveMetadataExtractor:
         # Add registry summary to result
         if registry_summary:
             result['registry_summary'] = registry_summary
-        
+
+        return result
+
+    def _add_persona_interpretation(self, result: Dict[str, Any], filepath: str) -> Dict[str, Any]:
+        """
+        Add persona-friendly interpretation for image files.
+
+        Args:
+            result: The extraction result
+            filepath: Path to the file
+
+        Returns:
+            Updated result with persona interpretation
+        """
+        try:
+            import importlib.util
+            import os
+            import sys
+
+            # Only add persona interpretation for image files
+            mime_type = result.get('metadata', {}).get('basic_properties', {}).get('mime_type', '')
+            if not mime_type or not mime_type.startswith('image/'):
+                return result
+
+            print("[persona_debug] Adding persona interpretation for new engine", file=sys.stderr)
+
+            # Get the path to persona_interpretation.py
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up to extractor directory
+            extractor_dir = os.path.dirname(current_dir)
+            persona_path = os.path.join(extractor_dir, "persona_interpretation.py")
+
+            # Load the module dynamically
+            spec = importlib.util.spec_from_file_location("persona_interpretation", persona_path)
+            persona_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(persona_module)
+
+            # Get the function
+            add_persona_interpretation = persona_module.add_persona_interpretation
+
+            # Add persona interpretation to the result
+            persona_result = add_persona_interpretation(result, "phone_photo_sarah")
+            result["persona_interpretation"] = persona_result.get("persona_interpretation")
+
+            print("[persona_debug] Successfully added persona interpretation to new engine", file=sys.stderr)
+
+        except Exception as e:
+            print(f"[persona_debug] Failed to add persona interpretation: {e}", file=sys.stderr)
+            # Don't fail the entire extraction if persona interpretation fails
+            pass
+
         return result
 
 

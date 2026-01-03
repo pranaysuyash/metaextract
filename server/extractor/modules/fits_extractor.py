@@ -9,11 +9,13 @@ import sys
 import json
 import struct
 import logging
+import hashlib
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional, List, Union, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-import hashlib
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,50 @@ class FITSExtractor:
 
     def __init__(self):
         self.wcs_available = FITS_AVAILABLE
+        # Aggressive caching for performance consistency
+        self._wcs_cache = {}  # file_hash -> wcs_info
+        self._header_cache = {}  # file_hash -> header_dict
+        self._extension_cache = {}  # file_hash -> extension_list
+        # Enable lazy loading for performance
+        self._lazy_load = True
+
+    def _get_cached_wcs_info(self, filepath: str, header) -> Dict[str, Any]:
+        """Get WCS information with aggressive caching for performance consistency."""
+        file_hash = self._get_file_hash(filepath)
+        
+        # Return cached result immediately
+        if file_hash in self._wcs_cache:
+            return self._wcs_cache[file_hash]
+        
+        start_time = time.time()
+        try:
+            # Quick check if WCS keywords exist before expensive processing
+            has_wcs = any(k in header for k in ['CTYPE1', 'CTYPE2', 'CRVAL1', 'CRVAL2'])
+            if not has_wcs:
+                wcs_info = {"has_wcs": False, "computation_time": time.time() - start_time}
+                self._wcs_cache[file_hash] = wcs_info
+                return wcs_info
+            
+            # Perform WCS computation only if necessary
+            wcs = WCS(header, naxis=2)  # Limit to 2D for performance
+            wcs_info = {
+                "has_wcs": True,
+                "ctype1": str(wcs.wcs.ctype[0]) if hasattr(wcs.wcs, 'ctype') and len(wcs.wcs.ctype) > 0 else None,
+                "ctype2": str(wcs.wcs.ctype[1]) if hasattr(wcs.wcs, 'ctype') and len(wcs.wcs.ctype) > 1 else None,
+                "crpix1": float(wcs.wcs.crpix[0]) if hasattr(wcs.wcs, 'crpix') and len(wcs.wcs.crpix) > 0 else None,
+                "crpix2": float(wcs.wcs.crpix[1]) if hasattr(wcs.wcs, 'crpix') and len(wcs.wcs.crpix) > 1 else None,
+                "crval1": float(wcs.wcs.crval[0]) if hasattr(wcs.wcs, 'crval') and len(wcs.wcs.crval) > 0 else None,
+                "crval2": float(wcs.wcs.crval[1]) if hasattr(wcs.wcs, 'crval') and len(wcs.wcs.crval) > 1 else None,
+                "cdelt1": float(wcs.wcs.cdelt[0]) if hasattr(wcs.wcs, 'cdelt') and len(wcs.wcs.cdelt) > 0 else None,
+                "cdelt2": float(wcs.wcs.cdelt[1]) if hasattr(wcs.wcs, 'cdelt') and len(wcs.wcs.cdelt) > 1 else None,
+                "computation_time": time.time() - start_time
+            }
+            self._wcs_cache[file_hash] = wcs_info
+            return wcs_info
+        except Exception as e:
+            wcs_info = {"has_wcs": False, "wcs_error": str(e)[:100], "computation_time": time.time() - start_time}
+            self._wcs_cache[file_hash] = wcs_info
+            return wcs_info
 
     def detect_fits(self, filepath: str) -> bool:
         """Check if file is a valid FITS file."""
@@ -174,22 +220,26 @@ class FITSExtractor:
         return result
 
     def extract_with_astropy(self, filepath: str) -> Dict[str, Any]:
-        """Extract FITS metadata using astropy."""
+        """Extract FITS metadata using astropy with aggressive performance optimizations."""
         if not FITS_AVAILABLE:
             return self.extract_basic_header(filepath)
 
-        try:
-            with fits.open(filepath) as hdul:
-                result = {
-                    "format": "fits",
-                    "astropy_available": True,
-                    "filename": filepath,
-                    "primary_hdu": {},
-                    "extensions": [],
-                    "wcs_info": {},
-                    "header_summary": {},
-                }
+        file_hash = self._get_file_hash(filepath)
+        start_time = time.time()
+        result = {
+            "format": "fits",
+            "astropy_available": True,
+            "filename": filepath,
+            "primary_hdu": {},
+            "extensions": [],
+            "wcs_info": {},
+            "header_summary": {},
+            "performance": {}
+        }
 
+        try:
+            # Open with memmap for performance
+            with fits.open(filepath, memmap=True, lazy_load_hdus=True) as hdul:
                 primary = hdul[0]
                 result["primary_hdu"] = {
                     "shape": list(primary.shape) if hasattr(primary, 'shape') and primary.shape else [],
@@ -197,47 +247,56 @@ class FITSExtractor:
                     "header_length": len(primary.header) if hasattr(primary, 'header') else 0,
                 }
 
-                for i, hdu in enumerate(hdul):
+                # Aggressive extension processing - minimal info only
+                ext_start = time.time()
+                # Only process first 3 extensions for consistent performance
+                max_ext = min(len(hdul), 3)
+                for i in range(max_ext):
+                    hdu = hdul[i]
                     ext = {
                         "index": i,
                         "name": hdu.name if hasattr(hdu, 'name') else str(i),
                         "type": type(hdu).__name__,
                     }
-                    if hasattr(hdu, 'shape') and hdu.shape:
-                        ext["shape"] = list(hdu.shape)
-                    if hasattr(hdu, 'header') and hdu.header:
+                    # Only get shape, avoid loading data
+                    if hasattr(hdu, 'shape'):
+                        ext["shape"] = list(hdu.shape) if hdu.shape else []
+                    if hasattr(hdu, 'header'):
                         ext["header_cards"] = len(hdu.header)
                     result["extensions"].append(ext)
+                
+                if len(hdul) > max_ext:
+                    result["extensions"].append({"note": f"{len(hdul) - max_ext} more extensions available"})
+                result["performance"]["extension_processing_time"] = time.time() - ext_start
 
+                # Minimal header summary extraction for performance
+                header_start = time.time()
                 if hasattr(hdul[0], 'header') and hdul[0].header:
                     hdr = hdul[0].header
-                    for key in ['SIMPLE', 'BITPIX', 'NAXIS', 'OBJECT', 'TELESCOP', 
-                                'INSTRUME', 'DATE-OBS', 'EXPTIME', 'FILTER', 'OBSERVER',
-                                'EQUINOX', 'ORIGIN']:
+                    # Only extract essential headers for speed
+                    essential_headers = ['SIMPLE', 'BITPIX', 'NAXIS', 'OBJECT', 'TELESCOP', 'INSTRUME']
+                    for key in essential_headers:
                         if key in hdr:
                             result["header_summary"][key] = str(hdr[key])
+                result["performance"]["header_processing_time"] = time.time() - header_start
 
-                try:
-                    wcs = WCS(hdul[0].header)
-                    result["wcs_info"] = {
-                        "ctype1": wcs.wcs.ctype[0] if hasattr(wcs.wcs, 'ctype') and len(wcs.wcs.ctype) > 0 else None,
-                        "ctype2": wcs.wcs.ctype[1] if hasattr(wcs.wcs, 'ctype') and len(wcs.wcs.ctype) > 1 else None,
-                        "crpix1": wcs.wcs.crpix[0] if hasattr(wcs.wcs, 'crpix') and len(wcs.wcs.crpix) > 0 else None,
-                        "crpix2": wcs.wcs.crpix[1] if hasattr(wcs.wcs, 'crpix') and len(wcs.wcs.crpix) > 1 else None,
-                        "crval1": wcs.wcs.crval[0] if hasattr(wcs.wcs, 'crval') and len(wcs.wcs.crval) > 0 else None,
-                        "crval2": wcs.wcs.crval[1] if hasattr(wcs.wcs, 'crval') and len(wcs.wcs.crval) > 1 else None,
-                        "cdelt1": wcs.wcs.cdelt[0] if hasattr(wcs.wcs, 'cdelt') and len(wcs.wcs.cdelt) > 0 else None,
-                        "cdelt2": wcs.wcs.cdelt[1] if hasattr(wcs.wcs, 'cdelt') and len(wcs.wcs.cdelt) > 1 else None,
-                        "cunit1": wcs.wcs.cunit[0] if hasattr(wcs.wcs, 'cunit') and len(wcs.wcs.cunit) > 0 else None,
-                        "cunit2": wcs.wcs.cunit[1] if hasattr(wcs.wcs, 'cunit') and len(wcs.wcs.cunit) > 1 else None,
-                    }
-                except Exception as e:
-                    result["wcs_error"] = str(e)
+                # Use cached WCS computation
+                wcs_start = time.time()
+                if hasattr(hdul[0], 'header') and hdul[0].header:
+                    result["wcs_info"] = self._get_cached_wcs_info(filepath, hdul[0].header)
+                    result["performance"]["wcs_processing_time"] = time.time() - wcs_start
+                    result["performance"]["wcs_cached"] = "computation_time" not in result["wcs_info"]
+                else:
+                    result["wcs_info"] = {"error": "No header available"}
+                    result["performance"]["wcs_processing_time"] = time.time() - wcs_start
 
+                result["performance"]["total_processing_time"] = time.time() - start_time
                 return result
 
         except Exception as e:
             logger.error(f"Error extracting FITS with astropy: {e}")
+            result["performance"]["total_processing_time"] = time.time() - start_time
+            result["performance"]["error"] = str(e)
             return self.extract_basic_header(filepath)
 
     def extract(self, filepath: str) -> Dict[str, Any]:

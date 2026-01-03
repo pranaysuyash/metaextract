@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
-import { db } from '../db';
+import { getDatabase, isDatabaseConnected } from '../db';
 import { trialUsages } from '@shared/schema';
 import { storage } from '../storage/index';
 import {
@@ -14,7 +14,7 @@ import {
   normalizeEmail,
   getSessionId,
   cleanupTempFile,
-} from '../utils/extraction-helpers-new';
+} from '../utils/extraction-helpers';
 import {
   sendQuotaExceededError,
   sendInvalidRequestError,
@@ -82,6 +82,43 @@ function getImagesMvpBalanceId(sessionId: string): string {
 // ============================================================================
 
 export function registerImagesMvpRoutes(app: Express) {
+  // ---------------------------------------------------------------------------
+  // Analytics: Track UI Events (Images MVP)
+  // ---------------------------------------------------------------------------
+  app.post(
+    '/api/images_mvp/analytics/track',
+    async (req: Request, res: Response) => {
+      try {
+        const event = typeof req.body?.event === 'string' ? req.body.event : '';
+        const properties =
+          req.body?.properties && typeof req.body.properties === 'object'
+            ? req.body.properties
+            : {};
+        const sessionId =
+          typeof req.body?.sessionId === 'string' ? req.body.sessionId : null;
+
+        if (!event) {
+          return sendInvalidRequestError(res, 'Event name is required');
+        }
+
+        await storage.logUiEvent({
+          product: 'images_mvp',
+          eventName: event,
+          sessionId,
+          userId: null,
+          properties,
+          ipAddress: req.ip || req.socket.remoteAddress || null,
+          userAgent: req.headers['user-agent'] || null,
+        });
+
+        return res.status(204).send();
+      } catch (error) {
+        console.error('Images MVP analytics error:', error);
+        return res.status(500).json({ error: 'Failed to log analytics event' });
+      }
+    }
+  );
+
   // ---------------------------------------------------------------------------
   // Credits: Get Packs
   // ---------------------------------------------------------------------------
@@ -246,8 +283,9 @@ export function registerImagesMvpRoutes(app: Express) {
         // Check Trial Status
         let trialUses = 0;
         if (trialEmail) {
-          if (db) {
-            const result = await db
+          if (isDatabaseConnected()) {
+            const dbClient = getDatabase();
+            const result = await dbClient
               .select({ uses: trialUsages.uses })
               .from(trialUsages)
               .where(eq(trialUsages.email, trialEmail))

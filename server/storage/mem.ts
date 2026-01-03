@@ -5,6 +5,8 @@ import {
   type ExtractionAnalytics,
   type CreditBalance,
   type CreditTransaction,
+  type InsertUiEvent,
+  type UiEvent,
   type OnboardingSession,
   type InsertOnboardingSession,
   type TrialUsage,
@@ -53,6 +55,7 @@ export class MemStorage implements IStorage {
   // Analytics data
   private analyticsLog: ExtractionAnalytics[];
   private analyticsCache: CacheableAnalytics;
+  private uiEvents: UiEvent[];
 
   // Credit system
   private creditBalancesMap: Map<string, CreditBalance>;
@@ -77,6 +80,7 @@ export class MemStorage implements IStorage {
       lastComputed: null,
       cacheMaxAge: ANALYTICS_CACHE_MAX_AGE,
     };
+    this.uiEvents = [];
     this.creditBalancesMap = new Map();
     this.creditBalancesBySessionId = new Map();
     this.creditTransactionsList = [];
@@ -161,6 +165,21 @@ export class MemStorage implements IStorage {
     // Invalidate cache when new analytics are logged
     this.analyticsCache.data = null;
     this.analyticsCache.lastComputed = null;
+  }
+
+  async logUiEvent(data: InsertUiEvent): Promise<void> {
+    const entry: UiEvent = {
+      id: randomUUID(),
+      product: data.product || 'core',
+      eventName: data.eventName,
+      sessionId: data.sessionId || null,
+      userId: data.userId || null,
+      properties: data.properties,
+      ipAddress: data.ipAddress || null,
+      userAgent: data.userAgent || null,
+      createdAt: new Date(),
+    };
+    this.uiEvents.push(entry);
   }
 
   async getAnalyticsSummary(): Promise<AnalyticsSummary> {
