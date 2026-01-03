@@ -46,8 +46,11 @@ class NewComprehensiveMetadataExtractor:
         from ..extractors.audio_extractor import AudioExtractor
         self.orchestrator.add_extractor(AudioExtractor())
         
-        # TODO: Add other extractors as they are created
-        # self.orchestrator.add_extractor(DocumentExtractor())
+        # Add document extractor
+        from ..extractors.document_extractor import DocumentExtractor
+        self.orchestrator.add_extractor(DocumentExtractor())
+        
+        # TODO: Add scientific extractor
         # self.orchestrator.add_extractor(ScientificExtractor())
     
     def extract_comprehensive_metadata(self, filepath: str, tier: str = "super") -> Dict[str, Any]:
@@ -153,11 +156,26 @@ class NewComprehensiveMetadataExtractor:
             }
         
         # Audio registry summary (when audio extractor is added)
-        if 'audio' in metadata:
+        if any(key in metadata for key in ['basic_properties', 'format_info', 'id3', 'vorbis', 'album_art']):
+            audio_data = metadata.get('basic_properties', {}) or metadata.get('format_info', {}) or metadata.get('id3', {}) or {}
             registry_summary['audio'] = {
-                'id3': len(metadata.get('audio', {})),
-                'codec': 0,
-                'broadcast': 0,
+                'id3': len(metadata.get('id3', {})),
+                'vorbis': len(metadata.get('vorbis', {})),
+                'codec': len(metadata.get('format_info', {}).get('mp3_specific', {})) + len(metadata.get('format_info', {}).get('flac_specific', {})),
+                'broadcast': 0,  # Will be populated when broadcast audio extractor is added
+            }
+        
+        # Document registry summary (when document extractor is added)
+        if any(key in metadata for key in ['pdf', 'word', 'excel', 'powerpoint', 'opendocument', 'ebook', 'html', 'structured', 'text', 'tabular', 'generic']):
+            registry_summary['document'] = {
+                'pdf': len(metadata.get('pdf', {})),
+                'office': len(metadata.get('word', {})) + len(metadata.get('excel', {})) + len(metadata.get('powerpoint', {})),
+                'opendocument': len(metadata.get('opendocument', {})),
+                'ebook': len(metadata.get('ebook', {})),
+                'web': len(metadata.get('html', {})),
+                'structured': len(metadata.get('structured', {})),
+                'text': len(metadata.get('text', {})),
+                'tabular': len(metadata.get('tabular', {}))
             }
         
         # Add registry summary to result
