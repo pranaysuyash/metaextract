@@ -519,6 +519,7 @@ def extract_scientific_dicom_fits_ultimate_advanced_extension_ix(file_path: str)
             len(endo_tags) + len(scope_specs) + len(illumination) +
             len(imaging) + len(fluid) + len(enhancement) +
             len([k for k in result.keys() if not k.startswith(('_', 'extension'))])
+        )
         result["fields_extracted"] = total_fields
         result["endo_extraction_timestamp"] = str(__import__('datetime').datetime.now())
         

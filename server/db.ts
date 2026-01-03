@@ -1,37 +1,201 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from '@shared/schema';
-import { config } from 'dotenv';
+import { config as loadEnv } from 'dotenv';
 
-// Load environment variables
-config({ path: './.env' });
+// ============================================================================
+// Types
+// ============================================================================
 
-// Check if DATABASE_URL is properly configured
-const isDatabaseConfigured =
-  process.env.DATABASE_URL &&
-  !process.env.DATABASE_URL.includes('user:password@host');
+interface DatabaseConfig {
+  url: string;
+  maxConnections?: number;
+  idleTimeout?: number;
+  connectionTimeout?: number;
+}
 
-let db: ReturnType<typeof drizzle> | null = null;
+interface DatabaseInstance {
+  client: ReturnType<typeof drizzle>;
+  pool: Pool;
+  isConnected: boolean;
+}
 
-if (isDatabaseConfigured) {
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const DEFAULT_POOL_CONFIG = {
+  max: 10, // Maximum connections
+  idleTimeoutMillis: 30000, // 30 seconds
+  connectionTimeoutMillis: 2000, // 2 seconds
+};
+
+/**
+ * Load and validate environment variables
+ * @throws Error if .env file cannot be loaded
+ */
+function loadEnvironment(): void {
+  const result = loadEnv({ path: './.env' });
+  if (result.error && result.error.code !== 'ENOENT') {
+    throw new Error(`Failed to load environment: ${result.error.message}`);
+  }
+}
+
+/**
+ * Validate DATABASE_URL format
+ * @throws Error if DATABASE_URL is missing or invalid
+ */
+function validateDatabaseUrl(): string {
+  const dbUrl = process.env.DATABASE_URL;
+
+  if (!dbUrl) {
+    throw new Error(
+      'DATABASE_URL environment variable is not set. Please configure it in .env file.'
+    );
+  }
+
+  // Check for placeholder pattern
+  if (dbUrl.includes('user:password@host')) {
+    throw new Error(
+      'DATABASE_URL contains placeholder values. Please update with actual database credentials.'
+    );
+  }
+
+  // Validate PostgreSQL URL format
+  if (!dbUrl.startsWith('postgresql://') && !dbUrl.startsWith('postgres://')) {
+    throw new Error(
+      'DATABASE_URL must be a valid PostgreSQL connection string (postgresql:// or postgres://)'
+    );
+  }
+
+  return dbUrl;
+}
+
+/**
+ * Initialize database connection with validation
+ * @throws Error if connection fails
+ */
+function initializeDatabase(): DatabaseInstance {
+  const dbUrl = validateDatabaseUrl();
+
+  const pool = new Pool({
+    connectionString: dbUrl,
+    ...DEFAULT_POOL_CONFIG,
+  });
+
+  // Set up error listeners for the pool
+  pool.on('error', error => {
+    console.error('❌ Unexpected error on database connection pool:', error);
+  });
+
+  // Create Drizzle client
+  const client = drizzle(pool, { schema });
+
+  return {
+    client,
+    pool,
+    isConnected: true,
+  };
+}
+
+/**
+ * Verify database connectivity by running a test query
+ * @throws Error if connection test fails
+ */
+async function testDatabaseConnection(db: DatabaseInstance): Promise<void> {
   try {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-    db = drizzle(pool, { schema });
-
-    // Export a cleanup function for tests
-    (db as any).$pool = pool;
-    console.log('✅ Database connected successfully');
+    // Simple test query to verify connection
+    await db.pool.query('SELECT 1');
   } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
+    throw new Error(
+      `Failed to connect to database: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
-export { db };
+// ============================================================================
+// Database Initialization
+// ============================================================================
 
-export async function closeDatabase() {
-  if (db && (db as any).$pool) {
-    await (db as any).$pool.end();
+let dbInstance: DatabaseInstance | null = null;
+let initError: Error | null = null;
+
+try {
+  loadEnvironment();
+  dbInstance = initializeDatabase();
+  // Test connection asynchronously
+  testDatabaseConnection(dbInstance).catch(error => {
+    initError = error;
+    console.error(initError.message);
+  });
+  console.log('✅ Database connection initialized successfully');
+} catch (error) {
+  initError = error as Error;
+  console.error(`❌ Failed to initialize database: ${initError.message}`);
+}
+
+// ============================================================================
+// Exports
+// ============================================================================
+
+/**
+ * Get the Drizzle ORM client
+ * @throws Error if database failed to initialize
+ */
+export function getDatabase(): ReturnType<typeof drizzle> {
+  if (!dbInstance) {
+    throw new Error(
+      'Database is not initialized. Check console for initialization errors.'
+    );
+  }
+  return dbInstance.client;
+}
+
+/**
+ * Check if database is connected
+ */
+export function isDatabaseConnected(): boolean {
+  return dbInstance?.isConnected ?? false;
+}
+
+/**
+ * Get the underlying PostgreSQL connection pool
+ * Useful for raw queries or advanced operations
+ */
+export function getDatabasePool(): Pool {
+  if (!dbInstance) {
+    throw new Error('Database is not initialized');
+  }
+  return dbInstance.pool;
+}
+
+/**
+ * Close database connection gracefully
+ * Should be called during application shutdown
+ */
+export async function closeDatabase(): Promise<void> {
+  if (dbInstance?.pool) {
+    try {
+      await dbInstance.pool.end();
+      console.log('✅ Database connection closed');
+    } catch (error) {
+      console.error(
+        `❌ Error closing database: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 }
+
+/**
+ * For backward compatibility with code using `db` directly
+ * Prefer using getDatabase() instead
+ * @deprecated Use getDatabase() instead
+ */
+export const db = {
+  get client() {
+    return getDatabase();
+  },
+  get pool() {
+    return getDatabasePool();
+  },
+};

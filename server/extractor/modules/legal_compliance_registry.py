@@ -129,4 +129,4 @@ def extract_compliance_standards(content: str) -> List[str]:
         r'(?:CCPA|California Consumer Privacy Rights Act)',
         r'(?:CCPA|California Consumer Privacy Rights Act)',
         r'(?:CCPA|California Consumer Privacy Rights Act)',
-        r'(?:CCPA|California Consumer Privacy Rights
+        r'(?:CCPA|California Consumer Privacy Rights Act)',    ]

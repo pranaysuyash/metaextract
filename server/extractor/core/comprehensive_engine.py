@@ -61,6 +61,9 @@ class NewComprehensiveMetadataExtractor:
             # Use the orchestrator to extract metadata
             result = self.orchestrator.extract_metadata(filepath, tier=tier, parallel=True)
             
+            # Add registry summary for frontend compatibility
+            result = self._add_registry_summary(result)
+            
             # Add compatibility layer information
             processing_time = (time.time() - start_time) * 1000
             
@@ -106,6 +109,53 @@ class NewComprehensiveMetadataExtractor:
             "extractors": extractors_info,
             "orchestrator_available": True
         }
+    
+    def _add_registry_summary(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add registry summary for frontend compatibility.
+        
+        Args:
+            result: The extraction result
+            
+        Returns:
+            Updated result with registry summary
+        """
+        metadata = result.get('metadata', {})
+        
+        # Create registry summary for different file types
+        registry_summary = {}
+        
+        # Image registry summary
+        if any(key in metadata for key in ['exif', 'iptc', 'xmp', 'pil']):
+            registry_summary['image'] = {
+                'exif': len(metadata.get('exif', {})),
+                'iptc': len(metadata.get('iptc', {})),
+                'xmp': len(metadata.get('xmp', {})),
+                'mobile': 0,  # Will be populated when mobile extractor is added
+                'perceptual_hashes': 0,  # Will be populated when hash extractor is added
+            }
+        
+        # Video registry summary (when video extractor is added)
+        if 'video' in metadata:
+            registry_summary['video'] = {
+                'format': len(metadata.get('video', {})),
+                'codec': 0,
+                'telemetry': 0,
+            }
+        
+        # Audio registry summary (when audio extractor is added)
+        if 'audio' in metadata:
+            registry_summary['audio'] = {
+                'id3': len(metadata.get('audio', {})),
+                'codec': 0,
+                'broadcast': 0,
+            }
+        
+        # Add registry summary to result
+        if registry_summary:
+            result['registry_summary'] = registry_summary
+        
+        return result
 
 
 # Compatibility function that matches the original API

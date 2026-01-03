@@ -485,6 +485,7 @@ def extract_scientific_dicom_fits_ultimate_advanced_extension_vi(file_path: str)
             len(us_tags) + len(doppler_params) + len(color_flow) +
             len(transducer) + len(biometry) + len(derived) +
             len([k for k in result.keys() if not k.startswith(('_', 'extension'))])
+        )
         result["fields_extracted"] = total_fields
         result["us_extraction_timestamp"] = str(__import__('datetime').datetime.now())
         

@@ -14,7 +14,7 @@ import {
   normalizeEmail,
   getSessionId,
   cleanupTempFile,
-} from '../utils/extraction-helpers';
+} from '../utils/extraction-helpers-new';
 import {
   sendQuotaExceededError,
   sendInvalidRequestError,
@@ -42,6 +42,23 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024, // 100MB Limit for images
   },
 });
+
+const SUPPORTED_IMAGE_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.heic',
+  '.heif',
+]);
 
 function getBaseUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {
@@ -207,12 +224,19 @@ export function registerImagesMvpRoutes(app: Express) {
 
         // Enforce file type
         const mimeType = req.file.mimetype;
-        if (mimeType !== 'image/jpeg' && mimeType !== 'image/png') {
+        const fileExt = path.extname(req.file.originalname).toLowerCase();
+        const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
+        const isSupportedExt = fileExt
+          ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
+          : false;
+        if (!isSupportedMime && !isSupportedExt) {
           // Return a 400 with specific message
           return res.status(400).json({
             error: 'Invalid file type',
-            message: 'Only JPG and PNG files are supported in this version.',
+            message:
+              'Only JPG, PNG, HEIC, and WebP files are supported in this version.',
             code: 'INVALID_FILE_TYPE',
+            supported: ['JPG', 'PNG', 'HEIC', 'WebP'],
           });
         }
 
@@ -322,15 +346,13 @@ export function registerImagesMvpRoutes(app: Express) {
         };
 
         // Record Usage
-        const fileExt =
-          path.extname(req.file.originalname).toLowerCase().slice(1) ||
-          'unknown';
+        const fileExtension = fileExt?.slice(1) || 'unknown';
 
         // 1. Log extraction analytics (generic)
         storage
           .logExtractionUsage({
             tier: useTrial ? 'free' : 'professional',
-            fileExtension: fileExt,
+            fileExtension,
             mimeType,
             fileSizeBytes: req.file.size,
             isVideo: false,
@@ -351,7 +373,7 @@ export function registerImagesMvpRoutes(app: Express) {
             .useCredits(
               creditBalanceId,
               creditCost,
-              `Extraction: ${fileExt} (Images MVP)`,
+              `Extraction: ${fileExtension} (Images MVP)`,
               mimeType
             )
             .catch(console.error);

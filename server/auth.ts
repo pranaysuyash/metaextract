@@ -25,8 +25,21 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required for security');
 }
+
+// Token and session configuration
 const JWT_EXPIRES_IN = '7d'; // 7 days
+const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // Must match JWT_EXPIRES_IN
 const SALT_ROUNDS = 12;
+
+// Cookie configuration
+const COOKIE_NAME = 'auth_token';
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+};
+
+// Token parsing
+const BEARER_PREFIX = 'Bearer ';
 
 // ============================================================================
 // Types
@@ -65,6 +78,38 @@ const loginSchema = z.object({
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Create an AuthUser object from database user data
+ */
+function createAuthUser(user: {
+  id: string;
+  email: string;
+  username: string;
+  tier: string;
+  subscriptionStatus: string | null;
+  subscriptionId: string | null;
+}): AuthUser {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    tier: user.tier,
+    subscriptionStatus: user.subscriptionStatus,
+    subscriptionId: user.subscriptionId,
+  };
+}
+
+/**
+ * Set authentication cookie on response
+ */
+function setAuthCookie(res: Response, token: string): void {
+  res.cookie(COOKIE_NAME, token, {
+    ...COOKIE_OPTIONS,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: TOKEN_EXPIRY_MS,
+  });
+}
 
 function generateToken(user: AuthUser): string {
   return jwt.sign(
@@ -117,10 +162,10 @@ export function authMiddleware(
   next: NextFunction
 ) {
   const authHeader = req.headers.authorization;
-  const cookieToken = req.cookies?.auth_token;
+  const cookieToken = req.cookies?.[COOKIE_NAME];
 
-  const token = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice(7)
+  const token = authHeader?.startsWith(BEARER_PREFIX)
+    ? authHeader.slice(BEARER_PREFIX.length)
     : cookieToken;
 
   if (token) {
@@ -259,25 +304,12 @@ export function registerAuthRoutes(app: Express) {
         })
         .returning();
 
-      // Generate token
-      const authUser: AuthUser = {
-        id: newUser.id,
-        email: newUser.email,
-        username: newUser.username,
-        tier: newUser.tier,
-        subscriptionStatus: newUser.subscriptionStatus,
-        subscriptionId: newUser.subscriptionId,
-      };
-
+      // ✅ Use helper to create AuthUser
+      const authUser = createAuthUser(newUser);
       const token = generateToken(authUser);
 
-      // Set cookie
-      res.cookie('auth_token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
+      // ✅ Use helper to set cookie
+      setAuthCookie(res, token);
 
       res.status(201).json({
         success: true,
@@ -378,7 +410,7 @@ export function registerAuthRoutes(app: Express) {
           .where(eq(users.id, user.id));
       }
 
-      // Generate token
+      // ✅ Create AuthUser with subscription-aware tier
       const authUser: AuthUser = {
         id: user.id,
         email: user.email,
@@ -390,13 +422,8 @@ export function registerAuthRoutes(app: Express) {
 
       const token = generateToken(authUser);
 
-      // Set cookie
-      res.cookie('auth_token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
+      // ✅ Use helper to set cookie
+      setAuthCookie(res, token);
 
       res.json({
         success: true,
@@ -513,23 +540,12 @@ export function registerAuthRoutes(app: Express) {
             .limit(1);
 
           if (freshUser) {
-            const authUser: AuthUser = {
-              id: freshUser.id,
-              email: freshUser.email,
-              username: freshUser.username,
-              tier: freshUser.tier,
-              subscriptionStatus: freshUser.subscriptionStatus,
-              subscriptionId: freshUser.subscriptionId,
-            };
-
+            // ✅ Use helper to create AuthUser
+            const authUser = createAuthUser(freshUser);
             const token = generateToken(authUser);
 
-            res.cookie('auth_token', token, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
+            // ✅ Use helper to set cookie
+            setAuthCookie(res, token);
 
             return res.json({
               success: true,
@@ -551,12 +567,8 @@ export function registerAuthRoutes(app: Express) {
       // Re-issue token with existing data
       const token = generateToken(req.user);
 
-      res.cookie('auth_token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      // ✅ Use helper to set cookie
+      setAuthCookie(res, token);
 
       res.json({
         success: true,
@@ -583,6 +595,7 @@ export function registerAuthRoutes(app: Express) {
       // Only allow admin users or the user themselves to update tiers
       const { userId, tier, subscriptionId, subscriptionStatus } = req.body;
 
+      // ✅ Validate required fields (single check, not duplicate)
       if (!userId || !tier) {
         return res.status(400).json({ error: 'userId and tier required' });
       }
@@ -591,10 +604,6 @@ export function registerAuthRoutes(app: Express) {
       // In production, this should be restricted to admin/internal calls only
       if (req.user.id !== userId) {
         return res.status(403).json({ error: 'Can only update your own tier' });
-      }
-
-      if (!userId || !tier) {
-        return res.status(400).json({ error: 'userId and tier required' });
       }
 
       if (!db) {

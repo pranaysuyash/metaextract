@@ -62,7 +62,7 @@ export default function ImagesMvpCreditsSuccess() {
           <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-8">
             <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm font-semibold mb-2">
               <CheckCircle2 className="w-4 h-4" />
-              1 credit = 1 JPG/PNG analysis
+              1 credit = 1 standard image (JPG, PNG, HEIC, WebP)
             </div>
             <p className="text-xs text-slate-500">
               Credits apply only to the Images MVP tool.
@@ -80,4 +80,3 @@ export default function ImagesMvpCreditsSuccess() {
     </Layout>
   );
 }
-

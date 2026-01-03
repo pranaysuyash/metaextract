@@ -23,7 +23,7 @@ import {
   invalidateTierCache,
   cacheKeys,
   preventCaching,
-  setCacheControl
+  setCacheControl,
 } from './cacheMiddleware';
 import { cacheManager } from './cache';
 import type { AuthRequest } from './auth';
@@ -91,29 +91,23 @@ function isRealTimeRequest(url: URL): boolean {
 
 export function setupCachedRoutes(router: Router): void {
   // GET /api/tiers - Cache tier configurations for 1 day
-  router.get('/tiers',
-    cacheTierConfig(),
-    async (req, res) => {
-      // Expensive database operation
-      const tiers = await fetchAllTiersFromDatabase();
+  router.get('/tiers', cacheTierConfig(), async (req, res) => {
+    // Expensive database operation
+    const tiers = await fetchAllTiersFromDatabase();
 
-      res.json(tiers);
-    }
-  );
+    res.json(tiers);
+  });
 
   // POST /api/tiers - Invalidate cache when tiers change
-  router.post('/tiers',
-    invalidateTierCache(),
-    async (req, res) => {
-      // Update tier configuration
-      await updateTierConfiguration(req.body);
+  router.post('/tiers', invalidateTierCache(), async (req, res) => {
+    // Update tier configuration
+    await updateTierConfiguration(req.body);
 
-      res.json({
-        success: true,
-        message: 'Tier configuration updated'
-      });
-    }
-  );
+    res.json({
+      success: true,
+      message: 'Tier configuration updated',
+    });
+  });
 }
 
 // ============================================================================
@@ -136,7 +130,7 @@ export function setupMetadataCaching(router: Router): void {
         return cacheKeys.metadata(fileId, tier);
       },
       ttl: TTL.METADATA,
-      tags: ['metadata']
+      tags: ['metadata'],
     }),
     async (req, res) => {
       const fileId = req.params.fileId;
@@ -156,7 +150,7 @@ export function setupMetadataCaching(router: Router): void {
       await updateFileMetadata(fileId, req.body);
       res.json({
         success: true,
-        message: 'Metadata updated'
+        message: 'Metadata updated',
       });
     }
   );
@@ -166,27 +160,30 @@ export function setupMetadataCaching(router: Router): void {
 // Example 3: Conditional Caching
 // ============================================================================
 
+/**
+ * Setup conditional caching for analytics
+ * Bypasses cache for real-time/live requests to show fresh data
+ * Regular requests use 10-minute cache for cost savings
+ */
 export function setupConditionalCaching(router: Router): void {
-  // Cache analytics, but skip for real-time requests
-  router.get('/analytics',
+  router.get(
+    '/analytics',
     cacheMiddleware({
       keyGenerator: (req: Request) => {
-        const url = new URL(req.url as string, `http://${req.headers.host}`);
+        const url = parseQueryUrl(req);
         const period = url.searchParams.get('period') || '24h';
         return cacheKeys.analytics('overview', period);
       },
-      ttl: 600, // 10 minutes
+      ttl: TTL.ANALYTICS,
       skipCache: (req: Request) => {
         // Don't cache if requesting real-time data
-        const url = new URL(req.url as string, `http://${req.headers.host}`);
-        return url.searchParams.has('realtime') || url.searchParams.has('live');
+        const url = parseQueryUrl(req);
+        return isRealTimeRequest(url);
       },
-      tags: ['analytics']
+      tags: ['analytics'],
     }),
     async (req, res) => {
-      // Generate analytics data
       const analytics = await generateAnalytics(req.query);
-
       res.json(analytics);
     }
   );
@@ -196,30 +193,29 @@ export function setupConditionalCaching(router: Router): void {
 // Example 4: Search Results Caching
 // ============================================================================
 
+/**
+ * Setup search result caching with query-based keys
+ * Popular searches are cached for 30 minutes
+ * Users can bypass cache with cache-control: no-cache header for fresh results
+ */
 export function setupSearchCaching(router: Router): void {
-  // GET /api/search - Cache search results
-  router.get('/search',
+  router.get(
+    '/search',
     cacheMiddleware({
       keyGenerator: (req: Request) => {
-        const url = new URL(req.url as string, `http://${req.headers.host}`);
+        const url = parseQueryUrl(req);
         const query = url.searchParams.get('q') || '';
         const filters = url.searchParams.toString();
         return cacheKeys.search(query, filters);
       },
-      ttl: 1800, // 30 minutes
+      ttl: TTL.SEARCH,
       tags: ['search'],
-      skipCache: (req: Request) => {
-        // Don't cache if user requests fresh results
-        return req.headers['cache-control'] === 'no-cache';
-      }
+      skipCache: shouldBypassCache,
     }),
     async (req, res) => {
       const query = req.query.q as string;
       const filters = req.query.filters || {};
-
-      // Expensive search operation
       const results = await performSearch(query, filters);
-
       res.json(results);
     }
   );
@@ -229,31 +225,32 @@ export function setupSearchCaching(router: Router): void {
 // Example 5: User-Specific Caching
 // ============================================================================
 
+/**
+ * Setup user preferences caching
+ * Requires authentication. Caches per-user preferences for 2 hours.
+ * Users can force refresh with cache-control: no-cache header
+ */
 export function setupUserCaching(router: Router): void {
-  // GET /api/user/preferences - Cache user preferences
-  router.get('/user/preferences',
+  router.get(
+    '/user/preferences',
     cacheMiddleware({
       keyGenerator: (req: Request) => {
-        const userId = (req as any).user?.id;
-        if (!userId) {
-          throw new Error('User not authenticated');
-        }
+        const userId = extractUserId(req);
         return cacheKeys.userSession(userId);
       },
-      ttl: 7200, // 2 hours
+      ttl: TTL.USER_PREFERENCES,
       tags: ['user'],
-      skipCache: (req: Request) => {
-        // Don't cache if user explicitly refreshes
-        return req.headers['cache-control'] === 'no-cache';
-      }
+      skipCache: shouldBypassCache,
     }),
     async (req, res) => {
-      const userId = (req as any).user.id;
-
-      // Fetch user preferences
-      const preferences = await getUserPreferences(userId);
-
-      res.json(preferences);
+      try {
+        const userId = extractUserId(req);
+        const preferences = await getUserPreferences(userId);
+        res.json(preferences);
+      } catch (error) {
+        const err = error as Error;
+        res.status(401).json({ error: err.message });
+      }
     }
   );
 }
@@ -262,17 +259,20 @@ export function setupUserCaching(router: Router): void {
 // Example 6: Health Check Caching
 // ============================================================================
 
+/**
+ * Setup health check caching with short TTL
+ * Minimizes impact of frequent health checks while keeping data reasonably fresh
+ */
 export function setupHealthCheckCaching(router: Router): void {
-  // GET /api/health - Cache health status (changes infrequently)
-  router.get('/health',
+  router.get(
+    '/health',
     cacheMiddleware({
       keyGenerator: () => cacheKeys.health('system'),
-      ttl: 60, // 1 minute
-      tags: ['health']
+      ttl: TTL.HEALTH_CHECK,
+      tags: ['health'],
     }),
     async (req, res) => {
       const health = await checkSystemHealth();
-
       res.json(health);
     }
   );
@@ -282,88 +282,110 @@ export function setupHealthCheckCaching(router: Router): void {
 // Example 7: No-Cache Zones for Sensitive Data
 // ============================================================================
 
+/**
+ * Setup routes that must never be cached
+ * Critical for security and correctness: authentication and payments
+ */
 export function setupNoCacheZones(router: Router): void {
-  // POST /api/auth/login - Never cache authentication responses
-  router.post('/auth/login',
-    async (req, res) => {
-      // Handle authentication
-      const authResult = await authenticateUser(req.body);
+  /**
+   * POST /api/auth/login - Never cache authentication responses
+   * Each login must be fresh to prevent token reuse attacks
+   */
+  router.post('/auth/login', async (req, res) => {
+    const authResult = await authenticateUser(req.body);
+    preventCaching(res);
+    res.json(authResult);
+  });
 
-      // Explicitly prevent caching
-      preventCaching(res);
-
-      res.json(authResult);
-    }
-  );
-
-  // POST /api/payment - Never cache payment operations
-  router.post('/payment',
-    async (req, res) => {
-      // Handle payment
-      const paymentResult = await processPayment(req.body);
-
-      // Prevent caching with short max-age
-      setCacheControl(res, 0, { noStore: true });
-
-      res.json(paymentResult);
-    }
-  );
+  /**
+   * POST /api/payment - Never cache payment operations
+   * Payment state changes every request, must never be cached
+   */
+  router.post('/payment', async (req, res) => {
+    const paymentResult = await processPayment(req.body);
+    setCacheControl(res, 0, { noStore: true });
+    res.json(paymentResult);
+  });
 }
 
 // ============================================================================
 // Example 8: Cache Invalidation Triggers
 // ============================================================================
 
+/**
+ * Setup cache management endpoints (admin only)
+ * Allows fine-grained control over cache invalidation and warming
+ */
 export function setupCacheInvalidation(router: Router): void {
-  // POST /api/admin/cache/clear - Manual cache clearing
-  router.post('/admin/cache/clear',
-    async (req, res) => {
-      const { tags, pattern } = req.body;
+  /**
+   * POST /api/admin/cache/clear - Manual cache clearing
+   * Supports three invalidation strategies: tags, pattern, or full clear
+   */
+  router.post('/admin/cache/clear', async (req, res) => {
+    const { tags, pattern } = req.body;
+
+    try {
+      let invalidated: number;
+      let method: string;
 
       if (tags && Array.isArray(tags)) {
-        // Invalidate by tags
+        // Invalidate by tags (e.g., ['metadata', 'search'])
         let totalInvalidated = 0;
         for (const tag of tags) {
           const count = await cacheManager.invalidateByTag(tag);
           totalInvalidated += count;
         }
-
-        res.json({
-          success: true,
-          invalidated: totalInvalidated,
-          method: 'tags'
-        });
+        invalidated = totalInvalidated;
+        method = 'tags';
       } else if (pattern) {
-        // Invalidate by pattern
-        const count = await cacheManager.invalidatePattern(pattern);
-
-        res.json({
-          success: true,
-          invalidated: count,
-          method: 'pattern'
-        });
+        // Invalidate by pattern (e.g., 'metadata:*')
+        invalidated = await cacheManager.invalidatePattern(pattern);
+        method = 'pattern';
       } else {
-        // Clear all cache
-        const success = await cacheManager.clear();
-
-        res.json({
-          success,
-          message: success ? 'All cache cleared' : 'Failed to clear cache'
-        });
+        // Clear entire cache
+        await cacheManager.clear();
+        invalidated = -1; // -1 indicates full clear
+        method = 'full';
       }
+
+      res.json({
+        success: true,
+        invalidated,
+        method,
+      });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        success: false,
+        error: err.message,
+      });
     }
-  );
+  });
 
-  // POST /api/admin/cache/warmup - Pre-warm cache with important data
-  router.post('/admin/cache/warmup',
-    async (req, res) => {
-      const keys = req.body.keys || [];
+  /**
+   * POST /api/admin/cache/warmup - Pre-warm cache with important data
+   * Reduces initial latency for frequently accessed data
+   */
+  router.post('/admin/cache/warmup', async (req, res) => {
+    const keys = req.body.keys || [];
 
-      // Common keys to warm up
+    try {
       const defaultKeys = [
-        { key: 'tier:config:free', value: await getTierConfig('free'), ttl: 86400 },
-        { key: 'tier:config:premium', value: await getTierConfig('premium'), ttl: 86400 },
-        { key: 'health:system', value: await getSystemHealth(), ttl: 60 },
+        {
+          key: cacheKeys.tiersConfig('free'),
+          value: await getTierConfig('free'),
+          ttl: TTL.TIER_CONFIG,
+        },
+        {
+          key: cacheKeys.tiersConfig('premium'),
+          value: await getTierConfig('premium'),
+          ttl: TTL.TIER_CONFIG,
+        },
+        {
+          key: cacheKeys.health('system'),
+          value: await getSystemHealth(),
+          ttl: TTL.HEALTH_CHECK,
+        },
       ];
 
       const keysToWarm = keys.length > 0 ? keys : defaultKeys;
@@ -372,70 +394,53 @@ export function setupCacheInvalidation(router: Router): void {
       res.json({
         success: true,
         warmed,
-        total: keysToWarm.length
+        total: keysToWarm.length,
+      });
+    } catch (error) {
+      const err = error as Error;
+      res.status(500).json({
+        success: false,
+        error: err.message,
       });
     }
-  );
+  });
 }
 
 // ============================================================================
-// Helper Functions (to be implemented)
+// Implementation Notes
 // ============================================================================
 
-async function fetchAllTiersFromDatabase() {
-  // Implementation would fetch tiers from database
-  return {};
-}
+/**
+ * The helper functions below should be implemented in actual route handlers.
+ * They're placeholders for demonstration purposes.
+ *
+ * Implement these functions with your actual business logic:
+ * - fetchAllTiersFromDatabase() - Query tier data from database
+ * - updateTierConfiguration() - Update tier config in database
+ * - fetchMetadataForFile() - Extract/retrieve file metadata
+ * - updateFileMetadata() - Persist metadata changes
+ * - generateAnalytics() - Compute analytics from logs/data
+ * - performSearch() - Query search index/database
+ * - getUserPreferences() - Fetch user settings
+ * - authenticateUser() - Validate credentials via auth provider
+ * - processPayment() - Process payment through payment gateway
+ * - checkSystemHealth() - Query service health status
+ * - getTierConfig() - Fetch tier configuration
+ * - getSystemHealth() - Aggregate system metrics
+ */
 
-async function updateTierConfiguration(config: any) {
-  // Implementation would update tier configuration
-}
+// These function signatures are shown for reference only.
+// Implement them with your actual business logic.
 
-async function fetchMetadataForFile(fileId: string) {
-  // Implementation would fetch metadata
-  return {};
-}
-
-async function updateFileMetadata(fileId: string, metadata: any) {
-  // Implementation would update metadata
-}
-
-async function generateAnalytics(query: any) {
-  // Implementation would generate analytics
-  return {};
-}
-
-async function performSearch(query: string, filters: any) {
-  // Implementation would perform search
-  return {};
-}
-
-async function getUserPreferences(userId: string) {
-  // Implementation would fetch user preferences
-  return {};
-}
-
-async function authenticateUser(credentials: any) {
-  // Implementation would authenticate user
-  return {};
-}
-
-async function processPayment(paymentData: any) {
-  // Implementation would process payment
-  return {};
-}
-
-async function checkSystemHealth() {
-  // Implementation would check system health
-  return {};
-}
-
-async function getTierConfig(tier: string) {
-  // Implementation would get tier config
-  return {};
-}
-
-async function getSystemHealth() {
-  // Implementation would get system health
-  return {};
-}
+// declare function fetchAllTiersFromDatabase(): Promise<any>;
+// declare function updateTierConfiguration(config: any): Promise<void>;
+// declare function fetchMetadataForFile(fileId: string): Promise<any>;
+// declare function updateFileMetadata(fileId: string, metadata: any): Promise<void>;
+// declare function generateAnalytics(query: any): Promise<any>;
+// declare function performSearch(query: string, filters: any): Promise<any>;
+// declare function getUserPreferences(userId: string): Promise<any>;
+// declare function authenticateUser(credentials: any): Promise<any>;
+// declare function processPayment(paymentData: any): Promise<any>;
+// declare function checkSystemHealth(): Promise<any>;
+// declare function getTierConfig(tier: string): Promise<any>;
+// declare function getSystemHealth(): Promise<any>;

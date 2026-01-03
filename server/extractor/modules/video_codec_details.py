@@ -16,7 +16,7 @@ try:
     from shared_utils import count_fields as _count_fields
 except ImportError:
     try:
-from .shared_utils import count_fields as _count_fields
+        from .shared_utils import count_fields as _count_fields
     except ImportError:
         # Fallback - define stub function
         def _count_fields(d): return 0

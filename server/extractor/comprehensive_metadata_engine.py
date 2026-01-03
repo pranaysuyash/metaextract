@@ -1225,6 +1225,14 @@ class ComprehensiveTierConfig:
     # Additional features referenced in code but missing from class
     workflow_dam: bool = False            # Workflow DAM metadata
     image_metadata: bool = False          # Image metadata processing
+    video_metadata: bool = False          # Video metadata processing
+    audio_metadata: bool = False          # Audio metadata processing
+    document_metadata: bool = False       # Document metadata processing
+    extended_metadata: bool = False       # Extended metadata processing
+    specialized_metadata: bool = False    # Specialized metadata processing
+    ai_ml_metadata: bool = False          # AI/ML metadata processing
+    industrial_metadata: bool = False     # Industrial metadata processing
+    scientific_metadata: bool = False     # Scientific metadata processing
 
 COMPREHENSIVE_TIER_CONFIGS = {
     Tier.FREE: ComprehensiveTierConfig(),
@@ -2892,6 +2900,15 @@ class ComprehensiveMetadataExtractor:
                 error_type=error_type
             )
 
+        # Promote burned metadata GPS to main GPS field if needed
+        if "burned_metadata" in base_result and base_result["burned_metadata"]:
+            burned_gps = base_result["burned_metadata"].get("parsed_data", {}).get("gps")
+            if burned_gps and "latitude" in burned_gps and "longitude" in burned_gps:
+                # Only set main GPS if it's missing or empty
+                if "gps" not in base_result or not base_result["gps"] or not base_result["gps"].get("latitude"):
+                    base_result["gps"] = burned_gps
+                    logger.debug(f"Promoted burned metadata GPS to main GPS field: {burned_gps['latitude']}, {burned_gps['longitude']}")
+
         return base_result
 
 # ============================================================================
@@ -2951,16 +2968,43 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[st
 
         # Add persona-friendly interpretation layer
         try:
-            from .persona_interpretation import add_persona_interpretation
+            print("[persona_debug] Attempting to add persona interpretation", file=sys.stderr)
+            import importlib.util
+            import os
+            # Get the path to persona_interpretation.py
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            persona_path = os.path.join(current_dir, "persona_interpretation.py")
+
+            # Load the module dynamically
+            spec = importlib.util.spec_from_file_location("persona_interpretation", persona_path)
+            persona_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(persona_module)
+
+            # Get the function
+            add_persona_interpretation = persona_module.add_persona_interpretation
             # Default to phone_photo_sarah persona for image files
             persona = "phone_photo_sarah"
             mime_type = result.get("file", {}).get("mime_type", "")
+            print(f"[persona_debug] Mime type: {mime_type}, starts with image/: {mime_type.startswith('image/')}", file=sys.stderr)
+            logger.info(f"[persona_check] Mime type: {mime_type}, starts with image/: {mime_type.startswith('image/')}")
             if mime_type.startswith("image/"):
-                result = add_persona_interpretation(result, persona)
-                logger.debug(f"Added persona interpretation for {persona}")
+                print(f"[persona_debug] Adding persona interpretation for {persona}", file=sys.stderr)
+                logger.info(f"[persona_adding] Adding persona interpretation for {persona}")
+                persona_result = add_persona_interpretation(result, persona)
+                # Add the persona interpretation to the existing result
+                result["persona_interpretation"] = persona_result.get("persona_interpretation")
+                print(f"[persona_debug] Successfully added persona interpretation", file=sys.stderr)
+                logger.info(f"[persona_success] Successfully added persona interpretation for {persona}")
+            else:
+                print(f"[persona_debug] Not an image file, skipping", file=sys.stderr)
+                logger.info(f"[persona_skipped] Not an image file, skipping persona interpretation")
         except ImportError as e:
+            print(f"[persona_debug] ImportError: {e}", file=sys.stderr)
             logger.debug(f"Persona interpretation not available: {e}")
         except Exception as e:
+            print(f"[persona_debug] Exception: {type(e).__name__}: {e}", file=sys.stderr)
+            import traceback
+            print(f"[persona_debug] Traceback: {traceback.format_exc()}", file=sys.stderr)
             logger.warning(f"Failed to add persona interpretation: {e}")
 
         return result

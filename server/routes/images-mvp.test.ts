@@ -136,7 +136,7 @@ describe('Images MVP API Tests', () => {
 
     it('should use trial if available (uses < 2)', async () => {
         // Mock DB uses to return 0 (trial available)
-        (db.select().from().where as jest.Mock).mockResolvedValue([{ uses: 0 }]);
+        (db.limit as jest.Mock).mockResolvedValue([{ uses: 0 }]);
         (storage.recordTrialUsage as jest.Mock).mockResolvedValue({});
 
         const response = await request(app)
@@ -153,7 +153,7 @@ describe('Images MVP API Tests', () => {
 
     it('should reject trial if uses >= 2 and no credits', async () => {
         // Mock DB uses to return 2 (trial used up)
-        (db.select().from().where as jest.Mock).mockResolvedValue([{ uses: 2 }]);
+        (db.limit as jest.Mock).mockResolvedValue([{ uses: 2 }]);
         
         // Mock balance 0
         (storage.getOrCreateCreditBalance as jest.Mock).mockResolvedValue({ credits: 0, id: 'bal_1' });
@@ -169,7 +169,7 @@ describe('Images MVP API Tests', () => {
 
     it('should use credits if trial exhausted', async () => {
         // Mock DB uses to return 2
-        (db.select().from().where as jest.Mock).mockResolvedValue([{ uses: 2 }]);
+        (db.limit as jest.Mock).mockResolvedValue([{ uses: 2 }]);
         // Mock balance 5
         (storage.getOrCreateCreditBalance as jest.Mock).mockResolvedValue({ id: 'bal_1', credits: 5 });
 

@@ -502,6 +502,7 @@ def extract_scientific_dicom_fits_ultimate_advanced_extension_viii(file_path: st
             len(fluoro_tags) + len(dose) + len(rt_params) +
             len(geometry) + len(lih) + len(derived) +
             len([k for k in result.keys() if not k.startswith(('_', 'extension'))])
+        )
         result["fields_extracted"] = total_fields
         result["fluoro_extraction_timestamp"] = str(__import__('datetime').datetime.now())
         
