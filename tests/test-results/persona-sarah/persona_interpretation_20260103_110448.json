@@ -1,0 +1,143 @@
+{
+  "test_run": {
+    "timestamp": "2026-01-03T11:04:48.129788",
+    "persona": "Phone Photo Sarah",
+    "test_type": "persona_interpretation",
+    "total_files_tested": 2
+  },
+  "results": [
+    {
+      "filename": "IMG_20251225_164634.jpg",
+      "file_size_mb": 2.63,
+      "raw_fields_count": 79,
+      "persona_interpretation": {
+        "key_findings": [
+          "\ud83d\udccd No GPS location data",
+          "\u274c Signs of modification detected"
+        ],
+        "plain_english_answers": {
+          "when_taken": {
+            "answer": "Unknown date",
+            "details": "No date information available",
+            "source": "none",
+            "confidence": "none"
+          },
+          "location": {
+            "has_location": false,
+            "answer": "No location data",
+            "details": "This photo doesn't have GPS information",
+            "confidence": "n/a",
+            "possible_reasons": [
+              "GPS was disabled when photo was taken",
+              "Location services were off",
+              "Photo was edited and GPS was stripped",
+              "Photo was taken indoors without GPS signal"
+            ]
+          },
+          "device": {
+            "answer": "Unknown device",
+            "device_type": "camera",
+            "details": {
+              "make": null,
+              "model": null,
+              "software": null
+            },
+            "confidence": "none"
+          },
+          "authenticity": {
+            "assessment": "likely_modified",
+            "confidence": "low",
+            "score": 45,
+            "answer": "Photo likely modified (low confidence)",
+            "checks_performed": {
+              "has_original_datetime": false,
+              "has_software_signatures": false,
+              "has_gps": false,
+              "exif_intact": false,
+              "thumbnails_match": true,
+              "suspicious_signs": []
+            },
+            "reasons": [
+              "Missing original date/time",
+              "EXIF data appears incomplete"
+            ]
+          }
+        },
+        "confidence_scores": {},
+        "warnings": [],
+        "recommendations": [],
+        "persona": "phone_photo_sarah"
+      },
+      "timestamp": "2026-01-03T11:04:48.036337"
+    },
+    {
+      "filename": "gps-map-photo.jpg",
+      "file_size_mb": 9.12,
+      "raw_fields_count": 96,
+      "persona_interpretation": {
+        "key_findings": [
+          "\ud83d\udcc5 Taken on December 25, 2025 at 04:48 PM",
+          "\ud83d\udccd No GPS location data",
+          "\ud83d\udcf1 Taken with Xiaomi 24053PY09I",
+          "\u26a0\ufe0f May have been edited"
+        ],
+        "plain_english_answers": {
+          "when_taken": {
+            "answer": "December 25, 2025 at 04:48 PM",
+            "details": "Taken 1 week ago",
+            "source": "photo_metadata",
+            "confidence": "high",
+            "raw_dates": {
+              "exif_date_original": "2025:12:25 16:48:10",
+              "filesystem_date": null
+            }
+          },
+          "location": {
+            "has_location": false,
+            "answer": "No location data",
+            "details": "This photo doesn't have GPS information",
+            "confidence": "n/a",
+            "possible_reasons": [
+              "GPS was disabled when photo was taken",
+              "Location services were off",
+              "Photo was edited and GPS was stripped",
+              "Photo was taken indoors without GPS signal"
+            ]
+          },
+          "device": {
+            "answer": "Xiaomi 24053PY09I",
+            "device_type": "smartphone",
+            "details": {
+              "make": "Xiaomi",
+              "model": "24053PY09I :: Captured by - GPS Map Camera",
+              "software": null
+            },
+            "confidence": "high"
+          },
+          "authenticity": {
+            "assessment": "possibly_edited",
+            "confidence": "medium",
+            "score": 75,
+            "answer": "Photo possibly edited (medium confidence)",
+            "checks_performed": {
+              "has_original_datetime": true,
+              "has_software_signatures": false,
+              "has_gps": false,
+              "exif_intact": false,
+              "thumbnails_match": false,
+              "suspicious_signs": []
+            },
+            "reasons": [
+              "EXIF data appears incomplete"
+            ]
+          }
+        },
+        "confidence_scores": {},
+        "warnings": [],
+        "recommendations": [],
+        "persona": "phone_photo_sarah"
+      },
+      "timestamp": "2026-01-03T11:04:48.129400"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "filename": "synthetic_iphone_photo.jpg",
+  "description": "Synthetic iPhone photo with perfect metadata",
+  "metadata": {
+    "DateTimeOriginal": "2024-07-15 14:30:45",
+    "CreateDate": "2024-07-15 14:30:45",
+    "Make": "Apple",
+    "Model": "iPhone 15 Pro Max",
+    "Software": "iOS 17.0",
+    "ExifImageWidth": 4032,
+    "ExifImageHeight": 3024,
+    "GPSLatitude": 37.7749,
+    "GPSLongitude": -122.4194,
+    "GPSLatitudeRef": "N",
+    "GPSLongitudeRef": "W",
+    "City": "San Francisco",
+    "State": "California",
+    "Country": "United States",
+    "ISO": 100,
+    "FNumber": 1.8,
+    "ExposureTime": "1/120",
+    "FocalLength": "6.86",
+    "LensModel": "iPhone 15 Pro Max back triple camera 6.86mm f/1.78"
+  },
+  "expected_persona_results": {
+    "when_taken": "July 15, 2024 at 02:30 PM",
+    "where": "San Francisco, California, United States",
+    "device": "Apple iPhone 15 Pro Max",
+    "authentic": "appears_authentic"
+  }
+}
