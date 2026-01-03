@@ -508,6 +508,7 @@ def extract_scientific_dicom_fits_ultimate_advanced_extension_vii(file_path: str
             len(angio_tags) + len(dose) + len(contrast) +
             len(geometry) + len(dsa) + len(derived) +
             len([k for k in result.keys() if not k.startswith(('_', 'extension'))])
+        )
         result["fields_extracted"] = total_fields
         result["angio_extraction_timestamp"] = str(__import__('datetime').datetime.now())
         

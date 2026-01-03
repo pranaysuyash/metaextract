@@ -50,6 +50,22 @@ class MetadataCategory(Enum):
     ACCESSIBILITY = "accessibility"
     TIFF_IFD = "tiff_ifd"
     ECOMMERCE = "ecommerce"
+    VECTOR_GRAPHICS = "vector_graphics"
+    NEXTGEN_IMAGE = "nextgen_image"
+    CINEMA_RAW = "cinema_raw"
+    DOCUMENT_IMAGE = "document_image"
+    MEDICAL_IMAGING = "medical_imaging"
+    SCIENTIFIC_IMAGING = "scientific_imaging"
+    REMOTE_SENSING = "remote_sensing"
+    AI_VISION = "ai_vision"
+    THREE_D_IMAGING = "three_d_imaging"
+    PRINT_PREPRESS = "print_prepress"
+    DRONE_UAV = "drone_uav"
+    THERMAL_IMAGING = "thermal_imaging"
+    VR_AR = "vr_ar"
+    BARCODE_OCR = "barcode_ocr"
+    DIGITAL_SIGNATURE = "digital_signature"
+    COLOR_GRADING = "color_grading"
 
 
 @dataclass
@@ -108,6 +124,22 @@ class ImageMetadataRegistry:
         self._register_accessibility()
         self._register_tiff_ifd()
         self._register_ecommerce()
+        self._register_vector_graphics()
+        self._register_nextgen_image()
+        self._register_cinema_raw()
+        self._register_document_image()
+        self._register_medical_imaging()
+        self._register_scientific_imaging()
+        self._register_remote_sensing()
+        self._register_ai_vision()
+        self._register_three_d_imaging()
+        self._register_print_prepress()
+        self._register_drone_uav()
+        self._register_thermal_imaging()
+        self._register_vr_ar()
+        self._register_barcode_ocr()
+        self._register_digital_signature()
+        self._register_color_grading()
 
     def _register_field(self, field: MetadataField):
         """Register a single metadata field"""
@@ -987,47 +1019,853 @@ class ImageMetadataRegistry:
                 supported_formats=["JPEG", "PNG", "WebP", "TIFF", "GIF", "AVIF", "HEIC", "PSD"]
             ))
 
-    def get_field(self, name: str) -> Optional[MetadataField]:
-        """Get a field definition by name"""
-        return self.fields.get(name)
+    def _register_vector_graphics(self):
+        """SVG and vector graphics metadata - ~40 fields"""
+        vector_fields = [
+            ("svg_version", MetadataCategory.VECTOR_GRAPHICS, "str", "SVG version"),
+            ("svg_base_profile", MetadataCategory.VECTOR_GRAPHICS, "str", "SVG base profile"),
+            ("svg_namespace", MetadataCategory.VECTOR_GRAPHICS, "str", "SVG namespace URI"),
+            ("svg_width", MetadataCategory.VECTOR_GRAPHICS, "str", "SVG width attribute"),
+            ("svg_height", MetadataCategory.VECTOR_GRAPHICS, "str", "SVG height attribute"),
+            ("svg_viewbox", MetadataCategory.VECTOR_GRAPHICS, "dict", "ViewBox coordinates"),
+            ("svg_preserve_aspect_ratio", MetadataCategory.VECTOR_GRAPHICS, "str", "Aspect ratio"),
+            ("svg_total_elements", MetadataCategory.VECTOR_GRAPHICS, "int", "Total element count"),
+            ("svg_element_counts", MetadataCategory.VECTOR_GRAPHICS, "dict", "Element type counts"),
+            ("svg_has_paths", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has path elements"),
+            ("svg_has_shapes", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has shape elements"),
+            ("svg_has_text", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has text elements"),
+            ("svg_has_images", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has embedded images"),
+            ("svg_has_groups", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has group elements"),
+            ("svg_has_symbols", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has symbol definitions"),
+            ("svg_has_markers", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has marker definitions"),
+            ("svg_has_masks", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has mask definitions"),
+            ("svg_has_filters", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has filter effects"),
+            ("svg_has_gradients", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has gradient definitions"),
+            ("svg_has_patterns", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has pattern definitions"),
+            ("svg_has_animations", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has SMIL animations"),
+            ("svg_animation_counts", MetadataCategory.VECTOR_GRAPHICS, "dict", "Animation type counts"),
+            ("svg_has_defs", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has definitions section"),
+            ("svg_has_external_links", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has external links"),
+            ("svg_xlink_count", MetadataCategory.VECTOR_GRAPHICS, "int", "XLink reference count"),
+            ("svg_anchor_count", MetadataCategory.VECTOR_GRAPHICS, "int", "Anchor/link count"),
+            ("svg_use_count", MetadataCategory.VECTOR_GRAPHICS, "int", "Use element count"),
+            ("svg_has_inline_css", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has inline CSS"),
+            ("svg_css_length", MetadataCategory.VECTOR_GRAPHICS, "int", "CSS content length"),
+            ("svg_has_accessibility", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has ARIA attributes"),
+            ("svg_aria_role", MetadataCategory.VECTOR_GRAPHICS, "str", "ARIA role"),
+            ("svg_aria_label", MetadataCategory.VECTOR_GRAPHICS, "str", "ARIA label"),
+            ("svg_title", MetadataCategory.VECTOR_GRAPHICS, "str", "Title element"),
+            ("svg_description", MetadataCategory.VECTOR_GRAPHICS, "str", "Description element"),
+            ("svg_keywords", MetadataCategory.VECTOR_GRAPHICS, "list", "Keywords"),
+            ("svg_has_rdf", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has RDF metadata"),
+            ("svg_has_dublin_core", MetadataCategory.VECTOR_GRAPHICS, "bool", "Has Dublin Core"),
+        ]
+        for name, category, field_type, description in vector_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["SVG", "SVGZ"]
+            ))
 
-    def get_fields_by_category(self, category: MetadataCategory) -> List[MetadataField]:
-        """Get all fields in a category"""
-        return [self.fields[name] for name in self.categories.get(category, [])]
+    def _register_nextgen_image(self):
+        """Next-generation image formats (JPEG XL, etc.) - ~30 fields"""
+        nextgen_fields = [
+            ("jxl_is_valid", MetadataCategory.NEXTGEN_IMAGE, "bool", "Is valid JPEG XL"),
+            ("jxl_box_count", MetadataCategory.NEXTGEN_IMAGE, "int", "Number of boxes"),
+            ("jxl_width", MetadataCategory.NEXTGEN_IMAGE, "int", "Image width"),
+            ("jxl_height", MetadataCategory.NEXTGEN_IMAGE, "int", "Image height"),
+            ("jxl_bits_per_sample", MetadataCategory.NEXTGEN_IMAGE, "int", "Bits per sample"),
+            ("jxl_samples_per_pixel", MetadataCategory.NEXTGEN_IMAGE, "int", "Samples per pixel"),
+            ("jxl_has_preview", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has preview image"),
+            ("jxl_num_extra_channels", MetadataCategory.NEXTGEN_IMAGE, "int", "Extra channels"),
+            ("jxl_is_animated", MetadataCategory.NEXTGEN_IMAGE, "bool", "Is animated"),
+            ("jxl_has_exif", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has EXIF"),
+            ("jxl_has_xmp", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has XMP"),
+            ("jxl_alpha_bits", MetadataCategory.NEXTGEN_IMAGE, "int", "Alpha channel bits"),
+            ("jxl_megapixels", MetadataCategory.NEXTGEN_IMAGE, "float", "Megapixels"),
+            ("jxl_aspect_ratio", MetadataCategory.NEXTGEN_IMAGE, "float", "Aspect ratio"),
+            ("jxl_codec_loop_mode", MetadataCategory.NEXTGEN_IMAGE, "str", "Codec loop mode"),
+            ("jxl_enhancement_layer", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has enhancement layer"),
+            ("jxl_lossless", MetadataCategory.NEXTGEN_IMAGE, "bool", "Is lossless"),
+            ("jxl_progressive_levels", MetadataCategory.NEXTGEN_IMAGE, "list", "Progressive levels"),
+            ("avif_has_reconstruction_box", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has JBR reconstruction"),
+            ("avif_is_grid_image", MetadataCategory.NEXTGEN_IMAGE, "bool", "Is grid image"),
+            ("avif_item_count", MetadataCategory.NEXTGEN_IMAGE, "int", "Item count"),
+            ("heic_has_auxiliary_image", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has auxiliary image"),
+            ("heic_depth_image", MetadataCategory.NEXTGEN_IMAGE, "bool", "Has depth image"),
+            ("heic_primary_item", MetadataCategory.NEXTGEN_IMAGE, "str", "Primary item ID"),
+        ]
+        for name, category, field_type, description in nextgen_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JXL", "AVIF", "HEIC"]
+            ))
 
-    def get_all_field_names(self) -> List[str]:
-        """Get list of all field names"""
-        return list(self.fields.keys())
+    def _register_cinema_raw(self):
+        """Cinema RAW formats (CinemaDNG, ARRI) - ~35 fields"""
+        cinema_fields = [
+            ("cinema_dng_version", MetadataCategory.CINEMA_RAW, "int", "DNG version"),
+            ("cinema_dng_backward_version", MetadataCategory.CINEMA_RAW, "int", "DNG backward version"),
+            ("cinema_dng_unique_camera_model", MetadataCategory.CINEMA_RAW, "str", "Unique camera model"),
+            ("cinema_dng_localized_model", MetadataCategory.CINEMA_RAW, "str", "Localized model"),
+            ("cinema_dng_color_matrix1", MetadataCategory.CINEMA_RAW, "list", "Color matrix 1"),
+            ("cinema_dng_color_matrix2", MetadataCategory.CINEMA_RAW, "list", "Color matrix 2"),
+            ("cinema_dng_forward_matrix1", MetadataCategory.CINEMA_RAW, "list", "Forward matrix 1"),
+            ("cinema_dng_forward_matrix2", MetadataCategory.CINEMA_RAW, "list", "Forward matrix 2"),
+            ("cinema_dng_calibration_illuminant1", MetadataCategory.CINEMA_RAW, "int", "Calibration illuminant 1"),
+            ("cinema_dng_calibration_illuminant2", MetadataCategory.CINEMA_RAW, "int", "Calibration illuminant 2"),
+            ("cinema_dng_as_shot_neutral", MetadataCategory.CINEMA_RAW, "list", "As shot neutral"),
+            ("cinema_dng_as_shot_white_xy", MetadataCategory.CINEMA_RAW, "list", "As shot white XY"),
+            ("cinema_dng_baseline_exposure", MetadataCategory.CINEMA_RAW, "float", "Baseline exposure"),
+            ("cinema_dng_baseline_noise", MetadataCategory.CINEMA_RAW, "float", "Baseline noise"),
+            ("cinema_dng_baseline_sharpness", MetadataCategory.CINEMA_RAW, "float", "Baseline sharpness"),
+            ("cinema_dng_bayer_green_split", MetadataCategory.CINEMA_RAW, "int", "Bayer green split"),
+            ("cinema_dng_active_area", MetadataCategory.CINEMA_RAW, "list", "Active area"),
+            ("cinema_dng_masked_areas", MetadataCategory.CINEMA_RAW, "list", "Masked areas"),
+            ("cinema_dng_raw_image_unique_id", MetadataCategory.CINEMA_RAW, "str", "Raw image unique ID"),
+            ("cinema_dng_original_filename", MetadataCategory.CINEMA_RAW, "str", "Original file name"),
+            ("arri_is_valid", MetadataCategory.CINEMA_RAW, "bool", "Is valid ARRI"),
+            ("arri_camera_model", MetadataCategory.CINEMA_RAW, "str", "ARRI camera model"),
+            ("arri_product_id", MetadataCategory.CINEMA_RAW, "str", "ARRI product ID"),
+            ("arri_sensor_name", MetadataCategory.CINEMA_RAW, "str", "Sensor name"),
+            ("arri_lens_name", MetadataCategory.CINEMA_RAW, "str", "Lens name"),
+            ("arri_frame_rate", MetadataCategory.CINEMA_RAW, "float", "Frame rate"),
+            ("arri_exposure_time", MetadataCategory.CINEMA_RAW, "float", "Exposure time"),
+            ("arri_iso_speed", MetadataCategory.CINEMA_RAW, "int", "ISO speed"),
+            ("cinema_color_depth", MetadataCategory.CINEMA_RAW, "int", "Color depth bits"),
+            ("cinema_compression", MetadataCategory.CINEMA_RAW, "str", "Compression type"),
+            ("cinema_megapixels", MetadataCategory.CINEMA_RAW, "float", "Megapixels"),
+            ("cinema_aspect_ratio", MetadataCategory.CINEMA_RAW, "float", "Aspect ratio"),
+        ]
+        for name, category, field_type, description in cinema_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["DNG", "CinemaDNG", "ARRI", "ALEXA"]
+            ))
 
-    def get_total_field_count(self) -> int:
-        """Get total number of registered fields"""
-        return len(self.fields)
+    def _register_document_image(self):
+        """Document and scanned image metadata - ~30 fields"""
+        doc_fields = [
+            ("doc_page_number", MetadataCategory.DOCUMENT_IMAGE, "int", "Page number"),
+            ("doc_page_count", MetadataCategory.DOCUMENT_IMAGE, "int", "Total page count"),
+            ("doc_resolution_x", MetadataCategory.DOCUMENT_IMAGE, "int", "X resolution DPI"),
+            ("doc_resolution_y", MetadataCategory.DOCUMENT_IMAGE, "int", "Y resolution DPI"),
+            ("doc_scan_software", MetadataCategory.DOCUMENT_IMAGE, "str", "Scanning software"),
+            ("doc_scan_device", MetadataCategory.DOCUMENT_IMAGE, "str", "Scan device model"),
+            ("doc_scan_date", MetadataCategory.DOCUMENT_IMAGE, "datetime", "Scan date"),
+            ("doc_has_ocr", MetadataCategory.DOCUMENT_IMAGE, "bool", "Has OCR text"),
+            ("doc_ocr_confidence", MetadataCategory.DOCUMENT_IMAGE, "float", "OCR confidence"),
+            ("doc_ocr_language", MetadataCategory.DOCUMENT_IMAGE, "str", "OCR language"),
+            ("doc_barcode_type", MetadataCategory.DOCUMENT_IMAGE, "str", "Barcode type"),
+            ("doc_barcode_data", MetadataCategory.DOCUMENT_IMAGE, "str", "Barcode data"),
+            ("doc_has_signature", MetadataCategory.DOCUMENT_IMAGE, "bool", "Has signature"),
+            ("doc_signature_area", MetadataCategory.DOCUMENT_IMAGE, "dict", "Signature area"),
+            ("doc_has_annotations", MetadataCategory.DOCUMENT_IMAGE, "bool", "Has annotations"),
+            ("doc_annotation_count", MetadataCategory.DOCUMENT_IMAGE, "int", "Annotation count"),
+            ("doc_has_bookmarks", MetadataCategory.DOCUMENT_IMAGE, "bool", "Has bookmarks"),
+            ("doc_bookmark_count", MetadataCategory.DOCUMENT_IMAGE, "int", "Bookmark count"),
+            ("doc_quality_mode", MetadataCategory.DOCUMENT_IMAGE, "str", "Quality mode"),
+            ("doc_color_mode", MetadataCategory.DOCUMENT_IMAGE, "str", "Color mode"),
+            ("doc_has_thumbnail", MetadataCategory.DOCUMENT_IMAGE, "bool", "Has thumbnail"),
+            ("doc_thumbnail_size", MetadataCategory.DOCUMENT_IMAGE, "dict", "Thumbnail dimensions"),
+            ("doc_compression_type", MetadataCategory.DOCUMENT_IMAGE, "str", "Compression type"),
+            ("doc_has_text_layer", MetadataCategory.DOCUMENT_IMAGE, "bool", "Has text layer"),
+            ("doc_form_fields", MetadataCategory.DOCUMENT_IMAGE, "list", "Form fields"),
+            ("doc_is_signed", MetadataCategory.DOCUMENT_IMAGE, "bool", "Is digitally signed"),
+            ("doc_signature_count", MetadataCategory.DOCUMENT_IMAGE, "int", "Signature count"),
+            ("doc_permission_flags", MetadataCategory.DOCUMENT_IMAGE, "dict", "Permission flags"),
+            ("doc_encrypted", MetadataCategory.DOCUMENT_IMAGE, "bool", "Is encrypted"),
+        ]
+        for name, category, field_type, description in doc_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPEG", "PNG", "TIFF", "PDF", "PSD"]
+            ))
 
-    def get_category_counts(self) -> Dict[str, int]:
-        """Get field counts per category"""
-        return {cat.value: len(fields) for cat, fields in self.categories.items()}
+    def _register_medical_imaging(self):
+        """Medical imaging metadata (DICOM, etc.) - ~30 fields"""
+        medical_fields = [
+            ("is_dicom", MetadataCategory.MEDICAL_IMAGING, "bool", "Is DICOM format"),
+            ("dicom_patient_id", MetadataCategory.MEDICAL_IMAGING, "str", "Patient ID"),
+            ("dicom_study_uid", MetadataCategory.MEDICAL_IMAGING, "str", "Study UID"),
+            ("dicom_series_uid", MetadataCategory.MEDICAL_IMAGING, "str", "Series UID"),
+            ("dicom_instance_uid", MetadataCategory.MEDICAL_IMAGING, "str", "Instance UID"),
+            ("dicom_modality", MetadataCategory.MEDICAL_IMAGING, "str", "Modality"),
+            ("dicom_body_part", MetadataCategory.MEDICAL_IMAGING, "str", "Body part examined"),
+            ("dicom_study_date", MetadataCategory.MEDICAL_IMAGING, "datetime", "Study date"),
+            ("dicom_series_date", MetadataCategory.MEDICAL_IMAGING, "datetime", "Series date"),
+            ("dicom_acquisition_date", MetadataCategory.MEDICAL_IMAGING, "datetime", "Acquisition date"),
+            ("dicom_study_description", MetadataCategory.MEDICAL_IMAGING, "str", "Study description"),
+            ("dicom_series_description", MetadataCategory.MEDICAL_IMAGING, "str", "Series description"),
+            ("dicom_institution_name", MetadataCategory.MEDICAL_IMAGING, "str", "Institution name"),
+            ("dicom_manufacturer", MetadataCategory.MEDICAL_IMAGING, "str", "Manufacturer"),
+            ("dicom_station_name", MetadataCategory.MEDICAL_IMAGING, "str", "Station name"),
+            ("dicom_physicians", MetadataCategory.MEDICAL_IMAGING, "list", "Physicians"),
+            ("dicom_referring_physician", MetadataCategory.MEDICAL_IMAGING, "str", "Referring physician"),
+            ("dicom_accession_number", MetadataCategory.MEDICAL_IMAGING, "str", "Accession number"),
+            ("dicom_study_id", MetadataCategory.MEDICAL_IMAGING, "str", "Study ID"),
+            ("dicom_series_number", MetadataCategory.MEDICAL_IMAGING, "int", "Series number"),
+            ("dicom_instance_number", MetadataCategory.MEDICAL_IMAGING, "int", "Instance number"),
+            ("dicom_slice_thickness", MetadataCategory.MEDICAL_IMAGING, "float", "Slice thickness"),
+            ("dicom_spacing", MetadataCategory.MEDICAL_IMAGING, "list", "Pixel spacing"),
+            ("dicom_rows", MetadataCategory.MEDICAL_IMAGING, "int", "Image rows"),
+            ("dicom_columns", MetadataCategory.MEDICAL_IMAGING, "int", "Image columns"),
+            ("dicom_bits_allocated", MetadataCategory.MEDICAL_IMAGING, "int", "Bits allocated"),
+            ("dicom_bits_stored", MetadataCategory.MEDICAL_IMAGING, "int", "Bits stored"),
+            ("dicom_window_center", MetadataCategory.MEDICAL_IMAGING, "float", "Window center"),
+            ("dicom_window_width", MetadataCategory.MEDICAL_IMAGING, "float", "Window width"),
+        ]
+        for name, category, field_type, description in medical_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["DCM", "DICOM"]
+            ))
 
-    def validate_field_value(self, name: str, value: Any) -> bool:
-        """Validate a field value against its type definition"""
-        field = self.fields.get(name)
-        if not field:
-            return False
-        
-        import typing
-        type_map = {
-            "int": int, "float": float, "str": str, "bool": bool,
-            "list": list, "dict": dict, "datetime": str
-        }
-        expected_type = type_map.get(field.field_type, type)
-        
-        if field.field_type == "list":
-            return isinstance(value, list)
-        elif field.field_type == "dict":
-            return isinstance(value, dict)
-        elif field.field_type == "datetime":
-            return isinstance(value, (str, type(None)))
-        else:
-            return isinstance(value, expected_type) or value is None
+    def _register_scientific_imaging(self):
+        """Scientific imaging metadata (FITS, microscopy) - ~30 fields"""
+        scientific_fields = [
+            ("is_fits", MetadataCategory.SCIENTIFIC_IMAGING, "bool", "Is FITS format"),
+            ("fits_bitpix", MetadataCategory.SCIENTIFIC_IMAGING, "int", "Bits per pixel"),
+            ("fits_naxis", MetadataCategory.SCIENTIFIC_IMAGING, "int", "Number of axes"),
+            ("fits_axes", MetadataCategory.SCIENTIFIC_IMAGING, "list", "Axis dimensions"),
+            ("fits_extend", MetadataCategory.SCIENTIFIC_IMAGING, "bool", "Has extension"),
+            ("fits_object", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Object name"),
+            ("fits_telescope", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Telescope"),
+            ("fits_observer", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Observer"),
+            ("fits_date_obs", MetadataCategory.SCIENTIFIC_IMAGING, "datetime", "Observation date"),
+            ("fits_Exposure", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Exposure time"),
+            ("fits_filter", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Filter"),
+            ("fits_instrument", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Instrument"),
+            ("fits_ra", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Right Ascension"),
+            ("fits_dec", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Declination"),
+            ("fits_equinox", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Equinox"),
+            ("is_microscopy", MetadataCategory.SCIENTIFIC_IMAGING, "bool", "Is microscopy image"),
+            ("micro_physical_size_x", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Physical size X"),
+            ("micro_physical_size_y", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Physical size Y"),
+            ("micro_magnification", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Magnification"),
+            ("micro_numerical_aperture", MetadataCategory.SCIENTIFIC_IMAGING, "float", "Numerical aperture"),
+            ("micro_objective", MetadataCategory.SCIENTIFIC_IMAGING, "str", "Objective"),
+            ("micro_channel_count", MetadataCategory.SCIENTIFIC_IMAGING, "int", "Channel count"),
+            ("micro_z_slices", MetadataCategory.SCIENTIFIC_IMAGING, "int", "Z-slice count"),
+            ("micro_time_points", MetadataCategory.SCIENTIFIC_IMAGING, "int", "Time points"),
+            ("micro_fluorescent_channels", MetadataCategory.SCIENTIFIC_IMAGING, "list", "Fluorescent channels"),
+            ("micro_has_ome_xml", MetadataCategory.SCIENTIFIC_IMAGING, "bool", "Has OME-XML"),
+        ]
+        for name, category, field_type, description in scientific_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["FITS", "TIFF", "OME-TIFF"]
+            ))
+
+    def _register_remote_sensing(self):
+        """Remote sensing and geospatial metadata - ~25 fields"""
+        remote_fields = [
+            ("is_geospatial", MetadataCategory.REMOTE_SENSING, "bool", "Is geospatial"),
+            ("geo_crs", MetadataCategory.REMOTE_SENSING, "str", "Coordinate reference system"),
+            ("geo_epsg_code", MetadataCategory.REMOTE_SENSING, "int", "EPSG code"),
+            ("geo_bounding_box", MetadataCategory.REMOTE_SENSING, "dict", "Bounding box"),
+            ("geo_ground_sample_distance", MetadataCategory.REMOTE_SENSING, "float", "GSD"),
+            ("geo_sun_elevation", MetadataCategory.REMOTE_SENSING, "float", "Sun elevation"),
+            ("geo_sun_azimuth", MetadataCategory.REMOTE_SENSING, "float", "Sun azimuth"),
+            ("geo_acquisition_date", MetadataCategory.REMOTE_SENSING, "datetime", "Acquisition date"),
+            ("geo_satellite_sensor", MetadataCategory.REMOTE_SENSING, "str", "Satellite/sensor"),
+            ("geo_cloud_coverage", MetadataCategory.REMOTE_SENSING, "float", "Cloud coverage"),
+            ("geo_band_count", MetadataCategory.REMOTE_SENSING, "int", "Band count"),
+            ("geo_bit_depth", MetadataCategory.REMOTE_SENSING, "int", "Bit depth"),
+            ("geo_projection", MetadataCategory.REMOTE_SENSING, "str", "Projection"),
+            ("geo_zone", MetadataCategory.REMOTE_SENSING, "str", "UTM zone"),
+            ("geo_datum", MetadataCategory.REMOTE_SENSING, "str", "Datum"),
+            ("geo_ellipsoid", MetadataCategory.REMOTE_SENSING, "str", "Ellipsoid"),
+            ("geo_transform_method", MetadataCategory.REMOTE_SENSING, "str", "Transform method"),
+            ("geo_pixel_format", MetadataCategory.REMOTE_SENSING, "str", "Pixel format"),
+            ("geo_compression", MetadataCategory.REMOTE_SENSING, "str", "Compression"),
+            ("geo_pyramid_levels", MetadataCategory.REMOTE_SENSING, "int", "Pyramid levels"),
+            ("geo_overview_count", MetadataCategory.REMOTE_SENSING, "int", "Overview count"),
+            ("geo_has_tfw", MetadataCategory.REMOTE_SENSING, "bool", "Has world file"),
+            ("geo_has_prj", MetadataCategory.REMOTE_SENSING, "bool", "Has projection file"),
+            ("is_cog", MetadataCategory.REMOTE_SENSING, "bool", "Is Cloud Optimized GeoTIFF"),
+        ]
+        for name, category, field_type, description in remote_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["GeoTIFF", "COG", "TIFF", "JPEG2000"]
+            ))
+
+    def _register_ai_vision(self):
+        """AI/ML vision and object detection metadata - ~35 fields"""
+        ai_fields = [
+            ("coco_is_valid", MetadataCategory.AI_VISION, "bool", "Is COCO format"),
+            ("coco_category_count", MetadataCategory.AI_VISION, "int", "COCO category count"),
+            ("coco_image_count", MetadataCategory.AI_VISION, "int", "COCO image count"),
+            ("coco_annotation_count", MetadataCategory.AI_VISION, "int", "COCO annotation count"),
+            ("coco_bbox_count", MetadataCategory.AI_VISION, "int", "Bounding box count"),
+            ("coco_segmentation_count", MetadataCategory.AI_VISION, "int", "Segmentation count"),
+            ("coco_keypoint_count", MetadataCategory.AI_VISION, "int", "Keypoint count"),
+            ("yolo_is_valid", MetadataCategory.AI_VISION, "bool", "Is YOLO format"),
+            ("yolo_annotation_count", MetadataCategory.AI_VISION, "int", "YOLO annotation count"),
+            ("yolo_unique_classes", MetadataCategory.AI_VISION, "int", "YOLO class count"),
+            ("pascal_voc_valid", MetadataCategory.AI_VISION, "bool", "Is Pascal VOC format"),
+            ("pascal_voc_object_count", MetadataCategory.AI_VISION, "int", "VOC object count"),
+            ("is_ai_generated", MetadataCategory.AI_VISION, "bool", "Is AI-generated"),
+            ("c2pa_manifest", MetadataCategory.AI_VISION, "bool", "Has C2PA manifest"),
+            ("has_provenance", MetadataCategory.AI_VISION, "bool", "Has provenance data"),
+            ("ai_generation_model", MetadataCategory.AI_VISION, "str", "AI generation model"),
+            ("ai_prompt", MetadataCategory.AI_VISION, "str", "Generation prompt"),
+            ("ai_seed", MetadataCategory.AI_VISION, "int", "Generation seed"),
+            ("ai_guidance_scale", MetadataCategory.AI_VISION, "float", "Guidance scale"),
+            ("ai_steps", MetadataCategory.AI_VISION, "int", "Generation steps"),
+            ("mask_is_segmentation", MetadataCategory.AI_VISION, "bool", "Is segmentation mask"),
+            ("mask_unique_values", MetadataCategory.AI_VISION, "int", "Mask unique values"),
+            ("mask_is_instance", MetadataCategory.AI_VISION, "bool", "Is instance segmentation"),
+            ("mask_is_semantic", MetadataCategory.AI_VISION, "bool", "Is semantic segmentation"),
+            ("mask_is_panoptic", MetadataCategory.AI_VISION, "bool", "Is panoptic segmentation"),
+            ("onnx_opset_version", MetadataCategory.AI_VISION, "int", "ONNX opset version"),
+            ("onnx_input_count", MetadataCategory.AI_VISION, "int", "Model input count"),
+            ("onnx_output_count", MetadataCategory.AI_VISION, "int", "Model output count"),
+            ("onnx_node_count", MetadataCategory.AI_VISION, "int", "ONNX node count"),
+            ("pytorch_epoch", MetadataCategory.AI_VISION, "int", "PyTorch epoch"),
+            ("pytorch_state_dict_count", MetadataCategory.AI_VISION, "int", "State dict count"),
+        ]
+        for name, category, field_type, description in ai_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JSON", "TXT", "XML", "PNG", "NPY", "ONNX", "PT", "PY"]
+            ))
+
+    def _register_three_d_imaging(self):
+        """3D imaging and point cloud metadata - ~35 fields"""
+        three_d_fields = [
+            ("ply_is_valid", MetadataCategory.THREE_D_IMAGING, "bool", "Is valid PLY"),
+            ("ply_encoding", MetadataCategory.THREE_D_IMAGING, "str", "PLY encoding"),
+            ("ply_vertex_count", MetadataCategory.THREE_D_IMAGING, "int", "PLY vertex count"),
+            ("ply_face_count", MetadataCategory.THREE_D_IMAGING, "int", "PLY face count"),
+            ("ply_element_count", MetadataCategory.THREE_D_IMAGING, "int", "PLY element count"),
+            ("obj_is_valid", MetadataCategory.THREE_D_IMAGING, "bool", "Is valid OBJ"),
+            ("obj_vertex_count", MetadataCategory.THREE_D_IMAGING, "int", "OBJ vertex count"),
+            ("obj_face_count", MetadataCategory.THREE_D_IMAGING, "int", "OBJ face count"),
+            ("obj_normal_count", MetadataCategory.THREE_D_IMAGING, "int", "OBJ normal count"),
+            ("obj_texcoord_count", MetadataCategory.THREE_D_IMAGING, "int", "OBJ texcoord count"),
+            ("obj_group_count", MetadataCategory.THREE_D_IMAGING, "int", "OBJ group count"),
+            ("obj_material_count", MetadataCategory.THREE_D_IMAGING, "int", "OBJ material count"),
+            ("obj_has_materials", MetadataCategory.THREE_D_IMAGING, "bool", "Has materials"),
+            ("gltf_is_valid", MetadataCategory.THREE_D_IMAGING, "bool", "Is valid glTF"),
+            ("gltf_version", MetadataCategory.THREE_D_IMAGING, "str", "glTF version"),
+            ("gltf_mesh_count", MetadataCategory.THREE_D_IMAGING, "int", "glTF mesh count"),
+            ("gltf_node_count", MetadataCategory.THREE_D_IMAGING, "int", "glTF node count"),
+            ("gltf_animation_count", MetadataCategory.THREE_D_IMAGING, "int", "glTF animation count"),
+            ("gltf_texture_count", MetadataCategory.THREE_D_IMAGING, "int", "glTF texture count"),
+            ("gltf_skin_count", MetadataCategory.THREE_D_IMAGING, "int", "glTF skin count"),
+            ("stl_is_valid", MetadataCategory.THREE_D_IMAGING, "bool", "Is valid STL"),
+            ("stl_is_ascii", MetadataCategory.THREE_D_IMAGING, "bool", "STL is ASCII"),
+            ("stl_facet_count", MetadataCategory.THREE_D_IMAGING, "int", "STL facet count"),
+            ("las_is_valid", MetadataCategory.THREE_D_IMAGING, "bool", "Is valid LAS"),
+            ("las_version", MetadataCategory.THREE_D_IMAGING, "str", "LAS version"),
+            ("las_point_count", MetadataCategory.THREE_D_IMAGING, "int", "LAS point count"),
+            ("las_has_colors", MetadataCategory.THREE_D_IMAGING, "bool", "LAS has colors"),
+            ("pcd_is_valid", MetadataCategory.THREE_D_IMAGING, "bool", "Is valid PCD"),
+            ("pcd_width", MetadataCategory.THREE_D_IMAGING, "int", "PCD width"),
+            ("pcd_height", MetadataCategory.THREE_D_IMAGING, "int", "PCD height"),
+            ("pcd_point_count", MetadataCategory.THREE_D_IMAGING, "int", "PCD point count"),
+            ("pcd_is_organized", MetadataCategory.THREE_D_IMAGING, "bool", "PCD is organized"),
+        ]
+        for name, category, field_type, description in three_d_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["PLY", "OBJ", "GLTF", "GLB", "STL", "LAS", "LAZ", "PCD"]
+            ))
+
+    def _register_print_prepress(self):
+        """Print and prepress metadata - ~30 fields"""
+        print_fields = [
+            ("pdfx_version", MetadataCategory.PRINT_PREPRESS, "str", "PDF/X version"),
+            ("pdfx_compliant", MetadataCategory.PRINT_PREPRESS, "bool", "PDF/X compliant"),
+            ("pdf_color_space", MetadataCategory.PRINT_PREPRESS, "str", "PDF color space"),
+            ("pdf_ink_coverage", MetadataCategory.PRINT_PREPRESS, "float", "Max ink coverage"),
+            ("pdf_trap_presence", MetadataCategory.PRINT_PREPRESS, "bool", "Has trapping"),
+            ("pdf_overprint", MetadataCategory.PRINT_PREPRESS, "bool", "Has overprint"),
+            ("pdf_spot_color_count", MetadataCategory.PRINT_PREPRESS, "int", "Spot color count"),
+            ("pdf_font_count", MetadataCategory.PRINT_PREPRESS, "int", "Font count"),
+            ("pdf_embedded_font_count", MetadataCategory.PRINT_PREPRESS, "int", "Embedded fonts"),
+            ("pdf_image_count", MetadataCategory.PRINT_PREPRESS, "int", "Image count"),
+            ("pdf_page_count", MetadataCategory.PRINT_PREPRESS, "int", "Page count"),
+            ("pdf_bleed", MetadataCategory.PRINT_PREPRESS, "dict", "Bleed settings"),
+            ("pdf_crop_marks", MetadataCategory.PRINT_PREPRESS, "bool", "Has crop marks"),
+            ("pdf_registration_marks", MetadataCategory.PRINT_PREPRESS, "bool", "Has registration marks"),
+            ("rip_software", MetadataCategory.PRINT_PREPRESS, "str", "RIP software"),
+            ("rip_resolution", MetadataCategory.PRINT_PREPRESS, "int", "RIP resolution DPI"),
+            ("rip_screening", MetadataCategory.PRINT_PREPRESS, "str", "Screening method"),
+            ("rip_screening_angles", MetadataCategory.PRINT_PREPRESS, "list", "Screening angles"),
+            ("rip_line_screen", MetadataCategory.PRINT_PREPRESS, "float", "Line screen LPI"),
+            ("rip_dot_shape", MetadataCategory.PRINT_PREPRESS, "str", "Dot shape"),
+            ("icc_output_profile", MetadataCategory.PRINT_PREPRESS, "str", "Output ICC profile"),
+            ("icc_source_profile", MetadataCategory.PRINT_PREPRESS, "str", "Source ICC profile"),
+            ("icc_rendering_intent", MetadataCategory.PRINT_PREPRESS, "str", "Rendering intent"),
+            ("proof_software", MetadataCategory.PRINT_PREPRESS, "str", "Proofing software"),
+            ("proof_profile", MetadataCategory.PRINT_PREPRESS, "str", "Proof profile"),
+            ("imposition_pages", MetadataCategory.PRINT_PREPRESS, "int", "Pages per sheet"),
+            ("imposition_signature_count", MetadataCategory.PRINT_PREPRESS, "int", "Signature count"),
+            ("imposition_page_order", MetadataCategory.PRINT_PREPRESS, "str", "Page order"),
+        ]
+        for name, category, field_type, description in print_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["PDF", "PDFX", "AI", "PSD", "TIFF", "EPS"]
+            ))
+
+    def _register_drone_uav(self):
+        """Drone/UAV and aerial imaging metadata - ~35 fields"""
+        drone_fields = [
+            ("drone_make", MetadataCategory.DRONE_UAV, "str", "Drone manufacturer"),
+            ("drone_model", MetadataCategory.DRONE_UAV, "str", "Drone model"),
+            ("drone_serial", MetadataCategory.DRONE_UAV, "str", "Drone serial number"),
+            ("flight_id", MetadataCategory.DRONE_UAV, "str", "Flight ID"),
+            ("flight_date", MetadataCategory.DRONE_UAV, "datetime", "Flight date"),
+            ("flight_duration", MetadataCategory.DRONE_UAV, "float", "Flight duration"),
+            ("flight_distance", MetadataCategory.DRONE_UAV, "float", "Flight distance"),
+            ("gimbal_mode", MetadataCategory.DRONE_UAV, "str", "Gimbal mode"),
+            ("gimbal_pitch", MetadataCategory.DRONE_UAV, "float", "Gimbal pitch"),
+            ("gimbal_yaw", MetadataCategory.DRONE_UAV, "float", "Gimbal yaw"),
+            ("gimbal_roll", MetadataCategory.DRONE_UAV, "float", "Gimbal roll"),
+            ("home_latitude", MetadataCategory.DRONE_UAV, "float", "Home latitude"),
+            ("home_longitude", MetadataCategory.DRONE_UAV, "float", "Home longitude"),
+            ("home_altitude", MetadataCategory.DRONE_UAV, "float", "Home altitude"),
+            ("relative_altitude", MetadataCategory.DRONE_UAV, "float", "Relative altitude"),
+            ("flight_speed", MetadataCategory.DRONE_UAV, "float", "Flight speed"),
+            ("horizontal_speed", MetadataCategory.DRONE_UAV, "float", "Horizontal speed"),
+            ("vertical_speed", MetadataCategory.DRONE_UAV, "float", "Vertical speed"),
+            ("battery_level", MetadataCategory.DRONE_UAV, "int", "Battery level"),
+            ("battery_voltage", MetadataCategory.DRONE_UAV, "float", "Battery voltage"),
+            ("satellite_count", MetadataCategory.DRONE_UAV, "int", "Satellite count"),
+            ("gps_accuracy", MetadataCategory.DRONE_UAV, "float", "GPS accuracy"),
+            ("home_point_set", MetadataCategory.DRONE_UAV, "bool", "Home point set"),
+            ("return_to_home", MetadataCategory.DRONE_UAV, "bool", "Return to home"),
+            ("obstacle_sensors", MetadataCategory.DRONE_UAV, "dict", "Obstacle sensors"),
+            ("flight_mode", MetadataCategory.DRONE_UAV, "str", "Flight mode"),
+            ("rc_channel", MetadataCategory.DRONE_UAV, "int", "RC channel"),
+            ("video_format", MetadataCategory.DRONE_UAV, "str", "Video format"),
+            ("video_codec", MetadataCategory.DRONE_UAV, "str", "Video codec"),
+            ("capture_mode", MetadataCategory.DRONE_UAV, "str", "Capture mode"),
+            ("photo_format", MetadataCategory.DRONE_UAV, "str", "Photo format"),
+            ("burst_count", MetadataCategory.DRONE_UAV, "int", "Burst count"),
+            ("aeb_count", MetadataCategory.DRONE_UAV, "int", "AEB count"),
+            ("timelapse_interval", MetadataCategory.DRONE_UAV, "float", "Timelapse interval"),
+        ]
+        for name, category, field_type, description in drone_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPG", "DNG", "MOV", "MP4", "TIFF"]
+            ))
+
+    def _register_thermal_imaging(self):
+        """Thermal and multispectral imaging metadata - ~30 fields"""
+        thermal_fields = [
+            ("thermal_is_valid", MetadataCategory.THERMAL_IMAGING, "bool", "Is thermal image"),
+            ("thermal_resolution", MetadataCategory.THERMAL_IMAGING, "str", "Thermal resolution"),
+            ("thermal_pixel_pitch", MetadataCategory.THERMAL_IMAGING, "float", "Pixel pitch"),
+            ("thermal_sensitivity", MetadataCategory.THERMAL_IMAGING, "float", "Thermal sensitivity"),
+            ("thermal_range_min", MetadataCategory.THERMAL_IMAGING, "float", "Temp range min"),
+            ("thermal_range_max", MetadataCategory.THERMAL_IMAGING, "float", "Temp range max"),
+            ("thermal_unit", MetadataCategory.THERMAL_IMAGING, "str", "Temperature unit"),
+            ("thermal_emissivity", MetadataCategory.THERMAL_IMAGING, "float", "Emissivity"),
+            ("thermal_reflected_temp", MetadataCategory.THERMAL_IMAGING, "float", "Reflected temp"),
+            ("thermal_atm_temp", MetadataCategory.THERMAL_IMAGING, "float", "Atmospheric temp"),
+            ("thermal_humidity", MetadataCategory.THERMAL_IMAGING, "float", "Humidity"),
+            ("thermal_distance", MetadataCategory.THERMAL_IMAGING, "float", "Measurement distance"),
+            ("thermal_focus", MetadataCategory.THERMAL_IMAGING, "float", "Focus distance"),
+            ("thermal_lens", MetadataCategory.THERMAL_IMAGING, "str", "Lens type"),
+            ("thermal_zoom", MetadataCategory.THERMAL_IMAGING, "float", "Optical zoom"),
+            ("thermal_digital_zoom", MetadataCategory.THERMAL_IMAGING, "float", "Digital zoom"),
+            ("multi_is_multispectral", MetadataCategory.THERMAL_IMAGING, "bool", "Is multispectral"),
+            ("multi_band_count", MetadataCategory.THERMAL_IMAGING, "int", "Band count"),
+            ("multi_center_wavelengths", MetadataCategory.THERMAL_IMAGING, "list", "Center wavelengths"),
+            ("multi_bandwidths", MetadataCategory.THERMAL_IMAGING, "list", "Bandwidths"),
+            ("multi_spatial_resolution", MetadataCategory.THERMAL_IMAGING, "float", "Spatial resolution"),
+            ("multi_swath_width", MetadataCategory.THERMAL_IMAGING, "float", "Swath width"),
+            ("multi_revisit_time", MetadataCategory.THERMAL_IMAGING, "float", "Revisit time"),
+            ("multi_cloud_cover", MetadataCategory.THERMAL_IMAGING, "float", "Cloud cover"),
+            ("hyperspectral_is_valid", MetadataCategory.THERMAL_IMAGING, "bool", "Is hyperspectral"),
+            ("hyperspectral_bands", MetadataCategory.THERMAL_IMAGING, "int", "Band count"),
+            ("hyperspectral_spectral_range", MetadataCategory.THERMAL_IMAGING, "str", "Spectral range"),
+            ("hyperspectral_spectral_resolution", MetadataCategory.THERMAL_IMAGING, "float", "Spectral resolution"),
+            ("hyperspectral_fwhm", MetadataCategory.THERMAL_IMAGING, "float", "FWHM"),
+        ]
+        for name, category, field_type, description in thermal_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["TIFF", "PNG", "JPG", "RAW", "RADIOMETRIC"]
+            ))
+
+    def _register_vr_ar(self):
+        """VR/AR and stereoscopic imaging metadata - ~30 fields"""
+        vr_fields = [
+            ("is_stereoscopic", MetadataCategory.VR_AR, "bool", "Is stereoscopic 3D"),
+            ("stereo_type", MetadataCategory.VR_AR, "str", "Stereo type (MPO, side-by-side, etc.)"),
+            ("stereo_left_frame", MetadataCategory.VR_AR, "dict", "Left frame metadata"),
+            ("stereo_right_frame", MetadataCategory.VR_AR, "dict", "Right frame metadata"),
+            ("stereo_parallax", MetadataCategory.VR_AR, "float", "Parallax value"),
+            ("is_vr_image", MetadataCategory.VR_AR, "bool", "Is VR image"),
+            ("vr_projection_type", MetadataCategory.VR_AR, "str", "VR projection type"),
+            ("vr_equirectangular", MetadataCategory.VR_AR, "bool", "Is equirectangular"),
+            ("vr_cubemap", MetadataCategory.VR_AR, "bool", "Is cubemap"),
+            ("vr_fisheye", MetadataCategory.VR_AR, "bool", "Is fisheye"),
+            ("vr_horizontal_fov", MetadataCategory.VR_AR, "float", "Horizontal FOV"),
+            ("vr_vertical_fov", MetadataCategory.VR_AR, "float", "Vertical FOV"),
+            ("is_ar_content", MetadataCategory.VR_AR, "bool", "Is AR content"),
+            ("ar_type", MetadataCategory.VR_AR, "str", "AR framework type"),
+            ("ar_tracking_type", MetadataCategory.VR_AR, "str", "AR tracking type"),
+            ("ar_anchor_type", MetadataCategory.VR_AR, "str", "AR anchor type"),
+            ("cubemap_face_count", MetadataCategory.VR_AR, "int", "Cubemap face count"),
+            ("is_light_field", MetadataCategory.VR_AR, "bool", "Is light field"),
+            ("light_field_type", MetadataCategory.VR_AR, "str", "Light field camera type"),
+            ("microlens_array", MetadataCategory.VR_AR, "dict", "Microlens array info"),
+            ("refocus_range", MetadataCategory.VR_AR, "dict", "Refocus range"),
+            ("is_omnidirectional", MetadataCategory.VR_AR, "bool", "Is omnidirectional"),
+            ("omni_projection", MetadataCategory.VR_AR, "str", "Omni projection type"),
+            ("omni_interpupillary_dist", MetadataCategory.VR_AR, "float", "IPD for stereo"),
+            ("gpano_cropped_width", MetadataCategory.VR_AR, "int", "GPano cropped width"),
+            ("gpano_cropped_height", MetadataCategory.VR_AR, "int", "GPano cropped height"),
+            ("gpano_full_pano_width", MetadataCategory.VR_AR, "int", "GPano full width"),
+            ("gpano_full_pano_height", MetadataCategory.VR_AR, "int", "GPano full height"),
+        ]
+        for name, category, field_type, description in vr_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPG", "PNG", "TIFF", "MPO", "GLB", "USD"]
+            ))
+
+    def _register_barcode_ocr(self):
+        """Barcode and OCR metadata - ~30 fields"""
+        barcode_fields = [
+            ("has_barcode", MetadataCategory.BARCODE_OCR, "bool", "Has barcode"),
+            ("barcode_count", MetadataCategory.BARCODE_OCR, "int", "Barcode count"),
+            ("barcode_type", MetadataCategory.BARCODE_OCR, "str", "Barcode type"),
+            ("barcode_data", MetadataCategory.BARCODE_OCR, "str", "Barcode data content"),
+            ("is_qr_code", MetadataCategory.BARCODE_OCR, "bool", "Is QR code"),
+            ("qr_version", MetadataCategory.BARCODE_OCR, "int", "QR version"),
+            ("qr_error_correction", MetadataCategory.BARCODE_OCR, "str", "QR error correction"),
+            ("qr_encoding", MetadataCategory.BARCODE_OCR, "str", "QR encoding"),
+            ("qr_data_type", MetadataCategory.BARCODE_OCR, "str", "QR data type"),
+            ("is_data_matrix", MetadataCategory.BARCODE_OCR, "bool", "Is Data Matrix"),
+            ("dm_rows", MetadataCategory.BARCODE_OCR, "int", "DM rows"),
+            ("dm_cols", MetadataCategory.BARCODE_OCR, "int", "DM columns"),
+            ("is_aztec_code", MetadataCategory.BARCODE_OCR, "bool", "Is Aztec Code"),
+            ("aztec_layers", MetadataCategory.BARCODE_OCR, "int", "Aztec layers"),
+            ("is_pdf417", MetadataCategory.BARCODE_OCR, "bool", "Is PDF417"),
+            ("pdf417_rows", MetadataCategory.BARCODE_OCR, "int", "PDF417 rows"),
+            ("pdf417_security_level", MetadataCategory.BARCODE_OCR, "int", "PDF417 security"),
+            ("has_ocr", MetadataCategory.BARCODE_OCR, "bool", "Has OCR text"),
+            ("ocr_engine", MetadataCategory.BARCODE_OCR, "str", "OCR engine"),
+            ("ocr_confidence", MetadataCategory.BARCODE_OCR, "float", "OCR confidence"),
+            ("ocr_language", MetadataCategory.BARCODE_OCR, "str", "OCR language"),
+            ("ocr_text_length", MetadataCategory.BARCODE_OCR, "int", "OCR text length"),
+            ("ocr_word_count", MetadataCategory.BARCODE_OCR, "int", "OCR word count"),
+            ("has_mrz", MetadataCategory.BARCODE_OCR, "bool", "Has MRZ"),
+            ("mrz_type", MetadataCategory.BARCODE_OCR, "str", "MRZ type"),
+            ("mrz_document_type", MetadataCategory.BARCODE_OCR, "str", "MRZ doc type"),
+            ("mrz_issuing_country", MetadataCategory.BARCODE_OCR, "str", "MRZ country"),
+            ("has_biometric", MetadataCategory.BARCODE_OCR, "bool", "Has biometric"),
+            ("biometric_type", MetadataCategory.BARCODE_OCR, "str", "Biometric type"),
+            ("face_detected", MetadataCategory.BARCODE_OCR, "bool", "Face detected"),
+        ]
+        for name, category, field_type, description in barcode_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPG", "PNG", "TIFF", "PDF", "DOC"]
+            ))
+
+    def _register_digital_signature(self):
+        """Digital signature and watermarking metadata - ~25 fields"""
+        sig_fields = [
+            ("has_digital_signature", MetadataCategory.DIGITAL_SIGNATURE, "bool", "Is signed"),
+            ("signature_type", MetadataCategory.DIGITAL_SIGNATURE, "str", "Signature type"),
+            ("signature_algorithm", MetadataCategory.DIGITAL_SIGNATURE, "str", "Algo used"),
+            ("signature_signer", MetadataCategory.DIGITAL_SIGNATURE, "str", "Signer ID"),
+            ("signature_timestamp", MetadataCategory.DIGITAL_SIGNATURE, "datetime", "Sign time"),
+            ("signature_valid", MetadataCategory.DIGITAL_SIGNATURE, "bool", "Signature valid"),
+            ("certificate_issuer", MetadataCategory.DIGITAL_SIGNATURE, "str", "Cert issuer"),
+            ("certificate_subject", MetadataCategory.DIGITAL_SIGNATURE, "str", "Cert subject"),
+            ("certificate_valid_from", MetadataCategory.DIGITAL_SIGNATURE, "datetime", "Cert start"),
+            ("certificate_valid_to", MetadataCategory.DIGITAL_SIGNATURE, "datetime", "Cert end"),
+            ("has_watermark", MetadataCategory.DIGITAL_SIGNATURE, "bool", "Has watermark"),
+            ("watermark_type", MetadataCategory.DIGITAL_SIGNATURE, "str", "Watermark type"),
+            ("watermark_algorithm", MetadataCategory.DIGITAL_SIGNATURE, "str", "Watermark algo"),
+            ("watermark_strength", MetadataCategory.DIGITAL_SIGNATURE, "float", "Watermark strength"),
+            ("has_steganography", MetadataCategory.DIGITAL_SIGNATURE, "bool", "Has steganography"),
+            ("stego_method", MetadataCategory.DIGITAL_SIGNATURE, "str", "Stego method"),
+            ("has_c2pa_manifest", MetadataCategory.DIGITAL_SIGNATURE, "bool", "C2PA manifest"),
+            ("c2pa_claim_generator", MetadataCategory.DIGITAL_SIGNATURE, "str", "C2PA generator"),
+            ("c2pa_assertions", MetadataCategory.DIGITAL_SIGNATURE, "list", "C2PA assertions"),
+            ("provenance_chain", MetadataCategory.DIGITAL_SIGNATURE, "list", "Provenance chain"),
+            ("is_ tamper_detected", MetadataCategory.DIGITAL_SIGNATURE, "bool", "Tamper check"),
+            ("hash_algorithm", MetadataCategory.DIGITAL_SIGNATURE, "str", "Hash algo"),
+            ("integrity_hash", MetadataCategory.DIGITAL_SIGNATURE, "str", "Integrity hash"),
+        ]
+        for name, category, field_type, description in sig_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPG", "PNG", "TIFF", "PDF", "PSD"]
+            ))
+
+    def _register_color_grading(self):
+        """Color grading and LUT metadata - ~25 fields"""
+        color_fields = [
+            ("has_lut", MetadataCategory.COLOR_GRADING, "bool", "Has LUT"),
+            ("lut_type", MetadataCategory.COLOR_GRADING, "str", "LUT type"),
+            ("lut_size", MetadataCategory.COLOR_GRADING, "int", "LUT size"),
+            ("lut_format", MetadataCategory.COLOR_GRADING, "str", "LUT format"),
+            ("lut_input_colorspace", MetadataCategory.COLOR_GRADING, "str", "Input space"),
+            ("lut_output_colorspace", MetadataCategory.COLOR_GRADING, "str", "Output space"),
+            ("has_color_grade", MetadataCategory.COLOR_GRADING, "bool", "Has color grade"),
+            ("grade_type", MetadataCategory.COLOR_GRADING, "str", "Grade type"),
+            ("lift_values", MetadataCategory.COLOR_GRADING, "list", "Lift RGB"),
+            ("gamma_values", MetadataCategory.COLOR_GRADING, "list", "Gamma RGB"),
+            ("gain_values", MetadataCategory.COLOR_GRADING, "list", "Gain RGB"),
+            ("offset_values", MetadataCategory.COLOR_GRADING, "list", "Offset RGB"),
+            ("contrast_curve", MetadataCategory.COLOR_GRADING, "list", "Contrast points"),
+            ("saturation", MetadataCategory.COLOR_GRADING, "float", "Saturation"),
+            ("vibrance", MetadataCategory.COLOR_GRADING, "float", "Vibrance"),
+            ("has_tone_curve", MetadataCategory.COLOR_GRADING, "bool", "Has tone curve"),
+            ("tone_curve_points", MetadataCategory.COLOR_GRADING, "list", "Tone curve"),
+            ("has_hsl_adjustments", MetadataCategory.COLOR_GRADING, "bool", "HSL adjustments"),
+            ("hsl_data", MetadataCategory.COLOR_GRADING, "dict", "HSL values"),
+            ("color_wheels", MetadataCategory.COLOR_GRADING, "list", "Color wheels"),
+            ("ACES_cinemaGamut", MetadataCategory.COLOR_GRADING, "bool", "ACES cinemaGamut"),
+            ("rec709_tone_curve", MetadataCategory.COLOR_GRADING, "bool", "Rec.709 tone"),
+            ("has_log_profile", MetadataCategory.COLOR_GRADING, "bool", "Has log profile"),
+            ("log_type", MetadataCategory.COLOR_GRADING, "str", "Log type"),
+            ("dynamic_range", MetadataCategory.COLOR_GRADING, "str", "Dynamic range"),
+            ("aces_cct", MetadataCategory.COLOR_GRADING, "bool", "ACES CCT"),
+            ("aces_cc", MetadataCategory.COLOR_GRADING, "bool", "ACES Color Correction"),
+            ("has_cdl", MetadataCategory.COLOR_GRADING, "bool", "Has CDL"),
+            ("cdl_sop", MetadataCategory.COLOR_GRADING, "list", "CDL SOP"),
+            ("cdl_sat", MetadataCategory.COLOR_GRADING, "list", "CDL Saturation"),
+            ("look_file", MetadataCategory.COLOR_GRADING, "str", "Look file"),
+            ("has_power_window", MetadataCategory.COLOR_GRADING, "bool", "Has power window"),
+            ("power_window_shape", MetadataCategory.COLOR_GRADING, "str", "Window shape"),
+            ("power_window_feather", MetadataCategory.COLOR_GRADING, "float", "Window feather"),
+        ]
+        for name, category, field_type, description in color_fields:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["CUBE", "3DL", "CSP", "JPG", "PNG", "TIFF", "PSD", "EXR"]
+            ))
+
+    def _register_iptc_extension(self):
+        """Extended IPTC metadata fields - ~20 additional fields"""
+        iptc_ext = [
+            ("iptc_country_code", MetadataCategory.IPTC_EXTENSION, "str", "Country code"),
+            ("iptc_sub_location", MetadataCategory.IPTC_EXTENSION, "str", "Sub-location"),
+            ("iptc_province_state", MetadataCategory.IPTC_EXTENSION, "str", "Province/state"),
+            ("iptc_action_advisory", MetadataCategory.IPTC_EXTENSION, "list", "Action advisory"),
+            ("iptc_av_note", MetadataCategory.IPTC_EXTENSION, "str", "AV note"),
+            ("iptc_credit", MetadataCategory.IPTC_EXTENSION, "str", "Credit"),
+            ("iptc_source", MetadataCategory.IPTC_EXTENSION, "str", "Source"),
+            ("iptc_contact", MetadataCategory.IPTC_EXTENSION, "list", "Contacts"),
+            ("iptc_lightbox_settings", MetadataCategory.IPTC_EXTENSION, "dict", "Lightbox"),
+            ("iptc_layout_settings", MetadataCategory.IPTC_EXTENSION, "dict", "Layout"),
+            ("iptc_image_type", MetadataCategory.IPTC_EXTENSION, "str", "Image type"),
+            ("iptc_editors_note", MetadataCategory.IPTC_EXTENSION, "str", "Editor's note"),
+            ("iptc_opt_note", MetadataCategory.IPTC_EXTENSION, "str", "Opt. note"),
+            ("iptc_usage_terms", MetadataCategory.IPTC_EXTENSION, "list", "Usage terms"),
+            ("iptc_instruction", MetadataCategory.IPTC_EXTENSION, "str", "Instructions"),
+            ("iptc_model_release", MetadataCategory.IPTC_EXTENSION, "str", "Model release"),
+            ("iptc_property_release", MetadataCategory.IPTC_EXTENSION, "str", "Property release"),
+            ("iptc_copyright_notice", MetadataCategory.IPTC_EXTENSION, "list", "Copyright"),
+            ("iptc_creator", MetadataCategory.IPTC_EXTENSION, "list", "Creators"),
+            ("iptc_rights_holder", MetadataCategory.IPTC_EXTENSION, "list", "Rights holders"),
+        ]
+        for name, category, field_type, description in iptc_ext:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPEG", "TIFF", "PSD", "PNG", "WebP"]
+            ))
+
+    def _register_camera_makernotes_extended(self):
+        """Extended camera maker notes - ~50 fields for various cameras"""
+        maker_ext = [
+            # Canon Extended
+            ("canon_makernote_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Canon MN ver"),
+            ("canon_cf_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Canon CF ver"),
+            ("canon_serial_number", MetadataCategory.CAMERA_MAKERNOTES, "str", "Canon serial"),
+            ("canon_time_zone", MetadataCategory.CAMERA_MAKERNOTES, "str", "Time zone"),
+            ("canon_camera_lens", MetadataCategory.CAMERA_MAKERNOTES, "str", "Lens model"),
+            ("canon_focus_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Focus mode"),
+            ("canon_af_points", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF points"),
+            ("canon_af_area", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF area"),
+            ("canon_metering_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Metering"),
+            ("canon_exp_program", MetadataCategory.CAMERA_MAKERNOTES, "str", "Exp program"),
+            ("canon_drive_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Drive mode"),
+            ("canon_focus_type", MetadataCategory.CAMERA_MAKERNOTES, "str", "Focus type"),
+            ("canon_image_stabilization", MetadataCategory.CAMERA_MAKERNOTES, "str", "IS mode"),
+            # Nikon Extended
+            ("nikon_makernote_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Nikon MN ver"),
+            ("nikon_shutter_count", MetadataCategory.CAMERA_MAKERNOTES, "int", "Shutter count"),
+            ("nikon_focus_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Focus mode"),
+            ("nikon_af_points", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF points"),
+            ("nikon_af_area_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "AF area"),
+            ("nikon_af_fine_tune", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF fine tune"),
+            ("nikon_vibration_reduction", MetadataCategory.CAMERA_MAKERNOTES, "str", "VR mode"),
+            ("nikon_flash_setting", MetadataCategory.CAMERA_MAKERNOTES, "str", "Flash setting"),
+            ("nikon_flash_compensation", MetadataCategory.CAMERA_MAKERNOTES, "float", "Flash comp"),
+            ("nikon_white_balance", MetadataCategory.CAMERA_MAKERNOTES, "str", "WB setting"),
+            ("nikon_wb_fine_tune", MetadataCategory.CAMERA_MAKERNOTES, "list", "WB fine tune"),
+            ("nikon_hdr", MetadataCategory.CAMERA_MAKERNOTES, "dict", "HDR settings"),
+            ("nikon_active_d_lighting", MetadataCategory.CAMERA_MAKERNOTES, "str", "ADL"),
+            # Sony Extended
+            ("sony_makernote_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Sony MN ver"),
+            ("sony_shutter_count", MetadataCategory.CAMERA_MAKERNOTES, "int", "Shutter count"),
+            ("sony_focus_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Focus mode"),
+            ("sony_af_points", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF points"),
+            ("sony_af_area", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF area"),
+            ("sony_steadyshot", MetadataCategory.CAMERA_MAKERNOTES, "str", "SteadyShot"),
+            ("sony_long_exposure_nr", MetadataCategory.CAMERA_MAKERNOTES, "str", "LE-NR"),
+            ("sony_high_iso_nr", MetadataCategory.CAMERA_MAKERNOTES, "str", "HI-ISO NR"),
+            ("sony_drange_optimizer", MetadataCategory.CAMERA_MAKERNOTES, "str", "DRO"),
+            ("sony_hdr", MetadataCategory.CAMERA_MAKERNOTES, "dict", "HDR settings"),
+            ("sony_multi_frame_nr", MetadataCategory.CAMERA_MAKERNOTES, "bool", "MFNR"),
+            # Fuji Extended
+            ("fuji_makernote_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Fuji MN ver"),
+            ("fuji_focus_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Focus mode"),
+            ("fuji_af_points", MetadataCategory.CAMERA_MAKERNOTES, "list", "AF points"),
+            ("fuji_film_mode", MetadataCategory.CAMERA_MAKERNOTES, "str", "Film mode"),
+            ("fuji_dynamic_range", MetadataCategory.CAMERA_MAKERNOTES, "str", "DR mode"),
+            ("fuji_white_balance", MetadataCategory.CAMERA_MAKERNOTES, "str", "WB setting"),
+            ("fuji_sharpness", MetadataCategory.CAMERA_MAKERNOTES, "int", "Sharpness"),
+            ("fuji_noise_reduction", MetadataCategory.CAMERA_MAKERNOTES, "int", "Noise red."),
+            ("fuji_color", MetadataCategory.CAMERA_MAKERNOTES, "int", "Color"),
+            ("fuji_tone", MetadataCategory.CAMERA_MAKERNOTES, "int", "Tone"),
+            ("fuji_highlight_tone", MetadataCategory.CAMERA_MAKERNOTES, "int", "Highlight"),
+            ("fuji_shadow_tone", MetadataCategory.CAMERA_MAKERNOTES, "int", "Shadow"),
+            ("fuji_color_chromatic_aberration", MetadataCategory.CAMERA_MAKERNOTES, "int", "Chrom. aber."),
+            ("fuji_color_resolution", MetadataCategory.CAMERA_MAKERNOTES, "int", "Color res."),
+            ("fuji_lens_modulation_optimizer", MetadataCategory.CAMERA_MAKERNOTES, "bool", "LMO"),
+            # Panasonic/Olympus Extended
+            ("panasonic_makernote_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Panasonic MN"),
+            ("olympus_makernote_ver", MetadataCategory.CAMERA_MAKERNOTES, "str", "Olympus MN"),
+            ("micro_four_thirds", MetadataCategory.CAMERA_MAKERNOTES, "bool", "MFT format"),
+            ("focus_bracket", MetadataCategory.CAMERA_MAKERNOTES, "bool", "Focus bracket"),
+            ("exposure_bracket", MetadataCategory.CAMERA_MAKERNOTES, "bool", "Exp. bracket"),
+            ("wb_bracket", MetadataCategory.CAMERA_MAKERNOTES, "bool", "WB bracket"),
+        ]
+        for name, category, field_type, description in maker_ext:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPEG", "TIFF", "RAW", "DNG", "ARW", "NEF", "CR2", "CR3", "ORF", "RW2", "RAF"]
+            ))
+
+    def _register_xmp_namespaces_extended(self):
+        """Extended XMP namespaces - ~30 additional fields"""
+        xmp_ext = [
+            ("xmp_photoshop_supplemental_categories", MetadataCategory.XMP_NAMESPACES, "list", "Supp. categories"),
+            ("xmp_photoshop_legacy_caption", MetadataCategory.XMP_NAMESPACES, "str", "Legacy caption"),
+            ("xmp_photoshop_history", MetadataCategory.XMP_NAMESPACES, "str", "History"),
+            ("xmp_photoshop_state", MetadataCategory.XMP_NAMESPACES, "list", "State info"),
+            ("xmp_photoshop_custom", MetadataCategory.XMP_NAMESPACES, "dict", "Custom data"),
+            ("xmp_illustrator_artwork", MetadataCategory.XMP_NAMESPACES, "dict", "Illustrator"),
+            ("xmp_indesign_document", MetadataCategory.XMP_NAMESPACES, "dict", "InDesign"),
+            ("xmp_premiere_pro", MetadataCategory.XMP_NAMESPACES, "dict", "Premiere"),
+            ("xmp_after_effects", MetadataCategory.XMP_NAMESPACES, "dict", "After Effects"),
+            ("xmp_lightroom", MetadataCategory.XMP_NAMESPACES, "dict", "Lightroom"),
+            ("xmp_camera_raw", MetadataCategory.XMP_NAMESPACES, "dict", "Camera Raw"),
+            ("xmp_bridge", MetadataCategory.XMP_NAMESPACES, "dict", "Bridge"),
+            ("xmp_dng_maker_note", MetadataCategory.XMP_NAMESPACES, "dict", "DNG MakerNote"),
+            ("xmp_dng_private_data", MetadataCategory.XMP_NAMESPACES, "dict", "DNG Private"),
+            ("xmp_exif_makernote", MetadataCategory.XMP_NAMESPACES, "dict", "Exif MN"),
+            ("xmp_xmp_note", MetadataCategory.XMP_NAMESPACES, "dict", "XMP Note"),
+            ("xmp_job", MetadataCategory.XMP_NAMESPACES, "dict", "Job info"),
+            ("xmp_label", MetadataCategory.XMP_NAMESPACES, "list", "Labels"),
+            ("xmp_rating", MetadataCategory.XMP_NAMESPACES, "int", "Rating 0-5"),
+            ("xmp_rating_percent", MetadataCategory.XMP_NAMESPACES, "int", "Rating %"),
+            ("xmp_web_statement", MetadataCategory.XMP_NAMESPACES, "str", "Web statement"),
+            ("xmp_marked", MetadataCategory.XMP_NAMESPACES, "bool", "Marked"),
+            ("xmp_usage_terms", MetadataCategory.XMP_NAMESPACES, "list", "Usage"),
+            ("xmp_certificate", MetadataCategory.XMP_NAMESPACES, "str", "Certificate"),
+            ("xmp_web_statement_url", MetadataCategory.XMP_NAMESPACES, "str", "URL"),
+            ("xmp_references", MetadataCategory.XMP_NAMESPACES, "list", "References"),
+            ("xmp_rights_marked", MetadataCategory.XMP_NAMESPACES, "bool", "Rights marked"),
+            ("xmp_rights_owner", MetadataCategory.XMP_NAMESPACES, "list", "Owners"),
+        ]
+        for name, category, field_type, description in xmp_ext:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPEG", "PNG", "WebP", "TIFF", "PSD", "HEIC", "AVIF", "DNG"]
+            ))
+
+    def _register_file_format_chunks_extended(self):
+        """Extended file format chunk metadata - ~30 additional fields"""
+        chunk_ext = [
+            # PNG Extended
+            ("png_ihdr_interlace", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Interlace"),
+            ("png_sbit_valid", MetadataCategory.FILE_FORMAT_CHUNKS, "bool", "sBIT valid"),
+            ("png_sbit_red", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "sBIT red"),
+            ("png_sbit_green", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "sBIT green"),
+            ("png_sbit_blue", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "sBIT blue"),
+            ("png_sbit_alpha", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "sBIT alpha"),
+            ("png_histogram_count", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Histogram"),
+            ("png_phys_physical", MetadataCategory.FILE_FORMAT_CHUNKS, "bool", "Physical unit"),
+            ("png_phys_unit", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Unit specifier"),
+            ("png_pixel_sample", MetadataCategory.FILE_FORMAT_CHUNKS, "list", "Sample depth"),
+            # WebP Extended
+            ("webp_animation_loop_count", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Loop count"),
+            ("webp_animation_bg_color", MetadataCategory.FILE_FORMAT_CHUNKS, "list", "BG color"),
+            ("webp_animation_disposal", MetadataCategory.FILE_FORMAT_CHUNKS, "str", "Disposal"),
+            ("webp_extended_format", MetadataCategory.FILE_FORMAT_CHUNKS, "bool", "Extended VP8"),
+            ("webp_lossless_alpha", MetadataCategory.FILE_FORMAT_CHUNKS, "bool", "Lossless alpha"),
+            ("webp_exif_size", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "EXIF size"),
+            ("webp_xmp_size", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "XMP size"),
+            ("webp_animation_size", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Animation size"),
+            # TIFF Extended
+            ("tiff_subfile_type", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Subfile type"),
+            ("tiff_new_subfile_type", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "New subfile"),
+            ("tiff_document_name", MetadataCategory.FILE_FORMAT_CHUNKS, "str", "Document name"),
+            ("tiff_page_name", MetadataCategory.FILE_FORMAT_CHUNKS, "str", "Page name"),
+            ("tiff_page_number", MetadataCategory.FILE_FORMAT_CHUNKS, "list", "Page number"),
+            ("tiff_xmp", MetadataCategory.FILE_FORMAT_CHUNKS, "str", "XMP data"),
+            ("tiff_photometric_interpretation", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Photometric"),
+            ("tiff_thumbnail_offset", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Thumb offset"),
+            ("tiff_thumbnail_length", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Thumb length"),
+            # JPEG Extended
+            ("jpeg_adobe_transform", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Adobe transform"),
+            ("jpeg_app14_dct_encode", MetadataCategory.FILE_FORMAT_CHUNKS, "list", "DCT encode"),
+            ("jpeg_huffman_tables", MetadataCategory.FILE_FORMAT_CHUNKS, "list", "Huffman tabs"),
+            ("jpeg_quantization_tables", MetadataCategory.FILE_FORMAT_CHUNKS, "list", "Quant tabs"),
+            ("jpeg_progressive", MetadataCategory.FILE_FORMAT_CHUNKS, "bool", "Progressive"),
+            ("jpeg_scan_count", MetadataCategory.FILE_FORMAT_CHUNKS, "int", "Scan count"),
+        ]
+        for name, category, field_type, description in chunk_ext:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["PNG", "WebP", "TIFF", "JPEG", "GIF", "AVIF", "HEIC"]
+            ))
+
+    def _register_quality_metrics_extended(self):
+        """Extended quality and perceptual metrics - ~20 additional fields"""
+        quality_ext = [
+            ("perceptual_blur_score", MetadataCategory.QUALITY_METRICS, "float", "Blur score"),
+            ("perceptual_blockiness", MetadataCategory.QUALITY_METRICS, "float", "Blockiness"),
+            ("perceptual_noise_estimate", MetadataCategory.QUALITY_METRICS, "float", "Noise est."),
+            ("perceptual_artifact_index", MetadataCategory.QUALITY_METRICS, "float", "Artifacts"),
+            ("perceptual_facial_quality", MetadataCategory.QUALITY_METRICS, "float", "Face quality"),
+            ("perceptual_exposure_score", MetadataCategory.QUALITY_METRICS, "float", "Exposure"),
+            ("perceptual_focus_score", MetadataCategory.QUALITY_METRICS, "float", "Focus"),
+            ("perceptual_composition_score", MetadataCategory.QUALITY_METRICS, "float", "Composition"),
+            ("perceptual_contrast_score", MetadataCategory.QUALITY_METRICS, "float", "Contrast"),
+            ("perceptual_saturation_score", MetadataCategory.QUALITY_METRICS, "float", "Saturation"),
+            ("perceptual_color_balance", MetadataCategory.QUALITY_METRICS, "float", "Color bal."),
+            ("perceptual_skin_tone_accuracy", MetadataCategory.QUALITY_METRICS, "float", "Skin tone"),
+            ("perceptual_dynamic_range_score", MetadataCategory.QUALITY_METRICS, "float", "DR score"),
+            ("perceptual_sharpness_score", MetadataCategory.QUALITY_METRICS, "float", "Sharpness"),
+            ("perceptual_overall_score", MetadataCategory.QUALITY_METRICS, "float", "Overall"),
+            ("technical_iso_rating", MetadataCategory.QUALITY_METRICS, "str", "ISO rating"),
+            ("technical_noise_rating", MetadataCategory.QUALITY_METRICS, "str", "Noise rating"),
+            ("technical_dynamic_range", MetadataCategory.QUALITY_METRICS, "str", "DR rating"),
+            ("technical_color_accuracy", MetadataCategory.QUALITY_METRICS, "str", "Color acc."),
+            ("technical_lens_quality", MetadataCategory.QUALITY_METRICS, "str", "Lens qual."),
+        ]
+        for name, category, field_type, description in quality_ext:
+            self._register_field(MetadataField(
+                name=name, category=category, field_type=field_type, description=description,
+                supported_formats=["JPEG", "PNG", "TIFF", "WebP", "AVIF", "HEIC"]
+            ))
 
     def get_supported_formats(self, name: str) -> List[str]:
         """Get supported formats for a field"""

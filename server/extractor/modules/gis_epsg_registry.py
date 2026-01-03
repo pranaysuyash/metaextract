@@ -6,6 +6,8 @@ These are detected as metadata in GeoTIFF, JPEG2000, and other geospatial format
 Target: ~6,500 fields
 """
 
+from typing import Dict, Any
+
 def get_gis_epsg_registry_field_count():
     # EPSG codes range from 1024 to 32767 plus others
     # We support the full standard range

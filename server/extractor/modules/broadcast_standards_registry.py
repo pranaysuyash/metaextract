@@ -6,6 +6,8 @@ Includes MXF, GXF, and other professional video format metadata.
 Target: ~6,500 fields
 """
 
+from typing import Dict, Any
+
 def get_broadcast_standards_registry_field_count():
     # Covers SMPTE Dictionary (RP 210), MXF (SMPTE 377M), etc.
     return 6500

@@ -8,6 +8,7 @@ import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
 import { MetadataComparisonDisplay } from '@/components/metadata-comparison-display';
 import { AdvancedResultsIntegration } from '@/components/advanced-results-integration';
 import { MedicalAnalysisResult } from '@/components/medical-analysis-result';
+import { PersonaDisplay } from '@/components/persona-display';
 import {
   MetadataExplorer,
   convertMetadataToProcessedFile,
@@ -1071,6 +1072,13 @@ export default function Results() {
                 </div>
 
                 <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+                  {/* PERSONA DISPLAY - Show Sarah-friendly answers first */}
+                  {(metadata.persona_interpretation) && (
+                    <div className="p-4 border-b border-white/10 bg-black/20">
+                      <PersonaDisplay interpretation={metadata.persona_interpretation} />
+                    </div>
+                  )}
+                  
                   <Tabs defaultValue="all" className="flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4">
                       <TabsList className="bg-white/5 border border-white/5 h-9 w-full md:w-auto">

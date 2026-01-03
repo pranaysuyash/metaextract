@@ -9,29 +9,108 @@ import {
   type InsertOnboardingSession,
   type TrialUsage,
   type InsertTrialUsage,
-  type InsertTrialUsage,
-  metadataResults,
   type MetadataResult,
   type InsertMetadataResult,
 } from '@shared/schema';
 import { randomUUID } from 'crypto';
 import { IStorage, AnalyticsSummary } from './types';
 
+// ============================================================================
+// Types
+// ============================================================================
+
+interface CacheableAnalytics {
+  data: AnalyticsSummary | null;
+  lastComputed: Date | null;
+  cacheMaxAge: number; // milliseconds
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const ANALYTICS_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
+const TIME_RANGES = {
+  ONE_DAY_MS: 24 * 60 * 60 * 1000,
+  SEVEN_DAYS_MS: 7 * 24 * 60 * 60 * 1000,
+};
+
+/**
+ * Normalize email for consistent lookups
+ */
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+// ============================================================================
+// In-Memory Storage Implementation
+// ============================================================================
+
 export class MemStorage implements IStorage {
+  // User data
   private users: Map<string, User>;
+
+  // Analytics data
   private analyticsLog: ExtractionAnalytics[];
-  private creditBalancesMap: Map<string, CreditBalance> = new Map();
-  private creditTransactionsList: CreditTransaction[] = [];
-  private onboardingSessionsMap: Map<string, OnboardingSession> = new Map();
-  private creditBalancesMap: Map<string, CreditBalance> = new Map();
-  private creditTransactionsList: CreditTransaction[] = [];
-  private onboardingSessionsMap: Map<string, OnboardingSession> = new Map();
-  private trialUsagesMap: Map<string, TrialUsage> = new Map();
-  private metadataMap: Map<string, MetadataResult> = new Map();
+  private analyticsCache: CacheableAnalytics;
+
+  // Credit system
+  private creditBalancesMap: Map<string, CreditBalance>;
+  private creditBalancesBySessionId: Map<string, string>; // sessionId -> balanceId for O(1) lookups
+  private creditTransactionsList: CreditTransaction[];
+
+  // Onboarding
+  private onboardingSessionsMap: Map<string, OnboardingSession>;
+  private onboardingSessionsByUserId: Map<string, string[]>; // userId -> [sessionIds] for O(1) lookups
+
+  // Trial usage
+  private trialUsagesMap: Map<string, TrialUsage>;
+
+  // Metadata
+  private metadataMap: Map<string, MetadataResult>;
 
   constructor() {
     this.users = new Map();
     this.analyticsLog = [];
+    this.analyticsCache = {
+      data: null,
+      lastComputed: null,
+      cacheMaxAge: ANALYTICS_CACHE_MAX_AGE,
+    };
+    this.creditBalancesMap = new Map();
+    this.creditBalancesBySessionId = new Map();
+    this.creditTransactionsList = [];
+    this.onboardingSessionsMap = new Map();
+    this.onboardingSessionsByUserId = new Map();
+    this.trialUsagesMap = new Map();
+    this.metadataMap = new Map();
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  /**
+   * Check if analytics cache is still valid
+   */
+  private isAnalyticsCacheValid(): boolean {
+    if (!this.analyticsCache.data || !this.analyticsCache.lastComputed) {
+      return false;
+    }
+    const age = Date.now() - this.analyticsCache.lastComputed.getTime();
+    return age < this.analyticsCache.cacheMaxAge;
+  }
+
+  /**
+   * Validate credit amount is positive
+   */
+  private validateCreditAmount(amount: number): void {
+    if (amount <= 0) {
+      throw new Error('Credit amount must be positive');
+    }
+    if (!Number.isFinite(amount)) {
+      throw new Error('Credit amount must be a finite number');
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -79,12 +158,20 @@ export class MemStorage implements IStorage {
       requestedAt: new Date(),
     };
     this.analyticsLog.push(entry);
+    // Invalidate cache when new analytics are logged
+    this.analyticsCache.data = null;
+    this.analyticsCache.lastComputed = null;
   }
 
   async getAnalyticsSummary(): Promise<AnalyticsSummary> {
+    // ✅ Return cached result if still valid (5 minute TTL)
+    if (this.isAnalyticsCacheValid() && this.analyticsCache.data) {
+      return this.analyticsCache.data;
+    }
+
     const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - TIME_RANGES.ONE_DAY_MS);
+    const sevenDaysAgo = new Date(now.getTime() - TIME_RANGES.SEVEN_DAYS_MS);
 
     const byTier: Record<string, number> = {};
     const byFileType: Record<string, number> = {};
@@ -118,7 +205,7 @@ export class MemStorage implements IStorage {
       if (entry.success) successCount++;
     }
 
-    return {
+    const result: AnalyticsSummary = {
       totalExtractions: this.analyticsLog.length,
       byTier,
       byFileType,
@@ -135,6 +222,12 @@ export class MemStorage implements IStorage {
           ? Math.round((successCount / this.analyticsLog.length) * 100)
           : 100,
     };
+
+    // ✅ Cache the result
+    this.analyticsCache.data = result;
+    this.analyticsCache.lastComputed = new Date();
+
+    return result;
   }
 
   async getRecentExtractions(
@@ -147,10 +240,12 @@ export class MemStorage implements IStorage {
     sessionId: string,
     userId?: string
   ): Promise<CreditBalance> {
-    const existing = Array.from(this.creditBalancesMap.values()).find(
-      b => b.sessionId === sessionId
-    );
-    if (existing) return existing;
+    // ✅ O(1) lookup using sessionId index
+    const existingBalanceId = this.creditBalancesBySessionId.get(sessionId);
+    if (existingBalanceId) {
+      const existing = this.creditBalancesMap.get(existingBalanceId);
+      if (existing) return existing;
+    }
 
     const balance: CreditBalance = {
       id: randomUUID(),
@@ -161,6 +256,7 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     this.creditBalancesMap.set(balance.id, balance);
+    this.creditBalancesBySessionId.set(sessionId, balance.id);
     return balance;
   }
 
@@ -176,11 +272,16 @@ export class MemStorage implements IStorage {
     description: string,
     paymentId?: string
   ): Promise<CreditTransaction> {
+    // ✅ Validate credit amount before processing
+    this.validateCreditAmount(amount);
+
     const balance = this.creditBalancesMap.get(balanceId);
-    if (balance) {
-      balance.credits += amount;
-      balance.updatedAt = new Date();
+    if (!balance) {
+      throw new Error(`Credit balance not found: ${balanceId}`);
     }
+
+    balance.credits += amount;
+    balance.updatedAt = new Date();
 
     const tx: CreditTransaction = {
       id: randomUUID(),
@@ -202,6 +303,9 @@ export class MemStorage implements IStorage {
     description: string,
     fileType?: string
   ): Promise<CreditTransaction | null> {
+    // ✅ Validate credit amount
+    this.validateCreditAmount(amount);
+
     const balance = this.creditBalancesMap.get(balanceId);
     // ✅ Atomic check: Verify balance is sufficient before deducting
     // This prevents negative credits even if async operations interleave
@@ -237,9 +341,13 @@ export class MemStorage implements IStorage {
   async getOnboardingSession(
     userId: string
   ): Promise<OnboardingSession | undefined> {
-    return Array.from(this.onboardingSessionsMap.values())
-      .filter(s => s.userId === userId)
-      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
+    // ✅ O(1) lookup using userId index, return most recent session
+    const sessionIds = this.onboardingSessionsByUserId.get(userId);
+    if (!sessionIds || sessionIds.length === 0) return undefined;
+
+    // Get the last session (most recent)
+    const lastSessionId = sessionIds[sessionIds.length - 1];
+    return this.onboardingSessionsMap.get(lastSessionId);
   }
 
   async createOnboardingSession(
@@ -260,6 +368,13 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     this.onboardingSessionsMap.set(session.id, session);
+    // ✅ Update userId index for fast lookups
+    if (session.userId) {
+      const sessions =
+        this.onboardingSessionsByUserId.get(session.userId) ?? [];
+      sessions.push(session.id);
+      this.onboardingSessionsByUserId.set(session.userId, sessions);
+    }
     return session;
   }
 
@@ -274,13 +389,13 @@ export class MemStorage implements IStorage {
   }
 
   async hasTrialUsage(email: string): Promise<boolean> {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     const usage = this.trialUsagesMap.get(normalizedEmail);
     return !!usage && usage.uses > 0;
   }
 
   async recordTrialUsage(data: InsertTrialUsage): Promise<TrialUsage> {
-    const normalizedEmail = data.email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(data.email);
     const existing = this.trialUsagesMap.get(normalizedEmail);
     if (existing) {
       existing.uses += 1;
@@ -306,7 +421,7 @@ export class MemStorage implements IStorage {
   }
 
   async getTrialUsageByEmail(email: string): Promise<TrialUsage | undefined> {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     return this.trialUsagesMap.get(normalizedEmail);
   }
 

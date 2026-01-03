@@ -139,7 +139,7 @@ export function PricingModal({
             <div>
               <div className="font-semibold">Buy Image Credits</div>
               <div className="text-xs text-slate-400">
-                1 credit = 1 JPG/PNG analysis
+                1 credit = 1 standard image (JPG, PNG, HEIC, WebP)
               </div>
             </div>
           </div>
@@ -201,4 +201,3 @@ export function PricingModal({
     </Dialog>
   );
 }
-

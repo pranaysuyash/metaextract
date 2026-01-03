@@ -8,7 +8,22 @@ import { useToast } from '@/hooks/use-toast';
 import { TrialAccessModal } from '@/components/trial-access-modal';
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
 
-const SUPPORTED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
+const SUPPORTED_EXTENSIONS = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.heic',
+  '.heif',
+  '.webp',
+];
+
+const SUPPORTED_MIMES = [
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/heif',
+  'image/webp',
+];
 
 export function SimpleUploadZone() {
   const [isDragActive, setIsDragActive] = useState(false);
@@ -52,12 +67,11 @@ export function SimpleUploadZone() {
   const handleFile = (file: File) => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     const isSupportedExt = ext && SUPPORTED_EXTENSIONS.includes(ext);
-    const isSupportedMime =
-      file.type === 'image/jpeg' || file.type === 'image/png';
+    const isSupportedMime = SUPPORTED_MIMES.includes(file.type);
     if (!isSupportedExt && !isSupportedMime) {
       toast({
         title: 'Unsupported File',
-        description: 'Please upload a JPG or PNG image.',
+        description: 'Please upload a JPG, PNG, HEIC, or WebP image.',
         variant: 'destructive',
       });
       return;
@@ -206,7 +220,7 @@ export function SimpleUploadZone() {
               Drop your image here
             </h3>
             <p className="text-slate-400 text-sm mb-6">
-              Supports JPG, PNG. <br />
+              Supports JPG, PNG, HEIC (iPhone), WebP. <br />
               <span className="text-primary/80 text-xs font-mono mt-1 block">
                 <Zap className="w-3 h-3 inline mr-1" />2 Free Checks Included
               </span>

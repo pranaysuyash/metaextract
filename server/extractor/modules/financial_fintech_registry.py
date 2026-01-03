@@ -6,6 +6,8 @@ Includes XBRL (eXtensible Business Reporting Language), OFX (Open Financial Exch
 Target: ~8,000 fields
 """
 
+from typing import Dict, Any
+
 def get_financial_fintech_registry_field_count():
     # XBRL Taxonomies (US GAAP, IFRS) have thousands of elements
     # OFX/QIF/SWIFT fields

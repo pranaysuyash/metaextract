@@ -849,7 +849,7 @@ def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
                     pass
 
             # Extract general metadata
-            if hasattr(audio_file, 'info'):
+            # Extract general metadata
                 info = audio_file.info
                 if hasattr(info, 'length'):
                     result["duration"] = info.length
@@ -858,8 +858,8 @@ def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
                 if hasattr(info, 'sample_rate'):
                     result["sample_rate"] = info.sample_rate
 
-            # Count total fields extracted
-            total_fields = (
+                # Count total fields extracted
+                total_fields = (
                 len(result["id3v2_text_frames"]) +
                 len(result["id3v2_url_frames"]) +
                 len(result["id3v2_other_frames"]) +
@@ -867,8 +867,8 @@ def extract_id3_frames_metadata(filepath: str) -> Dict[str, Any]:
                 len(result["ape_tags"]) +
                 len(result["mp4_tags"]) +
                 len(result.get("picture_info", {}))
-            )
-            result["fields_extracted"] = total_fields
+                )
+                result["fields_extracted"] = total_fields
 
         except ImportError:
             result["error"] = "Mutagen library not available"
