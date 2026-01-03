@@ -42,8 +42,11 @@ class NewComprehensiveMetadataExtractor:
         from ..extractors.video_extractor import VideoExtractor
         self.orchestrator.add_extractor(VideoExtractor())
         
+        # Add audio extractor
+        from ..extractors.audio_extractor import AudioExtractor
+        self.orchestrator.add_extractor(AudioExtractor())
+        
         # TODO: Add other extractors as they are created
-        # self.orchestrator.add_extractor(AudioExtractor())
         # self.orchestrator.add_extractor(DocumentExtractor())
         # self.orchestrator.add_extractor(ScientificExtractor())
     
