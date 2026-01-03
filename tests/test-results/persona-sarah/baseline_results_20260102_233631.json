@@ -1,0 +1,108 @@
+{
+  "test_run": {
+    "timestamp": "2026-01-02T23:36:31.901055",
+    "persona": "Phone Photo Sarah",
+    "test_type": "baseline",
+    "total_files_tested": 2
+  },
+  "results": [
+    {
+      "filename": "IMG_20251225_164634.jpg",
+      "file_size": 2756210,
+      "extraction_success": false,
+      "total_fields_extracted": 0,
+      "sarahs_questions": {
+        "question_1_when": {
+          "question": "When was this photo taken?",
+          "answer": {
+            "found": false,
+            "dates": {},
+            "most_reliable": "No date found"
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        },
+        "question_2_where": {
+          "question": "Where was I when I took this?",
+          "answer": {
+            "has_gps": false,
+            "coordinates": {},
+            "readable_location": "NOT IMPLEMENTED - Need reverse geocoding"
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        },
+        "question_3_what_device": {
+          "question": "What phone took this?",
+          "answer": {
+            "found": false,
+            "device_info": {},
+            "friendly_name": "Unknown device"
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        },
+        "question_4_authentic": {
+          "question": "Is this photo authentic?",
+          "answer": {
+            "software_detected": false,
+            "editing_detected": false,
+            "has_hash": false,
+            "exif_intact": false,
+            "suspicious_fields": []
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        }
+      },
+      "raw_metadata_sample": {},
+      "extraction_time": "N/A",
+      "timestamp": "2026-01-02T23:36:31.785995"
+    },
+    {
+      "filename": "gps-map-photo.jpg",
+      "file_size": 9562433,
+      "extraction_success": false,
+      "total_fields_extracted": 0,
+      "sarahs_questions": {
+        "question_1_when": {
+          "question": "When was this photo taken?",
+          "answer": {
+            "found": false,
+            "dates": {},
+            "most_reliable": "No date found"
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        },
+        "question_2_where": {
+          "question": "Where was I when I took this?",
+          "answer": {
+            "has_gps": false,
+            "coordinates": {},
+            "readable_location": "NOT IMPLEMENTED - Need reverse geocoding"
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        },
+        "question_3_what_device": {
+          "question": "What phone took this?",
+          "answer": {
+            "found": false,
+            "device_info": {},
+            "friendly_name": "Unknown device"
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        },
+        "question_4_authentic": {
+          "question": "Is this photo authentic?",
+          "answer": {
+            "software_detected": false,
+            "editing_detected": false,
+            "has_hash": false,
+            "exif_intact": false,
+            "suspicious_fields": []
+          },
+          "ease_of_finding": "TODO - Test with actual UI"
+        }
+      },
+      "raw_metadata_sample": {},
+      "extraction_time": "N/A",
+      "timestamp": "2026-01-02T23:36:31.900803"
+    }
+  ]
+}

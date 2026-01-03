@@ -51,7 +51,8 @@ try:
         get_hot_reload_stats_global,
         enable_plugins_global,
         discover_and_load_plugins_global,
-        get_plugin_stats_global
+        get_plugin_stats_global,
+        get_all_available_extraction_functions
     )
     MODULE_DISCOVERY_AVAILABLE = True
 except ImportError:
@@ -760,6 +761,42 @@ try:
 except ImportError:
     analyze_steganography = None  # type: ignore[assignment]
 
+# New AI Generation Detection module
+try:
+    from .modules.ai_generation_detector import detect_ai_generation
+except ImportError:
+    detect_ai_generation = None  # type: ignore[assignment]
+
+# New Image Forensics module
+try:
+    from .modules.image_forensics import analyze_image_forensics
+except ImportError:
+    analyze_image_forensics = None  # type: ignore[assignment]
+
+# New Photoshop PSD module
+try:
+    from .modules.photoshop_psd import analyze_photoshop_psd
+except ImportError:
+    analyze_photoshop_psd = None  # type: ignore[assignment]
+
+# New Edit History module
+try:
+    from .modules.edit_history import analyze_edit_history
+except ImportError:
+    analyze_edit_history = None  # type: ignore[assignment]
+
+# New OpenEXR HDR module
+try:
+    from .modules.openexr_hdr import analyze_openexr_hdr
+except ImportError:
+    analyze_openexr_hdr = None  # type: ignore[assignment]
+
+# New ICC Profile parser module
+try:
+    from .modules.icc_profile_parser import extract_icc_profile
+except ImportError:
+    extract_icc_profile = None  # type: ignore[assignment]
+
 try:
     import sys
     import os
@@ -1184,6 +1221,10 @@ class ComprehensiveTierConfig:
     environmental_sustainability: bool = False # Environmental monitoring, climate data, ESG
     social_media_digital: bool = False    # Social media posts, digital marketing, messaging
     gaming_entertainment: bool = False    # Video games, esports, streaming, interactive media
+    
+    # Additional features referenced in code but missing from class
+    workflow_dam: bool = False            # Workflow DAM metadata
+    image_metadata: bool = False          # Image metadata processing
 
 COMPREHENSIVE_TIER_CONFIGS = {
     Tier.FREE: ComprehensiveTierConfig(),
@@ -2259,6 +2300,8 @@ class ComprehensiveMetadataExtractor:
         is_image = mime_type.startswith("image/")
         is_video = mime_type.startswith("video/")
         is_audio = mime_type.startswith("audio/") or file_ext in [".mp3", ".flac", ".ogg", ".wav", ".m4a", ".aac", ".aiff"]
+        is_psd = file_ext in ['.psd', '.psb'] or 'photoshop' in mime_type.lower()
+        is_exr = file_ext in ['.exr']
 
         try:
             # Medical imaging (DICOM)
@@ -2436,6 +2479,42 @@ class ComprehensiveMetadataExtractor:
                 ai_result = safe_extract_module(detect_ai_content, filepath, "ai_detection", base_result)
                 if ai_result:
                     base_result["ai_detection"] = ai_result
+
+            # New: AI Generation Detection (Stable Diffusion, Midjourney, DALL-E, C2PA)
+            if tier_config.ai_content_detection and detect_ai_generation and is_image:
+                ai_gen_result = safe_extract_module(detect_ai_generation, filepath, "ai_generation_detector")
+                if ai_gen_result:
+                    base_result["ai_generation"] = ai_gen_result
+
+            # New: Image Forensics Analysis (ELA, noise, duplicates)
+            if tier_config.manipulation_detection and analyze_image_forensics and is_image:
+                forensics_result = safe_extract_module(analyze_image_forensics, filepath, "image_forensics")
+                if forensics_result:
+                    base_result["image_forensics"] = forensics_result
+
+            # New: Photoshop PSD Analysis
+            if is_psd and analyze_photoshop_psd:
+                psd_result = safe_extract_module(analyze_photoshop_psd, filepath, "photoshop_psd")
+                if psd_result:
+                    base_result["photoshop_psd"] = psd_result
+
+            # New: Edit History Analysis
+            if tier_config.workflow_dam and analyze_edit_history and is_image:
+                edit_result = safe_extract_module(analyze_edit_history, filepath, "edit_history")
+                if edit_result:
+                    base_result["edit_history"] = edit_result
+
+            # New: OpenEXR HDR Analysis
+            if is_exr and analyze_openexr_hdr:
+                exr_result = safe_extract_module(analyze_openexr_hdr, filepath, "openexr_hdr")
+                if exr_result:
+                    base_result["openexr_hdr"] = exr_result
+
+            # New: ICC Profile Extraction
+            if extract_icc_profile and (is_image or is_psd):
+                icc_result = safe_extract_module(extract_icc_profile, filepath, "icc_profile_parser")
+                if icc_result:
+                    base_result["icc_profile"] = icc_result
 
             # Build advanced analysis summary
             advanced_modules_run = []
@@ -2869,6 +2948,20 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[st
                 "success": True
             }
         )
+
+        # Add persona-friendly interpretation layer
+        try:
+            from .persona_interpretation import add_persona_interpretation
+            # Default to phone_photo_sarah persona for image files
+            persona = "phone_photo_sarah"
+            mime_type = result.get("file", {}).get("mime_type", "")
+            if mime_type.startswith("image/"):
+                result = add_persona_interpretation(result, persona)
+                logger.debug(f"Added persona interpretation for {persona}")
+        except ImportError as e:
+            logger.debug(f"Persona interpretation not available: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to add persona interpretation: {e}")
 
         return result
     except Exception as e:

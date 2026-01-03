@@ -1,26 +1,77 @@
-import React, { useRef, useState, useEffect } from "react";
-import { PublicLayout as Layout } from "@/components/public-layout";
-import { EnhancedUploadZone } from "@/components/enhanced-upload-zone";
-import { PRICING_TIERS, CREDIT_PACKS, CREDIT_EXPLANATION } from "@/lib/mockData";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Database, Lock, Globe, Info, MoveRight, ScanLine, Terminal, Cpu, Share2, FileCode, ShieldAlert, Zap, CheckCircle2, Loader2, Coins, User, LogIn, UserPlus } from "lucide-react";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import React, { useRef, useState, useEffect } from 'react';
+import { PublicLayout as Layout } from '@/components/public-layout';
+import { EnhancedUploadZone } from '@/components/enhanced-upload-zone';
+import {
+  PRICING_TIERS,
+  CREDIT_PACKS,
+  CREDIT_EXPLANATION,
+} from '@/lib/mockData';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Database,
+  Lock,
+  Globe,
+  Info,
+  MoveRight,
+  ScanLine,
+  Terminal,
+  Cpu,
+  Share2,
+  FileCode,
+  ShieldAlert,
+  Zap,
+  CheckCircle2,
+  Loader2,
+  Coins,
+  User,
+  LogIn,
+  UserPlus,
+} from 'lucide-react';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
+
+// Constants for configuration
+const SESSION_STORAGE_LIMIT = 4 * 1024 * 1024; // 4MB
+const SESSION_ID_KEY = 'metaextract_session_id';
 
 function getSessionId(): string {
-  let sessionId = localStorage.getItem("metaextract_session_id");
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    localStorage.setItem("metaextract_session_id", sessionId);
+  try {
+    // Check if localStorage is available
+    if (typeof Storage === 'undefined' || !window.localStorage) {
+      console.warn(
+        'localStorage not available, generating temporary session ID'
+      );
+      return crypto.randomUUID();
+    }
+
+    let sessionId = localStorage.getItem(SESSION_ID_KEY);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
+    }
+    return sessionId;
+  } catch (e) {
+    console.warn('localStorage access failed, using temporary session ID', e);
+    return crypto.randomUUID();
   }
-  return sessionId;
 }
 
 // Custom hook for mouse parallax
@@ -34,8 +85,8 @@ function useParallax(sensitivity = 20) {
         y: (e.clientY - window.innerHeight / 2) / sensitivity,
       });
     };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [sensitivity]);
 
   return position;
@@ -46,7 +97,9 @@ export default function Home() {
   const parallax = useParallax(30);
   const parallaxBg = useParallax(80);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const [creditPackLoading, setCreditPackLoading] = useState<string | null>(null);
+  const [creditPackLoading, setCreditPackLoading] = useState<string | null>(
+    null
+  );
   const [advancedMode, setAdvancedMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -54,49 +107,65 @@ export default function Home() {
 
   const handleUploadResults = (results: any[]) => {
     if (results.length > 0) {
+      const result = results[0];
+
       // Try to store in session storage (might fail if too large)
       try {
-        sessionStorage.setItem('currentMetadata', JSON.stringify(results[0]));
+        sessionStorage.setItem('currentMetadata', JSON.stringify(result));
       } catch (e) {
-        console.warn('Metadata too large for session storage, using navigation state only', e);
+        console.warn(
+          'Metadata too large for session storage, using navigation state only',
+          e
+        );
         // Clear old data to prevent confusion
         sessionStorage.removeItem('currentMetadata');
       }
-      // Navigate with state AND ID param for persistence
-      const result = results[0];
+
+      // Navigate with state AND ID param if available (for shareable links)
       const search = result.id ? `?id=${result.id}` : '';
       navigate(`/results${search}`, { state: { metadata: result } });
     }
   };
 
   const handleCreditPurchase = async (packName: string) => {
-    const packKey = packName.toLowerCase() as "single" | "batch" | "bulk";
+    const packKey = packName.toLowerCase() as 'single' | 'batch' | 'bulk';
     setCreditPackLoading(packKey);
 
     try {
       const sessionId = getSessionId();
-      const response = await fetch("/api/credits/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/credits/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pack: packKey, sessionId }),
       });
 
-      const data = await response.json();
-
+      // Check if response is ok before parsing JSON
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
       }
+
+      const data = await response.json().catch(() => {
+        throw new Error('Invalid response format from server');
+      });
 
       if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+        // Open checkout in new tab to preserve app state
+        window.open(data.checkout_url, '_blank');
       } else {
-        throw new Error("No checkout URL received");
+        throw new Error('No checkout URL received from server');
       }
     } catch (error) {
+      console.error('Credit purchase error:', error);
       toast({
-        title: "Checkout Error",
-        description: error instanceof Error ? error.message : "Failed to start checkout",
-        variant: "destructive",
+        title: 'Credit Purchase Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to start credit purchase',
+        variant: 'destructive',
       });
     } finally {
       setCreditPackLoading(null);
@@ -104,35 +173,47 @@ export default function Home() {
   };
 
   const handleCheckout = async (tier: string) => {
-    if (tier === "free") {
-      document.getElementById("enhanced-upload")?.scrollIntoView({ behavior: 'smooth' });
+    if (tier === 'free') {
+      // Check for reduced motion preference
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const behavior = prefersReducedMotion ? 'auto' : 'smooth';
+      document
+        .getElementById('enhanced-upload')
+        ?.scrollIntoView({ behavior });
       return;
     }
 
     setCheckoutLoading(tier);
     try {
-      const response = await fetch("/api/checkout/create-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/checkout/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier }),
       });
 
-      const data = await response.json();
-
+      // Check if response is ok before parsing JSON
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json().catch(() => {
+        throw new Error('Invalid response format from server');
+      });
 
       if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+        // Open checkout in new tab to preserve app state
+        window.open(data.checkout_url, '_blank');
       } else {
-        throw new Error("No checkout URL received");
+        throw new Error('No checkout URL received from server');
       }
     } catch (error) {
+      console.error('Checkout error:', error);
       toast({
-        title: "Checkout Error",
-        description: error instanceof Error ? error.message : "Failed to start checkout",
-        variant: "destructive",
+        title: 'Checkout Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to start checkout',
+        variant: 'destructive',
       });
     } finally {
       setCheckoutLoading(null);
@@ -140,14 +221,22 @@ export default function Home() {
   };
 
   // Check if user has access to advanced features
-  const hasAdvancedAccess = !!(user && ['professional', 'forensic', 'enterprise'].includes(user.tier));
+  const hasAdvancedAccess = !!(
+    user && ['professional', 'forensic', 'enterprise'].includes(user.tier)
+  );
 
   return (
     <Layout showHeader={true} showFooter={true}>
-      <div ref={containerRef} id="main-content" className="relative min-h-[200vh] bg-[#0B0C10] overflow-hidden selection:bg-primary/30">
-
+      <div
+        ref={containerRef}
+        id="main-content"
+        className="relative min-h-[200vh] bg-[#0B0C10] overflow-hidden selection:bg-primary/30"
+      >
         {/* Global animated background elements */}
-        <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
+        <div
+          className="fixed inset-0 z-0 pointer-events-none"
+          aria-hidden="true"
+        >
           <motion.div
             style={{ x: parallaxBg.x, y: parallaxBg.y }}
             className="absolute inset-0 opacity-20"
@@ -168,19 +257,22 @@ export default function Home() {
               style={{
                 top: `${Math.random() * 80 + 10}%`,
                 left: `${Math.random() * 80 + 10}%`,
-                rotate: `${Math.random() * 20 - 10}deg`
+                rotate: `${Math.random() * 20 - 10}deg`,
               }}
               animate={{
                 y: [0, -20, 0],
-                opacity: [0.3, 0.6, 0.3]
+                opacity: [0.3, 0.6, 0.3],
               }}
               transition={{
                 duration: 5 + Math.random() * 5,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: 'easeInOut',
               }}
             >
-              {`0x${Math.floor(Math.random() * 16777215).toString(16).toUpperCase()}`} {/* SEGMENT_{i} */}
+              {`0x${Math.floor(Math.random() * 16777215)
+                .toString(16)
+                .toUpperCase()}`}{' '}
+              {/* SEGMENT_{i} */}
             </motion.div>
           ))}
         </div>
@@ -188,7 +280,6 @@ export default function Home() {
         {/* SECTION 1: HERO */}
         <section className="relative min-h-screen flex flex-col justify-center px-6 md:px-20 z-10 pt-20">
           <div className="max-w-[1400px] mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-
             {/* Left text block */}
             <div className="md:col-span-7 relative">
               <motion.div
@@ -196,13 +287,15 @@ export default function Home() {
                 animate={{ opacity: 1, x: 0 }}
                 className="relative z-20"
               >
-
                 <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-tight mb-6">
-                  Extract forensic metadata <span className="text-primary">competitors miss.</span>
+                  Extract forensic metadata{' '}
+                  <span className="text-primary">competitors miss.</span>
                 </h1>
 
                 <p className="text-base md:text-lg lg:text-xl text-slate-300 max-w-xl leading-relaxed mb-8">
-                  Courts, journalists, and security teams trust MetaExtract to uncover 7,000+ hidden fields, detect manipulation, and preserve digital evidence.
+                  Courts, journalists, and security teams trust MetaExtract to
+                  uncover 7,000+ hidden fields, detect manipulation, and
+                  preserve digital evidence.
                 </p>
 
                 <div className="flex flex-wrap gap-4 items-center mb-12">
@@ -222,14 +315,23 @@ export default function Home() {
 
                 <div className="flex gap-4 items-center">
                   <Button
-                    onClick={() => document.getElementById("enhanced-upload")?.scrollIntoView({ behavior: 'smooth' })}
+                    onClick={() =>
+                      document
+                        .getElementById('enhanced-upload')
+                        ?.scrollIntoView({ behavior: 'smooth' })
+                    }
                     className="h-14 px-8 bg-primary hover:bg-white text-black font-bold text-lg rounded shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all transform hover:-translate-y-1"
                   >
                     START EXTRACTION
                   </Button>
                   <div className="flex flex-col gap-1 text-sm text-slate-400">
                     <span>No sign-up required for free scan.</span>
-                    <a href="#pricing" className="text-primary hover:underline text-xs">Plans start at FREE</a>
+                    <a
+                      href="#pricing"
+                      className="text-primary hover:underline text-xs"
+                    >
+                      Plans start at FREE
+                    </a>
                   </div>
                 </div>
               </motion.div>
@@ -241,30 +343,37 @@ export default function Home() {
               className="md:col-span-5 relative h-[500px] flex items-center justify-center"
             >
               <div className="absolute inset-0 border border-white/10 rounded-3xl bg-black/20 backdrop-blur-sm -rotate-6 z-0"></div>
-              <div id="enhanced-upload" className="relative z-10 w-full transform rotate-3 transition-transform hover:rotate-0 duration-500">
+              <div
+                id="enhanced-upload"
+                className="relative z-10 w-full transform rotate-3 transition-transform hover:rotate-0 duration-500"
+              >
                 {isAuthenticated && hasAdvancedAccess && (
                   <div className="mb-4 flex items-center justify-center gap-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg backdrop-blur-sm">
                     <ShieldAlert className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm text-purple-300 font-medium">Advanced Forensic Analysis</span>
+                    <span className="text-sm text-purple-300 font-medium">
+                      Advanced Forensic Analysis
+                    </span>
                     <Button
                       onClick={() => setAdvancedMode(!advancedMode)}
-                      variant={advancedMode ? "default" : "outline"}
+                      variant={advancedMode ? 'default' : 'outline'}
                       size="sm"
                       className={cn(
-                        "transition-all duration-200",
+                        'transition-all duration-200',
                         advancedMode
-                          ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
-                          : "border-purple-400/50 text-purple-300 hover:text-purple-200 hover:bg-purple-500/10"
+                          ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-600'
+                          : 'border-purple-400/50 text-purple-300 hover:text-purple-200 hover:bg-purple-500/10'
                       )}
                     >
                       <Zap className="w-3 h-3 mr-1" />
-                      {advancedMode ? "Enabled" : "Enable"}
+                      {advancedMode ? 'Enabled' : 'Enable'}
                     </Button>
                   </div>
                 )}
                 <EnhancedUploadZone
                   onResults={handleUploadResults}
-                  tier={import.meta.env.DEV ? 'enterprise' : (user?.tier || 'free')}
+                  tier={
+                    import.meta.env.DEV ? 'enterprise' : user?.tier || 'free'
+                  }
                   maxFiles={1}
                   advanced={advancedMode && hasAdvancedAccess}
                 />
@@ -276,21 +385,28 @@ export default function Home() {
                       const stored = sessionStorage.getItem('currentMetadata');
                       if (!stored) {
                         toast({
-                          title: "No result in memory",
-                          description: "Upload a file first, then click V2 to view it.",
-                          variant: "destructive"
+                          title: 'No result in memory',
+                          description:
+                            'Upload a file first, then click V2 to view it.',
+                          variant: 'destructive',
                         });
                         return;
                       }
                       try {
                         const parsed = JSON.parse(stored);
-                        navigate('/results-v2', { state: { metadata: parsed } });
+                        navigate('/results-v2', {
+                          state: { metadata: parsed },
+                        });
                       } catch (e) {
-                        console.error('Failed to parse stored metadata for V2', e);
+                        console.error(
+                          'Failed to parse stored metadata for V2',
+                          e
+                        );
                         toast({
-                          title: "Corrupted metadata",
-                          description: "Please re-upload the file to view in V2.",
-                          variant: "destructive"
+                          title: 'Corrupted metadata',
+                          description:
+                            'Please re-upload the file to view in V2.',
+                          variant: 'destructive',
                         });
                       }
                     }}
@@ -305,7 +421,11 @@ export default function Home() {
                 {/* Decorative orbiting elements */}
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  transition={{
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: 'linear',
+                  }}
                   className="absolute -top-10 -right-10 w-32 h-32 border border-dashed border-primary/30 rounded-full"
                 ></motion.div>
               </div>
@@ -323,7 +443,9 @@ export default function Home() {
                   Authentication Status
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  {isAuthenticated ? "You are logged in and can access all features" : "Login to access advanced features and save your work"}
+                  {isAuthenticated
+                    ? 'You are logged in and can access all features'
+                    : 'Login to access advanced features and save your work'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -340,11 +462,15 @@ export default function Home() {
                           <CheckCircle2 className="w-5 h-5 text-green-500" />
                         </div>
                         <div>
-                          <p className="font-medium">Welcome back, {user.username}!</p>
+                          <p className="font-medium">
+                            Welcome back, {user.username}!
+                          </p>
                           <p className="text-sm text-slate-400">{user.email}</p>
                         </div>
                       </div>
-                      <Badge className={`${user.tier === 'professional' ? 'bg-blue-600' : user.tier === 'forensic' ? 'bg-purple-600' : user.tier === 'enterprise' ? 'bg-green-600' : 'bg-gray-600'} text-white`}>
+                      <Badge
+                        className={`${user.tier === 'professional' ? 'bg-blue-600' : user.tier === 'forensic' ? 'bg-purple-600' : user.tier === 'enterprise' ? 'bg-green-600' : 'bg-gray-600'} text-white`}
+                      >
                         {user.tier.toUpperCase()}
                       </Badge>
                     </div>
@@ -369,25 +495,42 @@ export default function Home() {
                 ) : (
                   <div className="space-y-4">
                     <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                      <h4 className="font-medium mb-2">Test the Authentication System</h4>
+                      <h4 className="font-medium mb-2">
+                        Test the Authentication System
+                      </h4>
                       <p className="text-sm text-slate-400 mb-4">
-                        Use these test credentials to login and explore different subscription tiers:
+                        Use these test credentials to login and explore
+                        different subscription tiers:
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                         <div className="p-3 bg-white/5 rounded border border-white/10">
-                          <p className="text-xs font-mono text-blue-400 mb-1">PROFESSIONAL</p>
-                          <p className="text-xs font-mono">test@metaextract.com</p>
+                          <p className="text-xs font-mono text-blue-400 mb-1">
+                            PROFESSIONAL
+                          </p>
+                          <p className="text-xs font-mono">
+                            test@metaextract.com
+                          </p>
                           <p className="text-xs font-mono">testpassword123</p>
                         </div>
                         <div className="p-3 bg-white/5 rounded border border-white/10">
-                          <p className="text-xs font-mono text-purple-400 mb-1">FORENSIC</p>
-                          <p className="text-xs font-mono">forensic@metaextract.com</p>
-                          <p className="text-xs font-mono">forensicpassword123</p>
+                          <p className="text-xs font-mono text-purple-400 mb-1">
+                            FORENSIC
+                          </p>
+                          <p className="text-xs font-mono">
+                            forensic@metaextract.com
+                          </p>
+                          <p className="text-xs font-mono">
+                            forensicpassword123
+                          </p>
                         </div>
                         <div className="p-3 bg-white/5 rounded border border-white/10">
-                          <p className="text-xs font-mono text-green-400 mb-1">ENTERPRISE</p>
-                          <p className="text-xs font-mono">admin@metaextract.com</p>
+                          <p className="text-xs font-mono text-green-400 mb-1">
+                            ENTERPRISE
+                          </p>
+                          <p className="text-xs font-mono">
+                            admin@metaextract.com
+                          </p>
                           <p className="text-xs font-mono">adminpassword123</p>
                         </div>
                       </div>
@@ -397,7 +540,9 @@ export default function Home() {
                       <Button
                         onClick={() => {
                           // Trigger login modal - this will be handled by the Layout component
-                          const loginButton = document.querySelector('[data-auth="login"]') as HTMLButtonElement;
+                          const loginButton = document.querySelector(
+                            '[data-auth="login"]'
+                          ) as HTMLButtonElement;
                           if (loginButton) loginButton.click();
                         }}
                         className="bg-[#6366f1] hover:bg-[#5855eb] text-white"
@@ -408,7 +553,9 @@ export default function Home() {
                       <Button
                         onClick={() => {
                           // Trigger register modal
-                          const registerButton = document.querySelector('[data-auth="register"]') as HTMLButtonElement;
+                          const registerButton = document.querySelector(
+                            '[data-auth="register"]'
+                          ) as HTMLButtonElement;
                           if (registerButton) registerButton.click();
                         }}
                         variant="outline"
@@ -430,14 +577,15 @@ export default function Home() {
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="flex items-end justify-between mb-8">
               <div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter">CORE CAPABILITIES</h2>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter">
+                  CORE CAPABILITIES
+                </h2>
                 <p className="font-mono text-slate-300 text-sm">{`SYSTEM_MODULES // V2.4`}</p>
               </div>
             </div>
 
             {/* Tighter Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-auto md:h-[500px]">
-
               {/* Feature 1: Deep Extract (Wide) */}
               <motion.div
                 whileHover={{ scale: 0.99 }}
@@ -452,18 +600,28 @@ export default function Home() {
                     <ScanLine className="w-4 h-4" />
                     <span>DEEP_PACKET_INSPECTION</span>
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">Forensic Deep-Dive</h3>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                    Forensic Deep-Dive
+                  </h3>
                   <p className="text-slate-300 leading-relaxed max-w-md">
-                    Bypass standard EXIF viewers. Our engine reconstructs 7,000+ data points including Canon MakerNotes, Sony Encrypted Data, and Photoshop History logs to build a complete chain of custody.
+                    Bypass standard EXIF viewers. Our engine reconstructs 7,000+
+                    data points including Canon MakerNotes, Sony Encrypted Data,
+                    and Photoshop History logs to build a complete chain of
+                    custody.
                   </p>
                 </div>
 
                 <div className="mt-8 flex flex-wrap gap-2">
-                  {["MAKERNOTES", "IPTC-IIM", "XMP-EXT", "ICC_PROFILE"].map((tag, i) => (
-                    <span key={i} className="px-2 py-1 bg-white/10 text-[10px] font-mono text-slate-200 border border-white/20 rounded">
-                      {tag}
-                    </span>
-                  ))}
+                  {['MAKERNOTES', 'IPTC-IIM', 'XMP-EXT', 'ICC_PROFILE'].map(
+                    (tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-white/10 text-[10px] font-mono text-slate-200 border border-white/20 rounded"
+                      >
+                        {tag}
+                      </span>
+                    )
+                  )}
                 </div>
               </motion.div>
 
@@ -477,7 +635,8 @@ export default function Home() {
                   <ShieldAlert className="w-8 h-8 mb-4 opacity-80" />
                   <h3 className="text-xl font-bold mb-2">No Data Retention</h3>
                   <p className="text-black/80 text-sm font-medium leading-tight">
-                    Files are processed in temporary RAM and permanently deleted immediately after analysis. We never store your evidence.
+                    Files are processed in temporary RAM and permanently deleted
+                    immediately after analysis. We never store your evidence.
                   </p>
                 </motion.div>
 
@@ -491,7 +650,8 @@ export default function Home() {
                     <span>GLOBAL_STANDARDS</span>
                   </div>
                   <p className="text-slate-300 text-sm leading-tight">
-                    Full compliance with C2PA, Dublin Core, and GDPR Right-to-Erasure protocols.
+                    Full compliance with C2PA, Dublin Core, and GDPR
+                    Right-to-Erasure protocols.
                   </p>
                 </motion.div>
               </div>
@@ -508,9 +668,13 @@ export default function Home() {
                   <span>BINARY_LEVEL_ACCESS</span>
                 </div>
 
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Hex & Entropy Analysis</h3>
+                <h3 className="text-xl md:text-2xl font-bold text-white mb-4">
+                  Hex & Entropy Analysis
+                </h3>
                 <p className="text-slate-300 text-sm leading-relaxed mb-8">
-                  Direct hex-level access allows you to inspect raw file headers. Entropy analysis helps detect if a file has been artificially manipulated or edited.
+                  Direct hex-level access allows you to inspect raw file
+                  headers. Entropy analysis helps detect if a file has been
+                  artificially manipulated or edited.
                 </p>
 
                 <div className="mt-auto space-y-3 font-mono text-xs">
@@ -528,8 +692,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                <Button variant="link" className="text-primary p-0 h-auto justify-start mt-6 group hover:no-underline">
-                  View Technical Specs <MoveRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform" />
+                <Button
+                  variant="link"
+                  className="text-primary p-0 h-auto justify-start mt-6 group hover:no-underline"
+                >
+                  View Technical Specs{' '}
+                  <MoveRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform" />
                 </Button>
               </motion.div>
             </div>
@@ -541,7 +709,9 @@ export default function Home() {
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="flex items-end justify-between mb-12">
               <div>
-                <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-2">ACCESS</h2>
+                <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-2">
+                  ACCESS
+                </h2>
                 <p className="font-mono text-primary text-sm">{`// SELECT_TIER`}</p>
               </div>
               <div className="hidden md:block w-1/3 h-px bg-white/20"></div>
@@ -556,19 +726,47 @@ export default function Home() {
                   className={`relative p-6 flex flex-col h-[400px] transition-all duration-300 group ${tier.recommended ? 'bg-primary text-black' : 'bg-black border border-white/10 hover:border-white/30'}`}
                 >
                   <div className="flex justify-between items-start mb-8">
-                    <h3 className={`font-mono text-xl font-bold ${tier.recommended ? 'text-black' : 'text-white'}`}>{tier.name}</h3>
-                    {tier.recommended && <Zap className="w-5 h-5 text-black animate-pulse" />}
+                    <h3
+                      className={`font-mono text-xl font-bold ${tier.recommended ? 'text-black' : 'text-white'}`}
+                    >
+                      {tier.name}
+                    </h3>
+                    {tier.recommended && (
+                      <Zap className="w-5 h-5 text-black animate-pulse" />
+                    )}
                   </div>
 
                   <div className="mb-auto">
-                    <div className="text-4xl font-bold mb-1 tracking-tighter">{tier.price}<span className="text-sm font-normal opacity-60">{tier.period}</span></div>
-                    <p className={`text-xs ${tier.recommended ? 'text-black/80' : 'text-slate-400'} mb-6`}>{tier.description}</p>
+                    <div className="text-4xl font-bold mb-1 tracking-tighter">
+                      {tier.price}
+                      <span className="text-sm font-normal opacity-60">
+                        {tier.period}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-xs ${tier.recommended ? 'text-black/80' : 'text-slate-400'} mb-6`}
+                    >
+                      {tier.description}
+                    </p>
 
                     <ul className="space-y-3">
                       {tier.features.map((feat, j) => (
-                        <li key={j} className="flex items-center gap-2 text-xs font-mono">
-                          <div className={`w-1 h-1 ${tier.recommended ? 'bg-black' : 'bg-primary'}`}></div>
-                          <span className={tier.recommended ? 'text-black/90' : 'text-slate-300'}>{feat}</span>
+                        <li
+                          key={j}
+                          className="flex items-center gap-2 text-xs font-mono"
+                        >
+                          <div
+                            className={`w-1 h-1 ${tier.recommended ? 'bg-black' : 'bg-primary'}`}
+                          ></div>
+                          <span
+                            className={
+                              tier.recommended
+                                ? 'text-black/90'
+                                : 'text-slate-300'
+                            }
+                          >
+                            {feat}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -581,8 +779,13 @@ export default function Home() {
                     className={`w-full mt-6 rounded-sm font-bold tracking-wide border ${tier.recommended ? 'bg-black text-white hover:bg-black/80 border-black' : 'bg-transparent text-white hover:bg-white hover:text-black border-white/20'}`}
                   >
                     {checkoutLoading === tier.tier ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-                    ) : tier.cta}
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />{' '}
+                        Processing...
+                      </>
+                    ) : (
+                      tier.cta
+                    )}
                   </Button>
                 </motion.div>
               ))}
@@ -596,17 +799,28 @@ export default function Home() {
                     <CreditCard className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="text-white font-bold font-mono">PAY-AS-YOU-GO CREDITS</h4>
-                    <p className="text-slate-400 text-xs max-w-sm mb-2">No subscription required. Buy credits for one-off forensic extractions.</p>
+                    <h4 className="text-white font-bold font-mono">
+                      PAY-AS-YOU-GO CREDITS
+                    </h4>
+                    <p className="text-slate-400 text-xs max-w-sm mb-2">
+                      No subscription required. Buy credits for one-off forensic
+                      extractions.
+                    </p>
                     <p className="text-primary text-xs font-mono border-l-2 border-primary/30 pl-2">
-                      1 Credit = 1 Standard File Extraction <span className="text-slate-500">(Video = 3 Credits)</span>
+                      1 Credit = 1 Standard File Extraction{' '}
+                      <span className="text-slate-500">
+                        (Video = 3 Credits)
+                      </span>
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-4 overflow-x-auto pb-4 md:pb-0">
                   {CREDIT_PACKS.map((pack, i) => {
-                    const packKey = pack.name.toLowerCase() as "single" | "batch" | "bulk";
+                    const packKey = pack.name.toLowerCase() as
+                      | 'single'
+                      | 'batch'
+                      | 'bulk';
                     const isLoading = creditPackLoading === packKey;
                     return (
                       <button
@@ -623,10 +837,18 @@ export default function Home() {
                           </div>
                         ) : (
                           <>
-                            <div className="text-xs text-slate-400 mb-1">{pack.name}</div>
-                            <div className="text-xl font-bold text-white group-hover:text-primary">{pack.price}</div>
-                            <div className="text-[10px] text-slate-500 font-mono mt-1">{pack.credits} Credits</div>
-                            <div className="text-[10px] text-primary/80 font-mono mt-2 border-t border-white/10 pt-2">{pack.per_credit}</div>
+                            <div className="text-xs text-slate-400 mb-1">
+                              {pack.name}
+                            </div>
+                            <div className="text-xl font-bold text-white group-hover:text-primary">
+                              {pack.price}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-mono mt-1">
+                              {pack.credits} Credits
+                            </div>
+                            <div className="text-[10px] text-primary/80 font-mono mt-2 border-t border-white/10 pt-2">
+                              {pack.per_credit}
+                            </div>
                           </>
                         )}
                       </button>
@@ -637,7 +859,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
       </div>
     </Layout>
   );
@@ -660,5 +881,5 @@ function CreditCard(props: React.SVGProps<SVGSVGElement>) {
       <rect width="20" height="14" x="2" y="5" rx="2" />
       <line x1="2" x2="22" y1="10" y2="10" />
     </svg>
-  )
+  );
 }

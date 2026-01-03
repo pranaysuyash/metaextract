@@ -3,8 +3,10 @@ import React, { useEffect, useState } from "react";
 import { PublicLayout as Layout } from "@/components/public-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, Share2, CheckCircle2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, Share2, CheckCircle2, Hash, Fingerprint, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -13,12 +15,12 @@ interface MvpMetadata {
     filesize: string;
     filetype: string;
     mime_type: string;
-    gps: Record<string, any> | null;
-    exif: Record<string, any>;
+    gps: Record<string, unknown> | null;
+    exif: Record<string, unknown>;
     filesystem?: { created?: string; modified?: string };
-    hashes?: Record<string, any>;
-    file_integrity?: Record<string, any>;
-    perceptual_hashes?: Record<string, any>;
+    hashes?: Record<string, unknown>;
+    file_integrity?: Record<string, unknown>;
+    perceptual_hashes?: Record<string, unknown>;
     burned_metadata?: {
         has_burned_metadata: boolean;
         extracted_text?: string | null;
@@ -34,18 +36,25 @@ interface MvpMetadata {
         warnings?: string[];
         summary?: { overall_status?: string; gps_comparison?: string; timestamp_comparison?: string };
     } | null;
-    normalized?: Record<string, any> | null;
-    calculated?: Record<string, any> | null;
+    normalized?: Record<string, unknown> | null;
+    calculated?: Record<string, unknown> | null;
     processing_ms?: number;
     fields_extracted?: number;
     access: { trial_granted: boolean; trial_email_present: boolean };
     _trial_limited?: boolean;
     client_last_modified_iso?: string;
-    registry_summary?: Record<string, any>;
+    registry_summary?: Record<string, unknown>;
+    [key: string]: unknown;
 }
+
+type TabValue = "privacy" | "authenticity" | "photography" | "raw";
 
 export default function ImagesMvpResults() {
     const [metadata, setMetadata] = useState<MvpMetadata | null>(null);
+    const [activeTab, setActiveTab] = useState<TabValue>("privacy");
+    const [rawSearch, setRawSearch] = useState("");
+    const [showOverlayText, setShowOverlayText] = useState(false);
+    const [showAllExif, setShowAllExif] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -67,6 +76,9 @@ export default function ImagesMvpResults() {
     const isTrialLimited = metadata._trial_limited || (metadata.access?.trial_granted);
     const canExport = !isTrialLimited;
 
+    const isTabValue = (value: string): value is TabValue =>
+        value === "privacy" || value === "authenticity" || value === "photography" || value === "raw";
+
     const handleDownloadJson = () => {
         if (!canExport) {
             return;
@@ -83,8 +95,8 @@ export default function ImagesMvpResults() {
     };
 
     // Format Date Helper
-    const formatDate = (dateStr?: string) => {
-        if (!dateStr) return "Not available";
+    const formatDate = (dateStr?: string, emptyMessage = "Not available") => {
+        if (!dateStr) return emptyMessage;
         try {
             return new Date(dateStr).toLocaleString();
         } catch {
@@ -92,8 +104,10 @@ export default function ImagesMvpResults() {
         }
     };
 
-    const hasValue = (value: any): boolean => {
+    const hasValue = (value: unknown): boolean => {
         if (value === null || value === undefined) return false;
+        if (typeof value === "boolean") return value;
+        if (typeof value === "number") return Number.isFinite(value);
         if (typeof value === "string") {
             const trimmed = value.trim();
             return trimmed.length > 0 && trimmed.toLowerCase() !== "n/a" && trimmed.toLowerCase() !== "unknown";
@@ -103,19 +117,18 @@ export default function ImagesMvpResults() {
         return true;
     };
 
-    const labelOrNotEmbedded = (value: any) => (hasValue(value) ? String(value) : "Not embedded");
-
-    const getGpsCoords = (gps: Record<string, any> | null | undefined) => {
+    const getGpsCoords = (gps: Record<string, unknown> | null | undefined) => {
         if (!gps || typeof gps !== 'object') return null;
-        const latRaw = gps.latitude ?? gps.lat ?? gps.GPSLatitude ?? gps.gps_latitude ?? gps.Latitude;
-        const lonRaw = gps.longitude ?? gps.lon ?? gps.lng ?? gps.GPSLongitude ?? gps.gps_longitude ?? gps.Longitude;
+        const record = gps as Record<string, unknown>;
+        const latRaw = record.latitude ?? record.lat ?? record.GPSLatitude ?? record.gps_latitude ?? record.Latitude;
+        const lonRaw = record.longitude ?? record.lon ?? record.lng ?? record.GPSLongitude ?? record.gps_longitude ?? record.Longitude;
         const lat = typeof latRaw === "number" ? latRaw : parseFloat(String(latRaw));
         const lon = typeof lonRaw === "number" ? lonRaw : parseFloat(String(lonRaw));
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
         return { latitude: lat, longitude: lon };
     };
 
-    const parseOverlayGps = (burned?: any) => {
+    const parseOverlayGps = (burned?: MvpMetadata["burned_metadata"]) => {
         const raw = burned?.parsed_data?.gps;
         if (!raw) return null;
         const lat = typeof raw.latitude === 'number' ? raw.latitude : parseFloat(String(raw.latitude));
@@ -128,7 +141,7 @@ export default function ImagesMvpResults() {
     const overlayGps = parseOverlayGps(metadata.burned_metadata);
     const hasGps = !!gpsCoords;
     const gpsMapUrl = gpsCoords
-        ? (metadata.gps?.google_maps_url || `https://maps.google.com/?q=${gpsCoords.latitude},${gpsCoords.longitude}`)
+        ? ((metadata.gps as Record<string, unknown> | null)?.google_maps_url as string | undefined) || `https://maps.google.com/?q=${gpsCoords.latitude},${gpsCoords.longitude}`
         : overlayGps
         ? (overlayGps.google_maps_url || `https://maps.google.com/?q=${overlayGps.latitude},${overlayGps.longitude}`)
         : '';
@@ -151,7 +164,10 @@ export default function ImagesMvpResults() {
         return Number.isNaN(dt.getTime()) ? null : dt;
     };
     const filenameDate = parseWhatsappFilenameDate(metadata.filename);
-    const captureDateFromExif = parseExifDate(metadata.exif?.DateTimeOriginal || metadata.exif?.CreateDate);
+    const captureDateFromExif = parseExifDate(
+        (metadata.exif?.DateTimeOriginal as string | null | undefined) ||
+        (metadata.exif?.CreateDate as string | null | undefined)
+    );
     const captureDateLabel = captureDateFromExif
         ? "CAPTURE DATE"
         : filenameDate
@@ -167,34 +183,259 @@ export default function ImagesMvpResults() {
     const embeddedGpsState = hasGps ? "embedded" : overlayGps ? "overlay" : "none";
     const burnedTimestamp = metadata.burned_metadata?.parsed_data?.timestamp || null;
     const hashSha256 = metadata.hashes?.sha256 || metadata.file_integrity?.sha256 || null;
+    const hashMd5 = metadata.hashes?.md5 || metadata.file_integrity?.md5 || null;
     const fieldsExtracted = metadata.fields_extracted ?? null;
     const processingMs = metadata.processing_ms ?? null;
-    const software = metadata.exif?.Software || null;
+    const software = (metadata.exif?.Software as string | undefined) || null;
 
-    const highlights: Array<{ text: string; chip: "Privacy" | "Authenticity" | "Photography"; detail?: string }> = [];
+    type DetailEntry = { path: string; valuePreview: string; value: unknown };
+    const previewValue = (value: unknown): string => {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "string") return value.length > 180 ? `${value.slice(0, 180)}…` : value;
+        if (typeof value === "number" || typeof value === "boolean") return String(value);
+        try {
+            const text = JSON.stringify(value);
+            return text.length > 180 ? `${text.slice(0, 180)}…` : text;
+        } catch {
+            return String(value);
+        }
+    };
+
+    const collectDetailEntries = (
+        obj: unknown,
+        prefix = "",
+        depth = 0,
+        maxDepth = 4,
+        out: DetailEntry[] = [],
+        maxEntries = 200
+    ): DetailEntry[] => {
+        if (out.length >= maxEntries) return out;
+        if (depth > maxDepth) return out;
+        if (obj === null || obj === undefined) return out;
+        if (typeof obj !== "object") {
+            if (!hasValue(obj)) return out;
+            out.push({
+                path: prefix || "(root)",
+                valuePreview: previewValue(obj),
+                value: obj,
+            });
+            return out;
+        }
+        if (Array.isArray(obj)) {
+            if (!hasValue(obj)) return out;
+            out.push({
+                path: prefix || "(root)",
+                valuePreview: previewValue(obj),
+                value: obj,
+            });
+            return out;
+        }
+        const record = obj as Record<string, unknown>;
+        for (const key of Object.keys(record)) {
+            if (key.startsWith("_")) continue;
+            if (key === "access") continue;
+            if (key === "extracted_text") continue;
+            const next = prefix ? `${prefix}.${key}` : key;
+            const value = record[key];
+            if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+                collectDetailEntries(value, next, depth + 1, maxDepth, out, maxEntries);
+            } else {
+                if (!hasValue(value)) continue;
+                out.push({
+                    path: next,
+                    valuePreview: previewValue(value),
+                    value,
+                });
+            }
+            if (out.length >= maxEntries) break;
+        }
+        return out;
+    };
+
+    const scrollTo = (tab: typeof activeTab, anchorId: string) => {
+        setActiveTab(tab);
+        window.setTimeout(() => {
+            const el = document.getElementById(anchorId);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+    };
+
+    const highlightIcon = (chip: "Privacy" | "Authenticity" | "Photography") => {
+        if (chip === "Privacy") return <MapPin className="w-4 h-4" />;
+        if (chip === "Authenticity") return <Fingerprint className="w-4 h-4" />;
+        return <Camera className="w-4 h-4" />;
+    };
+
+    const highlightAccent = (chip: "Privacy" | "Authenticity" | "Photography") => {
+        if (chip === "Privacy") return "border-emerald-500/20 bg-emerald-500/5 text-emerald-200";
+        if (chip === "Authenticity") return "border-purple-500/20 bg-purple-500/5 text-purple-200";
+        return "border-blue-500/20 bg-blue-500/5 text-blue-200";
+    };
+
+    const highlights: Array<{
+        text: string;
+        chip: "Privacy" | "Authenticity" | "Photography";
+        icon: React.ReactNode;
+        accentClass: string;
+        target?: { tab: typeof activeTab; anchorId: string };
+    }> = [];
     if (captureDateValue !== "Not embedded") {
-        highlights.push({ text: "Capture time found.", chip: "Photography", detail: captureDateLabel === "FILENAME DATE" ? "From filename" : "From EXIF" });
+        highlights.push({
+            text: `Capture time found (${captureDateLabel === "FILENAME DATE" ? "from filename" : "from EXIF"}).`,
+            chip: "Photography",
+            icon: highlightIcon("Photography"),
+            accentClass: highlightAccent("Photography"),
+            target: { tab: "privacy", anchorId: "section-timestamps" },
+        });
     } else {
-        highlights.push({ text: "No embedded capture time found (common after sharing apps).", chip: "Photography" });
+        highlights.push({
+            text: "No embedded capture time found (common after sharing apps).",
+            chip: "Photography",
+            icon: highlightIcon("Photography"),
+            accentClass: highlightAccent("Photography"),
+            target: { tab: "privacy", anchorId: "section-timestamps" },
+        });
     }
     if (embeddedGpsState === "embedded") {
-        highlights.push({ text: "Location is embedded in EXIF.", chip: "Privacy" });
+        highlights.push({
+            text: "Location is embedded in EXIF.",
+            chip: "Privacy",
+            icon: highlightIcon("Privacy"),
+            accentClass: highlightAccent("Privacy"),
+            target: { tab: "privacy", anchorId: "section-location" },
+        });
     } else if (embeddedGpsState === "overlay") {
-        highlights.push({ text: "Location not embedded in EXIF, but found in overlay text (pixels).", chip: "Privacy" });
+        highlights.push({
+            text: "Location not embedded in EXIF, but found in overlay text (pixels).",
+            chip: "Privacy",
+            icon: highlightIcon("Privacy"),
+            accentClass: highlightAccent("Privacy"),
+            target: { tab: "privacy", anchorId: "section-location" },
+        });
     } else {
-        highlights.push({ text: "Location not embedded in this file.", chip: "Privacy" });
+        highlights.push({
+            text: "Location not embedded in this file.",
+            chip: "Privacy",
+            icon: highlightIcon("Privacy"),
+            accentClass: highlightAccent("Privacy"),
+            target: { tab: "privacy", anchorId: "section-location" },
+        });
     }
     if (hasValue(metadata.exif?.Make) || hasValue(metadata.exif?.Model)) {
-        highlights.push({ text: `Device detected: ${[metadata.exif?.Make, metadata.exif?.Model].filter(Boolean).join(" ")}`, chip: "Photography" });
+        highlights.push({
+            text: `Device detected: ${[metadata.exif?.Make, metadata.exif?.Model].filter(Boolean).join(" ")}`,
+            chip: "Photography",
+            icon: highlightIcon("Photography"),
+            accentClass: highlightAccent("Photography"),
+            target: { tab: "privacy", anchorId: "section-device" },
+        });
     }
     if (hasValue(software)) {
-        highlights.push({ text: `Software tag present: ${software}`, chip: "Authenticity" });
+        highlights.push({
+            text: `Software tag present: ${software}`,
+            chip: "Authenticity",
+            icon: highlightIcon("Authenticity"),
+            accentClass: highlightAccent("Authenticity"),
+            target: { tab: "authenticity", anchorId: "section-auth-signals" },
+        });
     } else {
-        highlights.push({ text: "No editing software tag found (inconclusive).", chip: "Authenticity" });
+        highlights.push({
+            text: "No editing software tag found (inconclusive).",
+            chip: "Authenticity",
+            icon: highlightIcon("Authenticity"),
+            accentClass: highlightAccent("Authenticity"),
+            target: { tab: "authenticity", anchorId: "section-auth-signals" },
+        });
     }
     if (hasValue(hashSha256)) {
-        highlights.push({ text: "SHA-256 hash computed for integrity.", chip: "Authenticity" });
+        highlights.push({
+            text: "SHA-256 hash computed for integrity.",
+            chip: "Authenticity",
+            icon: highlightIcon("Authenticity"),
+            accentClass: highlightAccent("Authenticity"),
+            target: { tab: "privacy", anchorId: "section-integrity" },
+        });
     }
+
+    const exifEntries = Object.entries(metadata.exif || {}).filter(([, v]) => hasValue(v));
+    const exifEntriesForList =
+        showAllExif || canExport ? exifEntries : exifEntries.slice(0, 14);
+
+    const imageWidth = metadata.exif?.ImageWidth;
+    const imageHeight = metadata.exif?.ImageHeight ?? metadata.exif?.ImageLength;
+    const dimensionsValue =
+        hasValue(imageWidth) && hasValue(imageHeight)
+            ? `${String(imageWidth)} × ${String(imageHeight)}`
+            : null;
+    const megapixelsValue = hasValue(metadata.calculated?.megapixels)
+        ? String(metadata.calculated?.megapixels)
+        : null;
+    const colorSpaceNumeric = Number(metadata.exif?.ColorSpace);
+    const colorSpaceValue =
+        Number.isFinite(colorSpaceNumeric) && colorSpaceNumeric === 1
+            ? "sRGB"
+            : hasValue(metadata.exif?.ColorSpace)
+              ? String(metadata.exif?.ColorSpace)
+              : null;
+
+    const collectPaths = (obj: unknown, prefix = "", depth = 0, out: DetailEntry[] = []): DetailEntry[] => {
+        if (out.length >= 500) return out;
+        if (depth > 5) return out;
+        if (obj === null || obj === undefined) return out;
+        if (typeof obj !== "object") {
+            out.push({
+                path: prefix || "(root)",
+                valuePreview: previewValue(obj).slice(0, 140),
+                value: obj,
+            });
+            return out;
+        }
+        if (Array.isArray(obj)) {
+            const preview = previewValue(obj.slice(0, 5));
+            out.push({
+                path: prefix || "(root)",
+                valuePreview: preview.slice(0, 140),
+                value: obj,
+            });
+            return out;
+        }
+        const record = obj as Record<string, unknown>;
+        for (const key of Object.keys(record)) {
+            const next = prefix ? `${prefix}.${key}` : key;
+            const value = record[key];
+            if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+                collectPaths(value, next, depth + 1, out);
+            } else if (Array.isArray(value)) {
+                const preview = previewValue(value.slice(0, 5));
+                out.push({
+                    path: next,
+                    valuePreview: preview.slice(0, 140),
+                    value,
+                });
+            } else {
+                if (!hasValue(value)) continue;
+                out.push({
+                    path: next,
+                    valuePreview: previewValue(value).slice(0, 140),
+                    value,
+                });
+            }
+            if (out.length >= 500) break;
+        }
+        return out;
+    };
+
+    const allRawPaths = collectPaths(metadata);
+    const q = rawSearch.trim().toLowerCase();
+    const rawMatches = q
+        ? allRawPaths
+              .filter(
+                  (e) =>
+                      e.path.toLowerCase().includes(q) ||
+                      e.valuePreview.toLowerCase().includes(q)
+              )
+              .slice(0, 80)
+        : allRawPaths.slice(0, 40);
 
     return (
         <Layout showHeader={true} showFooter={true}>
@@ -262,12 +503,24 @@ export default function ImagesMvpResults() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {highlights.slice(0, 6).map((h, idx) => (
-                                <div key={idx} className="flex items-start justify-between gap-3">
-                                    <div className="text-sm text-slate-200">{h.text}</div>
-                                    <span className="shrink-0 text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 font-mono">
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() =>
+                                        h.target
+                                            ? scrollTo(h.target.tab, h.target.anchorId)
+                                            : undefined
+                                    }
+                                    className={`w-full text-left flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${h.accentClass} ${h.target ? "hover:bg-white/5" : ""}`}
+                                >
+                                    <div className="mt-0.5 opacity-90">{h.icon}</div>
+                                    <div className="flex-1">
+                                        <div className="text-sm">{h.text}</div>
+                                    </div>
+                                    <span className="shrink-0 text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-slate-200 font-mono">
                                         {h.chip}
                                     </span>
-                                </div>
+                                </button>
                             ))}
                             {(fieldsExtracted || processingMs) && (
                                 <div className="pt-2 text-xs text-slate-500 font-mono">
@@ -279,18 +532,23 @@ export default function ImagesMvpResults() {
                         </CardContent>
                     </Card>
 
-                    <Tabs defaultValue="privacy" className="w-full">
+                    <Tabs value={activeTab} onValueChange={(v) => (isTabValue(v) ? setActiveTab(v) : undefined)} className="w-full">
                         <TabsList className="bg-[#121217] border border-white/5">
                             <TabsTrigger value="privacy">Privacy</TabsTrigger>
                             <TabsTrigger value="authenticity">Authenticity</TabsTrigger>
                             <TabsTrigger value="photography">Photography</TabsTrigger>
-                            <TabsTrigger value="raw" disabled={!canExport}>Raw</TabsTrigger>
+                            <TabsTrigger value="raw">
+                                <span className="inline-flex items-center gap-2">
+                                    {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" />}
+                                    Raw
+                                </span>
+                            </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="privacy" className="mt-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Location Card */}
-                                <Card className="bg-[#121217] border-white/5">
+                                <Card className="bg-[#121217] border-white/5" id="section-location">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
                                             <MapPin className="w-4 h-4" /> LOCATION DATA
@@ -350,6 +608,36 @@ export default function ImagesMvpResults() {
                                                         View on Google Maps <ArrowRight className="w-3 h-3 inline ml-1" />
                                                     </a>
                                                 )}
+                                                {(burnedTimestamp || metadata.burned_metadata?.parsed_data?.plus_code) && (
+                                                    <div className="text-xs text-slate-400 space-y-1">
+                                                        {burnedTimestamp && (
+                                                            <div>
+                                                                <span className="text-slate-500">Overlay time:</span> {burnedTimestamp}
+                                                            </div>
+                                                        )}
+                                                        {metadata.burned_metadata?.parsed_data?.plus_code && (
+                                                            <div>
+                                                                <span className="text-slate-500">Plus code:</span>{" "}
+                                                                {metadata.burned_metadata.parsed_data.plus_code}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div className="pt-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="border-white/10 hover:bg-white/5 w-full"
+                                                        onClick={() => setShowOverlayText((s) => !s)}
+                                                    >
+                                                        {showOverlayText ? "Hide overlay text" : "View overlay text"}
+                                                    </Button>
+                                                    {showOverlayText && (
+                                                        <div className="mt-3 text-xs text-slate-200 bg-black/30 border border-white/5 rounded p-3 max-h-40 overflow-auto">
+                                                            {metadata.burned_metadata?.extracted_text?.slice(0, 1200) ||
+                                                                "Text not available"}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="py-8 text-center">
@@ -362,7 +650,7 @@ export default function ImagesMvpResults() {
                                 </Card>
 
                                 {/* Device Info */}
-                                <Card className="bg-[#121217] border-white/5">
+                                <Card className="bg-[#121217] border-white/5" id="section-device">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
                                             <Camera className="w-4 h-4" /> DEVICE INFORMATION
@@ -370,14 +658,24 @@ export default function ImagesMvpResults() {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="grid grid-cols-1 gap-4">
-                                            <div className="pb-3 border-b border-white/5">
-                                                <span className="text-slate-500 block text-xs font-mono mb-1">CAMERA MAKE</span>
-                                                <span className="text-white font-medium">{labelOrNotEmbedded(metadata.exif?.Make)}</span>
-                                            </div>
-                                            <div className="pb-3 border-b border-white/5">
-                                                <span className="text-slate-500 block text-xs font-mono mb-1">CAMERA MODEL</span>
-                                                <span className="text-white font-medium">{labelOrNotEmbedded(metadata.exif?.Model)}</span>
-                                            </div>
+                                            {!hasValue(metadata.exif?.Make) && !hasValue(metadata.exif?.Model) ? (
+                                                <div className="text-xs text-slate-500">No camera make/model tags found.</div>
+                                            ) : (
+                                                <>
+                                                    {hasValue(metadata.exif?.Make) && (
+                                                        <div className="pb-3 border-b border-white/5">
+                                                            <span className="text-slate-500 block text-xs font-mono mb-1">CAMERA MAKE</span>
+                                                            <span className="text-white font-medium">{String(metadata.exif?.Make)}</span>
+                                                        </div>
+                                                    )}
+                                                    {hasValue(metadata.exif?.Model) && (
+                                                        <div className="pb-3 border-b border-white/5">
+                                                            <span className="text-slate-500 block text-xs font-mono mb-1">CAMERA MODEL</span>
+                                                            <span className="text-white font-medium">{String(metadata.exif?.Model)}</span>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
                                             {hasValue(software) && (
                                                 <div>
                                                     <span className="text-slate-500 block text-xs font-mono mb-1">SOFTWARE</span>
@@ -389,7 +687,7 @@ export default function ImagesMvpResults() {
                                 </Card>
 
                                 {/* Timestamps */}
-                                <Card className="bg-[#121217] border-white/5">
+                                <Card className="bg-[#121217] border-white/5" id="section-timestamps">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
                                             <Calendar className="w-4 h-4" /> TIMESTAMPS
@@ -411,7 +709,9 @@ export default function ImagesMvpResults() {
                                             )}
                                             <div>
                                                 <span className="text-slate-500 block text-xs font-mono mb-1">LOCAL FILE MODIFIED</span>
-                                                <span className="text-white font-medium">{formatDate(localModifiedValue || undefined)}</span>
+                                                <span className="text-white font-medium">
+                                                    {formatDate(localModifiedValue || undefined, "Not available (browser did not provide)")}
+                                                </span>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -425,88 +725,160 @@ export default function ImagesMvpResults() {
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <ul className="space-y-3">
-                                            <li className="flex justify-between text-sm">
-                                                <span className="text-slate-400">MakerNotes</span>
-                                                <span className={metadata.exif?.MakerNote || (Object.keys(metadata.exif || {}).some((k) => k.toLowerCase().includes('maker'))) ? "text-red-400" : "text-slate-600"}>
-                                                    {metadata.exif?.MakerNote || (Object.keys(metadata.exif || {}).some((k) => k.toLowerCase().includes('maker'))) ? "Detected" : "Not embedded"}
-                                                </span>
-                                            </li>
-                                            <li className="flex justify-between text-sm">
-                                                <span className="text-slate-400">Serial Numbers</span>
-                                                <span className="text-slate-600">{metadata.exif?.BodySerialNumber || metadata.exif?.LensSerialNumber || metadata.exif?.SerialNumber || "Not embedded"}</span>
-                                            </li>
-                                            <li className="flex justify-between text-sm">
-                                                <span className="text-slate-400">Color Profile</span>
-                                                <span className="text-white">{metadata.exif?.ColorSpace === 1 ? 'sRGB' : (metadata.exif?.ColorSpace || 'Unspecified')}</span>
-                                            </li>
-                                        </ul>
+                                        {(() => {
+                                            const exifKeys = Object.keys(metadata.exif || {});
+                                            const hasMakerNotes =
+                                                hasValue(metadata.exif?.MakerNote) ||
+                                                exifKeys.some((k) => k.toLowerCase().includes("maker"));
+                                            const serial =
+                                                (metadata.exif?.BodySerialNumber as string | undefined) ||
+                                                (metadata.exif?.LensSerialNumber as string | undefined) ||
+                                                (metadata.exif?.SerialNumber as string | undefined) ||
+                                                null;
+                                            const colorProfile = colorSpaceValue;
+
+                                            if (!hasMakerNotes && !hasValue(serial) && !hasValue(colorProfile)) {
+                                                return <div className="text-xs text-slate-500">No hidden identifiers detected.</div>;
+                                            }
+
+                                            return (
+                                                <ul className="space-y-3">
+                                                    {hasMakerNotes && (
+                                                        <li className="flex justify-between text-sm">
+                                                            <span className="text-slate-400">MakerNotes</span>
+                                                            <span className="text-red-400">Detected</span>
+                                                        </li>
+                                                    )}
+                                                    {hasValue(serial) && (
+                                                        <li className="flex justify-between text-sm">
+                                                            <span className="text-slate-400">Serial Numbers</span>
+                                                            <span className="text-slate-200 truncate max-w-[55%]">{serial}</span>
+                                                        </li>
+                                                    )}
+                                                    {hasValue(colorProfile) && (
+                                                        <li className="flex justify-between text-sm">
+                                                            <span className="text-slate-400">Color Profile</span>
+                                                            <span className="text-slate-200">{colorProfile}</span>
+                                                        </li>
+                                                    )}
+                                                </ul>
+                                            );
+                                        })()}
                                     </CardContent>
                                 </Card>
 
-                                {/* Overlay / Burned Metadata */}
-                                {metadata.burned_metadata?.has_burned_metadata && (
-                                    <Card className="bg-[#121217] border-white/5">
+                                {/* Integrity */}
+                                {(hasValue(hashSha256) || hasValue(hashMd5)) && (
+                                    <Card className="bg-[#121217] border-white/5" id="section-integrity">
                                         <CardHeader>
                                             <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                                <ShieldAlert className="w-4 h-4" /> OVERLAY TEXT (OCR)
+                                                <Hash className="w-4 h-4" /> INTEGRITY
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent className="space-y-3 text-sm">
-                                            <div className="text-slate-300">
-                                                <span className="block text-xs text-slate-500 mb-1">EXTRACTED TEXT</span>
-                                                <span className="block bg-white/5 rounded p-2 max-h-32 overflow-y-auto">
-                                                    {metadata.burned_metadata.extracted_text?.slice(0, 400) || 'Text not available'}
-                                                </span>
-                                            </div>
-                                            {metadata.burned_metadata.parsed_data?.gps && (
-                                                <div className="grid grid-cols-2 gap-4 font-mono">
-                                                    <div>
-                                                        <span className="text-slate-500 block text-xs">LATITUDE (Overlay)</span>
-                                                        {metadata.burned_metadata.parsed_data.gps.latitude}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-slate-500 block text-xs">LONGITUDE (Overlay)</span>
-                                                        {metadata.burned_metadata.parsed_data.gps.longitude}
-                                                    </div>
+                                        <CardContent className="space-y-3 text-sm font-mono">
+                                            {hasValue(hashSha256) && (
+                                                <div className="flex justify-between gap-3">
+                                                    <span className="text-slate-400">SHA256</span>
+                                                    <span className="text-slate-200 truncate max-w-[60%]">{String(hashSha256)}</span>
                                                 </div>
                                             )}
-                                            {metadata.burned_metadata.parsed_data?.timestamp && (
-                                                <div className="text-slate-300">
-                                                    <span className="text-slate-500 block text-xs">TIMESTAMP (Overlay)</span>
-                                                    <span>{metadata.burned_metadata.parsed_data.timestamp}</span>
+                                            {hasValue(hashMd5) && (
+                                                <div className="flex justify-between gap-3">
+                                                    <span className="text-slate-400">MD5</span>
+                                                    <span className="text-slate-200 truncate max-w-[60%]">{String(hashMd5)}</span>
                                                 </div>
                                             )}
                                         </CardContent>
                                     </Card>
                                 )}
 
-                                {/* Integrity */}
-                                {(hasValue(metadata.hashes) || hasValue(metadata.file_integrity)) && (
-                                    <Card className="bg-[#121217] border-white/5">
-                                        <CardHeader>
-                                            <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                                <Lock className="w-4 h-4" /> INTEGRITY
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-3 text-sm font-mono">
-                                            <div className="flex justify-between gap-3">
-                                                <span className="text-slate-400">SHA256</span>
-                                                <span className="text-slate-200 truncate max-w-[60%]">{labelOrNotEmbedded(metadata.hashes?.sha256 || metadata.file_integrity?.sha256)}</span>
-                                            </div>
-                                            <div className="flex justify-between gap-3">
-                                                <span className="text-slate-400">MD5</span>
-                                                <span className="text-slate-200 truncate max-w-[60%]">{labelOrNotEmbedded(metadata.hashes?.md5 || metadata.file_integrity?.md5)}</span>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
+                                <Card className="bg-[#121217] border-white/5 md:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm font-mono text-slate-400">ADVANCED DETAILS</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Accordion type="single" collapsible className="border-white/10">
+                                            <AccordionItem value="privacy-advanced" className="border-white/10">
+                                                <AccordionTrigger className="text-slate-200 hover:no-underline">
+                                                    Privacy details (filtered)
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    {(() => {
+                                                        const maxEntries = canExport ? 200 : 20;
+                                                        const details = collectDetailEntries(
+                                                            {
+                                                                location: {
+                                                                    embedded_gps: gpsCoords,
+                                                                    overlay_gps: overlayGps,
+                                                                    overlay_plus_code: metadata.burned_metadata?.parsed_data?.plus_code,
+                                                                    overlay_address: metadata.burned_metadata?.parsed_data?.address,
+                                                                },
+                                                                timestamps: {
+                                                                    capture_date: captureDateValue !== "Not embedded" ? captureDateValue : null,
+                                                                    overlay_timestamp: burnedTimestamp,
+                                                                    local_file_modified: localModifiedValue,
+                                                                },
+                                                                device: {
+                                                                    make: metadata.exif?.Make,
+                                                                    model: metadata.exif?.Model,
+                                                                    software,
+                                                                },
+                                                                identifiers: {
+                                                                    maker_notes_detected:
+                                                                        hasValue(metadata.exif?.MakerNote) ||
+                                                                        Object.keys(metadata.exif || {}).some((k) => k.toLowerCase().includes("maker")),
+                                                                    serial_numbers:
+                                                                        metadata.exif?.BodySerialNumber ||
+                                                                        metadata.exif?.LensSerialNumber ||
+                                                                        metadata.exif?.SerialNumber,
+                                                                },
+                                                                registry_summary: metadata.registry_summary ?? null,
+                                                            },
+                                                            "",
+                                                            0,
+                                                            4,
+                                                            [],
+                                                            maxEntries
+                                                        );
+
+                                                        if (details.length === 0) {
+                                                            return <div className="text-xs text-slate-500">No additional fields in this view.</div>;
+                                                        }
+
+                                                        return (
+                                                            <>
+                                                                {!canExport && (
+                                                                    <div className="text-xs text-slate-500 mb-3">
+                                                                        Showing the first {maxEntries} entries. Unlock Raw to search and view everything.
+                                                                    </div>
+                                                                )}
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                    {details.map((d) => (
+                                                                        <button
+                                                                            key={d.path}
+                                                                            type="button"
+                                                                            className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                                            onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [d.path]: d.value }, null, 2))}
+                                                                        >
+                                                                            <div className="text-xs font-mono text-slate-300 truncate">{d.path}</div>
+                                                                            <div className="text-xs text-slate-500 truncate">{d.valuePreview}</div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </TabsContent>
 
                         <TabsContent value="authenticity" className="mt-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card className="bg-[#121217] border-white/5">
+                                <Card className="bg-[#121217] border-white/5" id="section-auth-signals">
                                     <CardHeader>
                                         <CardTitle className="text-sm font-mono text-slate-400">AUTHENTICITY SIGNALS</CardTitle>
                                     </CardHeader>
@@ -539,18 +911,83 @@ export default function ImagesMvpResults() {
                                         {hasValue(metadata.perceptual_hashes?.phash) && (
                                             <div className="flex justify-between gap-3">
                                                 <span className="text-slate-400">pHash</span>
-                                                <span className="text-slate-200 truncate max-w-[60%]">{metadata.perceptual_hashes.phash}</span>
+                                                <span className="text-slate-200 truncate max-w-[60%]">{String(metadata.perceptual_hashes?.phash)}</span>
                                             </div>
                                         )}
                                         {hasValue(metadata.perceptual_hashes?.dhash) && (
                                             <div className="flex justify-between gap-3">
                                                 <span className="text-slate-400">dHash</span>
-                                                <span className="text-slate-200 truncate max-w-[60%]">{metadata.perceptual_hashes.dhash}</span>
+                                                <span className="text-slate-200 truncate max-w-[60%]">{String(metadata.perceptual_hashes?.dhash)}</span>
                                             </div>
                                         )}
                                         {!hasValue(metadata.perceptual_hashes?.phash) && !hasValue(metadata.perceptual_hashes?.dhash) && (
                                             <div className="text-xs text-slate-500">Perceptual hashes not available for this file.</div>
                                         )}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-[#121217] border-white/5 md:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm font-mono text-slate-400">ADVANCED DETAILS</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Accordion type="single" collapsible className="border-white/10">
+                                            <AccordionItem value="auth-advanced" className="border-white/10">
+                                                <AccordionTrigger className="text-slate-200 hover:no-underline">
+                                                    Authenticity details (filtered)
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    {(() => {
+                                                        const maxEntries = canExport ? 200 : 20;
+                                                        const details = collectDetailEntries(
+                                                            {
+                                                                hashes: metadata.hashes ?? null,
+                                                                file_integrity: metadata.file_integrity ?? null,
+                                                                perceptual_hashes: metadata.perceptual_hashes ?? null,
+                                                                metadata_comparison: metadata.metadata_comparison ?? null,
+                                                                software,
+                                                                processing: {
+                                                                    fields_extracted: fieldsExtracted,
+                                                                    processing_ms: processingMs,
+                                                                },
+                                                            },
+                                                            "",
+                                                            0,
+                                                            4,
+                                                            [],
+                                                            maxEntries
+                                                        );
+
+                                                        if (details.length === 0) {
+                                                            return <div className="text-xs text-slate-500">No additional fields in this view.</div>;
+                                                        }
+
+                                                        return (
+                                                            <>
+                                                                {!canExport && (
+                                                                    <div className="text-xs text-slate-500 mb-3">
+                                                                        Showing the first {maxEntries} entries. Unlock Raw to search and view everything.
+                                                                    </div>
+                                                                )}
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                    {details.map((d) => (
+                                                                        <button
+                                                                            key={d.path}
+                                                                            type="button"
+                                                                            className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                                            onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [d.path]: d.value }, null, 2))}
+                                                                        >
+                                                                            <div className="text-xs font-mono text-slate-300 truncate">{d.path}</div>
+                                                                            <div className="text-xs text-slate-500 truncate">{d.valuePreview}</div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -566,32 +1003,32 @@ export default function ImagesMvpResults() {
                                         {hasValue(metadata.normalized?.exposure_triangle) && (
                                             <div className="text-slate-300">
                                                 <span className="text-slate-500 block text-xs font-mono mb-1">EXPOSURE</span>
-                                                <span className="text-white">{metadata.normalized?.exposure_triangle}</span>
+                                                <span className="text-white">{String(metadata.normalized?.exposure_triangle)}</span>
                                             </div>
                                         )}
                                         <div className="grid grid-cols-2 gap-4 font-mono text-xs">
                                             {hasValue(metadata.exif?.ISO) && (
                                                 <div>
                                                     <span className="text-slate-500 block">ISO</span>
-                                                    <span className="text-slate-200">{metadata.exif.ISO}</span>
+                                                    <span className="text-slate-200">{String(metadata.exif?.ISO)}</span>
                                                 </div>
                                             )}
                                             {hasValue(metadata.exif?.FNumber) && (
                                                 <div>
                                                     <span className="text-slate-500 block">APERTURE</span>
-                                                    <span className="text-slate-200">f/{metadata.exif.FNumber}</span>
+                                                    <span className="text-slate-200">f/{String(metadata.exif?.FNumber)}</span>
                                                 </div>
                                             )}
                                             {hasValue(metadata.exif?.ExposureTime) && (
                                                 <div>
                                                     <span className="text-slate-500 block">SHUTTER</span>
-                                                    <span className="text-slate-200">{metadata.exif.ExposureTime}s</span>
+                                                    <span className="text-slate-200">{String(metadata.exif?.ExposureTime)}s</span>
                                                 </div>
                                             )}
                                             {hasValue(metadata.exif?.FocalLength) && (
                                                 <div>
                                                     <span className="text-slate-500 block">FOCAL LENGTH</span>
-                                                    <span className="text-slate-200">{metadata.exif.FocalLength}mm</span>
+                                                    <span className="text-slate-200">{String(metadata.exif?.FocalLength)}mm</span>
                                                 </div>
                                             )}
                                         </div>
@@ -606,45 +1043,194 @@ export default function ImagesMvpResults() {
                                         <CardTitle className="text-sm font-mono text-slate-400">IMAGE INFO</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-3 text-sm">
-                                        <div className="text-slate-300">
-                                            <span className="text-slate-500 block text-xs font-mono mb-1">DIMENSIONS</span>
-                                            <span className="text-white">{metadata.exif?.ImageWidth && (metadata.exif?.ImageHeight || metadata.exif?.ImageLength) ? `${metadata.exif.ImageWidth} × ${(metadata.exif.ImageHeight || metadata.exif.ImageLength)}` : "Not available"}</span>
+                                        {!dimensionsValue && !megapixelsValue && !colorSpaceValue ? (
+                                            <div className="text-xs text-slate-500">No image info fields available.</div>
+                                        ) : (
+                                            <>
+                                                {dimensionsValue && (
+                                                    <div className="text-slate-300">
+                                                        <span className="text-slate-500 block text-xs font-mono mb-1">DIMENSIONS</span>
+                                                        <span className="text-white">{dimensionsValue}</span>
+                                                    </div>
+                                                )}
+                                                {megapixelsValue && (
+                                                    <div className="text-slate-300">
+                                                        <span className="text-slate-500 block text-xs font-mono mb-1">MEGAPIXELS</span>
+                                                        <span className="text-white">{megapixelsValue}</span>
+                                                    </div>
+                                                )}
+                                                {colorSpaceValue && (
+                                                    <div className="text-slate-300">
+                                                        <span className="text-slate-500 block text-xs font-mono mb-1">COLOR SPACE</span>
+                                                        <span className="text-white">{colorSpaceValue}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-[#121217] border-white/5 md:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm font-mono text-slate-400">EXIF FIELDS</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <div className="text-xs text-slate-500">
+                                            {exifEntries.length} fields present
+                                            {!canExport && exifEntries.length > 14 ? " • Unlock Raw to see all fields" : ""}
                                         </div>
-                                        <div className="text-slate-300">
-                                            <span className="text-slate-500 block text-xs font-mono mb-1">MEGAPIXELS</span>
-                                            <span className="text-white">{metadata.calculated?.megapixels || "Not available"}</span>
-                                        </div>
-                                        <div className="text-slate-300">
-                                            <span className="text-slate-500 block text-xs font-mono mb-1">COLOR SPACE</span>
-                                            <span className="text-white">{metadata.exif?.ColorSpace === 1 ? "sRGB" : (metadata.exif?.ColorSpace || "Unspecified")}</span>
-                                        </div>
+                                        {exifEntries.length === 0 ? (
+                                            <div className="text-xs text-slate-500">No EXIF fields embedded.</div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                                                {exifEntriesForList.map(([k, v]) => (
+                                                    <div key={k} className="flex justify-between gap-3 bg-white/5 border border-white/5 rounded px-3 py-2">
+                                                        <span className="text-slate-400 truncate">{k}</span>
+                                                        <span className="text-slate-200 truncate max-w-[55%]">{String(v)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {exifEntries.length > 14 && (
+                                            <div className="pt-2">
+                                                <Button
+                                                    variant="outline"
+                                                    className="border-white/10 hover:bg-white/5"
+                                                    onClick={() => setShowAllExif((s) => !s)}
+                                                >
+                                                    {showAllExif ? "Show fewer" : "Show more"}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-[#121217] border-white/5 md:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm font-mono text-slate-400">ADVANCED DETAILS</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Accordion type="single" collapsible className="border-white/10">
+                                            <AccordionItem value="photo-advanced" className="border-white/10">
+                                                <AccordionTrigger className="text-slate-200 hover:no-underline">
+                                                    Photography details (filtered)
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    {(() => {
+                                                        const maxEntries = canExport ? 200 : 20;
+                                                        const details = collectDetailEntries(
+                                                            {
+                                                                camera: {
+                                                                    make: metadata.exif?.Make,
+                                                                    model: metadata.exif?.Model,
+                                                                },
+                                                                capture: {
+                                                                    capture_date: captureDateValue !== "Not embedded" ? captureDateValue : null,
+                                                                    date_source: captureDateLabel,
+                                                                },
+                                                                settings: {
+                                                                    iso: metadata.exif?.ISO,
+                                                                    f_number: metadata.exif?.FNumber,
+                                                                    exposure_time: metadata.exif?.ExposureTime,
+                                                                    focal_length: metadata.exif?.FocalLength,
+                                                                    focal_length_35mm: metadata.exif?.FocalLengthIn35mmFormat,
+                                                                },
+                                                                image: {
+                                                                    dimensions: dimensionsValue,
+                                                                    megapixels: megapixelsValue,
+                                                                    color_space: colorSpaceValue,
+                                                                },
+                                                                normalized: metadata.normalized ?? null,
+                                                                calculated: metadata.calculated ?? null,
+                                                            },
+                                                            "",
+                                                            0,
+                                                            4,
+                                                            [],
+                                                            maxEntries
+                                                        );
+
+                                                        if (details.length === 0) {
+                                                            return <div className="text-xs text-slate-500">No additional fields in this view.</div>;
+                                                        }
+
+                                                        return (
+                                                            <>
+                                                                {!canExport && (
+                                                                    <div className="text-xs text-slate-500 mb-3">
+                                                                        Showing the first {maxEntries} entries. Unlock Raw to search and view everything.
+                                                                    </div>
+                                                                )}
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                    {details.map((d) => (
+                                                                        <button
+                                                                            key={d.path}
+                                                                            type="button"
+                                                                            className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                                            onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [d.path]: d.value }, null, 2))}
+                                                                        >
+                                                                            <div className="text-xs font-mono text-slate-300 truncate">{d.path}</div>
+                                                                            <div className="text-xs text-slate-500 truncate">{d.valuePreview}</div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
                                     </CardContent>
                                 </Card>
                             </div>
                         </TabsContent>
 
                         <TabsContent value="raw" className="mt-6">
-                            {!canExport ? (
-                                <Card className="bg-[#121217] border-white/5">
-                                    <CardHeader>
-                                        <CardTitle className="text-sm font-mono text-slate-400">RAW JSON (LOCKED)</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="text-sm text-slate-400">
-                                        Raw JSON view is available after the trial. Purchase credits to unlock.
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                <Card className="bg-[#121217] border-white/5">
-                                    <CardHeader>
-                                        <CardTitle className="text-sm font-mono text-slate-400">RAW JSON</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
+                            <Card className="bg-[#121217] border-white/5">
+                                <CardHeader>
+                                    <CardTitle className="text-sm font-mono text-slate-400">
+                                        {canExport ? "RAW JSON" : "RAW JSON (PREVIEW)"}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {!canExport && (
+                                        <div className="text-sm text-slate-400 mb-4">
+                                            Raw JSON export is locked during the trial, but you can preview/search a subset of extracted fields here.
+                                        </div>
+                                    )}
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <Search className="w-4 h-4 text-slate-500" />
+                                        <Input
+                                            value={rawSearch}
+                                            onChange={(e) => setRawSearch(e.target.value)}
+                                            placeholder="Search keys/values..."
+                                            className="bg-black/30 border-white/10 text-slate-200 placeholder:text-slate-600"
+                                        />
+                                    </div>
+                                    <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {(canExport ? rawMatches : rawMatches.slice(0, 20)).map((m) => (
+                                            <button
+                                                key={m.path}
+                                                type="button"
+                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [m.path]: m.value }, null, 2))}
+                                            >
+                                                <div className="text-xs font-mono text-slate-300 truncate">{m.path}</div>
+                                                <div className="text-xs text-slate-500 truncate">{m.valuePreview}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {canExport ? (
                                         <pre className="text-xs text-slate-200 bg-black/30 border border-white/5 rounded p-3 overflow-auto max-h-[520px]">
                                             {JSON.stringify(metadata, null, 2)}
                                         </pre>
-                                    </CardContent>
-                                </Card>
-                            )}
+                                    ) : (
+                                        <div className="text-xs text-slate-500">
+                                            Showing up to 20 matches. Unlock credits to download the full report and view complete raw JSON.
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </TabsContent>
                     </Tabs>
                 </div>

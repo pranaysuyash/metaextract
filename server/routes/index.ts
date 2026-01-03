@@ -11,6 +11,7 @@ import { registerImagesMvpRoutes } from './images-mvp';
 import { registerExtractionRoutes } from './extraction';
 import { registerForensicRoutes } from './forensic';
 import { registerMetadataRoutes } from './metadata';
+import { registerLLMFindingsRoutes } from './llm-findings';
 import { registerTierRoutes } from './tiers';
 import { registerAdminRoutes } from './admin';
 import { registerPaymentRoutes } from '../payments';
@@ -43,6 +44,7 @@ export async function registerRoutes(
   registerExtractionRoutes(app);
   registerForensicRoutes(app);
   registerMetadataRoutes(app);
+  registerLLMFindingsRoutes(app);
   registerTierRoutes(app);
   registerAdminRoutes(app);
   registerPaymentRoutes(app);

@@ -1,0 +1,18 @@
+{
+  "test_run": {
+    "timestamp": "2026-01-02T23:43:01.677204",
+    "persona": "Phone Photo Sarah",
+    "test_type": "exiftool_baseline",
+    "total_files_tested": 2
+  },
+  "results": [
+    {
+      "filename": "IMG_20251225_164634.jpg",
+      "error": "Exiftool failed or returned empty data"
+    },
+    {
+      "filename": "gps-map-photo.jpg",
+      "error": "Exiftool failed or returned empty data"
+    }
+  ]
+}

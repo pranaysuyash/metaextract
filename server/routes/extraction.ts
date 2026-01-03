@@ -196,11 +196,11 @@ export function registerExtractionRoutes(app: Express): void {
         credits_required: creditCost,
       };
 
-      // Log analytics
+      // Log analytics (non-critical, error doesn't block response)
       const fileExt =
         path.extname(req.file.originalname).toLowerCase().slice(1) || 'unknown';
-      storage
-        .logExtractionUsage({
+      try {
+        await storage.logExtractionUsage({
           tier: normalizedTier,
           fileExtension: fileExt,
           mimeType,
@@ -214,18 +214,37 @@ export function registerExtractionRoutes(app: Express): void {
           success: true,
           ipAddress: req.ip || req.socket.remoteAddress || null,
           userAgent: req.headers['user-agent'] || null,
-        })
-        .catch((err) => console.error('Failed to log usage:', err));
+        });
+      } catch (err) {
+        console.error('[Extraction] Failed to log usage:', err);
+        // Continue - analytics failure is not blocking
+      }
 
+      // ✅ CRITICAL: Deduct credits (must complete before responding to user)
       if (chargeCredits && creditBalanceId) {
-        storage
-          .useCredits(
+        try {
+          const txn = await storage.useCredits(
             creditBalanceId,
             creditCost,
             `Extraction: ${fileExt}`,
             mimeType
-          )
-          .catch((err) => console.error('Failed to use credits:', err));
+          );
+
+          if (!txn) {
+            // useCredits returns null if balance insufficient
+            // (safety check in case balance changed between validation and deduction)
+            return sendQuotaExceededError(
+              res,
+              'Credit deduction failed (insufficient balance)'
+            );
+          }
+        } catch (err) {
+          console.error('[Extraction] Failed to deduct credits:', err);
+          return sendInternalServerError(
+            res,
+            'Unable to process credit transaction. Please try again.'
+          );
+        }
       }
 
       if (!bypassCredits && hasTrialAvailable && trialEmail) {

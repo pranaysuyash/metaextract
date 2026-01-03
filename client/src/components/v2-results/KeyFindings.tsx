@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
@@ -7,9 +7,15 @@ import {
   Shield,
   CheckCircle2,
   AlertTriangle,
-  XCircle
+  XCircle,
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Conditional logging
+const DEBUG = import.meta.env.DEV;
+const log = DEBUG ? console.log.bind(console) : () => {};
 
 interface KeyFindingsProps {
   metadata: any;
@@ -25,10 +31,41 @@ interface Finding {
 }
 
 export function KeyFindings({ metadata, className }: KeyFindingsProps) {
-  // Debug the metadata structure
-  console.log('[KeyFindings] Metadata received:', metadata);
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [isLoadingLLM, setIsLoadingLLM] = useState(false);
+  const [usedLLM, setUsedLLM] = useState(false);
 
-  const findings = extractKeyFindings(metadata);
+  log('[KeyFindings] Metadata received:', metadata);
+
+  useEffect(() => {
+    async function loadFindings() {
+      // Try LLM extraction first if available
+      try {
+        setIsLoadingLLM(true);
+        const llmFindings = await extractFindingsWithLLM(metadata);
+        if (llmFindings && llmFindings.length > 0) {
+          log('[KeyFindings] Using LLM-generated findings');
+          setFindings(llmFindings);
+          setUsedLLM(true);
+          setIsLoadingLLM(false);
+          return;
+        }
+      } catch (error) {
+        log(
+          '[KeyFindings] LLM extraction failed, falling back to rules:',
+          error
+        );
+      }
+
+      setIsLoadingLLM(false);
+      // Fallback to rule-based extraction
+      const ruleBasedFindings = extractKeyFindings(metadata);
+      setFindings(ruleBasedFindings);
+      setUsedLLM(false);
+    }
+
+    loadFindings();
+  }, [metadata]);
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -37,7 +74,7 @@ export function KeyFindings({ metadata, className }: KeyFindingsProps) {
         <div className="p-2 bg-primary/20 rounded border border-primary/30">
           <Smartphone className="h-5 w-5 text-primary" />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="text-xl font-bold text-white font-mono tracking-tight">
             KEY FINDINGS
           </h2>
@@ -45,14 +82,45 @@ export function KeyFindings({ metadata, className }: KeyFindingsProps) {
             Plain English answers to the most important questions
           </p>
         </div>
+        {usedLLM && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/20 border border-purple-500/30 rounded text-purple-300 text-xs font-mono">
+            <Sparkles className="w-3 h-3" />
+            AI Enhanced
+          </div>
+        )}
       </div>
 
+      {/* Loading State */}
+      {isLoadingLLM && (
+        <div className="flex items-center justify-center py-12 text-slate-400">
+          <Loader2 className="w-6 h-6 animate-spin mr-3" />
+          <span className="font-mono text-sm">
+            Analyzing metadata with AI...
+          </span>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoadingLLM && findings.length === 0 && (
+        <div className="text-center py-12 px-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <AlertTriangle className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
+          <p className="text-slate-300 font-mono text-sm mb-2">
+            No key findings could be extracted from this file.
+          </p>
+          <p className="text-xs text-slate-500 font-mono">
+            File may be missing standard metadata fields (EXIF, GPS, etc.)
+          </p>
+        </div>
+      )}
+
       {/* Findings Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {findings.map((finding, index) => (
-          <FindingCardDark key={index} finding={finding} />
-        ))}
-      </div>
+      {!isLoadingLLM && findings.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {findings.map((finding, index) => (
+            <FindingCardDark key={index} finding={finding} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -63,36 +131,46 @@ function FindingCardDark({ finding }: { finding: Finding }) {
   const statusColors = {
     success: 'border-emerald-500/30 bg-emerald-500/10',
     warning: 'border-yellow-500/30 bg-yellow-500/10',
-    error: 'border-red-500/30 bg-red-500/10'
+    error: 'border-red-500/30 bg-red-500/10',
   };
 
   const confidenceColors = {
     high: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
     medium: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
-    low: 'text-red-400 border-red-500/30 bg-red-500/10'
+    low: 'text-red-400 border-red-500/30 bg-red-500/10',
   };
 
   return (
-    <div className={cn(
-      'border backdrop-blur-sm rounded-lg p-4 transition-all duration-200',
-      finding.status ? statusColors[finding.status] : 'border-white/10 bg-white/5'
-    )}>
+    <div
+      className={cn(
+        'border backdrop-blur-sm rounded-lg p-4 transition-all duration-200',
+        finding.status
+          ? statusColors[finding.status]
+          : 'border-white/10 bg-white/5'
+      )}
+    >
       <div className="flex items-start gap-3">
         {/* Icon */}
-        <div className={cn(
-          'p-2 rounded border flex-shrink-0',
-          finding.status === 'success' && 'bg-emerald-500/20 border-emerald-500/30',
-          finding.status === 'warning' && 'bg-yellow-500/20 border-yellow-500/30',
-          finding.status === 'error' && 'bg-red-500/20 border-red-500/30',
-          !finding.status && 'bg-primary/20 border-primary/30'
-        )}>
-          <Icon className={cn(
-            'w-4 h-4',
-            finding.status === 'success' && 'text-emerald-400',
-            finding.status === 'warning' && 'text-yellow-400',
-            finding.status === 'error' && 'text-red-400',
-            !finding.status && 'text-primary'
-          )} />
+        <div
+          className={cn(
+            'p-2 rounded border flex-shrink-0',
+            finding.status === 'success' &&
+              'bg-emerald-500/20 border-emerald-500/30',
+            finding.status === 'warning' &&
+              'bg-yellow-500/20 border-yellow-500/30',
+            finding.status === 'error' && 'bg-red-500/20 border-red-500/30',
+            !finding.status && 'bg-primary/20 border-primary/30'
+          )}
+        >
+          <Icon
+            className={cn(
+              'w-4 h-4',
+              finding.status === 'success' && 'text-emerald-400',
+              finding.status === 'warning' && 'text-yellow-400',
+              finding.status === 'error' && 'text-red-400',
+              !finding.status && 'text-primary'
+            )}
+          />
         </div>
 
         {/* Content */}
@@ -104,7 +182,10 @@ function FindingCardDark({ finding }: { finding: Finding }) {
             {finding.confidence && (
               <Badge
                 variant="outline"
-                className={cn('text-[10px] font-mono', confidenceColors[finding.confidence])}
+                className={cn(
+                  'text-[10px] font-mono',
+                  confidenceColors[finding.confidence]
+                )}
               >
                 {finding.confidence.toUpperCase()}
               </Badge>
@@ -132,75 +213,90 @@ function FindingCardDark({ finding }: { finding: Finding }) {
 }
 
 // ============================================================================
-// HELPER FUNCTIONS - Updated to read actual metadata structure
+// HELPER FUNCTIONS - LLM-powered and rule-based extraction
 // ============================================================================
+
+async function extractFindingsWithLLM(
+  metadata: any
+): Promise<Finding[] | null> {
+  try {
+    const response = await fetch('/api/metadata/findings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metadata }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`LLM extraction failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.findings || null;
+  } catch (error) {
+    log('[extractFindingsWithLLM] Error:', error);
+    return null;
+  }
+}
+
+// Robust metadata value finder
+function findMetadataValue(metadata: any, paths: string[][]): any {
+  for (const path of paths) {
+    let value = metadata;
+    for (const key of path) {
+      value = value?.[key];
+      if (value === undefined || value === null) break;
+    }
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return null;
+}
 
 function extractKeyFindings(metadata: any): Finding[] {
   const findings: Finding[] = [];
 
-  console.log('[extractKeyFindings] Full metadata object:', JSON.stringify(metadata, null, 2));
+  log('[extractKeyFindings] Processing metadata');
 
-  // 1. When was this photo taken?
-  const whenFinding = extractWhen(metadata);
-  if (whenFinding) {
-    findings.push(whenFinding);
-  }
+  // Extensible finding extractors - easy to add more
+  const extractors = [
+    extractWhen,
+    extractWhere,
+    extractDevice,
+    extractAuthenticity,
+  ];
 
-  // 2. Where was this photo taken?
-  const whereFinding = extractWhere(metadata);
-  if (whereFinding) {
-    findings.push(whereFinding);
-  }
+  extractors.forEach(extractor => {
+    const finding = extractor(metadata);
+    if (finding) {
+      findings.push(finding);
+    }
+  });
 
-  // 3. What device took this photo?
-  const deviceFinding = extractDevice(metadata);
-  if (deviceFinding) {
-    findings.push(deviceFinding);
-  }
-
-  // 4. Is this photo authentic?
-  const authenticityFinding = extractAuthenticity(metadata);
-  if (authenticityFinding) {
-    findings.push(authenticityFinding);
-  }
-
-  console.log('[extractKeyFindings] Final findings:', findings);
+  log('[extractKeyFindings] Extracted', findings.length, 'findings');
   return findings;
 }
 
 function extractWhen(metadata: any): Finding | null {
-  console.log('[extractWhen] Looking for file dates...');
-
-  // Look for ALL dates: photo metadata, filesystem, ICC profile, etc.
-  const allDateFields = [
-    // EXIF photo dates
-    metadata?.exif?.DateTimeOriginal,
-    metadata?.exif?.CreateDate,
-    metadata?.exif?.ModifyDate,
-    metadata?.exif?.DateTime,
-    metadata?.exif?.['Date/Time Original'],
-    metadata?.exif?.['Create Date'],
-    metadata?.exif?.['Modify Date'],
-    // ICC Profile date
-    metadata?.exif?.ProfileDateTime,
-    // Filesystem dates
-    metadata?.filesystem?.created,
-    metadata?.filesystem?.modified,
-    metadata?.forensic?.forensic?.filesystem?.file_created,
-    metadata?.forensic?.forensic?.filesystem?.file_modified
-  ];
-
-  console.log('[extractWhen] All date fields found:', allDateFields);
-
-  let rawDate = allDateFields.find(date => date && date !== '');
+  const rawDate = findMetadataValue(metadata, [
+    ['exif', 'DateTimeOriginal'],
+    ['exif', 'CreateDate'],
+    ['exif', 'ModifyDate'],
+    ['exif', 'DateTime'],
+    ['exif', 'Date/Time Original'],
+    ['exif', 'ProfileDateTime'],
+    ['filesystem', 'created'],
+    ['filesystem', 'modified'],
+    ['forensic', 'filesystem', 'file_created'],
+    ['forensic', 'filesystem', 'file_modified'],
+  ]);
 
   if (!rawDate) {
-    console.log('[extractWhen] No date found - BE HONEST about it');
     return {
       icon: Calendar,
       label: 'WHEN',
-      value: 'File date not available in metadata',
-      status: 'warning'
+      value: 'Date not available in metadata',
+      status: 'warning',
     };
   }
 
@@ -213,158 +309,188 @@ function extractWhen(metadata: any): Finding | null {
     icon: Calendar,
     label: 'WHEN',
     value: formattedDate,
-    confidence: 'high'
+    confidence: 'high',
   };
 }
 
 function extractWhere(metadata: any): Finding | null {
-  console.log('[extractWhere] Looking for GPS data...');
-
-  // Check multiple possible GPS locations
   const gps = metadata?.gps || metadata?.summary?.gps;
 
-  console.log('[extractWhere] GPS data:', gps);
-
   if (!gps || (!gps.latitude && !gps.Latitude)) {
-    console.log('[extractWhere] No GPS found');
     return {
       icon: MapPin,
       label: 'WHERE',
-      value: 'No location information available',
-      status: 'warning'
+      value: 'No location data in metadata',
+      status: 'warning',
     };
   }
 
   const lat = gps.latitude || gps.Latitude;
   const lng = gps.longitude || gps.Longitude;
 
-  // For now, show coordinates
+  // TODO: Add reverse geocoding for human-readable location
   const locationText = formatCoordinates(lat, lng);
 
   return {
     icon: MapPin,
     label: 'WHERE',
     value: locationText,
-    confidence: 'high'
+    confidence: 'high',
   };
 }
 
+// Device model database for friendly names
+const DEVICE_DATABASE: Record<string, string> = {
+  '24053PY09I': 'Xiaomi Redmi Note 11S',
+  'iPhone14,3': 'iPhone 13 Pro Max',
+  'iPhone14,2': 'iPhone 13 Pro',
+  'iPhone13,4': 'iPhone 12 Pro Max',
+  'SM-G998B': 'Samsung Galaxy S21 Ultra',
+  'SM-G991B': 'Samsung Galaxy S21',
+  // Add more as needed
+};
+
 function extractDevice(metadata: any): Finding | null {
-  console.log('[extractDevice] Looking for device info...');
+  const make = findMetadataValue(metadata, [
+    ['exif', 'Make'],
+    ['exif', 'DeviceManufacturer'],
+  ]);
 
-  // Check multiple possible device locations based on real data structure
-  const make = metadata?.exif?.Make || metadata?.exif?.['Make'] || metadata?.exif?.DeviceManufacturer;
-  const model = metadata?.exif?.Model || metadata?.exif?.['Model'] || metadata?.exif?.['Device Model Name'] || metadata?.exif?.DeviceModel;
-
-  console.log('[extractDevice] Make:', make, 'Model:', model);
+  const model = findMetadataValue(metadata, [
+    ['exif', 'Model'],
+    ['exif', 'Device Model Name'],
+    ['exif', 'DeviceModel'],
+  ]);
 
   if (!make && !model) {
-    console.log('[extractDevice] No device info found');
     return {
       icon: Smartphone,
       label: 'DEVICE',
-      value: 'Device information not available',
-      status: 'warning'
+      value: 'Device information not in metadata',
+      status: 'warning',
     };
   }
 
-  // Format device name - handle complex model strings like "24053PY09I :: Captured by - GPS Map Camera"
-  let deviceName = '';
-  if (make && model) {
-    // If model contains the make, don't repeat it
-    if (model.toLowerCase().includes(make.toLowerCase())) {
-      deviceName = model;
+  // Clean raw model for database lookup
+  const rawModel = (model || '').split('::')[0].trim();
+
+  // Check device database first
+  let deviceName = DEVICE_DATABASE[rawModel] || '';
+
+  if (!deviceName) {
+    // Fallback to cleaned make + model
+    if (make && model) {
+      deviceName = model.toLowerCase().includes(make.toLowerCase())
+        ? model
+        : `${make} ${model}`;
     } else {
-      deviceName = `${make} ${model}`;
+      deviceName = model || make;
     }
-  } else if (model) {
-    deviceName = model;
-  } else if (make) {
-    deviceName = make;
+
+    // Clean up
+    deviceName = deviceName
+      .replace(/captured by.*gps map camera/gi, '')
+      .replace(/corporation|inc|ltd\.?/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
-
-  // Clean up device name - remove camera app descriptions
-  deviceName = deviceName
-    .split('::')[0] // Take everything before :: if present
-    .replace(/captured by.*gps map camera/gi, '')
-    .replace(/corporation|inc|ltd\.?/gi, '')
-    .replace(/\s+/g, ' ') // Clean up extra spaces
-    .trim();
-
-  // Capitalize first letter of each word
-  deviceName = deviceName
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-
-  console.log('[extractDevice] Final device name:', deviceName);
 
   return {
     icon: Smartphone,
     label: 'DEVICE',
     value: deviceName,
-    confidence: 'high'
+    confidence: deviceName === DEVICE_DATABASE[rawModel] ? 'high' : 'medium',
   };
 }
 
 function extractAuthenticity(metadata: any): Finding | null {
-  console.log('[extractAuthenticity] Assessing authenticity...');
+  // Check for actual forensic indicators
+  const manipulationDetected =
+    metadata?.manipulation_detection?.is_manipulated ||
+    metadata?.forensic?.manipulation_detected ||
+    metadata?.ai_detection?.is_ai_generated;
 
-  // Basic authenticity assessment based on available metadata
-  const hasExif = metadata?.exif && Object.keys(metadata.exif).length > 0;
-  const hasGPS = metadata?.gps && (metadata.gps.latitude || metadata.gps.Latitude);
-  const hasFileHashes = metadata?.file_integrity?.md5 || metadata?.file_integrity?.sha256;
-
-  console.log('[extractAuthenticity] hasExif:', hasExif, 'hasGPS:', hasGPS, 'hasFileHashes:', hasFileHashes);
-
-  // Calculate confidence score
-  let confidenceScore = 0;
-  if (hasExif) confidenceScore += 40;
-  if (hasGPS) confidenceScore += 30;
-  if (hasFileHashes) confidenceScore += 30;
-
-  let assessment = '';
-  let confidence: 'high' | 'medium' | 'low' = 'medium';
-  let status: 'success' | 'warning' | 'error' = 'success';
-
-  if (confidenceScore >= 80) {
-    assessment = 'File appears authentic';
-    confidence = 'high';
-    status = 'success';
-  } else if (confidenceScore >= 50) {
-    assessment = 'File appears mostly authentic';
-    confidence = 'medium';
-    status = 'success';
-  } else {
-    assessment = 'Limited metadata - authenticity uncertain';
-    confidence = 'low';
-    status = 'warning';
+  if (manipulationDetected) {
+    return {
+      icon: Shield,
+      label: 'AUTHENTICITY',
+      value: 'Manipulation indicators detected',
+      confidence: 'high',
+      status: 'error',
+    };
   }
 
-  console.log('[extractAuthenticity] Assessment:', assessment, 'Score:', confidenceScore);
+  // Check date consistency
+  const exifDate = findMetadataValue(metadata, [
+    ['exif', 'DateTimeOriginal'],
+    ['exif', 'CreateDate'],
+  ]);
+  const fileDate = findMetadataValue(metadata, [['filesystem', 'created']]);
 
-  return {
-    icon: Shield,
-    label: 'AUTHENTICITY',
-    value: assessment,
-    confidence,
-    status
-  };
+  if (exifDate && fileDate) {
+    try {
+      const exifTime = new Date(exifDate.replace(/:/g, '-')).getTime();
+      const fileTime = new Date(fileDate).getTime();
+      const daysDiff = Math.abs(exifTime - fileTime) / (1000 * 60 * 60 * 24);
+
+      if (daysDiff > 1) {
+        return {
+          icon: Shield,
+          label: 'AUTHENTICITY',
+          value: 'Date mismatch between EXIF and file system',
+          confidence: 'medium',
+          status: 'warning',
+        };
+      }
+    } catch (e) {
+      // Date parsing failed, continue with other checks
+    }
+  }
+
+  // Check for metadata completeness
+  const hasExif = metadata?.exif && Object.keys(metadata.exif).length > 5;
+  const hasGPS = metadata?.gps?.latitude;
+  const hasThumbnail = metadata?.thumbnail || metadata?.exif?.ThumbnailImage;
+
+  const signals = [hasExif, hasGPS, hasThumbnail].filter(Boolean).length;
+
+  if (signals >= 2) {
+    return {
+      icon: Shield,
+      label: 'AUTHENTICITY',
+      value: 'File appears authentic - complete metadata',
+      confidence: 'high',
+      status: 'success',
+    };
+  } else if (signals === 1) {
+    return {
+      icon: Shield,
+      label: 'AUTHENTICITY',
+      value: 'Partial metadata - likely authentic',
+      confidence: 'medium',
+      status: 'success',
+    };
+  } else {
+    return {
+      icon: Shield,
+      label: 'AUTHENTICITY',
+      value: 'Minimal metadata - cannot assess authenticity',
+      confidence: 'low',
+      status: 'warning',
+    };
+  }
 }
 
 function formatDateTime(dateString: string): string {
   try {
-    console.log('[formatDateTime] Formatting:', dateString);
-
     let cleanDate = dateString;
 
-    // Remove any timezone info for now
+    // Remove timezone info (TODO: preserve and display timezone)
     cleanDate = cleanDate.split(/[+-]\d{2}:\d{2}/)[0].trim();
 
-    // Try parsing different formats
     let date: Date;
 
-    // Try EXIF format: "2023:06:15 14:34:22"
+    // Handle EXIF format: "2023:06:15 14:34:22"
     if (cleanDate.match(/^\d{4}:\d{2}:\d{2}/)) {
       const parts = cleanDate.split(/[\s:T:-]/);
       if (parts.length >= 6) {
@@ -385,7 +511,6 @@ function formatDateTime(dateString: string): string {
     }
 
     if (isNaN(date.getTime())) {
-      console.log('[formatDateTime] Failed to parse, returning original');
       return dateString;
     }
 
@@ -396,15 +521,11 @@ function formatDateTime(dateString: string): string {
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     };
 
-    const formatted = date.toLocaleDateString('en-US', options);
-    console.log('[formatDateTime] Formatted result:', formatted);
-    return formatted;
-
+    return date.toLocaleDateString('en-US', options);
   } catch (error) {
-    console.log('[formatDateTime] Error:', error);
     return dateString;
   }
 }

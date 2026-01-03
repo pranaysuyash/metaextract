@@ -1,0 +1,26 @@
+{
+  "test_run": {
+    "timestamp": "2026-01-03T00:33:14.543557",
+    "persona": "Phone Photo Sarah",
+    "test_type": "integrated_pipeline",
+    "total_files_tested": 2
+  },
+  "results": [
+    {
+      "filename": "gps-map-photo.jpg",
+      "extraction_success": true,
+      "has_persona_interpretation": false,
+      "fields_extracted": 0,
+      "persona_data": null,
+      "timestamp": "2026-01-03T00:33:14.326207"
+    },
+    {
+      "filename": "IMG_20251225_164634.jpg",
+      "extraction_success": true,
+      "has_persona_interpretation": false,
+      "fields_extracted": 0,
+      "persona_data": null,
+      "timestamp": "2026-01-03T00:33:14.543246"
+    }
+  ]
+}

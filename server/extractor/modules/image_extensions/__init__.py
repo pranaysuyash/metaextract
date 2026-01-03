@@ -18,6 +18,8 @@ from .registry import (
 from .basic_image_extension import BasicImageExtension
 from .advanced_image_extension import AdvancedImageExtension
 from .universal_image_extension import UniversalImageExtension
+from .complete_gps_extension import CompleteGPSImageExtension
+from .specialized_modules_extension import SpecializedModulesExtension
 
 __all__ = [
     "ImageExtensionBase",
@@ -31,6 +33,8 @@ __all__ = [
     "BasicImageExtension",
     "AdvancedImageExtension",
     "UniversalImageExtension",
+    "CompleteGPSImageExtension",
+    "SpecializedModulesExtension",
 ]
 
 # Version and compatibility
@@ -48,6 +52,8 @@ def _register_extensions():
         BasicImageExtension,
         AdvancedImageExtension,
         UniversalImageExtension,
+        CompleteGPSImageExtension,
+        SpecializedModulesExtension,
     ]
 
     for ext_class in extensions:

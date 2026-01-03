@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useRef } from "react";
-import { useDropzone } from "react-dropzone";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import React, { useState, useCallback, useRef } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Upload,
   File,
@@ -19,13 +19,16 @@ import {
   Loader2,
   Zap,
   Clock,
-  Timer
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { analyzeFile, type FileAnalysis } from "@/utils/fileAnalysis";
-import { estimateProcessingTime, type ProcessingEstimate } from "@/utils/processingEstimates";
+  Timer,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { analyzeFile, type FileAnalysis } from '@/utils/fileAnalysis';
+import {
+  estimateProcessingTime,
+  type ProcessingEstimate,
+} from '@/utils/processingEstimates';
 
 interface FileState {
   file: File;
@@ -50,18 +53,62 @@ interface EnhancedUploadZoneProps {
 
 const ACCEPTED_TYPES = {
   // Standard media types
-  'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.heic', '.heif', '.svg', '.psd'],
-  'video/*': ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.3gp', '.flv', '.wmv', '.asf', '.rm', '.rmvb'],
-  'audio/*': ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac', '.aiff', '.opus', '.wma', '.ac3', '.dts'],
+  'image/*': [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.webp',
+    '.tiff',
+    '.tif',
+    '.bmp',
+    '.heic',
+    '.heif',
+    '.svg',
+    '.psd',
+  ],
+  'video/*': [
+    '.mp4',
+    '.mov',
+    '.avi',
+    '.mkv',
+    '.webm',
+    '.m4v',
+    '.3gp',
+    '.flv',
+    '.wmv',
+    '.asf',
+    '.rm',
+    '.rmvb',
+  ],
+  'audio/*': [
+    '.mp3',
+    '.flac',
+    '.wav',
+    '.ogg',
+    '.m4a',
+    '.aac',
+    '.aiff',
+    '.opus',
+    '.wma',
+    '.ac3',
+    '.dts',
+  ],
 
   // Documents
   'application/pdf': ['.pdf'],
   'application/msword': ['.doc'],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
+    '.docx',
+  ],
   'application/vnd.ms-excel': ['.xls'],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
+    '.xlsx',
+  ],
   'application/vnd.ms-powerpoint': ['.ppt'],
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': [
+    '.pptx',
+  ],
   'text/plain': ['.txt', '.md'],
   'text/csv': ['.csv'],
   'text/html': ['.html', '.htm'],
@@ -82,9 +129,37 @@ const ACCEPTED_TYPES = {
   'application/x-shapefile': ['.shp'],
 
   // Emerging technology formats
-  'application/x-ai-model': ['.ai', '.ml', '.model', '.h5', '.pb', '.onnx', '.tflite', '.pt', '.pth', '.ckpt', '.pkl', '.joblib'],
-  'application/x-blockchain': ['.blockchain', '.chain', '.ledger', '.crypto', '.nft', '.token'],
-  'application/x-ar-vr': ['.ar', '.vr', '.xr', '.gltf', '.glb', '.usdz', '.reality'],
+  'application/x-ai-model': [
+    '.ai',
+    '.ml',
+    '.model',
+    '.h5',
+    '.pb',
+    '.onnx',
+    '.tflite',
+    '.pt',
+    '.pth',
+    '.ckpt',
+    '.pkl',
+    '.joblib',
+  ],
+  'application/x-blockchain': [
+    '.blockchain',
+    '.chain',
+    '.ledger',
+    '.crypto',
+    '.nft',
+    '.token',
+  ],
+  'application/x-ar-vr': [
+    '.ar',
+    '.vr',
+    '.xr',
+    '.gltf',
+    '.glb',
+    '.usdz',
+    '.reality',
+  ],
   'application/x-iot': ['.iot', '.device', '.sensor'],
   'application/x-quantum': ['.quantum', '.qasm', '.qisk', '.cirq', '.qubit'],
   'application/x-neural': ['.neural', '.nn', '.dl'],
@@ -102,30 +177,75 @@ const ACCEPTED_TYPES = {
   'application/zip': ['.zip'],
   'application/x-tar': ['.tar', '.tar.gz', '.tgz'],
   'application/x-rar-compressed': ['.rar'],
-  'application/x-7z-compressed': ['.7z']
+  'application/x-7z-compressed': ['.7z'],
 };
 
 const getFileIcon = (file?: File) => {
-  const name = file?.name ? String(file.name) : "";
-  const ext = name ? name.toLowerCase().split('.').pop() : "";
+  const name = file?.name ? String(file.name) : '';
+  const ext = name ? name.toLowerCase().split('.').pop() : '';
 
-  if (file?.type?.startsWith('image/') || ['.psd'].includes(`.${ext}`)) return Image;
+  if (file?.type?.startsWith('image/') || ['.psd'].includes(`.${ext}`))
+    return Image;
   if (file?.type?.startsWith('video/')) return Video;
   if (file?.type?.startsWith('audio/')) return Music;
   if (file?.type === 'application/pdf' || ext === 'pdf') return FileText;
 
   // Medical/Scientific
-  if (['.dcm', '.dicom', '.fits', '.fit', '.fts', '.h5', '.hdf5', '.he5', '.nc', '.netcdf', '.nc4'].includes(`.${ext}`)) {
+  if (
+    [
+      '.dcm',
+      '.dicom',
+      '.fits',
+      '.fit',
+      '.fts',
+      '.h5',
+      '.hdf5',
+      '.he5',
+      '.nc',
+      '.netcdf',
+      '.nc4',
+    ].includes(`.${ext}`)
+  ) {
     return FileText; // Could use a specialized icon
   }
 
   // Emerging tech
-  if (['.ai', '.ml', '.model', '.blockchain', '.ar', '.vr', '.iot', '.quantum', '.neural', '.robot', '.bio', '.nano', '.space'].includes(`.${ext}`)) {
+  if (
+    [
+      '.ai',
+      '.ml',
+      '.model',
+      '.blockchain',
+      '.ar',
+      '.vr',
+      '.iot',
+      '.quantum',
+      '.neural',
+      '.robot',
+      '.bio',
+      '.nano',
+      '.space',
+    ].includes(`.${ext}`)
+  ) {
     return Zap; // Tech icon for emerging formats
   }
 
   // Documents
-  if (['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md', '.html', '.xml', '.json'].includes(`.${ext}`)) {
+  if (
+    [
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.md',
+      '.html',
+      '.xml',
+      '.json',
+    ].includes(`.${ext}`)
+  ) {
     return FileText;
   }
 
@@ -133,26 +253,82 @@ const getFileIcon = (file?: File) => {
 };
 
 const getFileTypeColor = (file?: File) => {
-  const name = file?.name ? String(file.name) : "";
-  const ext = name ? name.toLowerCase().split('.').pop() : "";
+  const name = file?.name ? String(file.name) : '';
+  const ext = name ? name.toLowerCase().split('.').pop() : '';
 
-  if (file?.type?.startsWith('image/') || ['.psd'].includes(`.${ext}`)) return 'bg-blue-500/10 text-blue-600 border-blue-200';
-  if (file?.type?.startsWith('video/')) return 'bg-purple-500/10 text-purple-600 border-purple-200';
-  if (file?.type?.startsWith('audio/')) return 'bg-green-500/10 text-green-600 border-green-200';
-  if (file?.type === 'application/pdf' || ext === 'pdf') return 'bg-red-500/10 text-red-600 border-red-200';
+  if (file?.type?.startsWith('image/') || ['.psd'].includes(`.${ext}`))
+    return 'bg-blue-500/10 text-blue-600 border-blue-200';
+  if (file?.type?.startsWith('video/'))
+    return 'bg-purple-500/10 text-purple-600 border-purple-200';
+  if (file?.type?.startsWith('audio/'))
+    return 'bg-green-500/10 text-green-600 border-green-200';
+  if (file?.type === 'application/pdf' || ext === 'pdf')
+    return 'bg-red-500/10 text-red-600 border-red-200';
 
   // Medical/Scientific - cyan
-  if (['.dcm', '.dicom', '.fits', '.fit', '.fts', '.h5', '.hdf5', '.he5', '.nc', '.netcdf', '.nc4', '.shp'].includes(`.${ext}`)) {
+  if (
+    [
+      '.dcm',
+      '.dicom',
+      '.fits',
+      '.fit',
+      '.fts',
+      '.h5',
+      '.hdf5',
+      '.he5',
+      '.nc',
+      '.netcdf',
+      '.nc4',
+      '.shp',
+    ].includes(`.${ext}`)
+  ) {
     return 'bg-cyan-500/10 text-cyan-600 border-cyan-200';
   }
 
   // Emerging tech - orange
-  if (['.ai', '.ml', '.model', '.blockchain', '.ar', '.vr', '.iot', '.quantum', '.neural', '.robot', '.bio', '.nano', '.space', '.renewable', '.autonomous', '.telecom', '.security', '.digital', '.twin'].includes(`.${ext}`)) {
+  if (
+    [
+      '.ai',
+      '.ml',
+      '.model',
+      '.blockchain',
+      '.ar',
+      '.vr',
+      '.iot',
+      '.quantum',
+      '.neural',
+      '.robot',
+      '.bio',
+      '.nano',
+      '.space',
+      '.renewable',
+      '.autonomous',
+      '.telecom',
+      '.security',
+      '.digital',
+      '.twin',
+    ].includes(`.${ext}`)
+  ) {
     return 'bg-orange-500/10 text-orange-600 border-orange-200';
   }
 
   // Documents - indigo
-  if (['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md', '.html', '.xml', '.json', '.csv'].includes(`.${ext}`)) {
+  if (
+    [
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.md',
+      '.html',
+      '.xml',
+      '.json',
+      '.csv',
+    ].includes(`.${ext}`)
+  ) {
     return 'bg-indigo-500/10 text-indigo-600 border-indigo-200';
   }
 
@@ -173,7 +349,7 @@ export function EnhancedUploadZone({
   maxFiles = 10,
   className,
   advanced = false,
-  useV2 = false
+  useV2 = false,
 }: EnhancedUploadZoneProps) {
   const navigate = useNavigate();
   const [files, setFiles] = useState<FileState[]>([]);
@@ -182,40 +358,45 @@ export function EnhancedUploadZone({
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
-    // Handle rejected files
-    rejectedFiles.forEach(({ file, errors }) => {
-      errors.forEach((error: any) => {
-        toast({
-          title: "File rejected",
-          description: `${file.name}: ${error.message}`,
-          variant: "destructive"
+  const onDrop = useCallback(
+    async (acceptedFiles: File[], rejectedFiles: any[]) => {
+      // Handle rejected files
+      rejectedFiles.forEach(({ file, errors }) => {
+        errors.forEach((error: any) => {
+          toast({
+            title: 'File rejected',
+            description: `${file.name}: ${error.message}`,
+            variant: 'destructive',
+          });
         });
       });
-    });
 
-    // Add accepted files with analysis and estimates
-    const newFilesPromises = acceptedFiles.map(async (file) => {
-      // Run analysis and estimation in parallel
-      const [analysis, estimate] = await Promise.all([
-        analyzeFile(file),
-        Promise.resolve(estimateProcessingTime(file, tier as any)) // Sync but wrapped for consistency
-      ]);
+      // Add accepted files with analysis and estimates
+      const newFilesPromises = acceptedFiles.map(async file => {
+        // Run analysis and estimation in parallel
+        const [analysis, estimate] = await Promise.all([
+          analyzeFile(file),
+          Promise.resolve(estimateProcessingTime(file, tier as any)), // Sync but wrapped for consistency
+        ]);
 
-      return {
-        file,
-        id: crypto.randomUUID(),
-        status: 'pending' as const,
-        progress: 0,
-        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
-        analysis,
-        estimate
-      };
-    });
+        return {
+          file,
+          id: crypto.randomUUID(),
+          status: 'pending' as const,
+          progress: 0,
+          preview: file.type.startsWith('image/')
+            ? URL.createObjectURL(file)
+            : undefined,
+          analysis,
+          estimate,
+        };
+      });
 
-    const newFiles = await Promise.all(newFilesPromises);
-    setFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
-  }, [maxFiles, toast, tier]);
+      const newFiles = await Promise.all(newFilesPromises);
+      setFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
+    },
+    [maxFiles, toast, tier]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -232,7 +413,7 @@ export function EnhancedUploadZone({
     onDragEnter: () => setDragActive(true),
     onDragLeave: () => setDragActive(false),
     onDropAccepted: () => setDragActive(false),
-    onDropRejected: () => setDragActive(false)
+    onDropRejected: () => setDragActive(false),
   });
 
   const removeFile = (fileId: string) => {
@@ -257,36 +438,57 @@ export function EnhancedUploadZone({
       if (files.length === 1) {
         // Single file processing
         const fileState = files[0];
-        setFiles(prev => prev.map(f => f.id === fileState.id ? { ...f, status: 'uploading', progress: 0 } : f));
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileState.id
+              ? { ...f, status: 'uploading', progress: 0 }
+              : f
+          )
+        );
 
         const formData = new FormData();
         formData.append('file', fileState.file);
         if (fileState.file.lastModified) {
-          formData.append('client_last_modified', String(fileState.file.lastModified));
+          formData.append(
+            'client_last_modified',
+            String(fileState.file.lastModified)
+          );
         }
 
         const endpoint = advanced ? '/api/extract/advanced' : '/api/extract';
         const response = await fetch(`${endpoint}?tier=${tier}`, {
           method: 'POST',
           body: formData,
-          signal: abortControllerRef.current.signal
+          signal: abortControllerRef.current.signal,
         });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        setFiles(prev => prev.map(f => f.id === fileState.id ? { ...f, status: 'processing', progress: 50 } : f));
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileState.id
+              ? { ...f, status: 'processing', progress: 50 }
+              : f
+          )
+        );
 
         const result = await response.json();
         console.log('[EnhancedUploadZone] extracted result:', result);
 
-        setFiles(prev => prev.map(f => f.id === fileState.id ? {
-          ...f,
-          status: 'complete',
-          progress: 100,
-          result
-        } : f));
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileState.id
+              ? {
+                  ...f,
+                  status: 'complete',
+                  progress: 100,
+                  result,
+                }
+              : f
+          )
+        );
 
         results.push(result);
 
@@ -294,44 +496,52 @@ export function EnhancedUploadZone({
         if (useV2) {
           navigate('/results-v2', { state: { results, metadata: result } });
         }
-
       } else {
         // Batch processing
         const formData = new FormData();
         files.forEach(fileState => {
           formData.append('files', fileState.file);
           if (fileState.file.lastModified) {
-            formData.append('client_last_modified', String(fileState.file.lastModified));
+            formData.append(
+              'client_last_modified',
+              String(fileState.file.lastModified)
+            );
           }
         });
 
-        setFiles(prev => prev.map(f => ({ ...f, status: 'uploading', progress: 0 })));
+        setFiles(prev =>
+          prev.map(f => ({ ...f, status: 'uploading', progress: 0 }))
+        );
 
         const response = await fetch(`/api/extract/batch?tier=${tier}`, {
           method: 'POST',
           body: formData,
-          signal: abortControllerRef.current.signal
+          signal: abortControllerRef.current.signal,
         });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        setFiles(prev => prev.map(f => ({ ...f, status: 'processing', progress: 50 })));
+        setFiles(prev =>
+          prev.map(f => ({ ...f, status: 'processing', progress: 50 }))
+        );
 
         const batchResult = await response.json();
 
         // Update individual file statuses
-        setFiles(prev => prev.map(fileState => {
-          const result = batchResult.results[fileState.file.name];
-          return {
-            ...fileState,
-            status: result ? 'complete' : 'error',
-            progress: 100,
-            result,
-            error: result ? undefined : 'Processing failed'
-          };
-        }));
+        setFiles(prev =>
+          prev.map(fileState => {
+            const result = batchResult.results[fileState.file.name];
+            return {
+              ...fileState,
+              status: result ? 'complete' : 'error',
+              progress: 100,
+              result,
+              error: result ? undefined : 'Processing failed',
+            };
+          })
+        );
 
         results.push(...Object.values(batchResult.results));
       }
@@ -342,30 +552,36 @@ export function EnhancedUploadZone({
         console.log('[EnhancedUploadZone] Navigating to V2 results');
         navigate('/results-v2', { state: { results, metadata: results[0] } });
       } else {
-        console.log('[EnhancedUploadZone] Calling onResults with', results.length, 'results');
+        console.log(
+          '[EnhancedUploadZone] Calling onResults with',
+          results.length,
+          'results'
+        );
         // Pass single result object, not array
         onResults(results);
       }
 
       toast({
-        title: "Processing complete",
+        title: 'Processing complete',
         description: `Successfully processed ${results.length} file${results.length > 1 ? 's' : ''}`,
       });
-
     } catch (error) {
       console.error('Processing error:', error);
 
-      setFiles(prev => prev.map(f => ({
-        ...f,
-        status: 'error',
-        progress: 0,
-        error: error instanceof Error ? error.message : 'Processing failed'
-      })));
+      setFiles(prev =>
+        prev.map(f => ({
+          ...f,
+          status: 'error',
+          progress: 0,
+          error: error instanceof Error ? error.message : 'Processing failed',
+        }))
+      );
 
       toast({
-        title: "Processing failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
+        title: 'Processing failed',
+        description:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -377,10 +593,12 @@ export function EnhancedUploadZone({
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       setIsProcessing(false);
-      setFiles(prev => prev.map(f => ({ ...f, status: 'pending', progress: 0 })));
+      setFiles(prev =>
+        prev.map(f => ({ ...f, status: 'pending', progress: 0 }))
+      );
       toast({
-        title: "Processing cancelled",
-        description: "File processing has been cancelled"
+        title: 'Processing cancelled',
+        description: 'File processing has been cancelled',
       });
     }
   };
@@ -395,14 +613,16 @@ export function EnhancedUploadZone({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Drop Zone */}
-      <Card className={cn(
-        "border-2 border-dashed transition-all duration-200",
-        dragActive || isDragActive
-          ? "border-primary bg-primary/5 scale-[1.02]"
-          : "border-muted-foreground/25 hover:border-muted-foreground/50"
-      )}>
+      <Card
+        className={cn(
+          'border-2 border-dashed transition-all duration-200',
+          dragActive || isDragActive
+            ? 'border-primary bg-primary/5 scale-[1.02]'
+            : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+        )}
+      >
         <CardContent className="p-8">
           <div
             {...getRootProps()}
@@ -416,19 +636,21 @@ export function EnhancedUploadZone({
             <motion.div
               animate={{
                 scale: dragActive ? 1.1 : 1,
-                rotate: dragActive ? 5 : 0
+                rotate: dragActive ? 5 : 0,
               }}
               className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center"
               aria-hidden="true"
             >
-              <Upload className={cn(
-                "w-8 h-8 transition-colors",
-                dragActive ? "text-primary" : "text-muted-foreground"
-              )} />
+              <Upload
+                className={cn(
+                  'w-8 h-8 transition-colors',
+                  dragActive ? 'text-primary' : 'text-muted-foreground'
+                )}
+              />
             </motion.div>
 
             <h3 className="text-lg font-semibold mb-2">
-              {dragActive ? "Drop files here" : "Upload files for analysis"}
+              {dragActive ? 'Drop files here' : 'Upload files for analysis'}
             </h3>
 
             <p className="text-muted-foreground mb-4">
@@ -436,25 +658,51 @@ export function EnhancedUploadZone({
             </p>
 
             <div className="flex flex-wrap justify-center gap-2 mb-4">
-              <Badge variant="outline" className="text-xs">Images</Badge>
-              <Badge variant="outline" className="text-xs">Video</Badge>
-              <Badge variant="outline" className="text-xs">Audio</Badge>
-              <Badge variant="outline" className="text-xs">Documents</Badge>
-              <Badge variant="outline" className="text-xs">Medical</Badge>
-              <Badge variant="outline" className="text-xs">Scientific</Badge>
-              <Badge variant="outline" className="text-xs">AI/ML</Badge>
-              <Badge variant="outline" className="text-xs">Blockchain</Badge>
-              <Badge variant="outline" className="text-xs">AR/VR</Badge>
-              <Badge variant="outline" className="text-xs">IoT</Badge>
-              <Badge variant="outline" className="text-xs">+More</Badge>
+              <Badge variant="outline" className="text-xs">
+                Images
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Video
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Audio
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Documents
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Medical
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Scientific
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                AI/ML
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Blockchain
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                AR/VR
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                IoT
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                +More
+              </Badge>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Max {maxFiles} files • Up to {
-                tier === 'enterprise' || tier === 'super' ? '2GB' :
-                  tier === 'forensic' || tier === 'premium' ? '500MB' :
-                    tier === 'professional' || tier === 'starter' ? '100MB' : '10MB'
-              } per file
+              Max {maxFiles} files • Up to{' '}
+              {tier === 'enterprise' || tier === 'super'
+                ? '2GB'
+                : tier === 'forensic' || tier === 'premium'
+                  ? '500MB'
+                  : tier === 'professional' || tier === 'starter'
+                    ? '100MB'
+                    : '10MB'}{' '}
+              per file
             </p>
           </div>
         </CardContent>
@@ -496,7 +744,7 @@ export function EnhancedUploadZone({
             </div>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {files.map((fileState) => {
+              {files.map(fileState => {
                 const FileTypeIcon = getFileIcon(fileState.file);
 
                 return (
@@ -516,10 +764,12 @@ export function EnhancedUploadZone({
                           className="w-10 h-10 object-cover rounded"
                         />
                       ) : (
-                        <div className={cn(
-                          "w-10 h-10 rounded flex items-center justify-center border",
-                          getFileTypeColor(fileState.file)
-                        )}>
+                        <div
+                          className={cn(
+                            'w-10 h-10 rounded flex items-center justify-center border',
+                            getFileTypeColor(fileState.file)
+                          )}
+                        >
                           <FileTypeIcon className="w-5 h-5" />
                         </div>
                       )}
@@ -528,16 +778,22 @@ export function EnhancedUploadZone({
                     {/* File Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium truncate">{fileState.file.name}</p>
+                        <p className="font-medium truncate">
+                          {fileState.file.name}
+                        </p>
                         <Badge variant="outline" className="text-xs">
                           {formatFileSize(fileState.file.size)}
                         </Badge>
-                        {fileState.estimate && fileState.status === 'pending' && (
-                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                            <Timer className="w-3 h-3" />
-                            {fileState.estimate.displayText}
-                          </Badge>
-                        )}
+                        {fileState.estimate &&
+                          fileState.status === 'pending' && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs flex items-center gap-1"
+                            >
+                              <Timer className="w-3 h-3" />
+                              {fileState.estimate.displayText}
+                            </Badge>
+                          )}
                       </div>
 
                       {/* Progress Bar */}
@@ -547,55 +803,76 @@ export function EnhancedUploadZone({
                           {fileState.status === 'pending' && (
                             <>
                               <Clock className="w-3 h-3 text-slate-400" />
-                              <span className="text-xs text-muted-foreground">Ready</span>
+                              <span className="text-xs text-muted-foreground">
+                                Ready
+                              </span>
                             </>
                           )}
                           {fileState.status === 'uploading' && (
                             <>
                               <Upload className="w-3 h-3 text-blue-500" />
-                              <span className="text-xs text-muted-foreground">Uploading...</span>
+                              <span className="text-xs text-muted-foreground">
+                                Uploading...
+                              </span>
                             </>
                           )}
                           {fileState.status === 'processing' && (
                             <>
                               <Loader2 className="w-3 h-3 text-yellow-500 animate-spin" />
-                              <span className="text-xs text-muted-foreground">Processing...</span>
+                              <span className="text-xs text-muted-foreground">
+                                Processing...
+                              </span>
                             </>
                           )}
                           {fileState.status === 'complete' && (
                             <>
                               <CheckCircle2 className="w-3 h-3 text-green-500" />
-                              <span className="text-xs text-green-600">Complete</span>
+                              <span className="text-xs text-green-600">
+                                Complete
+                              </span>
                             </>
                           )}
                           {fileState.status === 'error' && (
                             <>
                               <AlertCircle className="w-3 h-3 text-red-500" />
-                              <span className="text-xs text-red-600">{fileState.error || 'Error'}</span>
+                              <span className="text-xs text-red-600">
+                                {fileState.error || 'Error'}
+                              </span>
                             </>
                           )}
                         </div>
                       </div>
 
                       {/* File Analysis Warnings/Suggestions */}
-                      {fileState.analysis && (fileState.analysis.warnings.length > 0 || fileState.analysis.suggestions.length > 0) && (
-                        <div className="mt-3 space-y-2">
-                          {fileState.analysis.warnings.map((warning, idx) => (
-                            <Alert key={`warn-${idx}`} variant="destructive" className="py-2">
-                              <AlertDescription className="text-xs">
-                                {warning}
-                              </AlertDescription>
-                            </Alert>
-                          ))}
-                          {fileState.analysis.suggestions.map((suggestion, idx) => (
-                            <Alert key={`sug-${idx}`} className="py-2 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-                              <AlertDescription className="text-xs text-blue-900 dark:text-blue-100">
-                                {suggestion}
-                              </AlertDescription>
-                            </Alert>
-                          ))}
-                        </div>
-                      )}
+                      {fileState.analysis &&
+                        (fileState.analysis.warnings.length > 0 ||
+                          fileState.analysis.suggestions.length > 0) && (
+                          <div className="mt-3 space-y-2">
+                            {fileState.analysis.warnings.map((warning, idx) => (
+                              <Alert
+                                key={`warn-${idx}`}
+                                variant="destructive"
+                                className="py-2"
+                              >
+                                <AlertDescription className="text-xs">
+                                  {warning}
+                                </AlertDescription>
+                              </Alert>
+                            ))}
+                            {fileState.analysis.suggestions.map(
+                              (suggestion, idx) => (
+                                <Alert
+                                  key={`sug-${idx}`}
+                                  className="py-2 border-blue-200 bg-blue-50 dark:bg-blue-950/20"
+                                >
+                                  <AlertDescription className="text-xs text-blue-900 dark:text-blue-100">
+                                    {suggestion}
+                                  </AlertDescription>
+                                </Alert>
+                              )
+                            )}
+                          </div>
+                        )}
                     </div>
 
                     {/* Actions */}
@@ -618,23 +895,26 @@ export function EnhancedUploadZone({
             </div>
 
             {/* Process Button */}
-            {files.length > 0 && !isProcessing && files.some(f => f.status === 'pending') && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="pt-4"
-              >
-                <Button
-                  onClick={processFiles}
-                  className="w-full"
-                  size="lg"
-                  aria-label={`Extract metadata from ${files.filter(f => f.status === 'pending').length} files`}
+            {files.length > 0 &&
+              !isProcessing &&
+              files.some(f => f.status === 'pending') && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="pt-4"
                 >
-                  <Zap className="w-4 h-4 mr-2" aria-hidden="true" />
-                  Extract Metadata ({files.filter(f => f.status === 'pending').length} files)
-                </Button>
-              </motion.div>
-            )}
+                  <Button
+                    onClick={processFiles}
+                    className="w-full"
+                    size="lg"
+                    aria-label={`Extract metadata from ${files.filter(f => f.status === 'pending').length} files`}
+                  >
+                    <Zap className="w-4 h-4 mr-2" aria-hidden="true" />
+                    Extract Metadata (
+                    {files.filter(f => f.status === 'pending').length} files)
+                  </Button>
+                </motion.div>
+              )}
           </motion.div>
         )}
       </AnimatePresence>

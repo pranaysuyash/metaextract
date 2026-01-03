@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/hooks/use-toast';
 import { Layout } from '@/components/layout';
 import { MOCK_METADATA } from '@/lib/mockData';
 import { PaymentModal } from '@/components/payment-modal';
@@ -8,9 +8,19 @@ import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
 import { MetadataComparisonDisplay } from '@/components/metadata-comparison-display';
 import { AdvancedResultsIntegration } from '@/components/advanced-results-integration';
 import { MedicalAnalysisResult } from '@/components/medical-analysis-result';
-import { MetadataExplorer, convertMetadataToProcessedFile } from '@/components/metadata-explorer';
-import { UIAdaptationProvider, ContextBanner, ContextIndicator } from '@/components/ui-adaptation-controller';
-import { ErrorBoundary, MetadataErrorBoundary } from '@/components/error-boundary';
+import {
+  MetadataExplorer,
+  convertMetadataToProcessedFile,
+} from '@/components/metadata-explorer';
+import {
+  UIAdaptationProvider,
+  ContextBanner,
+  ContextIndicator,
+} from '@/components/ui-adaptation-controller';
+import {
+  ErrorBoundary,
+  MetadataErrorBoundary,
+} from '@/components/error-boundary';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,11 +94,11 @@ interface MetadataComparison {
     gps_comparison: string;
     timestamp_comparison: string;
     overall_status:
-    | 'verified'
-    | 'suspicious'
-    | 'stripped_exif'
-    | 'no_overlay'
-    | 'no_metadata';
+      | 'verified'
+      | 'suspicious'
+      | 'stripped_exif'
+      | 'no_overlay'
+      | 'no_metadata';
   };
 }
 
@@ -173,10 +183,10 @@ export default function Results() {
     // Priority 1: Navigation State (In-Memory, handles large payloads)
     if (location.state?.metadata) {
       // Handle both array and object formats
-      const metadataObj = Array.isArray(location.state.metadata) 
-        ? location.state.metadata[0] 
+      const metadataObj = Array.isArray(location.state.metadata)
+        ? location.state.metadata[0]
         : location.state.metadata;
-      
+
       return metadataObj;
     }
 
@@ -193,14 +203,18 @@ export default function Results() {
         return MOCK_METADATA as any;
       }
     }
-    console.warn('[Results] No metadata in session storage. Falling back to MOCK_METADATA');
+    console.warn(
+      '[Results] No metadata in session storage. Falling back to MOCK_METADATA'
+    );
     return MOCK_METADATA as any;
   });
 
   // Fetch from DB if ID is present and we don't have fresh data
   useEffect(() => {
     if (resultId && (metadata === MOCK_METADATA || !metadata.filename)) {
-      console.log(`[Results] ID found in URL: ${resultId}. Fetching from DB...`);
+      console.log(
+        `[Results] ID found in URL: ${resultId}. Fetching from DB...`
+      );
       fetch(`/api/extract/results/${resultId}`)
         .then(res => {
           if (!res.ok) throw new Error('Result not found');
@@ -215,7 +229,7 @@ export default function Results() {
           toast({
             title: 'Error loading result',
             description: 'Could not load saved analysis. Using mock data.',
-            variant: 'destructive'
+            variant: 'destructive',
           });
         });
     }
@@ -234,13 +248,18 @@ export default function Results() {
   const [isProcessingAdvanced, setIsProcessingAdvanced] = useState(false);
 
   // Metadata explorer state
-  const [explorerViewMode, setExplorerViewMode] = useState<'simple' | 'advanced' | 'raw'>('advanced');
+  const [explorerViewMode, setExplorerViewMode] = useState<
+    'simple' | 'advanced' | 'raw'
+  >('advanced');
   const [processedFiles, setProcessedFiles] = useState<any[]>([]);
 
   // Initialize processed files for metadata explorer
   useEffect(() => {
     if (metadata) {
-      const processedFile = convertMetadataToProcessedFile(metadata, 'current-file');
+      const processedFile = convertMetadataToProcessedFile(
+        metadata,
+        'current-file'
+      );
       setProcessedFiles([processedFile]);
 
       // Extract advanced analysis from metadata if available
@@ -253,8 +272,7 @@ export default function Results() {
   useEffect(() => {
     const access = metadata?.access;
     if (!access) return;
-    const unlocked =
-      access.trial_granted || (access.credits_charged ?? 0) > 0;
+    const unlocked = access.trial_granted || (access.credits_charged ?? 0) > 0;
     if (unlocked) {
       setIsUnlocked(true);
     }
@@ -286,17 +304,25 @@ export default function Results() {
     let yPosition = 20;
 
     // Helper function to add text with word wrapping
-    const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10) => {
+    const addWrappedText = (
+      text: string,
+      x: number,
+      y: number,
+      maxWidth: number,
+      fontSize: number = 10
+    ) => {
       doc.setFontSize(fontSize);
       const lines = doc.splitTextToSize(text, maxWidth);
       doc.text(lines, x, y);
-      return y + (lines.length * fontSize * 0.4);
+      return y + lines.length * fontSize * 0.4;
     };
 
     // Title
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('METADATA ANALYSIS REPORT', pageWidth / 2, yPosition, { align: 'center' });
+    doc.text('METADATA ANALYSIS REPORT', pageWidth / 2, yPosition, {
+      align: 'center',
+    });
     yPosition += 15;
 
     // File Info
@@ -304,7 +330,7 @@ export default function Results() {
     doc.setFont('helvetica', 'normal');
     doc.text(`File: ${metadata.filename}`, 20, yPosition);
     yPosition += 8;
-    doc.text(`Size: ${(metadata.filesize || 0)} bytes`, 20, yPosition);
+    doc.text(`Size: ${metadata.filesize || 0} bytes`, 20, yPosition);
     yPosition += 8;
     doc.text(`Type: ${metadata.filetype}`, 20, yPosition);
     yPosition += 8;
@@ -321,9 +347,17 @@ export default function Results() {
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Fields Extracted: ${metadata.fields_extracted || 0}`, 20, yPosition);
+    doc.text(
+      `Fields Extracted: ${metadata.fields_extracted || 0}`,
+      20,
+      yPosition
+    );
     yPosition += 8;
-    doc.text(`Fields Available: ${metadata.fields_available || 0}`, 20, yPosition);
+    doc.text(
+      `Fields Available: ${metadata.fields_available || 0}`,
+      20,
+      yPosition
+    );
     yPosition += 8;
     doc.text(`Tier: ${metadata.tier || 'free'}`, 20, yPosition);
     yPosition += 15;
@@ -337,13 +371,29 @@ export default function Results() {
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Forensic Score: ${advancedAnalysis.forensic_score?.toFixed(2) || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `Forensic Score: ${advancedAnalysis.forensic_score?.toFixed(2) || 'N/A'}`,
+        20,
+        yPosition
+      );
       yPosition += 8;
-      doc.text(`Authenticity Assessment: ${advancedAnalysis.authenticity_assessment || 'Unknown'}`, 20, yPosition);
+      doc.text(
+        `Authenticity Assessment: ${advancedAnalysis.authenticity_assessment || 'Unknown'}`,
+        20,
+        yPosition
+      );
       yPosition += 8;
-      doc.text(`Modules Run: ${advancedAnalysis.modules_run?.join(', ') || 'None'}`, 20, yPosition);
+      doc.text(
+        `Modules Run: ${advancedAnalysis.modules_run?.join(', ') || 'None'}`,
+        20,
+        yPosition
+      );
       yPosition += 8;
-      doc.text(`Processing Time: ${(advancedAnalysis.processing_time_ms || 0).toFixed(0)}ms`, 20, yPosition);
+      doc.text(
+        `Processing Time: ${(advancedAnalysis.processing_time_ms || 0).toFixed(0)}ms`,
+        20,
+        yPosition
+      );
       yPosition += 15;
     }
 
@@ -361,11 +411,25 @@ export default function Results() {
       metadata.calculated?.file_modified;
 
     const keyFields = [
-      { label: 'MD5 Hash', value: metadata.hashes?.md5 || metadata.file_integrity?.md5 },
-      { label: 'SHA256 Hash', value: metadata.hashes?.sha256 || metadata.file_integrity?.sha256 },
+      {
+        label: 'MD5 Hash',
+        value: metadata.hashes?.md5 || metadata.file_integrity?.md5,
+      },
+      {
+        label: 'SHA256 Hash',
+        value: metadata.hashes?.sha256 || metadata.file_integrity?.sha256,
+      },
       { label: 'Capture Date', value: captureDate || 'Not embedded' },
-      { label: 'Modified Date (server file)', value: modifiedDate || 'Not available' },
-      { label: 'GPS Location', value: gpsCoords ? `${gpsCoords.latitude}, ${gpsCoords.longitude}` : 'Not embedded' },
+      {
+        label: 'Modified Date (server file)',
+        value: modifiedDate || 'Not available',
+      },
+      {
+        label: 'GPS Location',
+        value: gpsCoords
+          ? `${gpsCoords.latitude}, ${gpsCoords.longitude}`
+          : 'Not embedded',
+      },
       { label: 'Camera Make', value: metadata.exif?.Make || 'Not embedded' },
       { label: 'Camera Model', value: metadata.exif?.Model || 'Not embedded' },
     ];
@@ -386,7 +450,12 @@ export default function Results() {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'italic');
-      doc.text(`Generated by MetaExtract - Page ${i} of ${totalPages}`, pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+      doc.text(
+        `Generated by MetaExtract - Page ${i} of ${totalPages}`,
+        pageWidth / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
     }
 
     doc.save(`${metadata.filename}_analysis_report.pdf`);
@@ -408,20 +477,28 @@ export default function Results() {
       // For demo purposes, we'll use the test.jpg file
       const response = await fetch('/test.jpg');
       const blob = await response.blob();
-      const file = new File([blob], metadata.filename, { type: metadata.mime_type });
+      const file = new File([blob], metadata.filename, {
+        type: metadata.mime_type,
+      });
 
       formData.append('file', file);
 
-      const analysisResponse = await fetch(`/api/extract/advanced?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`, {
-        method: 'POST',
-        body: formData,
-      });
+      const analysisResponse = await fetch(
+        `/api/extract/advanced?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (analysisResponse.ok) {
         const result = await analysisResponse.json();
         setAdvancedAnalysis(result);
       } else {
-        console.error('Advanced analysis failed:', await analysisResponse.text());
+        console.error(
+          'Advanced analysis failed:',
+          await analysisResponse.text()
+        );
       }
     } catch (error) {
       console.error('Advanced analysis error:', error);
@@ -438,10 +515,13 @@ export default function Results() {
         formData.append('files', file);
       });
 
-      const response = await fetch(`/api/compare/batch?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`, {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `/api/compare/batch?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -462,10 +542,13 @@ export default function Results() {
         formData.append('files', file);
       });
 
-      const response = await fetch(`/api/timeline/reconstruct?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`, {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `/api/timeline/reconstruct?tier=${import.meta.env.DEV ? 'enterprise' : 'professional'}`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -631,8 +714,10 @@ export default function Results() {
       gps.GPSLongitude ??
       gps.gps_longitude ??
       gps.Longitude;
-    const lat = typeof latRaw === 'number' ? latRaw : parseFloat(String(latRaw));
-    const lon = typeof lonRaw === 'number' ? lonRaw : parseFloat(String(lonRaw));
+    const lat =
+      typeof latRaw === 'number' ? latRaw : parseFloat(String(latRaw));
+    const lon =
+      typeof lonRaw === 'number' ? lonRaw : parseFloat(String(lonRaw));
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
     return { latitude: lat, longitude: lon };
   };
@@ -689,42 +774,42 @@ export default function Results() {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: index * 0.003 }}
-        className='group grid grid-cols-2 gap-4 py-2 px-3 border-b border-white/5 hover:bg-white/5 rounded transition-colors font-mono text-xs'
+        className="group grid grid-cols-2 gap-4 py-2 px-3 border-b border-white/5 hover:bg-white/5 rounded transition-colors font-mono text-xs"
         data-testid={`field-row-${label
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '-')}`}
       >
-        <span className='text-slate-400 group-hover:text-primary/80 transition-colors break-all'>
+        <span className="text-slate-400 group-hover:text-primary/80 transition-colors break-all">
           {label}
         </span>
-        <div className='flex items-center gap-2 justify-end min-w-0'>
+        <div className="flex items-center gap-2 justify-end min-w-0">
           {isLocked && !isUnlocked ? (
             <button
               type="button"
-              className='flex items-center gap-2 text-slate-600 select-none bg-black/40 px-2 py-0.5 rounded border border-white/5 cursor-pointer hover:border-primary/30 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50'
+              className="flex items-center gap-2 text-slate-600 select-none bg-black/40 px-2 py-0.5 rounded border border-white/5 cursor-pointer hover:border-primary/30 transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/50"
               onClick={() => setShowPayment(true)}
             >
-              <span className='text-xs text-slate-500'>Upgrade to view</span>
-              <Lock className='w-3 h-3 text-primary/60' />
+              <span className="text-xs text-slate-500">Upgrade to view</span>
+              <Lock className="w-3 h-3 text-primary/60" />
             </button>
           ) : (
             <>
-              <span className='text-slate-200 text-right break-all selection:bg-primary/30 min-w-0'>
+              <span className="text-slate-200 text-right break-all selection:bg-primary/30 min-w-0">
                 {stringValue}
               </span>
               {copyable && !isLocked && (
                 <button
                   type="button"
                   onClick={() => copyToClipboard(stringValue, label)}
-                  className='opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded shrink-0 focus:outline-none focus:ring-1 focus:ring-primary/50'
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded shrink-0 focus:outline-none focus:ring-1 focus:ring-primary/50"
                   data-testid={`copy-${label
                     .toLowerCase()
                     .replace(/[^a-z0-9]/g, '-')}`}
                 >
                   {copiedField === label ? (
-                    <Check className='w-3 h-3 text-emerald-500' />
+                    <Check className="w-3 h-3 text-emerald-500" />
                   ) : (
-                    <Copy className='w-3 h-3 text-slate-500' />
+                    <Copy className="w-3 h-3 text-slate-500" />
                   )}
                 </button>
               )}
@@ -749,9 +834,9 @@ export default function Results() {
     <h4
       className={`flex items-center gap-2 text-xs font-bold mb-3 uppercase tracking-widest ${color}`}
     >
-      <Icon className='w-3 h-3' /> {title}
+      <Icon className="w-3 h-3" /> {title}
       {count !== undefined && (
-        <span className='text-slate-600 font-normal'>({count})</span>
+        <span className="text-slate-600 font-normal">({count})</span>
       )}
     </h4>
   );
@@ -760,37 +845,37 @@ export default function Results() {
     <UIAdaptationProvider initialMetadata={metadata}>
       <Layout>
         <ErrorBoundary level="page">
-          <div className='relative min-h-[calc(100vh-64px)] overflow-hidden'>
-            <div className='absolute inset-0 z-0 pointer-events-none'>
-              <div className='absolute inset-0 bg-background/90 z-10'></div>
+          <div className="relative min-h-[calc(100vh-64px)] overflow-hidden">
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <div className="absolute inset-0 bg-background/90 z-10"></div>
               <img
                 src={generatedBackground}
-                alt='Background'
-                className='w-full h-full object-cover opacity-10 mix-blend-screen scale-110'
+                alt="Background"
+                className="w-full h-full object-cover opacity-10 mix-blend-screen scale-110"
               />
             </div>
 
-            <div className='container mx-auto px-4 py-8 relative z-10 h-full flex flex-col'>
-              <div className='flex flex-col md:flex-row md:items-center justify-between mb-8 pb-6 border-b border-white/10 gap-4'>
-                <div className='flex items-center gap-4'>
-                  <div className='w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center'>
-                    <Cpu className='w-6 h-6 text-primary' />
+            <div className="container mx-auto px-4 py-8 relative z-10 h-full flex flex-col">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-6 border-b border-white/10 gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center">
+                    <Cpu className="w-6 h-6 text-primary" />
                   </div>
                   <div>
                     <h1
-                      className='text-xl font-bold text-white font-mono tracking-tight'
-                      data-testid='text-filename'
+                      className="text-xl font-bold text-white font-mono tracking-tight"
+                      data-testid="text-filename"
                     >
                       {metadata.filename}
                     </h1>
-                    <div className='flex gap-4 text-xs text-slate-500 font-mono mt-1'>
-                      <span data-testid='text-filesize'>
+                    <div className="flex gap-4 text-xs text-slate-500 font-mono mt-1">
+                      <span data-testid="text-filesize">
                         SIZE: {metadata.filesize}
                       </span>
-                      <span data-testid='text-filetype'>
+                      <span data-testid="text-filetype">
                         TYPE: {metadata.filetype}
                       </span>
-                      <span className='text-primary' data-testid='text-hash'>
+                      <span className="text-primary" data-testid="text-hash">
                         SHA256:{' '}
                         {metadata.file_integrity?.sha256?.substring(0, 12) ||
                           metadata.hash?.substring(0, 12)}
@@ -801,10 +886,10 @@ export default function Results() {
                   </div>
                 </div>
 
-                <div className='flex gap-3'>
+                <div className="flex gap-3">
                   {isProcessingAdvanced && (
-                    <div className='flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono'>
-                      <Zap className='w-4 h-4 animate-pulse' />
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono">
+                      <Zap className="w-4 h-4 animate-pulse" />
                       PROCESSING_ADVANCED_ANALYSIS...
                     </div>
                   )}
@@ -816,12 +901,12 @@ export default function Results() {
                         ? 'bg-emerald-600 hover:bg-emerald-700'
                         : 'bg-primary hover:bg-primary/90 text-black'
                     )}
-                    data-testid='button-download'
+                    data-testid="button-download"
                   >
                     {isUnlocked ? (
-                      <Download className='w-4 h-4' />
+                      <Download className="w-4 h-4" />
                     ) : (
-                      <Lock className='w-4 h-4' />
+                      <Lock className="w-4 h-4" />
                     )}
                     {isUnlocked ? 'JSON' : 'UNLOCK_FULL_DATA'}
                   </Button>
@@ -829,19 +914,21 @@ export default function Results() {
                     <Button
                       onClick={handlePDFExport}
                       variant="outline"
-                      className='gap-2 font-mono text-xs tracking-wider border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10'
+                      className="gap-2 font-mono text-xs tracking-wider border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10"
                     >
-                      <FileText className='w-4 h-4' />
+                      <FileText className="w-4 h-4" />
                       PDF
                     </Button>
                   )}
                   {import.meta.env.DEV && (
                     <Button
-                      onClick={() => navigate('/results-v2', { state: { metadata } })}
+                      onClick={() =>
+                        navigate('/results-v2', { state: { metadata } })
+                      }
                       variant="outline"
-                      className='gap-2 font-mono text-xs tracking-wider border-blue-500/50 text-blue-300 hover:bg-blue-500/10'
+                      className="gap-2 font-mono text-xs tracking-wider border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
                     >
-                      <Cpu className='w-4 h-4' />
+                      <Cpu className="w-4 h-4" />
                       V2
                     </Button>
                   )}
@@ -850,50 +937,51 @@ export default function Results() {
 
               <ContextBanner />
 
-              <div className='flex-1 flex flex-col md:flex-row gap-8 min-h-0'>
-                <div className='w-full md:w-72 shrink-0 space-y-4 md:overflow-y-auto pr-2 custom-scrollbar'>
-                  <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
-                    <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
+              <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-0">
+                <div className="w-full md:w-72 shrink-0 space-y-4 md:overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg">
+                    <h3 className="text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2">
                       Analysis Summary
                     </h3>
-                    <div className='space-y-4'>
+                    <div className="space-y-4">
                       <div>
-                        <div className='text-[10px] text-slate-500 uppercase'>
+                        <div className="text-[10px] text-slate-500 uppercase">
                           Total Fields
                         </div>
                         <div
-                          className='text-2xl font-mono text-primary font-bold'
-                          data-testid='text-total-fields'
+                          className="text-2xl font-mono text-primary font-bold"
+                          data-testid="text-total-fields"
                         >
                           {totalFields}
                         </div>
                       </div>
                       <div>
-                        <div className='text-[10px] text-slate-500 uppercase'>
+                        <div className="text-[10px] text-slate-500 uppercase">
                           File Integrity
                         </div>
-                        <div className='text-sm font-mono text-emerald-500 font-bold'>
+                        <div className="text-sm font-mono text-emerald-500 font-bold">
                           VERIFIED [MD5+SHA256]
                         </div>
                       </div>
                       <div>
-                        <div className='text-[10px] text-slate-500 uppercase'>
+                        <div className="text-[10px] text-slate-500 uppercase">
                           Location Data
                         </div>
-                        <div className='text-sm font-mono text-white flex items-center gap-2'>
+                        <div className="text-sm font-mono text-white flex items-center gap-2">
                           <MapPin
-                            className={`w-3 h-3 ${hasGPS ? 'text-primary' : 'text-slate-600'
-                              }`}
+                            className={`w-3 h-3 ${
+                              hasGPS ? 'text-primary' : 'text-slate-600'
+                            }`}
                           />
                           {hasGPS ? 'Present' : 'Not Embedded'}
                         </div>
                       </div>
                       {metadata.calculated && (
                         <div>
-                          <div className='text-[10px] text-slate-500 uppercase'>
+                          <div className="text-[10px] text-slate-500 uppercase">
                             Dimensions
                           </div>
-                          <div className='text-sm font-mono text-white'>
+                          <div className="text-sm font-mono text-white">
                             {metadata.calculated.megapixels
                               ? `${metadata.calculated.megapixels} MP`
                               : 'N/A'}
@@ -903,13 +991,16 @@ export default function Results() {
                         </div>
                       )}
                       <div>
-                        <div className='text-[10px] text-slate-500 uppercase'>
+                        <div className="text-[10px] text-slate-500 uppercase">
                           Advanced Analysis
                         </div>
-                        <div className='text-sm font-mono text-white flex items-center gap-2'>
+                        <div className="text-sm font-mono text-white flex items-center gap-2">
                           <Eye
-                            className={`w-3 h-3 ${advancedAnalysis ? 'text-primary' : 'text-slate-600'
-                              }`}
+                            className={`w-3 h-3 ${
+                              advancedAnalysis
+                                ? 'text-primary'
+                                : 'text-slate-600'
+                            }`}
                           />
                           {advancedAnalysis ? 'Available' : 'Not Run'}
                         </div>
@@ -918,28 +1009,28 @@ export default function Results() {
                   </div>
 
                   {hasGPS && metadata.gps?.google_maps_url && (
-                    <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
-                      <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
+                    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg">
+                      <h3 className="text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2">
                         GPS Location
                       </h3>
-                      <div className='space-y-2 font-mono text-xs'>
-                        <div className='text-slate-400'>
-                          <span className='text-slate-600'>LAT:</span>{' '}
+                      <div className="space-y-2 font-mono text-xs">
+                        <div className="text-slate-400">
+                          <span className="text-slate-600">LAT:</span>{' '}
                           {gpsCoords?.latitude.toFixed(6)}
                         </div>
-                        <div className='text-slate-400'>
-                          <span className='text-slate-600'>LON:</span>{' '}
+                        <div className="text-slate-400">
+                          <span className="text-slate-600">LON:</span>{' '}
                           {gpsCoords?.longitude.toFixed(6)}
                         </div>
                         <a
                           href={metadata.gps.google_maps_url}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mt-3'
-                          data-testid='link-google-maps'
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mt-3"
+                          data-testid="link-google-maps"
                         >
-                          <MapPin className='w-3 h-3' /> View on Maps{' '}
-                          <ExternalLink className='w-3 h-3' />
+                          <MapPin className="w-3 h-3" /> View on Maps{' '}
+                          <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
                     </div>
@@ -951,114 +1042,123 @@ export default function Results() {
                       <div className="flex items-center gap-3">
                         <AlertTriangle className="w-8 h-8" />
                         <div>
-                          <h3 className="text-xl font-bold">⚠️ USING MOCK DATA</h3>
-                          <p className="font-mono text-sm">Real extraction failed or data was lost.</p>
-                          <p className="text-xs opacity-75 mt-1">Check console logs for details.</p>
+                          <h3 className="text-xl font-bold">
+                            ⚠️ USING MOCK DATA
+                          </h3>
+                          <p className="font-mono text-sm">
+                            Real extraction failed or data was lost.
+                          </p>
+                          <p className="text-xs opacity-75 mt-1">
+                            Check console logs for details.
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <div className='bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg'>
-                    <h3 className='text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2'>
+                  <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg">
+                    <h3 className="text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2">
                       File Preview
                     </h3>
-                    <div className='aspect-square bg-black/50 rounded flex items-center justify-center border border-white/5 mb-2 relative overflow-hidden group'>
-                      <div className='absolute inset-0 bg-grid opacity-20'></div>
-                      <ImageIcon className='w-8 h-8 text-slate-600 group-hover:text-primary transition-colors' />
+                    <div className="aspect-square bg-black/50 rounded flex items-center justify-center border border-white/5 mb-2 relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-grid opacity-20"></div>
+                      <ImageIcon className="w-8 h-8 text-slate-600 group-hover:text-primary transition-colors" />
                     </div>
-                    <div className='text-[10px] text-slate-500 text-center font-mono'>
+                    <div className="text-[10px] text-slate-500 text-center font-mono">
                       ZERO_DATA_RETENTION
                     </div>
                   </div>
                 </div>
 
-                <div className='flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl'>
-                  <Tabs defaultValue='all' className='flex-1 flex flex-col'>
-                    <div className='flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4'>
-                      <TabsList className='bg-white/5 border border-white/5 h-9 w-full md:w-auto'>
+                <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+                  <Tabs defaultValue="all" className="flex-1 flex flex-col">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4">
+                      <TabsList className="bg-white/5 border border-white/5 h-9 w-full md:w-auto">
                         <TabsTrigger
-                          value='all'
-                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                          data-testid='tab-all'
+                          value="all"
+                          className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
+                          data-testid="tab-all"
                         >
                           ALL
-                          {metadata.metadata_comparison?.summary?.overall_status ===
-                            'suspicious' && (
-                              <div className='absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full'></div>
-                            )}
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value='explorer'
-                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                          data-testid='tab-explorer'
-                        >
-                          EXPLORER
-                          <div className='absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full'></div>
-                        </TabsTrigger>
-                        {metadata.medical_imaging?.available && (
-                          <TabsTrigger
-                            value='medical'
-                            className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                          >
-                            MEDICAL
-                            <div className='absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full'></div>
-                          </TabsTrigger>
-                        )}
-                        <TabsTrigger
-                          value='advanced'
-                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                          data-testid='tab-advanced'
-                        >
-                          ADVANCED
-                          {advancedAnalysis && (
-                            <div className='absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full'></div>
+                          {metadata.metadata_comparison?.summary
+                            ?.overall_status === 'suspicious' && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full"></div>
                           )}
                         </TabsTrigger>
                         <TabsTrigger
-                          value='forensic'
-                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative'
-                          data-testid='tab-forensic'
+                          value="explorer"
+                          className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
+                          data-testid="tab-explorer"
                         >
-                          FORENSIC
-                          {metadata.metadata_comparison?.summary?.overall_status ===
-                            'suspicious' && (
-                              <div className='absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full'></div>
-                            )}
+                          EXPLORER
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
+                        </TabsTrigger>
+                        {metadata.medical_imaging?.available && (
+                          <TabsTrigger
+                            value="medical"
+                            className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
+                          >
+                            MEDICAL
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
+                          </TabsTrigger>
+                        )}
+                        <TabsTrigger
+                          value="advanced"
+                          className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
+                          data-testid="tab-advanced"
+                        >
+                          ADVANCED
+                          {advancedAnalysis && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
+                          )}
                         </TabsTrigger>
                         <TabsTrigger
-                          value='technical'
-                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black'
-                          data-testid='tab-technical'
+                          value="forensic"
+                          className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
+                          data-testid="tab-forensic"
+                        >
+                          FORENSIC
+                          {metadata.metadata_comparison?.summary
+                            ?.overall_status === 'suspicious' && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full"></div>
+                          )}
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="technical"
+                          className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black"
+                          data-testid="tab-technical"
                         >
                           TECHNICAL
                         </TabsTrigger>
                         <TabsTrigger
-                          value='raw'
-                          className='text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black'
-                          data-testid='tab-raw'
+                          value="raw"
+                          className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black"
+                          data-testid="tab-raw"
                         >
                           RAW
                         </TabsTrigger>
                       </TabsList>
 
-                      <div className='relative w-64'>
-                        <Search className='absolute left-2.5 top-2.5 h-3 w-3 text-slate-500' />
+                      <div className="relative w-64">
+                        <Search className="absolute left-2.5 top-2.5 h-3 w-3 text-slate-500" />
                         <input
-                          type='text'
-                          placeholder='FILTER_FIELDS...'
-                          className='w-full bg-black/40 border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-0 outline-none font-mono'
+                          type="text"
+                          placeholder="FILTER_FIELDS..."
+                          className="w-full bg-black/40 border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-0 outline-none font-mono"
                           value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          data-testid='input-search'
+                          onChange={e => setSearchQuery(e.target.value)}
+                          data-testid="input-search"
                         />
                       </div>
                     </div>
 
-                    <div className='flex-1 overflow-hidden relative'>
-                      <ScrollArea className='h-full'>
-                        <div className='p-4 space-y-6'>
-                          <TabsContent value='explorer' className='mt-0 h-[600px]'>
+                    <div className="flex-1 overflow-hidden relative">
+                      <ScrollArea className="h-full">
+                        <div className="p-4 space-y-6">
+                          <TabsContent
+                            value="explorer"
+                            className="mt-0 h-[600px]"
+                          >
                             <MetadataErrorBoundary>
                               <MetadataExplorer
                                 files={processedFiles}
@@ -1068,31 +1168,31 @@ export default function Results() {
                             </MetadataErrorBoundary>
                           </TabsContent>
 
-                          <TabsContent value='medical' className='mt-0'>
+                          <TabsContent value="medical" className="mt-0">
                             <MedicalAnalysisResult
                               data={metadata.medical_imaging}
                               isUnlocked={isUnlocked}
                             />
                           </TabsContent>
 
-                          <TabsContent value='all' className='mt-0 space-y-6'>
+                          <TabsContent value="all" className="mt-0 space-y-6">
                             {metadata.file_integrity && (
                               <section>
                                 <SectionHeader
                                   icon={Hash}
-                                  title='File Integrity'
-                                  color='text-amber-500'
+                                  title="File Integrity"
+                                  color="text-amber-500"
                                   count={2}
                                 />
-                                <div className='grid grid-cols-1 gap-y-1'>
+                                <div className="grid grid-cols-1 gap-y-1">
                                   <FieldRow
-                                    label='MD5'
+                                    label="MD5"
                                     value={metadata.file_integrity.md5}
                                     copyable
                                     index={0}
                                   />
                                   <FieldRow
-                                    label='SHA256'
+                                    label="SHA256"
                                     value={metadata.file_integrity.sha256}
                                     copyable
                                     index={1}
@@ -1103,7 +1203,8 @@ export default function Results() {
 
                             {metadata.metadata_comparison &&
                               (metadata.fields_extracted === 0 ||
-                                metadata.metadata_comparison.summary?.overall_status !== 'no_metadata' ||
+                                metadata.metadata_comparison.summary
+                                  ?.overall_status !== 'no_metadata' ||
                                 metadata.metadata_comparison.has_both) && (
                                 <section>
                                   <MetadataComparisonDisplay
@@ -1125,11 +1226,13 @@ export default function Results() {
                             <section>
                               <SectionHeader
                                 icon={ShieldCheck}
-                                title='Forensic Evidence'
-                                color='text-emerald-500'
-                                count={filterFields(metadata.forensic || {}).length}
+                                title="Forensic Evidence"
+                                color="text-emerald-500"
+                                count={
+                                  filterFields(metadata.forensic || {}).length
+                                }
                               />
-                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                 {filterFields(metadata.forensic || {}).map(
                                   ([key, val], i) => (
                                     <FieldRow
@@ -1137,7 +1240,9 @@ export default function Results() {
                                       label={key}
                                       value={val}
                                       index={i}
-                                      locked={key.includes('Serial') && !isUnlocked}
+                                      locked={
+                                        key.includes('Serial') && !isUnlocked
+                                      }
                                       copyable
                                     />
                                   )
@@ -1148,11 +1253,13 @@ export default function Results() {
                             <section>
                               <SectionHeader
                                 icon={FileText}
-                                title='File Summary'
-                                color='text-primary'
-                                count={filterFields(metadata.summary || {}).length}
+                                title="File Summary"
+                                color="text-primary"
+                                count={
+                                  filterFields(metadata.summary || {}).length
+                                }
                               />
-                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                 {filterFields(metadata.summary || {}).map(
                                   ([key, val], i) => (
                                     <FieldRow
@@ -1170,13 +1277,14 @@ export default function Results() {
                               <section>
                                 <SectionHeader
                                   icon={Calculator}
-                                  title='Calculated Fields'
-                                  color='text-cyan-500'
+                                  title="Calculated Fields"
+                                  color="text-cyan-500"
                                   count={
-                                    filterFields(metadata.calculated || {}).length
+                                    filterFields(metadata.calculated || {})
+                                      .length
                                   }
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(metadata.calculated || {}).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1195,11 +1303,11 @@ export default function Results() {
                             <section>
                               <SectionHeader
                                 icon={Camera}
-                                title='Camera & EXIF'
-                                color='text-purple-400'
+                                title="Camera & EXIF"
+                                color="text-purple-400"
                                 count={filterFields(metadata.exif || {}).length}
                               />
-                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                 {filterFields(metadata.exif || {}).map(
                                   ([key, val], i) => (
                                     <FieldRow
@@ -1217,11 +1325,13 @@ export default function Results() {
                               <section>
                                 <SectionHeader
                                   icon={MapPin}
-                                  title='GPS Location'
-                                  color='text-rose-500'
-                                  count={filterFields(metadata.gps || {}).length}
+                                  title="GPS Location"
+                                  color="text-rose-500"
+                                  count={
+                                    filterFields(metadata.gps || {}).length
+                                  }
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(metadata.gps || {}).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1238,18 +1348,19 @@ export default function Results() {
                             )}
 
                             {!isUnlocked && (
-                              <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                <p className='text-xs text-slate-400 font-mono mb-2'>
-                                  {Object.keys(metadata.makernote || {}).length +
+                              <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
+                                <p className="text-xs text-slate-400 font-mono mb-2">
+                                  {Object.keys(metadata.makernote || {})
+                                    .length +
                                     Object.keys(metadata.extended || {})
                                       .length}{' '}
                                   ADDITIONAL FIELDS AVAILABLE
                                 </p>
                                 <Button
-                                  variant='link'
+                                  variant="link"
                                   onClick={() => setShowPayment(true)}
-                                  className='text-primary text-xs h-auto p-0'
-                                  data-testid='button-unlock-fields'
+                                  className="text-primary text-xs h-auto p-0"
+                                  data-testid="button-unlock-fields"
                                 >
                                   UNLOCK_ALL_FIELDS
                                 </Button>
@@ -1257,14 +1368,18 @@ export default function Results() {
                             )}
                           </TabsContent>
 
-                          <TabsContent value='advanced' className='mt-0'>
+                          <TabsContent value="advanced" className="mt-0">
                             <AdvancedResultsIntegration
                               metadata={metadata}
                               advancedAnalysis={advancedAnalysis}
                               comparisonResult={comparisonResult}
                               timelineResult={timelineResult}
                               forensicReport={forensicReport}
-                              tier={import.meta.env.DEV ? 'enterprise' : (metadata.tier || 'free')}
+                              tier={
+                                import.meta.env.DEV
+                                  ? 'enterprise'
+                                  : metadata.tier || 'free'
+                              }
                               onUpgrade={() => setShowPayment(true)}
                               onRunAdvancedAnalysis={runAdvancedAnalysis}
                               onRunComparison={runComparison}
@@ -1273,7 +1388,10 @@ export default function Results() {
                             />
                           </TabsContent>
 
-                          <TabsContent value='forensic' className='mt-0 space-y-6'>
+                          <TabsContent
+                            value="forensic"
+                            className="mt-0 space-y-6"
+                          >
                             {metadata.metadata_comparison && (
                               <section>
                                 <MetadataComparisonDisplay
@@ -1295,20 +1413,22 @@ export default function Results() {
                             <section>
                               <SectionHeader
                                 icon={Hash}
-                                title='File Integrity Hashes'
-                                color='text-amber-500'
+                                title="File Integrity Hashes"
+                                color="text-amber-500"
                               />
-                              <div className='space-y-1'>
+                              <div className="space-y-1">
                                 <FieldRow
-                                  label='MD5'
+                                  label="MD5"
                                   value={metadata.file_integrity?.md5 || 'N/A'}
                                   locked={!isUnlocked}
                                   copyable
                                   index={0}
                                 />
                                 <FieldRow
-                                  label='SHA256'
-                                  value={metadata.file_integrity?.sha256 || 'N/A'}
+                                  label="SHA256"
+                                  value={
+                                    metadata.file_integrity?.sha256 || 'N/A'
+                                  }
                                   locked={!isUnlocked}
                                   copyable
                                   index={1}
@@ -1319,10 +1439,10 @@ export default function Results() {
                             <section>
                               <SectionHeader
                                 icon={ShieldCheck}
-                                title='Chain of Custody'
-                                color='text-emerald-500'
+                                title="Chain of Custody"
+                                color="text-emerald-500"
                               />
-                              <div className='space-y-1'>
+                              <div className="space-y-1">
                                 {filterFields(metadata.forensic || {}).map(
                                   ([key, val], i) => (
                                     <FieldRow
@@ -1340,10 +1460,10 @@ export default function Results() {
                             <section>
                               <SectionHeader
                                 icon={Folder}
-                                title='Filesystem Metadata'
-                                color='text-blue-400'
+                                title="Filesystem Metadata"
+                                color="text-blue-400"
                               />
-                              <div className='space-y-1'>
+                              <div className="space-y-1">
                                 {filterFields(metadata.filesystem || {}).map(
                                   ([key, val], i) => (
                                     <FieldRow
@@ -1358,14 +1478,17 @@ export default function Results() {
                             </section>
                           </TabsContent>
 
-                          <TabsContent value='technical' className='mt-0 space-y-6'>
+                          <TabsContent
+                            value="technical"
+                            className="mt-0 space-y-6"
+                          >
                             <section>
                               <SectionHeader
                                 icon={Camera}
-                                title='Camera Settings'
-                                color='text-purple-400'
+                                title="Camera Settings"
+                                color="text-purple-400"
                               />
-                              <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                 {filterFields(metadata.exif || {}).map(
                                   ([key, val], i) => (
                                     <FieldRow
@@ -1379,87 +1502,90 @@ export default function Results() {
                               </div>
                             </section>
 
-                            {Object.keys(metadata.interoperability || {}).length >
-                              0 && (
-                                <section>
-                                  <SectionHeader
-                                    icon={Tag}
-                                    title='Interoperability (IFD)'
-                                    color='text-cyan-400'
-                                    count={
-                                      Object.keys(metadata.interoperability || {})
-                                        .length
-                                    }
-                                  />
-                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                    {filterFields(
-                                      metadata.interoperability || {}
-                                    ).map(([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    ))}
-                                  </div>
-                                </section>
-                              )}
+                            {Object.keys(metadata.interoperability || {})
+                              .length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title="Interoperability (IFD)"
+                                  color="text-cyan-400"
+                                  count={
+                                    Object.keys(metadata.interoperability || {})
+                                      .length
+                                  }
+                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                  {filterFields(
+                                    metadata.interoperability || {}
+                                  ).map(([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  ))}
+                                </div>
+                              </section>
+                            )}
 
                             {(metadata.makernote?._count > 0 ||
-                              Object.keys(metadata.makernote || {}).length > 1) && (
-                                <section>
-                                  <SectionHeader
-                                    icon={Tag}
-                                    title='MakerNote (Vendor-Specific)'
-                                    color='text-orange-400'
-                                    count={
-                                      metadata.makernote?._count ||
-                                      Object.keys(metadata.makernote || {}).length
-                                    }
-                                  />
-                                  {!isSectionLocked(metadata.makernote) &&
-                                    isUnlocked ? (
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                      {filterFields(metadata.makernote || {})
-                                        .slice(0, 50)
-                                        .map(([key, val], i) => (
-                                          <FieldRow
-                                            key={key}
-                                            label={key}
-                                            value={val}
-                                            index={i}
-                                          />
-                                        ))}
-                                    </div>
-                                  ) : (
-                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                      <p className='text-xs text-slate-400 font-mono mb-2'>
-                                        {metadata.makernote?._count || 0}{' '}
-                                        VENDOR-SPECIFIC FIELDS LOCKED
-                                      </p>
-                                      <Button
-                                        variant='link'
-                                        onClick={() => setShowPayment(true)}
-                                        className='text-primary text-xs h-auto p-0'
-                                      >
-                                        UNLOCK_MAKERNOTES
-                                      </Button>
-                                    </div>
-                                  )}
-                                </section>
-                              )}
+                              Object.keys(metadata.makernote || {}).length >
+                                1) && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title="MakerNote (Vendor-Specific)"
+                                  color="text-orange-400"
+                                  count={
+                                    metadata.makernote?._count ||
+                                    Object.keys(metadata.makernote || {}).length
+                                  }
+                                />
+                                {!isSectionLocked(metadata.makernote) &&
+                                isUnlocked ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                    {filterFields(metadata.makernote || {})
+                                      .slice(0, 50)
+                                      .map(([key, val], i) => (
+                                        <FieldRow
+                                          key={key}
+                                          label={key}
+                                          value={val}
+                                          index={i}
+                                        />
+                                      ))}
+                                  </div>
+                                ) : (
+                                  <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
+                                    <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                      {metadata.makernote?._count || 0}{' '}
+                                      VENDOR-SPECIFIC FIELDS LOCKED
+                                    </p>
+                                    <Button
+                                      variant="link"
+                                      onClick={() => setShowPayment(true)}
+                                      className="text-primary text-xs h-auto p-0"
+                                    >
+                                      UNLOCK_MAKERNOTES
+                                    </Button>
+                                  </div>
+                                )}
+                              </section>
+                            )}
 
                             {Object.keys(metadata.iptc || {}).length > 0 && (
                               <section>
                                 <SectionHeader
                                   icon={Tag}
-                                  title='IPTC Metadata'
-                                  color='text-indigo-400'
-                                  count={Object.keys(metadata.iptc || {}).length}
+                                  title="IPTC Metadata"
+                                  color="text-indigo-400"
+                                  count={
+                                    Object.keys(metadata.iptc || {}).length
+                                  }
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(metadata.iptc || {}).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1479,11 +1605,11 @@ export default function Results() {
                               <section>
                                 <SectionHeader
                                   icon={Tag}
-                                  title='XMP Metadata'
-                                  color='text-pink-400'
+                                  title="XMP Metadata"
+                                  color="text-pink-400"
                                   count={Object.keys(metadata.xmp || {}).length}
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(metadata.xmp || {}).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1501,60 +1627,62 @@ export default function Results() {
 
                             {(metadata.xmp_namespaces?._locked ||
                               Object.keys(flatXmpNamespaces).length > 0) && (
-                                <section>
-                                  <SectionHeader
-                                    icon={Tag}
-                                    title='XMP Namespaces'
-                                    color='text-fuchsia-400'
-                                    count={
-                                      metadata.xmp_namespaces?._count ||
-                                      Object.keys(flatXmpNamespaces).length
-                                    }
-                                  />
-                                  {!isSectionLocked(metadata.xmp_namespaces) &&
-                                    isUnlocked ? (
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                      {filterFields(flatXmpNamespaces)
-                                        .slice(0, 80)
-                                        .map(([key, val], i) => (
-                                          <FieldRow
-                                            key={key}
-                                            label={key}
-                                            value={val}
-                                            index={i}
-                                          />
-                                        ))}
-                                    </div>
-                                  ) : (
-                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                      <p className='text-xs text-slate-400 font-mono mb-2'>
-                                        {metadata.xmp_namespaces?._count || 0}{' '}
-                                        NAMESPACE FIELDS LOCKED
-                                      </p>
-                                      <Button
-                                        variant='link'
-                                        onClick={() => setShowPayment(true)}
-                                        className='text-primary text-xs h-auto p-0'
-                                      >
-                                        UNLOCK_XMP_NAMESPACES
-                                      </Button>
-                                    </div>
-                                  )}
-                                </section>
-                              )}
-
-                            {Object.keys(metadata.icc_profile || {}).length > 0 && (
                               <section>
                                 <SectionHeader
                                   icon={Tag}
-                                  title='ICC Profile'
-                                  color='text-emerald-400'
+                                  title="XMP Namespaces"
+                                  color="text-fuchsia-400"
                                   count={
-                                    Object.keys(metadata.icc_profile || {}).length
+                                    metadata.xmp_namespaces?._count ||
+                                    Object.keys(flatXmpNamespaces).length
                                   }
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                {!isSectionLocked(metadata.xmp_namespaces) &&
+                                isUnlocked ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                    {filterFields(flatXmpNamespaces)
+                                      .slice(0, 80)
+                                      .map(([key, val], i) => (
+                                        <FieldRow
+                                          key={key}
+                                          label={key}
+                                          value={val}
+                                          index={i}
+                                        />
+                                      ))}
+                                  </div>
+                                ) : (
+                                  <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
+                                    <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                      {metadata.xmp_namespaces?._count || 0}{' '}
+                                      NAMESPACE FIELDS LOCKED
+                                    </p>
+                                    <Button
+                                      variant="link"
+                                      onClick={() => setShowPayment(true)}
+                                      className="text-primary text-xs h-auto p-0"
+                                    >
+                                      UNLOCK_XMP_NAMESPACES
+                                    </Button>
+                                  </div>
+                                )}
+                              </section>
+                            )}
+
+                            {Object.keys(metadata.icc_profile || {}).length >
+                              0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title="ICC Profile"
+                                  color="text-emerald-400"
+                                  count={
+                                    Object.keys(metadata.icc_profile || {})
+                                      .length
+                                  }
+                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(metadata.icc_profile || {}).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1569,200 +1697,204 @@ export default function Results() {
                               </section>
                             )}
 
-                            {Object.keys(metadata.thumbnail_metadata || {}).length >
-                              0 && (
-                                <section>
-                                  <SectionHeader
-                                    icon={Tag}
-                                    title='Thumbnail Metadata'
-                                    color='text-amber-400'
-                                    count={
-                                      Object.keys(metadata.thumbnail_metadata || {})
-                                        .length
-                                    }
-                                  />
-                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                    {filterFields(
+                            {Object.keys(metadata.thumbnail_metadata || {})
+                              .length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title="Thumbnail Metadata"
+                                  color="text-amber-400"
+                                  count={
+                                    Object.keys(
                                       metadata.thumbnail_metadata || {}
-                                    ).map(([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    ))}
-                                  </div>
-                                </section>
-                              )}
+                                    ).length
+                                  }
+                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                  {filterFields(
+                                    metadata.thumbnail_metadata || {}
+                                  ).map(([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  ))}
+                                </div>
+                              </section>
+                            )}
 
                             {(metadata.embedded_thumbnails?._locked ||
-                              Object.keys(flatEmbeddedThumbnails).length > 0) && (
-                                <section>
-                                  <SectionHeader
-                                    icon={ImageIcon}
-                                    title='Embedded Thumbnails'
-                                    color='text-yellow-400'
-                                    count={
-                                      metadata.embedded_thumbnails?._count ||
-                                      Object.keys(flatEmbeddedThumbnails).length
-                                    }
-                                  />
-                                  {!isSectionLocked(metadata.embedded_thumbnails) &&
-                                    isUnlocked ? (
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                      {filterFields(flatEmbeddedThumbnails).map(
-                                        ([key, val], i) => (
-                                          <FieldRow
-                                            key={key}
-                                            label={key}
-                                            value={val}
-                                            index={i}
-                                          />
-                                        )
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                      <p className='text-xs text-slate-400 font-mono mb-2'>
-                                        {metadata.embedded_thumbnails?._count || 0}{' '}
-                                        EMBEDDED THUMBNAILS LOCKED
-                                      </p>
-                                      <Button
-                                        variant='link'
-                                        onClick={() => setShowPayment(true)}
-                                        className='text-primary text-xs h-auto p-0'
-                                      >
-                                        UNLOCK_EMBEDDED_THUMBNAILS
-                                      </Button>
-                                    </div>
-                                  )}
-                                </section>
-                              )}
-
-                            {Object.keys(metadata.image_container || {}).length >
-                              0 && (
-                                <section>
-                                  <SectionHeader
-                                    icon={Tag}
-                                    title='Image Container'
-                                    color='text-blue-400'
-                                    count={
-                                      Object.keys(metadata.image_container || {})
-                                        .length
-                                    }
-                                  />
-                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                    {filterFields(
-                                      metadata.image_container || {}
-                                    ).map(([key, val], i) => (
-                                      <FieldRow
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        index={i}
-                                      />
-                                    ))}
+                              Object.keys(flatEmbeddedThumbnails).length >
+                                0) && (
+                              <section>
+                                <SectionHeader
+                                  icon={ImageIcon}
+                                  title="Embedded Thumbnails"
+                                  color="text-yellow-400"
+                                  count={
+                                    metadata.embedded_thumbnails?._count ||
+                                    Object.keys(flatEmbeddedThumbnails).length
+                                  }
+                                />
+                                {!isSectionLocked(
+                                  metadata.embedded_thumbnails
+                                ) && isUnlocked ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                    {filterFields(flatEmbeddedThumbnails).map(
+                                      ([key, val], i) => (
+                                        <FieldRow
+                                          key={key}
+                                          label={key}
+                                          value={val}
+                                          index={i}
+                                        />
+                                      )
+                                    )}
                                   </div>
-                                </section>
-                              )}
+                                ) : (
+                                  <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
+                                    <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                      {metadata.embedded_thumbnails?._count ||
+                                        0}{' '}
+                                      EMBEDDED THUMBNAILS LOCKED
+                                    </p>
+                                    <Button
+                                      variant="link"
+                                      onClick={() => setShowPayment(true)}
+                                      className="text-primary text-xs h-auto p-0"
+                                    >
+                                      UNLOCK_EMBEDDED_THUMBNAILS
+                                    </Button>
+                                  </div>
+                                )}
+                              </section>
+                            )}
+
+                            {Object.keys(metadata.image_container || {})
+                              .length > 0 && (
+                              <section>
+                                <SectionHeader
+                                  icon={Tag}
+                                  title="Image Container"
+                                  color="text-blue-400"
+                                  count={
+                                    Object.keys(metadata.image_container || {})
+                                      .length
+                                  }
+                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                  {filterFields(
+                                    metadata.image_container || {}
+                                  ).map(([key, val], i) => (
+                                    <FieldRow
+                                      key={key}
+                                      label={key}
+                                      value={val}
+                                      index={i}
+                                    />
+                                  ))}
+                                </div>
+                              </section>
+                            )}
 
                             {(metadata.scientific?._locked ||
                               Object.keys(flatScientific).length > 0) && (
-                                <section>
-                                  <SectionHeader
-                                    icon={Database}
-                                    title='Scientific Metadata'
-                                    color='text-sky-400'
-                                    count={
-                                      metadata.scientific?._count ||
-                                      Object.keys(flatScientific).length
-                                    }
-                                  />
-                                  {!isSectionLocked(metadata.scientific) ? (
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                      {filterFields(flatScientific).map(
-                                        ([key, val], i) => (
-                                          <FieldRow
-                                            key={key}
-                                            label={key}
-                                            value={val}
-                                            index={i}
-                                          />
-                                        )
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                      <p className='text-xs text-slate-400 font-mono mb-2'>
-                                        SCIENTIFIC_METADATA_LOCKED
-                                      </p>
-                                      <Button
-                                        variant='link'
-                                        onClick={() => setShowPayment(true)}
-                                        className='text-primary text-xs h-auto p-0'
-                                      >
-                                        UNLOCK_SCIENTIFIC_METADATA
-                                      </Button>
-                                    </div>
-                                  )}
-                                </section>
-                              )}
+                              <section>
+                                <SectionHeader
+                                  icon={Database}
+                                  title="Scientific Metadata"
+                                  color="text-sky-400"
+                                  count={
+                                    metadata.scientific?._count ||
+                                    Object.keys(flatScientific).length
+                                  }
+                                />
+                                {!isSectionLocked(metadata.scientific) ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                    {filterFields(flatScientific).map(
+                                      ([key, val], i) => (
+                                        <FieldRow
+                                          key={key}
+                                          label={key}
+                                          value={val}
+                                          index={i}
+                                        />
+                                      )
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
+                                    <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                      SCIENTIFIC_METADATA_LOCKED
+                                    </p>
+                                    <Button
+                                      variant="link"
+                                      onClick={() => setShowPayment(true)}
+                                      className="text-primary text-xs h-auto p-0"
+                                    >
+                                      UNLOCK_SCIENTIFIC_METADATA
+                                    </Button>
+                                  </div>
+                                )}
+                              </section>
+                            )}
 
                             {(metadata.scientific_data?._locked ||
                               Object.keys(flatScientificData).length > 0) && (
-                                <section>
-                                  <SectionHeader
-                                    icon={FileText}
-                                    title='Scientific Data (HDF5/NetCDF)'
-                                    color='text-emerald-400'
-                                    count={
-                                      metadata.scientific_data?._count ||
-                                      Object.keys(flatScientificData).length
-                                    }
-                                  />
-                                  {!isSectionLocked(metadata.scientific_data) ? (
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
-                                      {filterFields(flatScientificData).map(
-                                        ([key, val], i) => (
-                                          <FieldRow
-                                            key={key}
-                                            label={key}
-                                            value={val}
-                                            index={i}
-                                          />
-                                        )
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className='p-4 border border-dashed border-white/10 rounded bg-white/5 text-center'>
-                                      <Lock className='w-6 h-6 text-slate-600 mx-auto mb-2' />
-                                      <p className='text-xs text-slate-400 font-mono mb-2'>
-                                        SCIENTIFIC_DATA_LOCKED
-                                      </p>
-                                      <Button
-                                        variant='link'
-                                        onClick={() => setShowPayment(true)}
-                                        className='text-primary text-xs h-auto p-0'
-                                      >
-                                        UNLOCK_SCIENTIFIC_DATA
-                                      </Button>
-                                    </div>
-                                  )}
-                                </section>
-                              )}
+                              <section>
+                                <SectionHeader
+                                  icon={FileText}
+                                  title="Scientific Data (HDF5/NetCDF)"
+                                  color="text-emerald-400"
+                                  count={
+                                    metadata.scientific_data?._count ||
+                                    Object.keys(flatScientificData).length
+                                  }
+                                />
+                                {!isSectionLocked(metadata.scientific_data) ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                    {filterFields(flatScientificData).map(
+                                      ([key, val], i) => (
+                                        <FieldRow
+                                          key={key}
+                                          label={key}
+                                          value={val}
+                                          index={i}
+                                        />
+                                      )
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
+                                    <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                      SCIENTIFIC_DATA_LOCKED
+                                    </p>
+                                    <Button
+                                      variant="link"
+                                      onClick={() => setShowPayment(true)}
+                                      className="text-primary text-xs h-auto p-0"
+                                    >
+                                      UNLOCK_SCIENTIFIC_DATA
+                                    </Button>
+                                  </div>
+                                )}
+                              </section>
+                            )}
 
                             {Object.keys(flatTelemetry).length > 0 && (
                               <section>
                                 <SectionHeader
                                   icon={Zap}
-                                  title='Video Telemetry'
-                                  color='text-rose-400'
+                                  title="Video Telemetry"
+                                  color="text-rose-400"
                                   count={Object.keys(flatTelemetry).length}
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(flatTelemetry).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1781,11 +1913,11 @@ export default function Results() {
                               <section>
                                 <SectionHeader
                                   icon={Camera}
-                                  title='360° / Panorama'
-                                  color='text-teal-400'
+                                  title="360° / Panorama"
+                                  color="text-teal-400"
                                   count={Object.keys(flatCamera360).length}
                                 />
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                   {filterFields(flatCamera360).map(
                                     ([key, val], i) => (
                                       <FieldRow
@@ -1801,14 +1933,14 @@ export default function Results() {
                             )}
                           </TabsContent>
 
-                          <TabsContent value='raw' className='mt-0'>
+                          <TabsContent value="raw" className="mt-0">
                             {isUnlocked ? (
-                              <div className='font-mono text-xs text-slate-400'>
-                                <div className='mb-4 text-xs text-slate-500 uppercase tracking-widest'>
+                              <div className="font-mono text-xs text-slate-400">
+                                <div className="mb-4 text-xs text-slate-500 uppercase tracking-widest">
                                   Extended Fields:{' '}
                                   {Object.keys(metadata.extended || {}).length}
                                 </div>
-                                <div className='space-y-1'>
+                                <div className="space-y-1">
                                   {filterFields(metadata.extended || {})
                                     .slice(0, 200)
                                     .map(([key, val], i) => (
@@ -1819,24 +1951,24 @@ export default function Results() {
                                         index={i}
                                       />
                                     ))}
-                                  {filterFields(metadata.extended || {}).length >
-                                    200 && (
-                                      <div className='py-4 text-center text-slate-600 italic'>
-                                        ...{' '}
-                                        {Object.keys(metadata.extended || {}).length -
-                                          200}{' '}
-                                        more fields in JSON export ...
-                                      </div>
-                                    )}
+                                  {filterFields(metadata.extended || {})
+                                    .length > 200 && (
+                                    <div className="py-4 text-center text-slate-600 italic">
+                                      ...{' '}
+                                      {Object.keys(metadata.extended || {})
+                                        .length - 200}{' '}
+                                      more fields in JSON export ...
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ) : (
-                              <div className='flex flex-col items-center justify-center h-[400px] text-center'>
-                                <Database className='w-16 h-16 text-white/5 mb-4' />
-                                <h3 className='text-lg font-bold text-white font-mono mb-2'>
+                              <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                                <Database className="w-16 h-16 text-white/5 mb-4" />
+                                <h3 className="text-lg font-bold text-white font-mono mb-2">
                                   RAW_DATA_LOCKED
                                 </h3>
-                                <p className='text-slate-500 max-w-sm mb-6 text-sm'>
+                                <p className="text-slate-500 max-w-sm mb-6 text-sm">
                                   Access to{' '}
                                   {Object.keys(metadata.extended || {}).length}{' '}
                                   extended metadata fields including MakerNotes,
@@ -1845,8 +1977,8 @@ export default function Results() {
                                 </p>
                                 <Button
                                   onClick={() => setShowPayment(true)}
-                                  className='bg-primary text-black'
-                                  data-testid='button-purchase-raw'
+                                  className="bg-primary text-black"
+                                  data-testid="button-purchase-raw"
                                 >
                                   PURCHASE_LICENSE ($5.00)
                                 </Button>
@@ -1868,7 +2000,7 @@ export default function Results() {
             onSuccess={onPaymentSuccess}
           />
         </ErrorBoundary>
-      </Layout >
-    </UIAdaptationProvider >
+      </Layout>
+    </UIAdaptationProvider>
   );
 }

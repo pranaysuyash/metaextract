@@ -1,4 +1,3 @@
-
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -12,8 +11,16 @@ const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirPath = dirname(currentFilePath);
 
 // Python executable: prefer project venv, fall back to system python3
-const venvPython = path.join(currentDirPath, '..', '..', '.venv', 'bin', 'python3');
-export const pythonExecutable = process.env.PYTHON_EXECUTABLE || 
+const venvPython = path.join(
+  currentDirPath,
+  '..',
+  '..',
+  '.venv',
+  'bin',
+  'python3'
+);
+export const pythonExecutable =
+  process.env.PYTHON_EXECUTABLE ||
   (existsSync(venvPython) ? venvPython : 'python3');
 
 export const PYTHON_SCRIPT_PATH = path.join(
@@ -111,6 +118,53 @@ export interface PythonMetadataResponse {
   error?: string;
 }
 
+export interface PersonaInterpretation {
+  persona: string;
+  key_findings: string[];
+  plain_english_answers: {
+    when_taken: {
+      answer: string;
+      details: string;
+      source: string;
+      confidence: string;
+    };
+    location: {
+      has_location: boolean;
+      answer: string;
+      details: string;
+      confidence: string;
+      coordinates?: {
+        latitude: number;
+        longitude: number;
+        formatted: string;
+      };
+      readable_location?: string;
+      possible_reasons?: string[];
+    };
+    device: {
+      answer: string;
+      device_type: string;
+      details: {
+        make: string | null;
+        model: string | null;
+        software: string | null;
+      };
+      confidence: string;
+    };
+    authenticity: {
+      assessment: string;
+      confidence: string;
+      score: number;
+      answer: string;
+      checks_performed: Record<string, any>;
+      reasons: string[];
+    };
+  };
+  confidence_scores: Record<string, any>;
+  warnings: string[];
+  recommendations: string[];
+}
+
 export interface FrontendMetadataResponse {
   filename: string;
   filesize: string;
@@ -145,6 +199,7 @@ export interface FrontendMetadataResponse {
     forensic_score: number;
     authenticity_assessment: string;
   };
+  persona_interpretation?: PersonaInterpretation;
   [key: string]: any;
 }
 
@@ -152,7 +207,9 @@ export interface FrontendMetadataResponse {
 // Helper Functions
 // ============================================================================
 
-export function normalizeEmail(email: string | null | undefined): string | null {
+export function normalizeEmail(
+  email: string | null | undefined
+): string | null {
   if (!email || typeof email !== 'string') return null;
   const trimmed = email.trim().toLowerCase();
   return trimmed.length > 3 && trimmed.includes('@') ? trimmed : null;
@@ -184,7 +241,9 @@ export function transformMetadataForFrontend(
   };
   const fieldsAvailable = fieldsAvailableByTier[normalizedTier] ?? 45000;
 
-  const normalizeGps = (gps: Record<string, any> | null): Record<string, any> | null => {
+  const normalizeGps = (
+    gps: Record<string, any> | null
+  ): Record<string, any> | null => {
     if (!gps || typeof gps !== 'object') return null;
     const latRaw =
       gps.latitude ??
@@ -201,8 +260,10 @@ export function transformMetadataForFrontend(
       gps.gps_longitude ??
       gps.Longitude;
 
-    const lat = typeof latRaw === 'number' ? latRaw : parseFloat(String(latRaw));
-    const lon = typeof lonRaw === 'number' ? lonRaw : parseFloat(String(lonRaw));
+    const lat =
+      typeof latRaw === 'number' ? latRaw : parseFloat(String(latRaw));
+    const lon =
+      typeof lonRaw === 'number' ? lonRaw : parseFloat(String(lonRaw));
 
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return null;
@@ -218,10 +279,12 @@ export function transformMetadataForFrontend(
     };
   };
 
-  const flattenForensic = (forensic: Record<string, any> | null): Record<string, any> => {
+  const flattenForensic = (
+    forensic: Record<string, any> | null
+  ): Record<string, any> => {
     if (!forensic || typeof forensic !== 'object') return {};
     const flat: Record<string, any> = {};
-    
+
     // Flatten nested objects
     Object.entries(forensic).forEach(([key, value]) => {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -232,14 +295,16 @@ export function transformMetadataForFrontend(
         flat[key] = value;
       }
     });
-    
+
     return flat;
   };
 
-  const flattenObject = (obj: Record<string, any> | null): Record<string, any> => {
+  const flattenObject = (
+    obj: Record<string, any> | null
+  ): Record<string, any> => {
     if (!obj || typeof obj !== 'object') return {};
     const flat: Record<string, any> = {};
-    
+
     // Flatten nested objects
     Object.entries(obj).forEach(([key, value]) => {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -250,13 +315,14 @@ export function transformMetadataForFrontend(
         flat[key] = value;
       }
     });
-    
+
     return flat;
   };
 
   const cleanedGps = normalizeGps(raw.gps);
   const exifData = raw.exif && Object.keys(raw.exif).length > 0 ? raw.exif : {};
-  const iptcData = raw.iptc && Object.keys(raw.iptc).length > 0 ? raw.iptc : null;
+  const iptcData =
+    raw.iptc && Object.keys(raw.iptc).length > 0 ? raw.iptc : null;
   const xmpData = raw.xmp && Object.keys(raw.xmp).length > 0 ? raw.xmp : null;
   const mobileData =
     raw.mobile_metadata && Object.keys(raw.mobile_metadata).length > 0
@@ -265,7 +331,9 @@ export function transformMetadataForFrontend(
 
   const parseWhatsappFilenameDate = (name?: string) => {
     if (!name) return null;
-    const match = name.match(/WhatsApp Image (\d{4})-(\d{2})-(\d{2}) at (\d{2})\.(\d{2})\.(\d{2})/i);
+    const match = name.match(
+      /WhatsApp Image (\d{4})-(\d{2})-(\d{2}) at (\d{2})\.(\d{2})\.(\d{2})/i
+    );
     if (!match) return null;
     const [, year, month, day, hour, minute, second] = match;
     return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
@@ -276,8 +344,13 @@ export function transformMetadataForFrontend(
     (exifData as any)?.CreateDate ||
     null;
   const filenameDate = parseWhatsappFilenameDate(originalFilename);
-  const captureDate = captureDateExif || (filenameDate ? filenameDate.toISOString() : null);
-  const captureSource = captureDateExif ? 'exif' : filenameDate ? 'filename' : null;
+  const captureDate =
+    captureDateExif || (filenameDate ? filenameDate.toISOString() : null);
+  const captureSource = captureDateExif
+    ? 'exif'
+    : filenameDate
+      ? 'filename'
+      : null;
 
   const calculated = {
     ...flattenObject(raw.calculated),
@@ -315,7 +388,9 @@ export function transformMetadataForFrontend(
     processing_ms: raw.extraction_info?.processing_ms || 0,
     file_integrity: raw.hashes?._locked ? { _locked: true } : raw.hashes || {},
     filesystem: raw.filesystem || {},
-    filesystem_source: raw.filesystem ? (raw.filesystem as any).source || 'server_temp_upload' : null,
+    filesystem_source: raw.filesystem
+      ? (raw.filesystem as any).source || 'server_temp_upload'
+      : null,
     calculated,
     gps: cleanedGps,
     summary: { ...raw.summary, filename: originalFilename },
@@ -354,7 +429,7 @@ export function transformMetadataForFrontend(
     registry_summary: registrySummary,
     locked_fields: raw.locked_fields || [],
     extraction_info: raw.extraction_info || {},
-    
+
     // Specialized Modules
     medical_imaging: raw.medical_imaging ?? null,
     astronomical_data: raw.astronomical_data ?? null,
@@ -375,6 +450,9 @@ export function transformMetadataForFrontend(
     environmental_sustainability: raw.environmental_sustainability ?? null,
     social_media_digital: raw.social_media_digital ?? null,
     gaming_entertainment: raw.gaming_entertainment ?? null,
+
+    // Persona interpretation (if available from Python backend)
+    persona_interpretation: (raw as any).persona_interpretation ?? undefined,
   };
 }
 
@@ -417,7 +495,7 @@ export async function extractMetadataWithPython(
     let stdout = '';
     let stderr = '';
 
-    python.stdout.on('data', (data) => {
+    python.stdout.on('data', data => {
       const dataStr = data.toString();
       stdout += dataStr;
       // Log large outputs in chunks to avoid overwhelming the console
@@ -428,14 +506,14 @@ export async function extractMetadataWithPython(
       }
     });
 
-    python.stderr.on('data', (data) => {
+    python.stderr.on('data', data => {
       const dataStr = data.toString();
       stderr += dataStr;
       // Log errors immediately
       console.error(`Python stderr: ${dataStr}`);
     });
 
-    python.on('close', (code) => {
+    python.on('close', code => {
       console.log(`Python extraction process exited with code: ${code}`);
 
       if (code !== 0) {
@@ -457,7 +535,10 @@ export async function extractMetadataWithPython(
 
       if (!stdout) {
         const error = 'Python extractor returned empty output';
-        console.error(error, { stderr, command: `${pythonExecutable} ${args.join(' ')}` });
+        console.error(error, {
+          stderr,
+          command: `${pythonExecutable} ${args.join(' ')}`,
+        });
         reject(new Error(error));
         return;
       }
@@ -489,7 +570,7 @@ export async function extractMetadataWithPython(
       }
     });
 
-    python.on('error', (err) => {
+    python.on('error', err => {
       console.error('Failed to spawn Python extraction process:', err);
       reject(new Error(`Failed to start Python extractor: ${err.message}`));
     });

@@ -1,10 +1,20 @@
 /**
  * Cache Integration Examples
  *
- * Shows how to integrate the Redis caching layer into existing MetaExtract routes
+ * Shows how to integrate the Redis caching layer into existing MetaExtract routes.
+ * Each example demonstrates different caching patterns and strategies.
+ *
+ * ## Caching Strategy Guide
+ *
+ * - **Tier Config (24h)**: Rarely changes, high cost to compute
+ * - **Metadata (1h)**: User may request same file, moderate cost
+ * - **Analytics (10m)**: Users want near-real-time, high cost to compute
+ * - **Search (30m)**: Popular queries benefit from caching, high cost
+ * - **User Prefs (2h)**: Relatively static, frequent access pattern
+ * - **Health (1m)**: Lightweight but called frequently
  */
 
-import { Router, Request } from 'express';
+import { Router, Request, Response } from 'express';
 import {
   cacheMiddleware,
   cacheMetadata,
@@ -16,6 +26,64 @@ import {
   setCacheControl
 } from './cacheMiddleware';
 import { cacheManager } from './cache';
+import type { AuthRequest } from './auth';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const TTL = {
+  TIER_CONFIG: 24 * 60 * 60, // 24 hours - rarely changes
+  METADATA: 60 * 60, // 1 hour - good balance of freshness and reuse
+  ANALYTICS: 10 * 60, // 10 minutes - near real-time with caching benefit
+  SEARCH: 30 * 60, // 30 minutes - popular queries benefit from cache
+  USER_PREFERENCES: 2 * 60 * 60, // 2 hours - relatively static user data
+  HEALTH_CHECK: 60, // 1 minute - lightweight, frequent checks
+};
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Safely extract user ID from request with proper typing
+ * @throws Error if user is not authenticated
+ */
+function extractUserId(req: Request): string {
+  const user = (req as AuthRequest).user;
+  if (!user?.id) {
+    throw new Error('User not authenticated');
+  }
+  return user.id;
+}
+
+/**
+ * Safely extract user tier from request with fallback
+ */
+function getUserTier(req: Request): string {
+  return (req as AuthRequest).user?.tier || 'anonymous';
+}
+
+/**
+ * Parse URL and extract query parameters safely
+ */
+function parseQueryUrl(req: Request): URL {
+  return new URL(req.url, `http://${req.headers.host}`);
+}
+
+/**
+ * Check if request explicitly bypasses cache via headers
+ */
+function shouldBypassCache(req: Request): boolean {
+  return req.headers['cache-control'] === 'no-cache';
+}
+
+/**
+ * Check if URL has real-time or live parameters
+ */
+function isRealTimeRequest(url: URL): boolean {
+  return url.searchParams.has('realtime') || url.searchParams.has('live');
+}
 
 // ============================================================================
 // Example 1: Basic Route Caching
@@ -52,37 +120,40 @@ export function setupCachedRoutes(router: Router): void {
 // Example 2: Metadata Caching with Custom Keys
 // ============================================================================
 
+/**
+ * Setup metadata caching with tier-aware cache keys
+ * Ensures users with different tiers don't share cached metadata
+ * (e.g., forensic tier may see more fields than free tier)
+ */
 export function setupMetadataCaching(router: Router): void {
   // GET /api/metadata/:fileId - Cache specific file metadata
-  router.get('/metadata/:fileId',
+  router.get(
+    '/metadata/:fileId',
     cacheMetadata({
       keyGenerator: (req: Request) => {
         const fileId = req.params.fileId;
-        const tier = (req as any).user?.tier || 'anonymous';
+        const tier = getUserTier(req);
         return cacheKeys.metadata(fileId, tier);
       },
-      ttl: 3600, // 1 hour
+      ttl: TTL.METADATA,
       tags: ['metadata']
     }),
     async (req, res) => {
       const fileId = req.params.fileId;
-
       // Expensive metadata extraction or database query
       const metadata = await fetchMetadataForFile(fileId);
-
       res.json(metadata);
     }
   );
 
   // POST /api/metadata/:fileId - Invalidate cache on updates
-  router.post('/metadata/:fileId',
+  router.post(
+    '/metadata/:fileId',
     invalidateMetadataCache(),
     async (req, res) => {
       const fileId = req.params.fileId;
-
       // Update metadata
       await updateFileMetadata(fileId, req.body);
-
       res.json({
         success: true,
         message: 'Metadata updated'

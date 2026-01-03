@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { KeyFindings } from '@/components/v2-results/KeyFindings';
 import { Button } from '@/components/ui/button';
@@ -32,35 +32,93 @@ interface MetadataResponse {
 export default function ResultsV2() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const resultId = searchParams.get('id');
   const { toast } = useToast();
   const [metadata, setMetadata] = useState<MetadataResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load metadata from navigation state - handle both array and single object
+    // Priority 1: Load from navigation state (handles large payloads, fresh upload)
     let metadataData = null;
 
     if (location.state?.metadata) {
-      console.log('[ResultsV2] Loaded metadata from navigation state:', location.state.metadata);
+      console.log('[ResultsV2] Loaded metadata from navigation state');
       metadataData = location.state.metadata;
     } else if (location.state?.results) {
-      console.log('[ResultsV2] Loaded results from navigation state:', location.state.results);
+      console.log('[ResultsV2] Loaded results from navigation state');
       metadataData = location.state.results;
+    } else {
+      // Priority 2: Try sessionStorage (V2 button uses this)
+      const stored = sessionStorage.getItem('currentMetadata');
+      if (stored) {
+        try {
+          metadataData = JSON.parse(stored);
+          console.log('[ResultsV2] Loaded from sessionStorage');
+          toast({
+            title: 'Using last result',
+            description: 'Loaded from memory.',
+          });
+        } catch (e) {
+          console.error('[ResultsV2] Failed to parse sessionStorage', e);
+        }
+      }
     }
 
     // Handle if data is an array
     if (Array.isArray(metadataData)) {
-      console.log('[ResultsV2] Data is array, taking first element:', metadataData[0]);
+      console.log('[ResultsV2] Data is array, taking first element');
       setMetadata(metadataData[0]);
+      setIsLoading(false);
     } else if (metadataData) {
-      console.log('[ResultsV2] Data is object:', metadataData);
+      console.log('[ResultsV2] Data is object');
       setMetadata(metadataData);
+      setIsLoading(false);
     } else {
-      console.error('[ResultsV2] No metadata found in navigation state');
+      console.warn('[ResultsV2] No metadata in navigation or sessionStorage');
+      setIsLoading(false);
     }
+  }, [location.state, toast]);
 
-    setIsLoading(false);
-  }, [location.state]);
+  // Priority 3: Fetch from DB if ID param exists and no data loaded yet
+  useEffect(() => {
+    if (resultId && !metadata) {
+      console.log(
+        `[ResultsV2] ID found in URL: ${resultId}. Fetching from DB...`
+      );
+      setIsLoading(true);
+
+      fetch(`/api/extract/results/${resultId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Result not found');
+          return res.json();
+        })
+        .then(data => {
+          console.log('[ResultsV2] Loaded metadata from DB');
+          setMetadata(data);
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error('[ResultsV2] Failed to fetch by ID:', err);
+          toast({
+            title: 'Error loading result',
+            description: 'Could not load saved analysis.',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          // Redirect to home after showing error
+          setTimeout(() => navigate('/'), 1500);
+        });
+    } else if (!metadata && !isLoading) {
+      // No data available from any source
+      toast({
+        title: 'No metadata found',
+        description: 'Please upload a file first.',
+        variant: 'destructive',
+      });
+      setTimeout(() => navigate('/'), 900);
+    }
+  }, [resultId, metadata, isLoading, navigate, toast]);
 
   const handleDownload = () => {
     if (!metadata) return;
@@ -78,22 +136,22 @@ export default function ResultsV2() {
 
     toast({
       title: 'Download started',
-      description: 'Your metadata file is being downloaded'
+      description: 'Your metadata file is being downloaded',
     });
   };
 
   if (isLoading) {
     return (
-      <div className='relative min-h-screen overflow-hidden'>
-        <div className='absolute inset-0 z-0'>
-          <div className='absolute inset-0 bg-background/90 z-10'></div>
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-background/90 z-10"></div>
           <img
             src={generatedBackground}
-            alt='Background'
-            className='w-full h-full object-cover opacity-10 mix-blend-screen scale-110'
+            alt="Background"
+            className="w-full h-full object-cover opacity-10 mix-blend-screen scale-110"
           />
         </div>
-        <div className='relative z-10 flex items-center justify-center min-h-screen'>
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-white font-mono">Loading your results...</p>
@@ -105,19 +163,25 @@ export default function ResultsV2() {
 
   if (!metadata) {
     return (
-      <div className='relative min-h-screen overflow-hidden'>
-        <div className='absolute inset-0 z-0'>
-          <div className='absolute inset-0 bg-background/90 z-10'></div>
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-background/90 z-10"></div>
           <img
             src={generatedBackground}
-            alt='Background'
-            className='w-full h-full object-cover opacity-10 mix-blend-screen scale-110'
+            alt="Background"
+            className="w-full h-full object-cover opacity-10 mix-blend-screen scale-110"
           />
         </div>
-        <div className='relative z-10 flex items-center justify-center min-h-screen'>
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-white mb-4 font-mono">No Results Found</h2>
-            <Button onClick={() => navigate('/')} variant="default" className="gap-2">
+            <h2 className="text-2xl font-bold text-white mb-4 font-mono">
+              No Results Found
+            </h2>
+            <Button
+              onClick={() => navigate('/')}
+              variant="default"
+              className="gap-2"
+            >
               <ArrowLeft className="w-4 h-4" />
               Go Home
             </Button>
@@ -128,21 +192,21 @@ export default function ResultsV2() {
   }
 
   return (
-    <div className='relative min-h-[calc(100vh-64px)] overflow-hidden'>
+    <div className="relative min-h-[calc(100vh-64px)] overflow-hidden">
       {/* Background */}
-      <div className='absolute inset-0 z-0 pointer-events-none'>
-        <div className='absolute inset-0 bg-background/90 z-10'></div>
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-background/90 z-10"></div>
         <img
           src={generatedBackground}
-          alt='Background'
-          className='w-full h-full object-cover opacity-10 mix-blend-screen scale-110'
+          alt="Background"
+          className="w-full h-full object-cover opacity-10 mix-blend-screen scale-110"
         />
       </div>
 
       {/* Header */}
-      <div className='relative z-10 border-b border-white/10'>
-        <div className='container mx-auto px-4 py-4'>
-          <div className='flex items-center justify-between'>
+      <div className="relative z-10 border-b border-white/10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => navigate('/')}
@@ -152,7 +216,7 @@ export default function ResultsV2() {
               Back to Home
             </Button>
 
-            <div className='flex gap-3'>
+            <div className="flex gap-3">
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono">
                 <Cpu className="w-4 h-4" />
                 V2 RESULTS
@@ -180,24 +244,25 @@ export default function ResultsV2() {
       </div>
 
       {/* Main Content */}
-      <div className='container mx-auto px-4 py-8 relative z-10'>
+      <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="max-w-7xl mx-auto space-y-8">
-
           {/* File Header - Matching your forensic theme */}
           <div className="flex items-center justify-between pb-6 border-b border-white/10">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center">
-                <Cpu className='w-6 h-6 text-primary' />
+                <Cpu className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className='text-xl font-bold text-white font-mono tracking-tight'>
+                <h1 className="text-xl font-bold text-white font-mono tracking-tight">
                   {metadata.filename}
                 </h1>
-                <div className='flex gap-4 text-xs text-slate-500 font-mono mt-1'>
+                <div className="flex gap-4 text-xs text-slate-500 font-mono mt-1">
                   <span>SIZE: {metadata.filesize}</span>
                   <span>TYPE: {metadata.filetype}</span>
                   <span className="text-primary">
-                    SHA256: {metadata.file_integrity?.sha256?.substring(0, 12) || 'N/A'}...
+                    SHA256:{' '}
+                    {metadata.file_integrity?.sha256?.substring(0, 12) || 'N/A'}
+                    ...
                   </span>
                 </div>
               </div>
@@ -213,14 +278,14 @@ export default function ResultsV2() {
           <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-8 shadow-lg">
             <div className="text-center">
               <p className="text-slate-400 font-mono text-sm">
-                [ Additional V2 features coming soon: Quick Details, Location Map, Camera Info, etc. ]
+                [ Additional V2 features coming soon: Quick Details, Location
+                Map, Camera Info, etc. ]
               </p>
               <div className="mt-4 text-xs text-slate-600 font-mono">
                 Current view: V2 Key Findings • Toggle to V1 for comparison
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
