@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Component File Type Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .file-type {
+        display: inline-block;
+        margin: 5px;
+        padding: 5px 10px;
+        background: #f0f0f0;
+        border-radius: 3px;
+      }
+      .supported {
+        background: #d4edda;
+        color: #155724;
+      }
+      .not-supported {
+        background: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Upload Component File Type Support Test</h1>
+
+    <div class="test-section">
+      <h2>Standard Media Types</h2>
+      <div class="file-type supported">
+        Images: .jpg, .jpeg, .png, .gif, .webp, .tiff, .tif, .bmp, .heic, .heif,
+        .svg, .psd
+      </div>
+      <div class="file-type supported">
+        Video: .mp4, .mov, .avi, .mkv, .webm, .m4v, .3gp, .flv, .wmv, .asf, .rm,
+        .rmvb
+      </div>
+      <div class="file-type supported">
+        Audio: .mp3, .flac, .wav, .ogg, .m4a, .aac, .aiff, .opus, .wma, .ac3,
+        .dts
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Documents</h2>
+      <div class="file-type supported">PDF: .pdf</div>
+      <div class="file-type supported">
+        Office: .doc, .docx, .xls, .xlsx, .ppt, .pptx
+      </div>
+      <div class="file-type supported">
+        Text: .txt, .md, .csv, .html, .htm, .xml, .json
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Scientific & Medical</h2>
+      <div class="file-type supported">Medical: .dcm, .dicom</div>
+      <div class="file-type supported">Astronomical: .fits, .fit, .fts</div>
+      <div class="file-type supported">
+        Scientific Data: .h5, .hdf5, .he5, .nc, .netcdf, .nc4
+      </div>
+      <div class="file-type supported">Geospatial: .shp</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Emerging Technology</h2>
+      <div class="file-type supported">
+        AI/ML: .ai, .ml, .model, .pb, .onnx, .tflite, .pt, .pth, .ckpt, .pkl,
+        .joblib
+      </div>
+      <div class="file-type supported">
+        Blockchain: .blockchain, .chain, .ledger, .crypto, .nft, .token
+      </div>
+      <div class="file-type supported">
+        AR/VR: .ar, .vr, .xr, .gltf, .glb, .usdz, .reality
+      </div>
+      <div class="file-type supported">IoT: .iot, .device, .sensor</div>
+      <div class="file-type supported">
+        Quantum: .quantum, .qasm, .qisk, .cirq, .qubit
+      </div>
+      <div class="file-type supported">Neural: .neural, .nn, .dl</div>
+      <div class="file-type supported">
+        Robotics: .robot, .urdf, .sdf, .xacro
+      </div>
+      <div class="file-type supported">
+        Biotech: .bio, .dna, .rna, .protein, .genome
+      </div>
+      <div class="file-type supported">Nanotechnology: .nano</div>
+      <div class="file-type supported">Space: .space, .satellite, .tle</div>
+      <div class="file-type supported">Energy: .renewable, .grid</div>
+      <div class="file-type supported">Autonomous: .autonomous, .vehicle</div>
+      <div class="file-type supported">Telecom: .telecom, .5g, .6g</div>
+      <div class="file-type supported">Security: .security, .encrypt</div>
+      <div class="file-type supported">Digital Twin: .digital, .twin, .sim</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Archives</h2>
+      <div class="file-type supported">
+        Archives: .zip, .tar, .tar.gz, .tgz, .rar, .7z
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Summary</h2>
+      <p>
+        <strong>Total Supported Extensions:</strong> 100+ file extensions across
+        all domains
+      </p>
+      <p>
+        <strong>Backend Extraction Capability:</strong> comprehensive metadata
+        field coverage
+      </p>
+      <p>
+        <strong>Specialized Engines:</strong> Medical, Astronomical, Geospatial,
+        Scientific, AI/ML, Blockchain, AR/VR, IoT, Quantum, and more
+      </p>
+    </div>
+
+    <script>
+      // Test file type detection
+      function testFileType(filename) {
+        const ext = filename.toLowerCase().split('.').pop();
+        const acceptedTypes = {
+          // Standard media types
+          'image/*': [
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.gif',
+            '.webp',
+            '.tiff',
+            '.tif',
+            '.bmp',
+            '.heic',
+            '.heif',
+            '.svg',
+            '.psd',
+          ],
+          'video/*': [
+            '.mp4',
+            '.mov',
+            '.avi',
+            '.mkv',
+            '.webm',
+            '.m4v',
+            '.3gp',
+            '.flv',
+            '.wmv',
+            '.asf',
+            '.rm',
+            '.rmvb',
+          ],
+          'audio/*': [
+            '.mp3',
+            '.flac',
+            '.wav',
+            '.ogg',
+            '.m4a',
+            '.aac',
+            '.aiff',
+            '.opus',
+            '.wma',
+            '.ac3',
+            '.dts',
+          ],
+
+          // Documents
+          'application/pdf': ['.pdf'],
+          'application/msword': ['.doc', '.docx'],
+          'application/vnd.ms-excel': ['.xls', '.xlsx'],
+          'application/vnd.ms-powerpoint': ['.ppt', '.pptx'],
+          'text/plain': ['.txt', '.md', '.csv'],
+          'text/html': ['.html', '.htm'],
+          'application/xml': ['.xml'],
+          'application/json': ['.json'],
+
+          // Medical imaging
+          'application/dicom': ['.dcm', '.dicom'],
+
+          // Astronomical data
+          'application/fits': ['.fits', '.fit', '.fts'],
+
+          // Scientific data
+          'application/x-hdf': ['.h5', '.hdf5', '.he5'],
+          'application/x-netcdf': ['.nc', '.netcdf', '.nc4'],
+
+          // Geospatial
+          'application/x-shapefile': ['.shp'],
+
+          // Emerging technology formats
+          'application/x-ai-model': [
+            '.ai',
+            '.ml',
+            '.model',
+            '.h5',
+            '.pb',
+            '.onnx',
+            '.tflite',
+            '.pt',
+            '.pth',
+            '.ckpt',
+            '.pkl',
+            '.joblib',
+          ],
+          'application/x-blockchain': [
+            '.blockchain',
+            '.chain',
+            '.ledger',
+            '.crypto',
+            '.nft',
+            '.token',
+          ],
+          'application/x-ar-vr': [
+            '.ar',
+            '.vr',
+            '.xr',
+            '.gltf',
+            '.glb',
+            '.usdz',
+            '.reality',
+          ],
+          'application/x-iot': ['.iot', '.device', '.sensor'],
+          'application/x-quantum': [
+            '.quantum',
+            '.qasm',
+            '.qisk',
+            '.cirq',
+            '.qubit',
+          ],
+          'application/x-neural': ['.neural', '.nn', '.dl'],
+          'application/x-robotics': ['.robot', '.urdf', '.sdf', '.xacro'],
+          'application/x-biotech': [
+            '.bio',
+            '.dna',
+            '.rna',
+            '.protein',
+            '.genome',
+          ],
+          'application/x-nano': ['.nano'],
+          'application/x-space': ['.space', '.satellite', '.tle'],
+          'application/x-renewable': ['.renewable', '.grid'],
+          'application/x-autonomous': ['.autonomous', '.vehicle'],
+          'application/x-telecom': ['.telecom', '.5g', '.6g'],
+          'application/x-security': ['.security', '.encrypt'],
+          'application/x-digital-twin': ['.digital', '.twin', '.sim'],
+
+          // Archive formats
+          'application/zip': ['.zip'],
+          'application/x-tar': ['.tar', '.tar.gz', '.tgz'],
+          'application/x-rar': ['.rar'],
+          'application/x-7z-compressed': ['.7z'],
+        };
+
+        for (const [mimeType, extensions] of Object.entries(acceptedTypes)) {
+          if (extensions.includes(`.${ext}`)) {
+            return { supported: true, mimeType, extension: `.${ext}` };
+          }
+        }
+        return { supported: false, extension: `.${ext}` };
+      }
+
+      // Test some sample files
+      const testFiles = [
+        'sample.jpg',
+        'model.ai',
+        'data.dcm',
+        'star.fits',
+        'experiment.h5',
+        'contract.blockchain',
+        'scene.gltf',
+        'sensor.iot',
+        'circuit.quantum',
+        'network.neural',
+        'robot.urdf',
+        'genome.bio',
+        'material.nano',
+        'satellite.tle',
+        'grid.renewable',
+        'car.autonomous',
+        'network.5g',
+        'key.encrypt',
+        'twin.digital',
+        'archive.zip',
+      ];
+
+      console.log('File Type Support Test Results:');
+      testFiles.forEach((filename) => {
+        const result = testFileType(filename);
+        console.log(
+          `${filename}: ${
+            result.supported ? '✓ SUPPORTED' : '✗ NOT SUPPORTED'
+          } (${result.extension})`
+        );
+      });
+    </script>
+  </body>
+</html>

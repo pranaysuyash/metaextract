@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PublicLayout as Layout } from '@/components/public-layout';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, ArrowRight, Coins } from 'lucide-react';
+import { trackImagesMvpEvent } from '@/lib/images-mvp-analytics';
 
 interface CreditPack {
   id: string;
@@ -14,6 +15,7 @@ export default function ImagesMvpCreditsSuccess() {
   const navigate = useNavigate();
   const [pack, setPack] = useState<string | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
+  const purchaseLogged = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -41,6 +43,15 @@ export default function ImagesMvpCreditsSuccess() {
       loadPacks();
     }
   }, []);
+
+  useEffect(() => {
+    if (!pack || purchaseLogged.current) return;
+    trackImagesMvpEvent('purchase_completed', {
+      pack,
+      credits,
+    });
+    purchaseLogged.current = true;
+  }, [pack, credits]);
 
   return (
     <Layout showHeader={true} showFooter={true}>

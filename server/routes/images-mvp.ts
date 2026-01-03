@@ -185,6 +185,18 @@ export function registerImagesMvpRoutes(app: Express) {
         const formatHintCounts: Record<string, number> = {};
         const resultsMimeCounts: Record<string, number> = {};
 
+        let landingViewed = 0;
+        let uploadSelected = 0;
+        let uploadRejected = 0;
+        let analysisStarted = 0;
+        let analysisCompleted = 0;
+        let analysisSuccess = 0;
+        let analysisFailed = 0;
+        let analysisProcessingMsTotal = 0;
+        let analysisProcessingCount = 0;
+        let paywallViewed = 0;
+        let purchaseCompleted = 0;
+
         let paywallPreviewed = 0;
         let paywallClicked = 0;
         let summaryCopied = 0;
@@ -224,6 +236,39 @@ export function registerImagesMvpRoutes(app: Express) {
             : {};
 
           switch (event.eventName) {
+            case 'images_landing_viewed':
+              landingViewed += 1;
+              break;
+            case 'upload_selected':
+              uploadSelected += 1;
+              break;
+            case 'upload_rejected':
+              uploadRejected += 1;
+              break;
+            case 'analysis_started':
+              analysisStarted += 1;
+              break;
+            case 'analysis_completed': {
+              analysisCompleted += 1;
+              const success =
+                typeof properties.success === 'boolean'
+                  ? properties.success
+                  : null;
+              if (success === true) {
+                analysisSuccess += 1;
+              } else if (success === false) {
+                analysisFailed += 1;
+              }
+              const processingMs =
+                typeof properties.processing_ms === 'number'
+                  ? properties.processing_ms
+                  : null;
+              if (processingMs !== null) {
+                analysisProcessingMsTotal += processingMs;
+                analysisProcessingCount += 1;
+              }
+              break;
+            }
             case 'purpose_selected': {
               const purpose =
                 typeof properties.purpose === 'string'
@@ -271,11 +316,17 @@ export function registerImagesMvpRoutes(app: Express) {
               increment(resultsMimeCounts, mimeType);
               break;
             }
+            case 'paywall_viewed':
+              paywallViewed += 1;
+              break;
             case 'paywall_preview_shown':
               paywallPreviewed += 1;
               break;
             case 'paywall_cta_clicked':
               paywallClicked += 1;
+              break;
+            case 'purchase_completed':
+              purchaseCompleted += 1;
               break;
             case 'summary_copied':
               summaryCopied += 1;
@@ -305,6 +356,22 @@ export function registerImagesMvpRoutes(app: Express) {
             firstEventAt: firstEventAt ? firstEventAt.toISOString() : null,
             lastEventAt: lastEventAt ? lastEventAt.toISOString() : null,
           },
+          funnel: {
+            landing_viewed: landingViewed,
+            upload_selected: uploadSelected,
+            upload_rejected: uploadRejected,
+            analysis_started: analysisStarted,
+            analysis_completed: analysisCompleted,
+            analysis_success: analysisSuccess,
+            analysis_failed: analysisFailed,
+            results_viewed: eventCounts.results_viewed || 0,
+            paywall_viewed: paywallViewed,
+            paywall_previewed: paywallPreviewed,
+            paywall_clicked: paywallClicked,
+            purchase_completed: purchaseCompleted,
+            export_summary_downloaded: summaryDownloaded,
+            export_json_downloaded: jsonDownloaded,
+          },
           events: eventCounts,
           purposes: {
             selected: purposeCounts,
@@ -322,6 +389,15 @@ export function registerImagesMvpRoutes(app: Express) {
             json: jsonDownloaded,
             summary: summaryDownloaded,
             summary_copied: summaryCopied,
+          },
+          analysis: {
+            completed: analysisCompleted,
+            success: analysisSuccess,
+            failed: analysisFailed,
+            average_processing_ms:
+              analysisProcessingCount > 0
+                ? Math.round(analysisProcessingMsTotal / analysisProcessingCount)
+                : null,
           },
           paywall: {
             previewed: paywallPreviewed,

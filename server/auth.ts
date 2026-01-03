@@ -119,14 +119,14 @@ function generateToken(user: AuthUser): string {
       username: user.username,
       tier: user.tier,
     },
-    JWT_SECRET,
+    JWT_SECRET!,
     { expiresIn: JWT_EXPIRES_IN }
   );
 }
 
 function verifyToken(token: string): AuthUser | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    const decoded = jwt.verify(token, JWT_SECRET!) as AuthUser;
     return decoded;
   } catch {
     return null;

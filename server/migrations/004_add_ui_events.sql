@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS ui_events (
   product TEXT NOT NULL DEFAULT 'core',
   event_name TEXT NOT NULL,
   session_id TEXT,
-  user_id VARCHAR REFERENCES users(id),
+  user_id VARCHAR,
   properties JSONB NOT NULL DEFAULT '{}'::jsonb,
   ip_address TEXT,
   user_agent TEXT,

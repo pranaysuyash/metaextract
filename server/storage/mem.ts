@@ -472,13 +472,15 @@ export class MemStorage implements IStorage {
     return this.trialUsagesMap.get(normalizedEmail);
   }
 
-  // Metadata Persistence
   async saveMetadata(data: InsertMetadataResult): Promise<MetadataResult> {
     const id = randomUUID();
     const result: MetadataResult = {
       ...data,
       id,
       createdAt: new Date(),
+      userId: data.userId || null, // Normalize undefined to null
+      mimeType: data.mimeType || null, // Normalize undefined to null
+      fileSize: data.fileSize || null, // Normalize undefined to null
     };
     this.metadataMap.set(id, result);
     return result;

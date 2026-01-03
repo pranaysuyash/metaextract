@@ -815,19 +815,22 @@ class EnhancedMasterExtension(ImageExtensionBase):
             brightness = float(np.mean(img_array))
             contrast = float(np.std(img_array))
 
-            # Detect dominant colors
+            # Detect dominant colors (with safety check for empty arrays)
             pixels = img_array.reshape(-1, 3)
-            unique_colors, counts = np.unique(pixels, axis=0, return_counts=True)
-            top_color_indices = np.argsort(counts)[-5:][::-1]
-            dominant_colors = []
+            if pixels.size > 0:
+                unique_colors, counts = np.unique(pixels, axis=0, return_counts=True)
+                top_color_indices = np.argsort(counts)[-5:][::-1]
+                dominant_colors = []
 
-            for idx in top_color_indices:
-                color = unique_colors[idx]
-                dominant_colors.append({
-                    "rgb": [int(color[0]), int(color[1]), int(color[2])],
-                    "hex": f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}",
-                    "percentage": round(float(counts[idx]) / len(pixels) * 100, 2)
-                })
+                for idx in top_color_indices:
+                    color = unique_colors[idx]
+                    dominant_colors.append({
+                        "rgb": [int(color[0]), int(color[1]), int(color[2])],
+                        "hex": f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}",
+                        "percentage": round(float(counts[idx]) / len(pixels) * 100, 2)
+                    })
+            else:
+                dominant_colors = []
 
             # Scene classification based on characteristics
             scene_type = "unknown"

@@ -5,20 +5,20 @@
     "successful_extractions": 3,
     "failed_extractions": 0,
     "success_rate": 100.0,
-    "average_extraction_time": 0.0031619866689046225,
+    "average_extraction_time": 0.0032989978790283203,
     "total_fields_extracted": 196
   },
   "performance_metrics": {
     "success_rate": 100.0,
-    "fastest_extraction": 0.0022101402282714844,
-    "slowest_extraction": 0.004724979400634766,
-    "median_extraction_time": 0.002550840377807617
+    "fastest_extraction": 0.002621889114379883,
+    "slowest_extraction": 0.004477024078369141,
+    "median_extraction_time": 0.0027980804443359375
   },
   "results": [
     {
       "dataset_name": "type",
       "success": true,
-      "extraction_time": 0.004724979400634766,
+      "extraction_time": 0.004477024078369141,
       "fields_extracted": 65,
       "error_message": null,
       "validation_details": {
@@ -30,7 +30,7 @@
     {
       "dataset_name": "type",
       "success": true,
-      "extraction_time": 0.0022101402282714844,
+      "extraction_time": 0.002621889114379883,
       "fields_extracted": 73,
       "error_message": null,
       "validation_details": {
@@ -42,7 +42,7 @@
     {
       "dataset_name": "type",
       "success": true,
-      "extraction_time": 0.002550840377807617,
+      "extraction_time": 0.0027980804443359375,
       "fields_extracted": 58,
       "error_message": null,
       "validation_details": {

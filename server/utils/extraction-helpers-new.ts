@@ -17,7 +17,7 @@ const projectRoot = process.cwd();
 const currentDirPath = path.join(projectRoot, 'server', 'utils');
 
 // Import the new refactored engine
-import { extract_comprehensive_metadata_new } from '../extractor/core/comprehensive_engine';
+// import { extract_comprehensive_metadata_new } from '../extractor/core/comprehensive_engine';
 
 // Re-export original helper functions for compatibility
 export {
@@ -116,7 +116,9 @@ export async function extractMetadataWithPythonNew(
     const startTime = Date.now();
     
     // Use the new refactored engine
-    const result = await extract_comprehensive_metadata_new(filePath, tier);
+    // const result = await extract_comprehensive_metadata_new(filePath, tier);
+    // TODO: Implement proper Python interop for the new engine
+    const result = { error: 'New engine not yet implemented in TypeScript' };
     
     const processingTime = Date.now() - startTime;
     

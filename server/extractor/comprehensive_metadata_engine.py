@@ -60,7 +60,6 @@ except ImportError:
     logger.warning("Module discovery system not available, falling back to manual imports")
 
 import os
-import sys
 import json
 import asyncio
 import subprocess
@@ -1531,7 +1530,18 @@ class AstronomicalDataEngine:
         
         # Use optimized FITS extractor for maximum performance consistency
         try:
-            from modules.fits_extractor import FITSExtractor
+            # Try importing the FITS extractor with multiple paths
+            try:
+                from modules.fits_extractor import FITSExtractor
+            except (ImportError, ModuleNotFoundError):
+                # If relative import fails, try absolute import
+                import sys
+                from pathlib import Path
+                module_path = Path(__file__).parent / 'modules'
+                if str(module_path) not in sys.path:
+                    sys.path.insert(0, str(module_path))
+                from fits_extractor import FITSExtractor
+            
             extractor = FITSExtractor()
             raw_result = extractor.extract(filepath)
             
@@ -1560,6 +1570,7 @@ class AstronomicalDataEngine:
                     "error": raw_result.get('error', 'Extraction failed')
                 }
         except Exception as e:
+            logger.error(f"FITS extraction failed: {type(e).__name__}: {e}")
             return {
                 "available": False,
                 "error": str(e)
@@ -2879,7 +2890,6 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[st
             print("[persona_debug] Attempting to add persona interpretation", file=sys.stderr)
             import importlib.util
             import os
-            import sys
 
             # Get the path to persona_interpretation.py
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -2935,7 +2945,6 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[st
             logger.debug(f"Persona interpretation not available: {e}")
         except Exception as e:
             print(f"[persona_debug] Exception: {type(e).__name__}: {e}", file=sys.stderr)
-            import traceback
             print(f"[persona_debug] Traceback: {traceback.format_exc()}", file=sys.stderr)
             logger.warning(f"Failed to add persona interpretation: {e}")
 

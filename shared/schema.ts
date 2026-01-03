@@ -253,3 +253,51 @@ export const insertTrialUsageSchema = createInsertSchema(trialUsages).omit({
 
 export type InsertTrialUsage = z.infer<typeof insertTrialUsageSchema>;
 export type TrialUsage = typeof trialUsages.$inferSelect;
+
+// Persona Interpretation Types
+export interface PersonaInterpretation {
+  persona: string;
+  key_findings: string[];
+  plain_english_answers: {
+    when_taken: {
+      answer: string;
+      details: string;
+      source: string;
+      confidence: string;
+    };
+    location: {
+      has_location: boolean;
+      answer: string;
+      details: string;
+      confidence: string;
+      coordinates?: {
+        latitude: number;
+        longitude: number;
+        formatted: string;
+      };
+      readable_location?: string;
+      possible_reasons?: string[];
+    };
+    device: {
+      answer: string;
+      device_type: string;
+      details: {
+        make: string | null;
+        model: string | null;
+        software: string | null;
+      };
+      confidence: string;
+    };
+    authenticity: {
+      assessment: string;
+      confidence: string;
+      score: number;
+      answer: string;
+      checks_performed: Record<string, any>;
+      reasons: string[];
+    };
+  };
+  confidence_scores: Record<string, any>;
+  warnings: string[];
+  recommendations: string[];
+}

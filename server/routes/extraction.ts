@@ -94,7 +94,7 @@ function shouldBypassCredits(req: AuthRequest): boolean {
 
 export function registerExtractionRoutes(app: Express): void {
   // Main extraction endpoint
-  app.post('/api/extract', upload.single('file'), async (req, res) => {
+  app.post('/api/extract', upload.single('file'), async (req: AuthRequest, res) => {
     const startTime = Date.now();
     let tempPath: string | null = null;
     let sessionId: string | null = null;
@@ -277,7 +277,7 @@ export function registerExtractionRoutes(app: Express): void {
         // Continue anyway - frontend will use memory fallback
       }
 
-      res.json([metadata]);
+      res.json(metadata);
     } catch (error) {
       const processingMs = Date.now() - startTime;
       const failureReason =
@@ -327,7 +327,7 @@ export function registerExtractionRoutes(app: Express): void {
   app.post(
     '/api/extract/batch',
     upload.array('files', 100),
-    async (req, res) => {
+    async (req: AuthRequest, res) => {
       const startTime = Date.now();
       const tempPaths: string[] = [];
 
@@ -479,7 +479,7 @@ export function registerExtractionRoutes(app: Express): void {
   );
 
   // Advanced extraction with forensic analysis
-  app.post('/api/extract/advanced', upload.single('file'), async (req, res) => {
+  app.post('/api/extract/advanced', upload.single('file'), async (req: AuthRequest, res) => {
     const startTime = Date.now();
     let tempPath: string | null = null;
 
@@ -733,7 +733,7 @@ export function registerExtractionRoutes(app: Express): void {
       );
     }
     // Retrieve saved extraction result
-  app.get('/api/extract/results/:id', async (req, res) => {
+  app.get('/api/extract/results/:id', async (req: AuthRequest, res) => {
     try {
       const result = await storage.getMetadata(req.params.id);
       if (!result) {

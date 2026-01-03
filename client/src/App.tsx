@@ -16,6 +16,7 @@ import ResultsV2 from "@/pages/results-v2";
 import ImagesMvpLanding from "@/pages/images-mvp";
 import ImagesMvpResults from "@/pages/images-mvp/results";
 import ImagesMvpCreditsSuccess from "@/pages/images-mvp/credits-success";
+import ImagesMvpAnalytics from "@/pages/images-mvp/analytics";
 import Dashboard from "@/pages/dashboard";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CreditsSuccess from "@/pages/credits-success";
@@ -90,6 +91,7 @@ function AppRouter() {
           <Route path="/images_mvp" element={<ImagesMvpLanding />} />
           <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
           <Route path="/images_mvp/credits/success" element={<ImagesMvpCreditsSuccess />} />
+          <Route path="/images_mvp/analytics" element={<ImagesMvpAnalytics />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

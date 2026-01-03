@@ -36,7 +36,7 @@ const DEFAULT_POOL_CONFIG = {
  */
 function loadEnvironment(): void {
   const result = loadEnv({ path: './.env' });
-  if (result.error && result.error.code !== 'ENOENT') {
+  if (result.error && (result.error as any).code !== 'ENOENT') {
     throw new Error(`Failed to load environment: ${result.error.message}`);
   }
 }
@@ -125,7 +125,7 @@ try {
   dbInstance = initializeDatabase();
   // Test connection asynchronously
   testDatabaseConnection(dbInstance).catch(error => {
-    initError = error;
+    initError = error as Error;
     console.error(initError.message);
   });
   console.log('✅ Database connection initialized successfully');

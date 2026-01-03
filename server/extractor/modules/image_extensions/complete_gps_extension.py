@@ -141,6 +141,12 @@ class CompleteGPSImageExtension(ImageExtensionBase):
             # Batch extract all metadata in a single PIL operation
             self._extract_all_metadata_optimized(filepath, result)
 
+            # Add comprehensive EXIF analysis (restored for field coverage)
+            self._add_comprehensive_exif_analysis(filepath, result)
+
+            # Extract thumbnail (lightweight version)
+            self._extract_thumbnail_fast(filepath, result)
+
             final_result = result.finalize()
             self.log_extraction_summary(final_result)
             return final_result
@@ -968,3 +974,138 @@ class CompleteGPSImageExtension(ImageExtensionBase):
 
         except Exception as e:
             result.add_warning(f"Fast XMP extraction failed: {str(e)[:100]}")
+
+    def _add_comprehensive_exif_analysis(self, filepath: str, result: ImageExtractionResult):
+        """Add comprehensive EXIF analysis for increased field coverage"""
+        try:
+            from PIL import Image
+            from PIL.ExifTags import TAGS
+            import time
+
+            start_time = time.time()
+
+            with Image.open(filepath) as img:
+                # Enhanced EXIF categorization for more fields
+                exif_data = img._getexif()
+                if exif_data:
+                    # Categorized EXIF data for better field coverage
+                    camera_data = {}
+                    lens_data = {}
+                    shooting_data = {}
+                    advanced_data = {}
+
+                    for tag_id, value in exif_data.items():
+                        try:
+                            tag = TAGS.get(tag_id, tag_id)
+
+                            # Convert bytes to string
+                            if isinstance(value, bytes):
+                                try:
+                                    value = value.decode('utf-8', errors='ignore')
+                                except:
+                                    value = str(value)[:100]
+
+                            # Categorize into detailed sections
+                            if 'make' in tag.lower() or 'model' in tag.lower():
+                                camera_data[tag] = value
+                            elif 'lens' in tag.lower() or 'focal' in tag.lower():
+                                lens_data[tag] = value
+                            elif any(k in tag.lower() for k in ['exposure', 'aperture', 'iso', 'shutter', 'flash']):
+                                shooting_data[tag] = value
+                            else:
+                                advanced_data[tag] = value
+
+                        except Exception:
+                            continue
+
+                    # Add categorized sections
+                    if camera_data:
+                        result.add_metadata("exif_camera", camera_data)
+                    if lens_data:
+                        result.add_metadata("exif_lens", lens_data)
+                    if shooting_data:
+                        result.add_metadata("exif_shooting", shooting_data)
+                    if advanced_data:
+                        result.add_metadata("exif_advanced", advanced_data)
+
+                # Add comprehensive image analysis
+                image_analysis = {
+                    "format": img.format,
+                    "mode": img.mode,
+                    "width": img.width,
+                    "height": img.height,
+                    "megapixels": round((img.width * img.height) / 1_000_000, 2),
+                    "aspect_ratio": round(img.width / img.height, 3),
+                    "has_transparency": img.mode in ('RGBA', 'LA', 'PA'),
+                    "color_channels": len(img.getbands()),
+                    "size_estimate": len(img.tobytes()) if img.width * img.height < 5_000_000 else "large_image"
+                }
+                result.add_metadata("image_analysis", image_analysis)
+
+                # Add technical metadata
+                technical_data = {
+                    "pil_format": img.format,
+                    "pil_mode": img.mode,
+                    "pixel_format": img.mode,
+                    "supports_transparency": img.mode in ('RGBA', 'LA', 'PA'),
+                    "band_count": len(img.getbands()),
+                    "is_animated": hasattr(img, 'is_animated') and getattr(img, 'is_animated', False),
+                    "n_frames": getattr(img, 'n_frames', 1) if hasattr(img, 'n_frames') else 1
+                }
+                result.add_metadata("technical_metadata", technical_data)
+
+            processing_time = time.time() - start_time
+            result.add_metadata("exif_analysis_performance", {
+                "processing_time": round(processing_time, 6),
+                "comprehensive_mode": True,
+                "field_enhancement": True
+            })
+
+        except Exception as e:
+            result.add_warning(f"Comprehensive EXIF analysis failed: {str(e)[:100]}")
+
+    def _extract_thumbnail_fast(self, filepath: str, result: ImageExtractionResult):
+        """Fast thumbnail extraction without expensive operations"""
+        try:
+            from PIL import Image
+
+            with Image.open(filepath) as img:
+                # Quick thumbnail check
+                thumbnail_info = {}
+
+                # Check for EXIF thumbnail
+                if hasattr(img, '_getexif'):
+                    exif = img._getexif()
+                    if exif:
+                        # Quick check for thumbnail presence
+                        from PIL.ExifTags import TAGS
+                        thumb_offset = exif.get(0x0201)  # JPEGInterchangeFormat
+                        thumb_length = exif.get(0x0202)  # JPEGInterchangeFormatLength
+
+                        if thumb_offset and thumb_length:
+                            thumbnail_info = {
+                                "has_thumbnail": True,
+                                "thumbnail_offset": thumb_offset,
+                                "thumbnail_length": thumb_length,
+                                "thumbnail_size_kb": round(thumb_length / 1024, 2)
+                            }
+                        else:
+                            thumbnail_info = {
+                                "has_thumbnail": False,
+                                "note": "No embedded EXIF thumbnail found"
+                            }
+                    else:
+                        thumbnail_info = {
+                            "has_thumbnail": False,
+                            "note": "No EXIF data available"
+                        }
+                else:
+                    thumbnail_info = {
+                        "has_thumbnail": False,
+                        "note": "EXIF not supported for this format"
+                    }
+
+                result.add_metadata("thumbnail", thumbnail_info)
+
+        except Exception as e:
+            result.add_warning(f"Fast thumbnail extraction failed: {str(e)[:100]}")

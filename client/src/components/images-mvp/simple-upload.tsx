@@ -1,12 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileWarning, X, Loader2, Zap } from 'lucide-react';
+import { Upload, Loader2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { TrialAccessModal } from '@/components/trial-access-modal';
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
+import {
+  getFileSizeBucket,
+  getImagesMvpSessionId,
+  trackImagesMvpEvent,
+} from '@/lib/images-mvp-analytics';
 
 const SUPPORTED_EXTENSIONS = [
   '.jpg',
@@ -34,6 +38,12 @@ export function SimpleUploadZone() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const getExtension = (name: string): string | null => {
+    const index = name.lastIndexOf('.');
+    if (index <= 0) return null;
+    return name.slice(index).toLowerCase();
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('metaextract_trial_email');
@@ -65,10 +75,28 @@ export function SimpleUploadZone() {
   };
 
   const handleFile = (file: File) => {
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    const isSupportedExt = ext && SUPPORTED_EXTENSIONS.includes(ext);
+    const ext = getExtension(file.name);
+    const isSupportedExt = ext ? SUPPORTED_EXTENSIONS.includes(ext) : false;
     const isSupportedMime = SUPPORTED_MIMES.includes(file.type);
+    const mimeType = file.type || 'application/octet-stream';
+    const sizeBucket = getFileSizeBucket(file.size);
+
+    trackImagesMvpEvent('upload_selected', {
+      extension: ext,
+      mime_type: mimeType,
+      size_bytes: file.size,
+      size_bucket: sizeBucket,
+      has_trial_email: Boolean(trialEmail),
+    });
+
     if (!isSupportedExt && !isSupportedMime) {
+      trackImagesMvpEvent('upload_rejected', {
+        extension: ext,
+        mime_type: mimeType,
+        size_bytes: file.size,
+        size_bucket: sizeBucket,
+        reason: 'unsupported_format',
+      });
       toast({
         title: 'Unsupported File',
         description: 'Please upload a JPG, PNG, HEIC, or WebP image.',
@@ -87,6 +115,7 @@ export function SimpleUploadZone() {
 
   const uploadFile = async (file: File, email: string) => {
     setIsUploading(true);
+    const startedAt = Date.now();
     const formData = new FormData();
     formData.append('file', file);
     formData.append('trial_email', email);
@@ -95,12 +124,22 @@ export function SimpleUploadZone() {
     }
 
     // Get session ID (reuse main app session logic)
-    let sessionId = localStorage.getItem('metaextract_session_id');
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      localStorage.setItem('metaextract_session_id', sessionId);
+    const sessionId = getImagesMvpSessionId();
+    if (sessionId) {
+      formData.append('session_id', sessionId);
     }
-    formData.append('session_id', sessionId);
+
+    const sizeBucket = getFileSizeBucket(file.size);
+    const mimeType = file.type || 'application/octet-stream';
+    const extension = getExtension(file.name);
+
+    trackImagesMvpEvent('analysis_started', {
+      extension,
+      mime_type: mimeType,
+      size_bytes: file.size,
+      size_bucket: sizeBucket,
+      has_trial_email: Boolean(email),
+    });
 
     try {
       const res = await fetch('/api/images_mvp/extract', {
@@ -117,8 +156,27 @@ export function SimpleUploadZone() {
       }
 
       if (!res.ok) {
+        const errorMessage =
+          typeof data?.error === 'string'
+            ? data.error
+            : data?.error?.message || data?.message || responseText || 'Extraction failed';
+        trackImagesMvpEvent('analysis_completed', {
+          success: false,
+          status: res.status,
+          error_message: errorMessage,
+          extension,
+          mime_type: mimeType,
+          size_bucket: sizeBucket,
+          elapsed_ms: Date.now() - startedAt,
+        });
+
         if (res.status === 402) {
           // Trigger Credit Purchase Flow
+          trackImagesMvpEvent('paywall_viewed', {
+            reason: 'trial_exhausted',
+            extension,
+            mime_type: mimeType,
+          });
           toast({
             title: 'Trial Limit Reached',
             description:
@@ -128,12 +186,25 @@ export function SimpleUploadZone() {
           setShowPricingModal(true);
           return;
         }
-        const message =
-          data?.error || data?.message || responseText || 'Extraction failed';
-        throw new Error(message);
+        throw new Error(errorMessage);
       }
 
       // Success
+      const processingMs =
+        typeof data?.processing_ms === 'number' ? data.processing_ms : null;
+      trackImagesMvpEvent('analysis_completed', {
+        success: true,
+        extension,
+        mime_type: mimeType,
+        size_bucket: sizeBucket,
+        processing_ms: processingMs,
+        elapsed_ms: Date.now() - startedAt,
+        fields_extracted: data?.fields_extracted ?? null,
+        trial_granted: data?.access?.trial_granted ?? null,
+        credits_charged: data?.access?.credits_charged ?? null,
+        credits_required: data?.access?.credits_required ?? null,
+      });
+
       sessionStorage.setItem('currentMetadata', JSON.stringify(data));
       // Navigate to results page with metadata in state
       navigate('/images_mvp/results', { state: { metadata: data } });

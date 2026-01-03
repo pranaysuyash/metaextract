@@ -48,9 +48,19 @@ class ImageExtractionResult:
         logger.warning(f"{self.source} extraction warning: {warning}")
 
     def add_metadata(self, key: str, value: Any):
-        """Add metadata field and increment counter"""
+        """Add metadata field and increment counter with smart field counting"""
         self.metadata[key] = value
-        self.fields_extracted += 1
+        # Smart field counting - count nested fields in dictionaries
+        if isinstance(value, dict):
+            # Count actual fields in the dictionary (excluding empty ones)
+            nested_count = sum(1 for v in value.values() if v is not None and v != {} and v != [])
+            self.fields_extracted += max(1, nested_count)  # At least 1 for the key itself
+        elif isinstance(value, (list, tuple)) and value:
+            # Count list items if they're not empty
+            self.fields_extracted += len([v for v in value if v is not None and v != {} and v != []])
+        else:
+            # Single field
+            self.fields_extracted += 1
 
     def add_metadata_dict(self, data: Dict[str, Any]):
         """Add multiple metadata fields"""

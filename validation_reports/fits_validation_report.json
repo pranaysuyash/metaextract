@@ -2,55 +2,55 @@
   "format_type": "fits",
   "summary": {
     "total_datasets": 3,
-    "successful_extractions": 0,
-    "failed_extractions": 3,
-    "success_rate": 0.0,
-    "average_extraction_time": 8.511543273925781e-05,
-    "total_fields_extracted": 0
+    "successful_extractions": 3,
+    "failed_extractions": 0,
+    "success_rate": 100.0,
+    "average_extraction_time": 0.00039807955423990887,
+    "total_fields_extracted": 89
   },
   "performance_metrics": {
-    "success_rate": 0.0,
-    "fastest_extraction": 7.033348083496094e-05,
-    "slowest_extraction": 0.00011086463928222656,
-    "median_extraction_time": 7.414817810058594e-05
+    "success_rate": 100.0,
+    "fastest_extraction": 0.0003349781036376953,
+    "slowest_extraction": 0.0005040168762207031,
+    "median_extraction_time": 0.0003552436828613281
   },
   "results": [
     {
       "dataset_name": "type",
-      "success": false,
-      "extraction_time": 0.00011086463928222656,
-      "fields_extracted": 0,
+      "success": true,
+      "extraction_time": 0.0005040168762207031,
+      "fields_extracted": 39,
       "error_message": null,
       "validation_details": {
-        "format_detected": false,
-        "has_wcs": false,
-        "telescope": "unknown",
+        "format_detected": true,
+        "has_wcs": true,
+        "telescope": "'HST     '",
         "num_hdus": 0
       }
     },
     {
       "dataset_name": "type",
-      "success": false,
-      "extraction_time": 7.414817810058594e-05,
-      "fields_extracted": 0,
+      "success": true,
+      "extraction_time": 0.0003552436828613281,
+      "fields_extracted": 39,
       "error_message": null,
       "validation_details": {
-        "format_detected": false,
-        "has_wcs": false,
-        "telescope": "unknown",
+        "format_detected": true,
+        "has_wcs": true,
+        "telescope": "'CHANDRA '",
         "num_hdus": 0
       }
     },
     {
       "dataset_name": "type",
-      "success": false,
-      "extraction_time": 7.033348083496094e-05,
-      "fields_extracted": 0,
+      "success": true,
+      "extraction_time": 0.0003349781036376953,
+      "fields_extracted": 11,
       "error_message": null,
       "validation_details": {
-        "format_detected": false,
-        "has_wcs": false,
-        "telescope": "unknown",
+        "format_detected": true,
+        "has_wcs": true,
+        "telescope": "'SDSS 2.5-M'",
         "num_hdus": 0
       }
     }

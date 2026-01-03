@@ -376,7 +376,11 @@ def dms_to_decimal(dms: Sequence, ref: str) -> Optional[float]:
         decimal = degrees + (minutes / 60.0) + (seconds / 3600.0)
         if ref.upper() in ["S", "W"]: decimal = -decimal
         return round(decimal, 8)
-    except: return None
+    except (ValueError, IndexError, TypeError) as e:
+
+        logger.debug(f"Failed to convert DMS to decimal: {e}")
+
+        return None
 
 def format_dms(decimal: float, is_latitude: bool) -> str:
     absolute = abs(decimal)
@@ -391,7 +395,9 @@ def safe_str(value: Any) -> Optional[str]:
     if value is None: return None
     if isinstance(value, bytes):
         try: return value.decode('utf-8', errors='ignore')
-        except: return base64.b64encode(value).decode('ascii')[:100] + "..."
+        except UnicodeDecodeError as e:
+            logger.debug(f"Failed to decode bytes as UTF-8: {e}, falling back to base64")
+            return base64.b64encode(value).decode('ascii')[:100] + "..."
     if isinstance(value, (list, tuple)): return ", ".join(str(v) for v in value[:10])
     return str(value)
 
@@ -750,7 +756,9 @@ def run_exiftool(filepath: str, args: List[str] = None) -> Optional[Dict[str, An
         if result.returncode != 0: return None
         data = json.loads(result.stdout)
         return data[0] if data else None
-    except: return None
+    except (json.JSONDecodeError, subprocess.TimeoutExpired, OSError) as e:
+        logger.debug(f"Failed to extract metadata with exiftool: {e}")
+        return None
 
 def categorize_exiftool_output(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """Organize exiftool output into logical categories."""
@@ -1150,7 +1158,9 @@ def extract_extended_attributes(filepath: str) -> Dict[str, Any]:
             except (AttributeError, TypeError) as e:
                 logger.debug(f"Failed to get extended attribute: {e}")
         return {"available": True, "count": len(attrs), "attributes": attrs}
-    except: return {"available": False}
+    except (OSError, ValueError) as e:
+        logger.debug(f"Failed to extract extended attributes: {e}")
+        return {"available": False}
 
 def extract_exif_basic(filepath: str) -> Optional[Dict[str, Any]]:
     if not EXIFREAD_AVAILABLE: return None
@@ -1177,7 +1187,9 @@ def extract_exif_basic(filepath: str) -> Optional[Dict[str, Any]]:
         if not result["thumbnail"]:
             result.pop("thumbnail", None)
         return result
-    except: return None
+    except (OSError, KeyError, ValueError) as e:
+        logger.debug(f"Failed to extract EXIF metadata: {e}")
+        return None
 
 def extract_gps_metadata(filepath: str) -> Optional[Dict[str, Any]]:
     if not EXIFREAD_AVAILABLE: return None
@@ -1224,7 +1236,9 @@ def extract_gps_metadata(filepath: str) -> Optional[Dict[str, Any]]:
             if tag in tags:
                 gps[key] = safe_str(tags[tag])
         return gps if gps else None
-    except: return None
+    except Exception as e:
+        logger.debug(f"Operation failed: {e}")
+        return None
 
 def extract_image_properties(filepath: str) -> Optional[Dict[str, Any]]:
     if not PIL_AVAILABLE: return None
@@ -1258,7 +1272,9 @@ def extract_image_properties(filepath: str) -> Optional[Dict[str, Any]]:
             except Exception as e:
                 properties["icc_profile_details"] = {"error": str(e)}
             return properties
-    except: return None
+    except Exception as e:
+        logger.debug(f"Operation failed: {e}")
+        return None
 
 def extract_video_properties(filepath: str) -> Optional[Dict[str, Any]]:
     try:
@@ -1266,7 +1282,9 @@ def extract_video_properties(filepath: str) -> Optional[Dict[str, Any]]:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0: return None
         return json.loads(result.stdout)
-    except: return None
+    except Exception as e:
+        logger.debug(f"Operation failed: {e}")
+        return None
 
 def extract_audio_properties(filepath: str) -> Optional[Dict[str, Any]]:
     if not MUTAGEN_AVAILABLE: return None
@@ -1317,7 +1335,9 @@ def extract_audio_properties(filepath: str) -> Optional[Dict[str, Any]]:
             result["has_album_art"] = True
         result["raw_tags"] = tags
         return result
-    except: return None
+    except Exception as e:
+        logger.debug(f"Operation failed: {e}")
+        return None
 
 def extract_pdf_properties(filepath: str) -> Optional[Dict[str, Any]]:
     if not PYPDF_AVAILABLE: return None
@@ -1341,7 +1361,9 @@ def extract_pdf_properties(filepath: str) -> Optional[Dict[str, Any]]:
             result["page_width"] = width
             result["page_height"] = height
         return result
-    except: return None
+    except Exception as e:
+        logger.debug(f"Operation failed: {e}")
+        return None
 
 def extract_svg_properties(filepath: str) -> Optional[Dict[str, Any]]:
     try:
@@ -1366,7 +1388,9 @@ def extract_svg_properties(filepath: str) -> Optional[Dict[str, Any]]:
         script_elements = root.findall(".//{http://www.w3.org/2000/svg}script") or root.findall(".//script")
         svg_data["has_scripts"] = len(script_elements) > 0
         return svg_data
-    except: return None
+    except Exception as e:
+        logger.debug(f"Operation failed: {e}")
+        return None
 
 def calculate_metadata(metadata: Dict[str, Any], current_time: datetime) -> Dict[str, Any]:
     calc = {}

@@ -4,8 +4,8 @@
 Ship a narrow, fast “Image Metadata Check” experience to validate PMF with minimal scope/risk.
 
 ## Launch Scope (v0)
-- Supported uploads: `image/jpeg`, `image/png` only (enforced in UI and API).
-- Primary user promise: “Get a calm summary + privacy/authenticity signals in <10s, exportable as JSON.”
+- Supported uploads: `image/jpeg`, `image/png`, `image/heic`, `image/heif`, `image/webp` (common photo formats).
+- Primary user promise: “Get a calm summary + privacy/authenticity signals in <10s, exportable as JSON after credits.”
 - Monetization: credits (paid-first), with a small trial exception (see below).
 
 ## Explicit Non-Goals (v0)
@@ -44,7 +44,8 @@ Ship a narrow, fast “Image Metadata Check” experience to validate PMF with m
 ### What is visible without credits (trial)
 - Highlights card.
 - Privacy tab basics (time, location embedded?, device make/model, file hashes).
-- No exports and no raw tables.
+- Summary export (copy/download).
+- No JSON export and no raw tables.
 
 ### What is paid (credits)
 - JSON export.
@@ -52,11 +53,12 @@ Ship a narrow, fast “Image Metadata Check” experience to validate PMF with m
 - Any advanced/expensive analysis (e.g., OCR overlay extraction if enabled).
 
 ## Backend Contract (Existing)
-- Extraction endpoint: `POST /api/extract` (already supports credit gating and `trial_email`).
-- Credit purchase:
-  - `POST /api/credits/purchase`
-  - `GET /api/credits/balance`
-  - `GET /api/credits/packs`
+- Images MVP extraction endpoint: `POST /api/images_mvp/extract`.
+  - Uses the same extraction helpers as the core app; no separate backend service.
+- Credit purchase (Images MVP):
+  - `POST /api/images_mvp/credits/purchase`
+  - `GET /api/images_mvp/credits/balance`
+  - `GET /api/images_mvp/credits/packs`
 
 ## Pricing Separation (Images vs Core App)
 For launch, keep “Images” pricing isolated from the rest of MetaExtract so experiments don’t break existing pricing.
@@ -77,7 +79,7 @@ Recommended approach (no DB schema change):
 ## Required UI Work Items
 1) **New “Images” product surface**
    - Add `/images` route and use a dedicated layout/copy (not the full product homepage).
-   - Show a small “supported formats” note (JPEG/PNG) and batch/file size limits.
+   - Show a small “supported formats” note (JPG/PNG/HEIC/WebP) and batch/file size limits.
 
 2) **Strict file filtering**
    - UI picker filters extensions and MIME.
@@ -97,8 +99,8 @@ Recommended approach (no DB schema change):
 
 5) **Instrumentation (minimum)**
    - `images_landing_viewed`
-   - `upload_selected` (count, total_size_bucket)
-   - `analysis_started` / `analysis_completed` (success_count, fail_count, processing_ms_bucket)
+   - `upload_selected` (file metadata + size bucket)
+   - `analysis_started` / `analysis_completed` (success/fail + processing_ms)
    - `results_viewed`
    - `paywall_viewed`
    - `purchase_completed`

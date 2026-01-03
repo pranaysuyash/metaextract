@@ -372,12 +372,12 @@ export function setupCacheInvalidation(router: Router): void {
     try {
       const defaultKeys = [
         {
-          key: cacheKeys.tiersConfig('free'),
+          key: cacheKeys.tierConfig('free'),
           value: await getTierConfig('free'),
           ttl: TTL.TIER_CONFIG,
         },
         {
-          key: cacheKeys.tiersConfig('premium'),
+          key: cacheKeys.tierConfig('premium'),
           value: await getTierConfig('premium'),
           ttl: TTL.TIER_CONFIG,
         },
@@ -437,10 +437,69 @@ export function setupCacheInvalidation(router: Router): void {
 // declare function fetchMetadataForFile(fileId: string): Promise<any>;
 // declare function updateFileMetadata(fileId: string, metadata: any): Promise<void>;
 // declare function generateAnalytics(query: any): Promise<any>;
-// declare function performSearch(query: string, filters: any): Promise<any>;
-// declare function getUserPreferences(userId: string): Promise<any>;
-// declare function authenticateUser(credentials: any): Promise<any>;
-// declare function processPayment(paymentData: any): Promise<any>;
-// declare function checkSystemHealth(): Promise<any>;
-// declare function getTierConfig(tier: string): Promise<any>;
-// declare function getSystemHealth(): Promise<any>;
+// ============================================================================
+// Stub Implementations (for demonstration purposes)
+// ============================================================================
+
+async function fetchAllTiersFromDatabase(): Promise<any[]> {
+  // Stub: In real implementation, this would query the database
+  return [
+    { id: 'free', name: 'Free', limits: { files: 10, size: '100MB' } },
+    { id: 'premium', name: 'Premium', limits: { files: 100, size: '1GB' } },
+  ];
+}
+
+async function updateTierConfiguration(config: any): Promise<void> {
+  // Stub: In real implementation, this would update the database
+  console.log('Updating tier configuration:', config);
+}
+
+async function fetchMetadataForFile(fileId: string): Promise<any> {
+  // Stub: In real implementation, this would query the database
+  return { id: fileId, metadata: { size: '1MB', type: 'image/jpeg' } };
+}
+
+async function updateFileMetadata(fileId: string, metadata: any): Promise<void> {
+  // Stub: In real implementation, this would update the database
+  console.log('Updating metadata for file:', fileId, metadata);
+}
+
+async function generateAnalytics(query: any): Promise<any> {
+  // Stub: In real implementation, this would perform complex analytics
+  return { totalFiles: 1000, totalSize: '10GB', popularTypes: ['jpeg', 'png'] };
+}
+
+async function performSearch(query: string, filters: any): Promise<any[]> {
+  // Stub: In real implementation, this would perform search
+  return [{ id: 'file1', name: 'example.jpg', matches: ['query'] }];
+}
+
+async function getUserPreferences(userId: string): Promise<any> {
+  // Stub: In real implementation, this would query user preferences
+  return { theme: 'dark', notifications: true };
+}
+
+async function checkSystemHealth(): Promise<any> {
+  // Stub: In real implementation, this would check system components
+  return { status: 'healthy', uptime: '99.9%', services: ['db', 'cache', 'api'] };
+}
+
+async function authenticateUser(credentials: any): Promise<any> {
+  // Stub: In real implementation, this would authenticate user
+  return { id: 'user123', email: 'user@example.com' };
+}
+
+async function processPayment(paymentData: any): Promise<any> {
+  // Stub: In real implementation, this would process payment
+  return { transactionId: 'txn_123', status: 'success' };
+}
+
+async function getTierConfig(tier: string): Promise<any> {
+  // Stub: In real implementation, this would get tier configuration
+  return { name: tier, limits: { files: 50, size: '500MB' } };
+}
+
+async function getSystemHealth(): Promise<any> {
+  // Stub: In real implementation, this would check system health
+  return { status: 'healthy', services: ['api', 'db', 'cache'] };
+}

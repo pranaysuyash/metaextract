@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { EnhancedUploadZone } from './enhanced-upload-zone';
 
 // Mock react-dropzone
@@ -72,9 +73,11 @@ function createMockFileList(files: File[]): FileList {
   return fileList;
 }
 
-// Wrapper component - toast hook is mocked globally
+// Wrapper component - includes MemoryRouter for useNavigate hook
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <>{children}</>
+  <MemoryRouter>
+    {children}
+  </MemoryRouter>
 );
 
 describe('EnhancedUploadZone', () => {

@@ -8,6 +8,7 @@ import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
 import { MetadataComparisonDisplay } from '@/components/metadata-comparison-display';
 import { AdvancedResultsIntegration } from '@/components/advanced-results-integration';
 import { MedicalAnalysisResult } from '@/components/medical-analysis-result';
+import { AlertTriangle } from 'lucide-react';
 import { PersonaDisplay } from '@/components/persona-display';
 import {
   MetadataExplorer,
@@ -171,6 +172,8 @@ interface MetadataResponse {
     credits_charged?: number;
     credits_required?: number;
   };
+  persona_interpretation?: import('@shared/schema').PersonaInterpretation;
+  medical_imaging?: Record<string, any>;
 }
 
 export default function Results() {
@@ -212,7 +215,7 @@ export default function Results() {
 
   // Fetch from DB if ID is present and we don't have fresh data
   useEffect(() => {
-    if (resultId && (metadata === MOCK_METADATA || !metadata.filename)) {
+    if (resultId && (metadata === (MOCK_METADATA as any) || !metadata.filename)) {
       console.log(
         `[Results] ID found in URL: ${resultId}. Fetching from DB...`
       );
@@ -1038,7 +1041,7 @@ export default function Results() {
                   )}
 
                   {/* PROMINENT DEBUG WARNING */}
-                  {metadata === MOCK_METADATA && (
+                  {metadata === (MOCK_METADATA as any) && (
                     <div className="mb-4 p-4 bg-red-600 text-white rounded-lg shadow-xl border-4 border-red-800 animate-pulse">
                       <div className="flex items-center gap-3">
                         <AlertTriangle className="w-8 h-8" />
@@ -1178,7 +1181,7 @@ export default function Results() {
 
                           <TabsContent value="medical" className="mt-0">
                             <MedicalAnalysisResult
-                              data={metadata.medical_imaging}
+                              data={(metadata.medical_imaging || { available: false }) as any}
                               isUnlocked={isUnlocked}
                             />
                           </TabsContent>

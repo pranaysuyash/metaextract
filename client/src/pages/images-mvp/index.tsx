@@ -1,11 +1,16 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { PublicLayout as Layout } from "@/components/public-layout";
 import { SimpleUploadZone } from "@/components/images-mvp/simple-upload";
 import { motion } from "framer-motion";
 import { ShieldCheck, Eye, Fingerprint, Zap } from "lucide-react";
+import { trackImagesMvpEvent } from "@/lib/images-mvp-analytics";
 
 export default function ImagesMvpLanding() {
+    useEffect(() => {
+        trackImagesMvpEvent("images_landing_viewed", { location: "images_mvp" });
+    }, []);
+
     return (
         <Layout showHeader={true} showFooter={true}>
             <div className="min-h-screen bg-[#0B0C10] text-white selection:bg-primary/30 pt-20">

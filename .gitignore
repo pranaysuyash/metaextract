@@ -54,3 +54,12 @@ coverage/
 # Database
 *.db
 *.sqlite
+
+# Large scientific test datasets (GitHub 100MB limit)
+tests/scientific-test-datasets/scientific-test-datasets/
+*.nc
+*.h5
+*.hdf5
+*.fits
+*.fits.gz
+*.dcm

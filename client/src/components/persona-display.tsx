@@ -56,14 +56,14 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
           {getPersonaIcon(persona)} Key Findings
         </h2>
         <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-          {persona.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          {persona.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
         </span>
       </div>
 
       {/* Key Findings */}
       <div className="mb-6">
         <ul className="space-y-2">
-          {key_findings.map((finding, index) => (
+          {key_findings.map((finding: string, index: number) => (
             <li key={index} className="flex items-start text-gray-700">
               <span className="mr-2">{finding}</span>
             </li>
@@ -123,7 +123,7 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
                 <div className="mt-2">
                   <p><strong>Possible reasons:</strong></p>
                   <ul className="list-disc ml-5">
-                    {plain_english_answers.location.possible_reasons.map((reason, index) => (
+                    {plain_english_answers.location.possible_reasons.map((reason: string, index: number) => (
                       <li key={index}>{reason}</li>
                     ))}
                   </ul>
@@ -183,7 +183,7 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
                 <div className="mt-2">
                   <p><strong>Reasons:</strong></p>
                   <ul className="list-disc ml-5">
-                    {plain_english_answers.authenticity.reasons.map((reason, index) => (
+                    {plain_english_answers.authenticity.reasons.map((reason: string, index: number) => (
                       <li key={index}>{reason}</li>
                     ))}
                   </ul>

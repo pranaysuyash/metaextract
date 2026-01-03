@@ -124,6 +124,7 @@ class ScientificFormatValidator:
             extraction_time = time.time() - start_time
 
             success = result.get('available', False) if result else False
+            
             # Count fields in various FITS metadata sections
             fields_extracted = 0
             if result:
@@ -410,9 +411,9 @@ def main():
         print("📊 COMPREHENSIVE SCIENTIFIC FORMAT VALIDATION RESULTS")
         print("="*80)
         print(f"Total Datasets Tested: {summary['total_datasets_tested']}")
-        print(".1f")
-        print(".3f")
-        print(".1f")
+        print(f"Overall Success Rate: {summary['overall_success_rate']:.1f}%")
+        print(f"Total Extraction Time: {summary['total_extraction_time']:.3f}s")
+        print(f"Average Time per Dataset: {summary['average_extraction_time_per_dataset']:.3f}s")
         print(f"Total Fields Extracted: {summary['total_fields_extracted']}")
 
         print("\n📈 Format-by-Format Results:")

@@ -11,6 +11,7 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { EnhancedUploadZone } from '@/components/enhanced-upload-zone';
 import {
   MetadataExplorer,
@@ -134,13 +135,15 @@ describe('Upload to Extraction Workflow Integration', () => {
       const onResults = jest.fn();
 
       render(
-        <div>
-          <EnhancedUploadZone
-            onResults={onResults}
-            tier='premium'
-            maxFiles={10}
-          />
-        </div>
+        <MemoryRouter>
+          <div>
+            <EnhancedUploadZone
+              onResults={onResults}
+              tier='premium'
+              maxFiles={10}
+            />
+          </div>
+        </MemoryRouter>
       );
 
       // Initial state should show upload zone
@@ -157,7 +160,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='premium' />
+        </MemoryRouter>
+      );
     });
 
     it('should handle batch file extraction', async () => {
@@ -175,7 +182,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='premium' />
+        </MemoryRouter>
+      );
     });
   });
 
@@ -185,7 +196,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='free' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='free' />
+        </MemoryRouter>
+      );
     });
 
     it('should handle HTTP error responses', async () => {
@@ -197,7 +212,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='free' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='free' />
+        </MemoryRouter>
+      );
     });
 
     it('should handle timeout errors', async () => {
@@ -210,7 +229,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='free' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='free' />
+        </MemoryRouter>
+      );
     });
   });
 
@@ -260,25 +283,37 @@ describe('Upload to Extraction Workflow Integration', () => {
   describe('Tier-Based Functionality', () => {
     it('should enforce file size limits by tier', () => {
       const { rerender } = render(
-        <EnhancedUploadZone onResults={jest.fn()} tier='free' />
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={jest.fn()} tier='free' />
+        </MemoryRouter>
       );
 
       expect(screen.getByText(/10MB per file/i)).toBeInTheDocument();
 
-      rerender(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
+      rerender(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={jest.fn()} tier='premium' />
+        </MemoryRouter>
+      );
 
       expect(screen.getByText(/500MB per file/i)).toBeInTheDocument();
     });
 
     it('should show appropriate format support by tier', () => {
       const { rerender } = render(
-        <EnhancedUploadZone onResults={jest.fn()} tier='free' />
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={jest.fn()} tier='free' />
+        </MemoryRouter>
       );
 
       // Free tier shows basic formats
       expect(screen.getByText('Images')).toBeInTheDocument();
 
-      rerender(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
+      rerender(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={jest.fn()} tier='premium' />
+        </MemoryRouter>
+      );
 
       // Premium tier shows advanced formats
       expect(screen.getByText('Medical')).toBeInTheDocument();
@@ -316,7 +351,11 @@ describe('Upload to Extraction Workflow Integration', () => {
         expect(tree.getByText('EOS R5')).toBeInTheDocument();
       });
 
-      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='premium' />
+        </MemoryRouter>
+      );
     });
 
     it('should handle user exploring metadata details', async () => {
@@ -470,7 +509,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
   describe('Accessibility Integration', () => {
     it('should maintain keyboard navigation throughout workflow', async () => {
-      render(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={jest.fn()} tier='premium' />
+        </MemoryRouter>
+      );
 
       const uploadZone = screen.getByText(/Upload files for analysis/i);
       expect(uploadZone).toBeVisible();
@@ -489,7 +532,11 @@ describe('Upload to Extraction Workflow Integration', () => {
         json: async () => mockExtractionResult,
       });
 
-      render(<EnhancedUploadZone onResults={jest.fn()} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={jest.fn()} tier='premium' />
+        </MemoryRouter>
+      );
 
       // Status changes should be announced
       // This would require checking for aria-live regions
@@ -507,7 +554,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='premium' />
+        </MemoryRouter>
+      );
 
       // First attempt fails
       // User retries
@@ -530,7 +581,11 @@ describe('Upload to Extraction Workflow Integration', () => {
 
       const onResults = jest.fn();
 
-      render(<EnhancedUploadZone onResults={onResults} tier='premium' />);
+      render(
+        <MemoryRouter>
+          <EnhancedUploadZone onResults={onResults} tier='premium' />
+        </MemoryRouter>
+      );
     });
   });
 });

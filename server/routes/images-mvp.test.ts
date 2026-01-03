@@ -207,16 +207,49 @@ describe('Images MVP API Tests', () => {
         {
           id: 'evt_1',
           product: 'images_mvp',
-          eventName: 'purpose_selected',
+          eventName: 'images_landing_viewed',
           sessionId: 'sess_a',
           userId: null,
-          properties: { purpose: 'privacy' },
+          properties: { location: 'images_mvp' },
           ipAddress: null,
           userAgent: null,
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
         },
         {
           id: 'evt_2',
+          product: 'images_mvp',
+          eventName: 'upload_selected',
+          sessionId: 'sess_a',
+          userId: null,
+          properties: { mime_type: 'image/jpeg' },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:00:01.000Z'),
+        },
+        {
+          id: 'evt_3',
+          product: 'images_mvp',
+          eventName: 'analysis_completed',
+          sessionId: 'sess_a',
+          userId: null,
+          properties: { success: true, processing_ms: 420 },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:00:02.000Z'),
+        },
+        {
+          id: 'evt_4',
+          product: 'images_mvp',
+          eventName: 'purpose_selected',
+          sessionId: 'sess_a',
+          userId: null,
+          properties: { purpose: 'privacy' },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:00:03.000Z'),
+        },
+        {
+          id: 'evt_5',
           product: 'images_mvp',
           eventName: 'tab_changed',
           sessionId: 'sess_a',
@@ -227,7 +260,7 @@ describe('Images MVP API Tests', () => {
           createdAt: new Date('2026-01-01T00:00:05.000Z'),
         },
         {
-          id: 'evt_3',
+          id: 'evt_6',
           product: 'images_mvp',
           eventName: 'export_json_downloaded',
           sessionId: 'sess_b',
@@ -238,7 +271,7 @@ describe('Images MVP API Tests', () => {
           createdAt: new Date('2026-01-01T00:01:00.000Z'),
         },
         {
-          id: 'evt_4',
+          id: 'evt_7',
           product: 'images_mvp',
           eventName: 'format_hint_shown',
           sessionId: 'sess_b',
@@ -249,7 +282,7 @@ describe('Images MVP API Tests', () => {
           createdAt: new Date('2026-01-01T00:02:00.000Z'),
         },
         {
-          id: 'evt_5',
+          id: 'evt_8',
           product: 'images_mvp',
           eventName: 'paywall_preview_shown',
           sessionId: 'sess_c',
@@ -259,6 +292,17 @@ describe('Images MVP API Tests', () => {
           userAgent: null,
           createdAt: new Date('2026-01-01T00:03:00.000Z'),
         },
+        {
+          id: 'evt_9',
+          product: 'images_mvp',
+          eventName: 'purchase_completed',
+          sessionId: 'sess_b',
+          userId: null,
+          properties: { pack: 'starter' },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:04:00.000Z'),
+        },
       ];
 
       (storage.getUiEvents as jest.Mock).mockResolvedValueOnce(mockEvents);
@@ -267,7 +311,7 @@ describe('Images MVP API Tests', () => {
         .get('/api/images_mvp/analytics/report?period=all')
         .expect(200);
 
-      expect(response.body.totals.events).toBe(5);
+      expect(response.body.totals.events).toBe(9);
       expect(response.body.totals.sessions).toBe(3);
       expect(response.body.totals.users).toBe(1);
       expect(response.body.purposes.selected.privacy).toBe(1);
@@ -275,6 +319,10 @@ describe('Images MVP API Tests', () => {
       expect(response.body.formats.hints['image/jpeg']).toBe(1);
       expect(response.body.exports.json).toBe(1);
       expect(response.body.paywall.previewed).toBe(1);
+      expect(response.body.funnel.landing_viewed).toBe(1);
+      expect(response.body.funnel.upload_selected).toBe(1);
+      expect(response.body.funnel.purchase_completed).toBe(1);
+      expect(response.body.analysis.average_processing_ms).toBe(420);
       expect(storage.getUiEvents).toHaveBeenCalledWith(
         expect.objectContaining({ product: 'images_mvp' })
       );

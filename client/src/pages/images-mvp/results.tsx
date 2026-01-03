@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
+import { trackImagesMvpEvent } from "@/lib/images-mvp-analytics";
 
 interface MvpMetadata {
     filename: string;
@@ -138,38 +139,12 @@ export default function ImagesMvpResults() {
         return null;
     };
 
-    const getSessionId = () => {
-        if (typeof window === "undefined") return null;
-        let sessionId = localStorage.getItem('metaextract_session_id');
-        if (!sessionId) {
-            sessionId = crypto.randomUUID();
-            localStorage.setItem('metaextract_session_id', sessionId);
-        }
-        return sessionId;
-    };
-
-    const trackEvent = useCallback((event: string, properties: Record<string, unknown> = {}) => {
-        if (typeof window === "undefined") return;
-        const payload = {
-            event,
-            properties,
-            sessionId: getSessionId(),
-        };
-        const body = JSON.stringify(payload);
-        if (navigator.sendBeacon) {
-            const blob = new Blob([body], { type: "application/json" });
-            navigator.sendBeacon("/api/images_mvp/analytics/track", blob);
-            return;
-        }
-        fetch("/api/images_mvp/analytics/track", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body,
-            keepalive: true,
-        }).catch(() => {
-            // Analytics is best-effort.
-        });
-    }, []);
+    const trackEvent = useCallback(
+        (event: string, properties: Record<string, unknown> = {}) => {
+            trackImagesMvpEvent(event, properties);
+        },
+        []
+    );
 
     useEffect(() => {
         if (!metadata) return;
