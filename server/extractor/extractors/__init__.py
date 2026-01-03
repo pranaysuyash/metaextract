@@ -1,0 +1,19 @@
+"""
+Specialized metadata extractors for MetaExtract.
+
+This module contains domain-specific extractors for different file types
+and metadata domains, including images, videos, audio, documents, and
+scientific formats.
+"""
+
+from .image_extractor import ImageExtractor
+from .video_extractor import VideoExtractor
+from .audio_extractor import AudioExtractor
+from .document_extractor import DocumentExtractor
+
+__all__ = [
+    'ImageExtractor',
+    'VideoExtractor',
+    'AudioExtractor',
+    'DocumentExtractor'
+]

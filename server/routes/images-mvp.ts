@@ -14,7 +14,7 @@ import {
   normalizeEmail,
   getSessionId,
   cleanupTempFile,
-} from '../utils/extraction-helpers';
+} from '../utils/extraction-helpers-new';
 import {
   sendQuotaExceededError,
   sendInvalidRequestError,
