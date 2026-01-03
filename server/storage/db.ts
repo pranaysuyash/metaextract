@@ -6,6 +6,7 @@ import {
   extractionAnalytics,
   uiEvents,
   type InsertUiEvent,
+  type UiEvent,
   creditBalances,
   creditTransactions,
   type CreditBalance,
@@ -20,7 +21,7 @@ import {
   type MetadataResult,
   type InsertMetadataResult,
 } from '@shared/schema';
-import { desc, sql, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { IStorage, AnalyticsSummary } from './types';
 
@@ -161,6 +162,38 @@ export class DatabaseStorage implements IStorage {
         .limit(limit);
     } catch (error) {
       console.error('Failed to get recent extractions:', error);
+      return [];
+    }
+  }
+
+  async getUiEvents(params?: {
+    product?: string;
+    since?: Date;
+    limit?: number;
+  }): Promise<UiEvent[]> {
+    if (!this.db) return [];
+    const limit = params?.limit ?? 1000;
+    const product = params?.product;
+    const since = params?.since;
+    try {
+      const conditions: any[] = [];
+      if (product) {
+        conditions.push(eq(uiEvents.product, product));
+      }
+      if (since) {
+        conditions.push(gte(uiEvents.createdAt, since));
+      }
+
+      let query = this.db.select().from(uiEvents);
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      return await query
+        .orderBy(desc(uiEvents.createdAt))
+        .limit(limit);
+    } catch (error) {
+      console.error('Failed to get UI events:', error);
       return [];
     }
   }

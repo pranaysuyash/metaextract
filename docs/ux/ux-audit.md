@@ -8,6 +8,7 @@ Canonical references:
 
 * Persona library: `docs/ux/personas.md`
 * Agent execution playbook: `docs/ux/agent-playbook.md`
+* Images MVP analytics report: `docs/ux/images_mvp_analytics_report.md`
 
 Status:
 

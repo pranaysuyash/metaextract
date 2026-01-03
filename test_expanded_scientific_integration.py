@@ -11,7 +11,7 @@ from pathlib import Path
 # Add server path
 sys.path.insert(0, str(Path(__file__).parent / "server"))
 
-from extractor.extractors.scientific_extractor import ScientificExtractor, ExpandedScientificExtractor, ScientificFormatCategory
+from extractor.extractors.scientific_extractor import ScientificExtractor
 from extractor.core.comprehensive_engine import NewComprehensiveMetadataExtractor
 
 
@@ -52,7 +52,7 @@ def test_expanded_integration():
     print("\n2. Testing expanded format coverage...")
     
     # Create expanded extractor
-    expanded_extractor = ExpandedScientificExtractor()
+    expanded_extractor = ScientificExtractor()
     
     # Get format statistics
     all_formats = expanded_extractor.get_expanded_scientific_formats()

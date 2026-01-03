@@ -8,6 +8,14 @@ import time
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
+import sys
+import os
+from pathlib import Path
+
+# Add the modules directory to the path to import image_extensions
+modules_dir = Path(__file__).parent
+sys.path.insert(0, str(modules_dir))
+
 from image_extensions import (
     get_global_registry,
     ImageExtractionResult

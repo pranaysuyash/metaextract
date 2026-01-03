@@ -78,9 +78,11 @@ class ScientificExtractor(BaseExtractor):
     
     def __init__(self):
         super().__init__(name="scientific", supported_formats=self.supported_formats)
-        streaming_config = StreamingConfig(chunk_size=5_000_000)  # 5MB chunks for scientific files
-        self.streaming_extractor = StreamingMetadataExtractor(streaming_config)
+
+        # Initialize streaming components
         self._streaming_enabled = True  # Enable streaming by default for large files
+        streaming_config = StreamingConfig(chunk_size=5_000_000)
+        self.streaming_extractor = StreamingMetadataExtractor(streaming_config)
         
     def _extract_metadata(self, context: ExtractionContext) -> Dict[str, Any]:
         """
@@ -775,7 +777,7 @@ class ScientificExtractor(BaseExtractor):
             'error': error
         }
     def __init__(self):
-        super().__init__(name=scientific, supported_formats=self.supported_formats)
+        super().__init__(name="scientific", supported_formats=self.supported_formats)
         
         # Initialize expanded scientific formats
         self.expanded_formats = self._define_expanded_scientific_formats()

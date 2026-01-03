@@ -745,7 +745,7 @@ class GeoTIFFTestGenerator:
         filepath = os.path.join(output_dir, filename)
 
         np.random.seed(42)
-        data = np.random.randint(0, 10000, (bands, shape[0], shape[1]), dtype=np.uint16)
+        data = np.random.randint(0, 256, (shape[0], shape[1]), dtype=np.uint8)
 
         transform = Affine.translation(0, 0) * Affine.scale(0.001, -0.001)
 
@@ -754,15 +754,13 @@ class GeoTIFFTestGenerator:
             driver='GTiff',
             height=shape[0],
             width=shape[1],
-            count=bands,
-            dtype=np.uint16,
+            count=1,
+            dtype=np.uint8,
             crs='EPSG:4326',
             transform=transform,
-            compress='lzw',
-            photometric='ycbcr'
+            compress='lzw'
         ) as dst:
-            for i in range(bands):
-                dst.write(data[i].astype(np.uint16), i + 1)
+            dst.write(data, 1)
 
         return TestDataset(
             filename=filename,
@@ -789,6 +787,7 @@ class GeoTIFFTestGenerator:
 
         try:
             import rasterio
+            from rasterio.transform import Affine
         except ImportError:
             return None
 

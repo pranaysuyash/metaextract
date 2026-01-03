@@ -5,38 +5,25 @@
     "successful_extractions": 3,
     "failed_extractions": 0,
     "success_rate": 100.0,
-    "average_extraction_time": 0.005374352137247722,
-    "total_fields_extracted": 48
+    "average_extraction_time": 0.005396604537963867,
+    "total_fields_extracted": 0
   },
   "performance_metrics": {
     "success_rate": 100.0,
-    "fastest_extraction": 0.0033512115478515625,
-    "slowest_extraction": 0.007697105407714844,
-    "median_extraction_time": 0.005074739456176758
+    "fastest_extraction": 0.0028069019317626953,
+    "slowest_extraction": 0.008105993270874023,
+    "median_extraction_time": 0.005276918411254883
   },
   "results": [
     {
       "dataset_name": "type",
       "success": true,
-      "extraction_time": 0.007697105407714844,
-      "fields_extracted": 14,
+      "extraction_time": 0.008105993270874023,
+      "fields_extracted": 0,
       "error_message": null,
       "validation_details": {
         "file_format": "NETCDF4",
         "num_datasets": 0,
-        "num_variables": 5,
-        "num_dimensions": 3
-      }
-    },
-    {
-      "dataset_name": "type",
-      "success": true,
-      "extraction_time": 0.005074739456176758,
-      "fields_extracted": 16,
-      "error_message": null,
-      "validation_details": {
-        "file_format": "unknown",
-        "num_datasets": 8,
         "num_variables": 0,
         "num_dimensions": 0
       }
@@ -44,14 +31,27 @@
     {
       "dataset_name": "type",
       "success": true,
-      "extraction_time": 0.0033512115478515625,
-      "fields_extracted": 18,
+      "extraction_time": 0.005276918411254883,
+      "fields_extracted": 0,
+      "error_message": null,
+      "validation_details": {
+        "file_format": "unknown",
+        "num_datasets": 0,
+        "num_variables": 0,
+        "num_dimensions": 0
+      }
+    },
+    {
+      "dataset_name": "type",
+      "success": true,
+      "extraction_time": 0.0028069019317626953,
+      "fields_extracted": 0,
       "error_message": null,
       "validation_details": {
         "file_format": "NETCDF4",
         "num_datasets": 0,
-        "num_variables": 8,
-        "num_dimensions": 4
+        "num_variables": 0,
+        "num_dimensions": 0
       }
     }
   ]

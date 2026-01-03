@@ -1,23 +1,23 @@
 {
-  "benchmark_timestamp": "2026-01-03T19:16:34.794508",
+  "benchmark_timestamp": "2026-01-03T19:31:35.320673",
   "system_info": {
     "platform": "darwin",
     "python_version": "3.11.12 (main, Apr  8 2025, 14:15:29) [Clang 17.0.0 (clang-1700.0.13.3)]",
     "cpu_count": 14,
     "cpu_count_logical": 14,
     "memory_total_gb": 96.0,
-    "benchmark_timestamp": "2026-01-03T19:16:33.369587"
+    "benchmark_timestamp": "2026-01-03T19:31:33.890874"
   },
   "overall_performance": {
     "total_datasets": 9,
     "total_file_size_mb": 1348.1138887405396,
-    "total_extraction_time": 0.1753683090209961,
-    "total_memory_used_mb": 19.296875,
-    "avg_time_per_dataset": 0.019485367668999568,
-    "avg_memory_per_dataset": 2.1440972222222223,
+    "total_extraction_time": 0.03092336654663086,
+    "total_memory_used_mb": 22.5625,
+    "avg_time_per_dataset": 0.003435929616292318,
+    "avg_memory_per_dataset": 2.5069444444444446,
     "overall_success_rate": 100.0,
     "performance_insights": [
-      "Performance varies significantly by format: hdf5_netcdf is 5.3x faster than fits",
+      "Performance varies significantly by format: fits is 15.0x faster than dicom",
       "Exceptional reliability with near-perfect success rates"
     ]
   },
@@ -25,16 +25,16 @@
     "dicom": {
       "dataset_count": 3,
       "total_file_size_mb": 0.8774604797363281,
-      "total_extraction_time": 0.030755996704101562,
-      "total_memory_used_mb": 3.796875,
-      "avg_cpu_percent": 8.433333333333334,
+      "total_extraction_time": 0.0210721492767334,
+      "total_memory_used_mb": 3.625,
+      "avg_cpu_percent": 6.199999999999999,
       "performance_analysis": {
         "success_rate": 100.0,
-        "avg_extraction_time": 0.010251998901367188,
-        "avg_memory_delta": 1.265625,
-        "avg_fields_per_second": 6372.74096124031,
-        "memory_efficiency": 19.371811224489797,
-        "performance_consistency": 8.678507879150255,
+        "avg_extraction_time": 0.007024049758911133,
+        "avg_memory_delta": 1.2083333333333333,
+        "avg_fields_per_second": 9301.376780602604,
+        "memory_efficiency": 18.494897959183675,
+        "performance_consistency": 13.709742908130544,
         "bottlenecks": [],
         "recommendations": []
       },
@@ -42,27 +42,27 @@
         {
           "dataset_name": "type",
           "file_size_mb": 0.5008277893066406,
-          "extraction_time": 0.010988950729370117,
-          "memory_delta_mb": 2.671875,
-          "cpu_percent_avg": 10.3,
+          "extraction_time": 0.008234977722167969,
+          "memory_delta_mb": 2.640625,
+          "cpu_percent_avg": 7.6,
           "fields_extracted": 65,
           "success": true
         },
         {
           "dataset_name": "type",
           "file_size_mb": 0.12587356567382812,
-          "extraction_time": 0.010766744613647461,
-          "memory_delta_mb": 0.40625,
-          "cpu_percent_avg": 7.3,
+          "extraction_time": 0.0069582462310791016,
+          "memory_delta_mb": 0.015625,
+          "cpu_percent_avg": 5.8,
           "fields_extracted": 73,
           "success": true
         },
         {
           "dataset_name": "type",
           "file_size_mb": 0.2507591247558594,
-          "extraction_time": 0.009000301361083984,
-          "memory_delta_mb": 0.71875,
-          "cpu_percent_avg": 7.7,
+          "extraction_time": 0.005878925323486328,
+          "memory_delta_mb": 0.96875,
+          "cpu_percent_avg": 5.2,
           "fields_extracted": 58,
           "success": true
         }
@@ -71,49 +71,45 @@
     "fits": {
       "dataset_count": 3,
       "total_file_size_mb": 5.06744384765625,
-      "total_extraction_time": 0.12148928642272949,
-      "total_memory_used_mb": 0.96875,
-      "avg_cpu_percent": 36.0,
+      "total_extraction_time": 0.0014011859893798828,
+      "total_memory_used_mb": 0.03125,
+      "avg_cpu_percent": 0.5,
       "performance_analysis": {
         "success_rate": 100.0,
-        "avg_extraction_time": 0.0404964288075765,
-        "avg_memory_delta": 0.3229166666666667,
-        "avg_fields_per_second": 1209.9832366164733,
-        "memory_efficiency": 6.5901360544217695,
-        "performance_consistency": 76.67249555605464,
-        "bottlenecks": [
-          "Inconsistent performance (>50% variation)"
-        ],
-        "recommendations": [
-          "Investigate performance variability and optimize caching"
-        ]
+        "avg_extraction_time": 0.00046706199645996094,
+        "avg_memory_delta": 0.010416666666666666,
+        "avg_fields_per_second": 0.0,
+        "memory_efficiency": 0,
+        "performance_consistency": 5.028528986635938,
+        "bottlenecks": [],
+        "recommendations": []
       },
       "metrics": [
         {
           "dataset_name": "type",
           "file_size_mb": 4.00726318359375,
-          "extraction_time": 0.020744800567626953,
-          "memory_delta_mb": 0.734375,
-          "cpu_percent_avg": 17.3,
-          "fields_extracted": 61,
+          "extraction_time": 0.0004909038543701172,
+          "memory_delta_mb": 0.0,
+          "cpu_percent_avg": 0.5,
+          "fields_extracted": 0,
           "success": true
         },
         {
           "dataset_name": "type",
           "file_size_mb": 1.00799560546875,
-          "extraction_time": 0.016408681869506836,
-          "memory_delta_mb": 0.171875,
-          "cpu_percent_avg": 15.0,
-          "fields_extracted": 61,
+          "extraction_time": 0.00047516822814941406,
+          "memory_delta_mb": 0.0,
+          "cpu_percent_avg": 0.5,
+          "fields_extracted": 0,
           "success": true
         },
         {
           "dataset_name": "type",
           "file_size_mb": 0.05218505859375,
-          "extraction_time": 0.0843358039855957,
-          "memory_delta_mb": 0.0625,
-          "cpu_percent_avg": 75.7,
-          "fields_extracted": 25,
+          "extraction_time": 0.00043511390686035156,
+          "memory_delta_mb": 0.03125,
+          "cpu_percent_avg": 0.5,
+          "fields_extracted": 0,
           "success": true
         }
       ]
@@ -121,49 +117,47 @@
     "hdf5_netcdf": {
       "dataset_count": 3,
       "total_file_size_mb": 1342.168984413147,
-      "total_extraction_time": 0.02312302589416504,
-      "total_memory_used_mb": 14.53125,
-      "avg_cpu_percent": 5.2,
+      "total_extraction_time": 0.008450031280517578,
+      "total_memory_used_mb": 18.90625,
+      "avg_cpu_percent": 1.9000000000000001,
       "performance_analysis": {
         "success_rate": 100.0,
-        "avg_extraction_time": 0.007707675298055013,
-        "avg_memory_delta": 4.84375,
-        "avg_fields_per_second": 1946.1120791875032,
-        "memory_efficiency": 322.9166666666667,
-        "performance_consistency": 14.577805089949186,
-        "bottlenecks": [
-          "High memory usage (>50MB per 1000 fields)"
-        ],
+        "avg_extraction_time": 0.0028166770935058594,
+        "avg_memory_delta": 6.302083333333333,
+        "avg_fields_per_second": 0.0,
+        "memory_efficiency": 0,
+        "performance_consistency": 39.136945002019075,
+        "bottlenecks": [],
         "recommendations": [
-          "Review memory management and consider streaming for large files"
+          "Investigate performance variability and optimize caching"
         ]
       },
       "metrics": [
         {
           "dataset_name": "type",
           "file_size_mb": 60.35675811767578,
-          "extraction_time": 0.007908821105957031,
-          "memory_delta_mb": 9.3125,
-          "cpu_percent_avg": 5.1,
-          "fields_extracted": 14,
+          "extraction_time": 0.003201007843017578,
+          "memory_delta_mb": 9.375,
+          "cpu_percent_avg": 2.1,
+          "fields_extracted": 0,
           "success": true
         },
         {
           "dataset_name": "type",
           "file_size_mb": 183.11727905273438,
-          "extraction_time": 0.00897216796875,
-          "memory_delta_mb": 1.125,
-          "cpu_percent_avg": 5.7,
-          "fields_extracted": 13,
+          "extraction_time": 0.001316070556640625,
+          "memory_delta_mb": 1.40625,
+          "cpu_percent_avg": 1.1,
+          "fields_extracted": 0,
           "success": true
         },
         {
           "dataset_name": "type",
           "file_size_mb": 1098.6949472427368,
-          "extraction_time": 0.006242036819458008,
-          "memory_delta_mb": 4.09375,
-          "cpu_percent_avg": 4.8,
-          "fields_extracted": 18,
+          "extraction_time": 0.003932952880859375,
+          "memory_delta_mb": 8.125,
+          "cpu_percent_avg": 2.5,
+          "fields_extracted": 0,
           "success": true
         }
       ]

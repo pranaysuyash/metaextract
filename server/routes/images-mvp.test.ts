@@ -13,6 +13,7 @@ jest.mock('../storage/index', () => ({
     getOrCreateCreditBalance: jest.fn(),
     logExtractionUsage: jest.fn().mockResolvedValue(undefined),
     logUiEvent: jest.fn().mockResolvedValue(undefined),
+    getUiEvents: jest.fn().mockResolvedValue([]),
     useCredits: jest.fn().mockResolvedValue(undefined),
     recordTrialUsage: jest.fn().mockResolvedValue(undefined),
   },
@@ -197,6 +198,86 @@ describe('Images MVP API Tests', () => {
         expect(response.body.access.trial_granted).toBe(false);
         expect(storage.useCredits).toHaveBeenCalledWith('bal_1', 1, expect.stringContaining('Extraction'), expect.any(String));
         expect(extractMetadataWithPython).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /api/images_mvp/analytics/report', () => {
+    it('should return aggregated analytics report', async () => {
+      const mockEvents = [
+        {
+          id: 'evt_1',
+          product: 'images_mvp',
+          eventName: 'purpose_selected',
+          sessionId: 'sess_a',
+          userId: null,
+          properties: { purpose: 'privacy' },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+        {
+          id: 'evt_2',
+          product: 'images_mvp',
+          eventName: 'tab_changed',
+          sessionId: 'sess_a',
+          userId: null,
+          properties: { tab: 'privacy' },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:00:05.000Z'),
+        },
+        {
+          id: 'evt_3',
+          product: 'images_mvp',
+          eventName: 'export_json_downloaded',
+          sessionId: 'sess_b',
+          userId: 'user_1',
+          properties: {},
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:01:00.000Z'),
+        },
+        {
+          id: 'evt_4',
+          product: 'images_mvp',
+          eventName: 'format_hint_shown',
+          sessionId: 'sess_b',
+          userId: null,
+          properties: { mime_type: 'image/jpeg' },
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:02:00.000Z'),
+        },
+        {
+          id: 'evt_5',
+          product: 'images_mvp',
+          eventName: 'paywall_preview_shown',
+          sessionId: 'sess_c',
+          userId: null,
+          properties: {},
+          ipAddress: null,
+          userAgent: null,
+          createdAt: new Date('2026-01-01T00:03:00.000Z'),
+        },
+      ];
+
+      (storage.getUiEvents as jest.Mock).mockResolvedValueOnce(mockEvents);
+
+      const response = await request(app)
+        .get('/api/images_mvp/analytics/report?period=all')
+        .expect(200);
+
+      expect(response.body.totals.events).toBe(5);
+      expect(response.body.totals.sessions).toBe(3);
+      expect(response.body.totals.users).toBe(1);
+      expect(response.body.purposes.selected.privacy).toBe(1);
+      expect(response.body.tabs.privacy).toBe(1);
+      expect(response.body.formats.hints['image/jpeg']).toBe(1);
+      expect(response.body.exports.json).toBe(1);
+      expect(response.body.paywall.previewed).toBe(1);
+      expect(storage.getUiEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ product: 'images_mvp' })
+      );
     });
   });
 });

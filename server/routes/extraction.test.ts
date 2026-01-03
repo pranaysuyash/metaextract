@@ -16,6 +16,7 @@ import multer from 'multer';
 import { spawn } from 'child_process';
 import { registerExtractionRoutes } from './extraction';
 import { storage } from '../storage/index';
+import { stopCleanupInterval } from '../middleware/rateLimit';
 
 // Mock the storage module
 jest.mock('../storage/index');
@@ -45,6 +46,13 @@ describe('API Endpoint Tests', () => {
     registerExtractionRoutes(app);
     jest.clearAllMocks();
   });
+
+  afterAll(() => {
+    stopCleanupInterval();
+  });
+
+  // Set a global timeout for all tests to prevent hanging
+  jest.setTimeout(10000);
 
   describe('POST /api/extract - Single File Extraction', () => {
     const mockPythonResponse = {
@@ -640,8 +648,11 @@ describe('API Endpoint Tests', () => {
       const mockPythonProcess = {
         stdout: { on: jest.fn() },
         stderr: { on: jest.fn() },
-        on: jest.fn(),
+        on: jest.fn((event, callback) => {
+          // Don't trigger any events - let the timeout fire
+        }),
         kill: jest.fn(),
+        killed: false,
       };
 
       (spawn as unknown as jest.Mock).mockReturnValue(mockPythonProcess);
@@ -652,7 +663,7 @@ describe('API Endpoint Tests', () => {
 
       expect(response.body).toHaveProperty('status', 'timeout');
       expect(response.body).toHaveProperty('python_engine', 'unresponsive');
-    });
+    }, 2000); // Increase timeout for this specific test to 2 seconds
   });
 
   describe('Tier-based Field Filtering', () => {

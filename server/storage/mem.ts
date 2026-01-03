@@ -182,6 +182,34 @@ export class MemStorage implements IStorage {
     this.uiEvents.push(entry);
   }
 
+  async getUiEvents(params?: {
+    product?: string;
+    since?: Date;
+    limit?: number;
+  }): Promise<UiEvent[]> {
+    const product = params?.product;
+    const since = params?.since;
+    const limit = params?.limit;
+
+    let results = this.uiEvents;
+    if (product) {
+      results = results.filter(event => event.product === product);
+    }
+    if (since) {
+      results = results.filter(event => event.createdAt >= since);
+    }
+
+    const ordered = [...results].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+
+    if (!limit) {
+      return ordered;
+    }
+
+    return ordered.slice(0, limit);
+  }
+
   async getAnalyticsSummary(): Promise<AnalyticsSummary> {
     // ✅ Return cached result if still valid (5 minute TTL)
     if (this.isAnalyticsCacheValid() && this.analyticsCache.data) {

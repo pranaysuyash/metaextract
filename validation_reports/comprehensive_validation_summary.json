@@ -1,32 +1,32 @@
 {
-  "validation_timestamp": "2026-01-03T19:13:06.557492",
+  "validation_timestamp": "2026-01-03T20:40:28.728783",
   "total_datasets_tested": 9,
-  "overall_success_rate": 100.0,
-  "total_extraction_time": 0.05481433868408203,
-  "average_extraction_time_per_dataset": 0.006090482076009114,
-  "total_fields_extracted": 391,
-  "average_fields_per_dataset": 43.44444444444444,
+  "overall_success_rate": 66.66666666666666,
+  "total_extraction_time": 0.025931119918823242,
+  "average_extraction_time_per_dataset": 0.0028812355465359157,
+  "total_fields_extracted": 196,
+  "average_fields_per_dataset": 21.77777777777778,
   "format_reports": {
     "dicom": {
       "success_rate": 100.0,
-      "average_time": 0.004061301549275716,
+      "average_time": 0.0031619866689046225,
       "total_fields": 196,
       "datasets_tested": 3
     },
     "fits": {
-      "success_rate": 100.0,
-      "average_time": 0.008835792541503906,
-      "total_fields": 147,
+      "success_rate": 0.0,
+      "average_time": 8.511543273925781e-05,
+      "total_fields": 0,
       "datasets_tested": 3
     },
     "hdf5_netcdf": {
       "success_rate": 100.0,
-      "average_time": 0.005374352137247722,
-      "total_fields": 48,
+      "average_time": 0.005396604537963867,
+      "total_fields": 0,
       "datasets_tested": 3
     }
   },
   "recommendations": [
-    "EXCELLENT: All formats showing high success rates and good performance."
+    "CRITICAL: fits format has low success rate (0.0%). Requires immediate attention."
   ]
 }

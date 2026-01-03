@@ -1,6 +1,6 @@
 {
   "report_metadata": {
-    "generated_at": "2026-01-03T13:36:48.033943Z",
+    "generated_at": "2026-01-03T13:55:03.332605Z",
     "output_directory": "test_datasets"
   },
   "suites": [
@@ -13,7 +13,7 @@
         "dicom/US"
       ],
       "dataset_count": 10,
-      "generated_at": "2026-01-03T13:36:29.187565Z",
+      "generated_at": "2026-01-03T13:54:45.624056Z",
       "datasets": [
         {
           "filename": "CT_Test_CT_Series_0001.dcm",
@@ -212,7 +212,7 @@
         "fits/binary_table"
       ],
       "dataset_count": 4,
-      "generated_at": "2026-01-03T13:36:48.032630Z",
+      "generated_at": "2026-01-03T13:55:03.063985Z",
       "datasets": [
         {
           "filename": "primary_2d.fits",
@@ -307,9 +307,62 @@
         "hdf5/multiscale",
         "netcdf/oceanographic"
       ],
-      "dataset_count": 2,
-      "generated_at": "2026-01-03T13:36:48.033609Z",
-      "datasets": []
+      "dataset_count": 3,
+      "generated_at": "2026-01-03T13:55:03.203017Z",
+      "datasets": [
+        {
+          "filename": "climate_small.h5",
+          "format": "hdf5",
+          "modality": "climate",
+          "size_bytes": 35316,
+          "dimensions": [
+            10,
+            18,
+            36
+          ],
+          "metadata_fields": [
+            "temperature",
+            "time",
+            "lat",
+            "lon"
+          ],
+          "notes": "HDF5 climate data shape (10, 18, 36)"
+        },
+        {
+          "filename": "multiscale.h5",
+          "format": "hdf5",
+          "modality": "multiscale",
+          "size_bytes": 90496,
+          "dimensions": [
+            256,
+            256
+          ],
+          "metadata_fields": [
+            "num_levels",
+            "base_shape",
+            "data/level_0"
+          ],
+          "notes": "HDF5 image pyramid (256, 256)"
+        },
+        {
+          "filename": "ocean_small.nc",
+          "format": "netcdf",
+          "modality": "oceanographic",
+          "size_bytes": 43171,
+          "dimensions": [
+            10,
+            18,
+            36
+          ],
+          "metadata_fields": [
+            "sea_surface_temperature",
+            "time",
+            "lat",
+            "lon"
+          ],
+          "notes": "netCDF ocean data shape (10, 18, 36)"
+        }
+      ]
     },
     {
       "suite_name": "geotiff_test_suite",
@@ -319,11 +372,64 @@
         "geotiff/satellite",
         "geotiff/cog"
       ],
-      "dataset_count": 0,
-      "generated_at": "2026-01-03T13:36:48.033905Z",
-      "datasets": []
+      "dataset_count": 3,
+      "generated_at": "2026-01-03T13:55:03.332560Z",
+      "datasets": [
+        {
+          "filename": "dem_test.tif",
+          "format": "geotiff",
+          "modality": "dem",
+          "size_bytes": 83755,
+          "dimensions": [
+            256,
+            256
+          ],
+          "metadata_fields": [
+            "crs",
+            "transform",
+            "nodata",
+            "compression"
+          ],
+          "notes": "GeoTIFF DEM shape (256, 256)"
+        },
+        {
+          "filename": "satellite_test.tif",
+          "format": "geotiff",
+          "modality": "satellite",
+          "size_bytes": 22701,
+          "dimensions": [
+            3,
+            128,
+            128
+          ],
+          "metadata_fields": [
+            "crs",
+            "transform",
+            "bands",
+            "photometric"
+          ],
+          "notes": "GeoTIFF satellite 3-band shape (128, 128)"
+        },
+        {
+          "filename": "cog_test.tif",
+          "format": "cog",
+          "modality": "cog",
+          "size_bytes": 476131,
+          "dimensions": [
+            512,
+            512
+          ],
+          "metadata_fields": [
+            "crs",
+            "transform",
+            "blocksize",
+            "overviews"
+          ],
+          "notes": "COG shape (512, 512) with overviews"
+        }
+      ]
     }
   ],
-  "total_datasets": 14,
-  "total_size_bytes": 29074016
+  "total_datasets": 20,
+  "total_size_bytes": 29825586
 }
