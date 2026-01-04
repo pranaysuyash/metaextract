@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, Share2, CheckCircle2, Hash, Fingerprint, Search, Info, Clipboard } from "lucide-react";
+import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, Share2, CheckCircle2, Hash, Fingerprint, Search, Info, Clipboard, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -64,6 +64,7 @@ const DENSITY_STORAGE_KEY = "images_mvp_density";
 
 export default function ImagesMvpResults() {
     const [metadata, setMetadata] = useState<MvpMetadata | null>(null);
+    const [loadState, setLoadState] = useState<"loading" | "ready" | "empty">("loading");
     const [activeTab, setActiveTab] = useState<TabValue>("privacy");
     const [rawSearch, setRawSearch] = useState("");
     const [showOverlayText, setShowOverlayText] = useState(false);
@@ -83,15 +84,70 @@ export default function ImagesMvpResults() {
     useEffect(() => {
         const stored = sessionStorage.getItem('currentMetadata');
         if (!stored) {
-            navigate('/images_mvp');
+            setLoadState("empty");
             return;
         }
         try {
             setMetadata(JSON.parse(stored));
+            setLoadState("ready");
         } catch {
-            navigate('/images_mvp');
+            setLoadState("empty");
         }
     }, [navigate]);
+
+    if (loadState === "loading") {
+        return (
+            <Layout showHeader={true} showFooter={true}>
+                <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+                    <div className="container mx-auto px-4 max-w-3xl">
+                        <Card className="bg-[#11121a] border-white/10">
+                            <CardContent className="p-8 text-center text-slate-300">
+                                Loading results...
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (loadState === "empty" || !metadata) {
+        return (
+            <Layout showHeader={true} showFooter={true}>
+                <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+                    <div className="container mx-auto px-4 max-w-3xl">
+                        <Card className="bg-[#11121a] border-white/10">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileImage className="w-5 h-5 text-primary" />
+                                    No results yet
+                                </CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Upload an image to extract metadata and view the analysis here.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+                                <Button
+                                    className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                                    onClick={() => navigate('/images_mvp')}
+                                >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Upload an image
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                                    onClick={() => navigate('/#pricing')}
+                                >
+                                    Learn about plans
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
 
     const isTabValue = (value: string): value is TabValue =>
         value === "privacy" || value === "authenticity" || value === "photography" || value === "raw";

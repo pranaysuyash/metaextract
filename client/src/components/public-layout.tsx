@@ -10,7 +10,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
-import { LogIn, UserPlus, User, LogOut, Menu, X } from 'lucide-react';
+import { LogIn, UserPlus, Upload, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { AuthModal } from './auth-modal';
 
@@ -69,26 +69,28 @@ export function PublicLayout({
               </Link>
 
               {/* Desktop Navigation */}
-              <nav className="hidden md:flex items-center gap-6">
-                <Link 
-                  to="/#features" 
-                  className="text-sm text-slate-300 hover:text-white transition-colors"
-                >
-                  Features
-                </Link>
-                <Link 
-                  to="/#pricing" 
-                  className="text-sm text-slate-300 hover:text-white transition-colors"
-                >
-                  Pricing
-                </Link>
-                <Link 
-                  to="/docs" 
-                  className="text-sm text-slate-300 hover:text-white transition-colors"
-                >
-                  Docs
-                </Link>
-              </nav>
+              {!isAuthenticated && (
+                <nav className="hidden md:flex items-center gap-6">
+                  <Link 
+                    to="/#features" 
+                    className="text-sm text-slate-300 hover:text-white transition-colors"
+                  >
+                    Features
+                  </Link>
+                  <Link 
+                    to="/#pricing" 
+                    className="text-sm text-slate-300 hover:text-white transition-colors"
+                  >
+                    Pricing
+                  </Link>
+                  <Link 
+                    to="/docs" 
+                    className="text-sm text-slate-300 hover:text-white transition-colors"
+                  >
+                    Docs
+                  </Link>
+                </nav>
+              )}
 
               {/* Auth Buttons */}
               <div className="hidden md:flex items-center gap-3">
@@ -97,11 +99,11 @@ export function PublicLayout({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate('/dashboard')}
+                      onClick={() => navigate('/images_mvp')}
                       className="text-slate-300 hover:text-white hover:bg-white/10"
                     >
-                      <User className="w-4 h-4 mr-2" />
-                      Dashboard
+                      <Upload className="w-4 h-4 mr-2" />
+                      Extract
                     </Button>
                     <Button
                       variant="ghost"
@@ -154,43 +156,45 @@ export function PublicLayout({
           {mobileMenuOpen && (
             <div className="md:hidden bg-[#0B0C10] border-t border-white/5">
               <div className="container mx-auto px-4 py-4 space-y-4">
-                <nav className="flex flex-col gap-2">
-                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                  <Link 
-                    to="/#features" 
-                    className="text-sm text-slate-300 hover:text-white py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Features
-                  </Link>
-                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                  <Link 
-                    to="/#pricing" 
-                    className="text-sm text-slate-300 hover:text-white py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Pricing
-                  </Link>
-                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                  <Link 
-                    to="/docs" 
-                    className="text-sm text-slate-300 hover:text-white py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Docs
-                  </Link>
-                </nav>
+                {!isAuthenticated && (
+                  <nav className="flex flex-col gap-2">
+                    {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
+                    <Link 
+                      to="/#features" 
+                      className="text-sm text-slate-300 hover:text-white py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Features
+                    </Link>
+                    {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
+                    <Link 
+                      to="/#pricing" 
+                      className="text-sm text-slate-300 hover:text-white py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Pricing
+                    </Link>
+                    {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
+                    <Link 
+                      to="/docs" 
+                      className="text-sm text-slate-300 hover:text-white py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Docs
+                    </Link>
+                  </nav>
+                )}
                 
                 <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
                   {isAuthenticated && user ? (
                     <>
                       <Button
                         variant="ghost"
-                        onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
+                        onClick={() => { navigate('/images_mvp'); setMobileMenuOpen(false); }}
                         className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
                       >
-                        <User className="w-4 h-4 mr-2" />
-                        Dashboard
+                        <Upload className="w-4 h-4 mr-2" />
+                        Extract
                       </Button>
                       <Button
                         variant="ghost"

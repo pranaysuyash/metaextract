@@ -1,34 +1,34 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
 } from '@/components/ui/accordion';
-import { 
-  Search, 
-  Download, 
-  Copy, 
-  Eye, 
-  EyeOff, 
+import {
+  Search,
+  Download,
+  Copy,
+  Eye,
+  EyeOff,
   Filter,
   FileJson,
   Database,
@@ -47,7 +47,8 @@ import {
   Ruler,
   Clock,
   Hash,
-  EyeIcon
+  EyeIcon,
+  Mail,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -126,7 +127,9 @@ interface MetadataResult {
   environmental_sustainability?: Record<string, any> | null;
   social_media_digital?: Record<string, any> | null;
   gaming_entertainment?: Record<string, any> | null;
-  error?: string;
+  // Email metadata
+  email?: Record<string, any> | null;
+  [key: string]: any;
 }
 
 interface EnhancedResultsDisplayProps {
@@ -138,17 +141,23 @@ interface EnhancedResultsDisplayProps {
  * Provides an improved interface for displaying metadata extraction results
  * with better organization, filtering, and visualization.
  */
-export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps) {
+export function EnhancedResultsDisplayV2({
+  result,
+}: EnhancedResultsDisplayProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('summary');
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
+  const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >({});
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>(
+    {}
+  );
 
   // Toggle category expansion
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => ({
       ...prev,
-      [category]: !prev[category]
+      [category]: !prev[category],
     }));
   };
 
@@ -157,20 +166,24 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
     const key = `${category}.${field}`;
     setVisibleFields(prev => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key],
     }));
   };
 
   // Filter metadata based on search term
   const filteredMetadata = useMemo(() => {
     if (!searchTerm) return result;
-    
+
     const filtered: any = { ...result };
     const lowerSearch = searchTerm.toLowerCase();
-    
+
     // Filter each category
     Object.entries(result).forEach(([key, value]) => {
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
         const filteredValue: any = {};
         Object.entries(value).forEach(([field, fieldValue]) => {
           if (
@@ -183,7 +196,7 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
         filtered[key] = filteredValue;
       }
     });
-    
+
     return filtered;
   }, [result, searchTerm]);
 
@@ -227,6 +240,8 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
         return <MapPin className="w-4 h-4" />;
       case 'drone_telemetry':
         return <MapPin className="w-4 h-4" />;
+      case 'email':
+        return <Mail className="w-4 h-4" />;
       default:
         return <Database className="w-4 h-4" />;
     }
@@ -235,10 +250,11 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
   // Render metadata table for a category
   const renderMetadataTable = (data: Record<string, any>, category: string) => {
     if (!data || typeof data !== 'object') return null;
-    
-    const entries = Object.entries(data).filter(([key, value]) => 
-      key.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(value).toLowerCase().includes(searchTerm.toLowerCase())
+
+    const entries = Object.entries(data).filter(
+      ([key, value]) =>
+        key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(value).toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (entries.length === 0) return null;
@@ -262,14 +278,20 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
                     size="sm"
                     onClick={() => toggleFieldVisibility(category, key)}
                   >
-                    {visibleFields[`${category}.${key}`] ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    {visibleFields[`${category}.${key}`] ? (
+                      <Eye className="w-3 h-3" />
+                    ) : (
+                      <EyeOff className="w-3 h-3" />
+                    )}
                   </Button>
                 </div>
               </TableCell>
               <TableCell>
                 {visibleFields[`${category}.${key}`] !== false ? (
                   <pre className="text-sm max-w-full overflow-x-auto whitespace-pre-wrap break-words">
-                    {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                    {typeof value === 'object'
+                      ? JSON.stringify(value, null, 2)
+                      : String(value)}
                   </pre>
                 ) : (
                   <span className="text-muted-foreground italic">Hidden</span>
@@ -283,11 +305,12 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
   };
 
   // Get all metadata categories
-  const metadataCategories = Object.keys(result).filter(key => 
-    typeof result[key as keyof MetadataResult] === 'object' && 
-    result[key as keyof MetadataResult] !== null &&
-    !['locked_fields', 'error'].includes(key) &&
-    !Array.isArray(result[key as keyof MetadataResult])
+  const metadataCategories = Object.keys(result).filter(
+    key =>
+      typeof result[key as keyof MetadataResult] === 'object' &&
+      result[key as keyof MetadataResult] !== null &&
+      !['locked_fields', 'error'].includes(key) &&
+      !Array.isArray(result[key as keyof MetadataResult])
   );
 
   return (
@@ -302,19 +325,16 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
                 Metadata Extraction Results
               </CardTitle>
               <CardDescription>
-                Detailed analysis of {result.filename} ({result.fields_extracted} fields extracted)
+                Detailed analysis of {result.filename} (
+                {result.fields_extracted} fields extracted)
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                Tier: {result.tier.toUpperCase()}
-              </Badge>
+              <Badge variant="outline">Tier: {result.tier.toUpperCase()}</Badge>
               <Badge variant="secondary">
                 {result.fields_extracted} fields
               </Badge>
-              <Badge variant="secondary">
-                {result.processing_ms}ms
-              </Badge>
+              <Badge variant="secondary">{result.processing_ms}ms</Badge>
             </div>
           </div>
         </CardHeader>
@@ -325,7 +345,7 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
               <Input
                 placeholder="Search metadata fields..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 className="pl-8"
               />
             </div>
@@ -349,10 +369,18 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <p className="text-sm"><span className="font-medium">Name:</span> {result.filename}</p>
-              <p className="text-sm"><span className="font-medium">Size:</span> {result.filesize}</p>
-              <p className="text-sm"><span className="font-medium">Type:</span> {result.filetype}</p>
-              <p className="text-sm"><span className="font-medium">MIME:</span> {result.mime_type}</p>
+              <p className="text-sm">
+                <span className="font-medium">Name:</span> {result.filename}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Size:</span> {result.filesize}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Type:</span> {result.filetype}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">MIME:</span> {result.mime_type}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -363,9 +391,17 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <p className="text-sm"><span className="font-medium">Fields:</span> {result.fields_extracted}</p>
-              <p className="text-sm"><span className="font-medium">Time:</span> {result.processing_ms}ms</p>
-              <p className="text-sm"><span className="font-medium">Tier:</span> {result.tier}</p>
+              <p className="text-sm">
+                <span className="font-medium">Fields:</span>{' '}
+                {result.fields_extracted}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Time:</span>{' '}
+                {result.processing_ms}ms
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Tier:</span> {result.tier}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -376,11 +412,12 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              {result.file_integrity && Object.entries(result.file_integrity).map(([key, value]) => (
-                <p key={key} className="text-sm">
-                  <span className="font-medium">{key}:</span> {String(value)}
-                </p>
-              ))}
+              {result.file_integrity &&
+                Object.entries(result.file_integrity).map(([key, value]) => (
+                  <p key={key} className="text-sm">
+                    <span className="font-medium">{key}:</span> {String(value)}
+                  </p>
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -391,11 +428,21 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <p className="text-sm"><span className="font-medium">Available:</span> {metadataCategories.length}</p>
-              <p className="text-sm"><span className="font-medium">Locked:</span> {result.locked_fields.length}</p>
-              <p className="text-sm"><span className="font-medium">Status:</span> 
-                <Badge variant={result.error ? "destructive" : "default"} className="ml-2">
-                  {result.error ? "Error" : "Success"}
+              <p className="text-sm">
+                <span className="font-medium">Available:</span>{' '}
+                {metadataCategories.length}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Locked:</span>{' '}
+                {result.locked_fields.length}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Status:</span>
+                <Badge
+                  variant={result.error ? 'destructive' : 'default'}
+                  className="ml-2"
+                >
+                  {result.error ? 'Error' : 'Success'}
                 </Badge>
               </p>
             </div>
@@ -407,8 +454,8 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6 overflow-x-auto">
           {metadataCategories.slice(0, 6).map(category => (
-            <TabsTrigger 
-              key={category} 
+            <TabsTrigger
+              key={category}
               value={category}
               className="whitespace-nowrap"
             >
@@ -431,14 +478,30 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {getCategoryIcon(category)}
-                  <span className="capitalize">{category.replace('_', ' ')}</span>
+                  <span className="capitalize">
+                    {category.replace('_', ' ')}
+                  </span>
                   <Badge variant="secondary" className="ml-2">
-                    {Object.keys(result[category as keyof MetadataResult] as Record<string, any>).length} fields
+                    {
+                      Object.keys(
+                        result[category as keyof MetadataResult] as Record<
+                          string,
+                          any
+                        >
+                      ).length
+                    }{' '}
+                    fields
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {renderMetadataTable(result[category as keyof MetadataResult] as Record<string, any>, category)}
+                {renderMetadataTable(
+                  result[category as keyof MetadataResult] as Record<
+                    string,
+                    any
+                  >,
+                  category
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -452,14 +515,30 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       {getCategoryIcon(category)}
-                      <span className="capitalize">{category.replace('_', ' ')}</span>
+                      <span className="capitalize">
+                        {category.replace('_', ' ')}
+                      </span>
                       <Badge variant="secondary" className="ml-2">
-                        {Object.keys(result[category as keyof MetadataResult] as Record<string, any>).length} fields
+                        {
+                          Object.keys(
+                            result[category as keyof MetadataResult] as Record<
+                              string,
+                              any
+                            >
+                          ).length
+                        }{' '}
+                        fields
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {renderMetadataTable(result[category as keyof MetadataResult] as Record<string, any>, category)}
+                    {renderMetadataTable(
+                      result[category as keyof MetadataResult] as Record<
+                        string,
+                        any
+                      >,
+                      category
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -483,15 +562,31 @@ export function EnhancedResultsDisplayV2({ result }: EnhancedResultsDisplayProps
                 <AccordionTrigger className="flex items-center gap-2">
                   <div className="flex items-center gap-2">
                     {getCategoryIcon(category)}
-                    <span className="capitalize">{category.replace('_', ' ')}</span>
+                    <span className="capitalize">
+                      {category.replace('_', ' ')}
+                    </span>
                     <Badge variant="secondary" className="ml-2">
-                      {Object.keys(result[category as keyof MetadataResult] as Record<string, any>).length} fields
+                      {
+                        Object.keys(
+                          result[category as keyof MetadataResult] as Record<
+                            string,
+                            any
+                          >
+                        ).length
+                      }{' '}
+                      fields
                     </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <ScrollArea className="h-80 rounded-md border p-4">
-                    {renderMetadataTable(result[category as keyof MetadataResult] as Record<string, any>, category)}
+                    {renderMetadataTable(
+                      result[category as keyof MetadataResult] as Record<
+                        string,
+                        any
+                      >,
+                      category
+                    )}
                   </ScrollArea>
                 </AccordionContent>
               </AccordionItem>

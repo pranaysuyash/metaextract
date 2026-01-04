@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 # Library availability checks
 try:
-    import pandas as pd
+    import pandas as pd  # type: ignore[reportMissingImports]
     PANDAS_AVAILABLE = True
 except ImportError:
     pd: Any = None
@@ -58,7 +58,7 @@ except ImportError:
     DICOM_AVAILABLE = False
 
 try:
-    import nibabel as nib
+    import nibabel as nib  # type: ignore[reportMissingImports]
     NIBABEL_AVAILABLE = True
 except ImportError:
     nib: Any = None
@@ -746,12 +746,11 @@ def _analyze_fhir_resource(filepath: str) -> Dict[str, Any]:
                 result["fhir_info"]["organization_references"] = extract_references(fhir_data, "Organization")
                 result["fhir_info"]["encounter_references"] = extract_references(fhir_data, "Encounter")
         
-        except json.JSONDecodeError:
+        except ValueError:
             # Not valid JSON, treat as text
             pass
         except Exception:
-            # Ensure json name is bound for static analysis
-            import json  # type: ignore
+            # Fallback: ignore parsing errors and continue
             pass
         
         return result

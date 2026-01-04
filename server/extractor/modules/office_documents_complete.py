@@ -928,7 +928,7 @@ def _extract_powerpoint_master_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_transitions_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint transition information."""
-    transitions = {'powerpoint_transitions_complete': True}
+    transitions: Dict[str, Any] = {'powerpoint_transitions_complete': True}
     
     try:
         transition_count = 0
@@ -985,7 +985,7 @@ def _extract_powerpoint_transitions_complete(zf: zipfile.ZipFile) -> Dict[str, A
 
 def _extract_powerpoint_animations_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint animation information."""
-    animations = {'powerpoint_animations_complete': True}
+    animations: Dict[str, Any] = {'powerpoint_animations_complete': True}
     
     try:
         animation_count = 0
@@ -1018,7 +1018,7 @@ def _extract_powerpoint_animations_complete(zf: zipfile.ZipFile) -> Dict[str, An
 
 def _extract_powerpoint_shapes_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint shape information."""
-    shapes = {'powerpoint_shapes_complete': True}
+    shapes: Dict[str, Any] = {'powerpoint_shapes_complete': True}
     
     try:
         shape_count = 0
@@ -1055,7 +1055,7 @@ def _extract_powerpoint_shapes_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_media_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint media information."""
-    media = {'powerpoint_media_complete': True}
+    media: Dict[str, Any] = {'powerpoint_media_complete': True}
     
     try:
         video_count = 0
@@ -1104,7 +1104,7 @@ def _extract_powerpoint_media_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_notes_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint speaker notes information."""
-    notes = {'powerpoint_notes_complete': True}
+    notes: Dict[str, Any] = {'powerpoint_notes_complete': True}
     
     try:
         notes_count = 0
@@ -1128,7 +1128,7 @@ def _extract_powerpoint_notes_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_section_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint section information."""
-    sections = {'powerpoint_sections_complete': True}
+    sections: Dict[str, Any] = {'powerpoint_sections_complete': True}
     
     try:
         section_count = 0
@@ -1146,7 +1146,7 @@ def _extract_powerpoint_section_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_custom_show_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint custom show information."""
-    custom_shows = {'powerpoint_custom_shows_complete': True}
+    custom_shows: Dict[str, Any] = {'powerpoint_custom_shows_complete': True}
     
     try:
         custom_show_count = 0
@@ -1164,7 +1164,7 @@ def _extract_powerpoint_custom_show_complete(zf: zipfile.ZipFile) -> Dict[str, A
 
 def _extract_powerpoint_protection_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint protection information."""
-    protection = {'powerpoint_protection_complete': True}
+    protection: Dict[str, Any] = {'powerpoint_protection_complete': True}
     
     try:
         if 'ppt/presentation.xml' in zf.namelist():
@@ -1183,7 +1183,7 @@ def _extract_powerpoint_protection_complete(zf: zipfile.ZipFile) -> Dict[str, An
 
 def _extract_word_comments_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word comments information."""
-    comments = {'word_comments_complete': True}
+    comments: Dict[str, Any] = {'word_comments_complete': True}
     
     try:
         if 'word/comments.xml' in zf.namelist():
@@ -1204,7 +1204,7 @@ def _extract_word_comments_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_word_revisions_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word revision information."""
-    revisions = {'word_revisions_complete': True}
+    revisions: Dict[str, Any] = {'word_revisions_complete': True}
     
     try:
         if 'word/document.xml' in zf.namelist():
@@ -1223,7 +1223,7 @@ def _extract_word_revisions_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_word_styles_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word styles information."""
-    styles = {'word_styles_complete': True}
+    styles: Dict[str, Any] = {'word_styles_complete': True}
     
     try:
         if 'word/styles.xml' in zf.namelist():
@@ -1243,7 +1243,7 @@ def _extract_word_styles_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_word_settings_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word settings information."""
-    settings = {'word_settings_complete': True}
+    settings: Dict[str, Any] = {'word_settings_complete': True}
     
     try:
         if 'word/settings.xml' in zf.namelist():
@@ -1263,7 +1263,7 @@ def _extract_word_settings_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_word_custom_xml(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word custom XML information."""
-    custom_xml = {'word_custom_xml_complete': True}
+    custom_xml: Dict[str, Any] = {'word_custom_xml_complete': True}
     
     try:
         custom_xml_count = 0
@@ -1281,7 +1281,7 @@ def _extract_word_custom_xml(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_word_relationships(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word relationships information."""
-    rels = {'word_relationships_complete': True}
+    rels: Dict[str, Any] = {'word_relationships_complete': True}
     
     try:
         rel_count = 0
@@ -1304,7 +1304,7 @@ def _extract_word_relationships(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_zip_stats(zf: zipfile.ZipFile, filepath: str) -> Dict[str, Any]:
     """Extract ZIP archive statistics."""
-    stats = {'zip_stats_complete': True}
+    stats: Dict[str, Any] = {'zip_stats_complete': True}
     
     try:
         stats['zip_file_count'] = len(zf.namelist())

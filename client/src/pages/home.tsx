@@ -34,6 +34,7 @@ import {
   User,
   LogIn,
   UserPlus,
+  Upload,
 } from 'lucide-react';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import {
@@ -477,14 +478,14 @@ export default function Home() {
 
                     <div className="flex gap-3">
                       <Button
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate('/images_mvp')}
                         className="bg-[#6366f1] hover:bg-[#5855eb] text-white"
                       >
-                        <User className="w-4 h-4 mr-2" />
-                        Go to Dashboard
+                        <Upload className="w-4 h-4 mr-2" />
+                        Start Extracting
                       </Button>
                       <Button
-                        onClick={() => navigate('/results')}
+                        onClick={() => navigate('/images_mvp/results')}
                         variant="outline"
                         className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
                       >

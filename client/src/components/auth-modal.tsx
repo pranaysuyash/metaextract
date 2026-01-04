@@ -6,6 +6,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: AuthModalProps) {
   const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,8 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
       setTimeout(() => {
         resetForms();
         onClose();
+        // Redirect to extraction flow after successful login
+        navigate('/images_mvp', { replace: true });
         onSuccess?.();
       }, 500);
     } else {
@@ -97,6 +101,8 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
       setTimeout(() => {
         resetForms();
         onClose();
+        // Redirect to extraction flow after successful registration
+        navigate('/images_mvp', { replace: true });
         onSuccess?.();
       }, 1000);
     } else {

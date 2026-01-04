@@ -16,6 +16,7 @@ import { registerTierRoutes } from './tiers';
 import { registerAdminRoutes } from './admin';
 import { registerPaymentRoutes } from '../payments';
 import { registerGeocodingRoutes } from './geocoding';
+import { registerOnboardingRoutes } from './onboarding';
 import { rateLimitManager } from '../rateLimitRedis';
 import { rateLimitAPI } from '../rateLimitMiddleware';
 
@@ -50,6 +51,7 @@ export async function registerRoutes(
   registerAdminRoutes(app);
   registerPaymentRoutes(app);
   registerGeocodingRoutes(app);
+  registerOnboardingRoutes(app);
 
   return httpServer;
 }

@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Layout } from '@/components/layout';
-import { MOCK_METADATA } from '@/lib/mockData';
 import { PaymentModal } from '@/components/payment-modal';
 import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
 import { MetadataComparisonDisplay } from '@/components/metadata-comparison-display';
@@ -183,61 +182,67 @@ export default function Results() {
   const resultId = searchParams.get('id');
   const { toast } = useToast();
 
-  const [metadata, setMetadata] = useState<MetadataResponse>(() => {
-    // Priority 1: Navigation State (In-Memory, handles large payloads)
-    if (location.state?.metadata) {
-      // Handle both array and object formats
-      const metadataObj = Array.isArray(location.state.metadata)
-        ? location.state.metadata[0]
-        : location.state.metadata;
+  const [metadata, setMetadata] = useState<MetadataResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-      return metadataObj;
-    }
-
-    // Priority 2: Session Storage (might be truncated or missing if quota exceeded)
-    const stored = sessionStorage.getItem('currentMetadata');
-    if (stored) {
+  // Fetch metadata from the database instead of using session storage
+  useEffect(() => {
+    const fetchMetadata = async () => {
       try {
-        const parsed = JSON.parse(stored);
-        console.log('[Results] Loaded metadata from session storage:', parsed);
-        return parsed;
-      } catch (e) {
-        console.error('[Results] Failed to parse session storage:', e);
-        console.warn('[Results] Falling back to MOCK_METADATA');
-        return MOCK_METADATA as any;
+        setError(null);
+        // Priority 1: Navigation State (In-Memory, handles large payloads)
+        if (location.state?.metadata) {
+          // Handle both array and object formats
+          const metadataObj = Array.isArray(location.state.metadata)
+            ? location.state.metadata[0]
+            : location.state.metadata;
+
+          setMetadata(metadataObj);
+          setLoading(false);
+          return;
+        }
+
+        // Priority 2: Query Parameter (for sharing links)
+        const urlParams = new URLSearchParams(location.search);
+        const metadataId = urlParams.get('id');
+
+        if (metadataId) {
+          // Fetch from database via API
+          const response = await fetch(`/api/extract/results/${metadataId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+            },
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            setMetadata(result);
+            console.log('[Results] Loaded metadata from database:', result);
+          } else if (response.status === 404) {
+            console.warn('[Results] Metadata not found in database');
+            setMetadata(null);
+          } else {
+            throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+          }
+        } else {
+          // No metadata ID provided, show empty state
+          console.warn('[Results] No metadata ID provided');
+          setMetadata(null);
+        }
+      } catch (err) {
+        console.error('[Results] Error fetching metadata:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        setMetadata(null);
+      } finally {
+        setLoading(false);
       }
-    }
-    console.warn(
-      '[Results] No metadata in session storage. Falling back to MOCK_METADATA'
-    );
-    return MOCK_METADATA as any;
-  });
+    };
+
+    fetchMetadata();
+  }, [location]);
 
   // Fetch from DB if ID is present and we don't have fresh data
-  useEffect(() => {
-    if (resultId && (metadata === (MOCK_METADATA as any) || !metadata.filename)) {
-      console.log(
-        `[Results] ID found in URL: ${resultId}. Fetching from DB...`
-      );
-      fetch(`/api/extract/results/${resultId}`)
-        .then(res => {
-          if (!res.ok) throw new Error('Result not found');
-          return res.json();
-        })
-        .then(data => {
-          console.log('[Results] Loaded metadata from DB');
-          setMetadata(data);
-        })
-        .catch(err => {
-          console.error('[Results] Failed to fetch by ID:', err);
-          toast({
-            title: 'Error loading result',
-            description: 'Could not load saved analysis. Using mock data.',
-            variant: 'destructive',
-          });
-        });
-    }
-  }, [resultId, metadata, toast]);
 
   const [showPayment, setShowPayment] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -283,6 +288,16 @@ export default function Results() {
   }, [metadata]);
 
   const handleDownload = () => {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata) {
+      toast({
+        title: "Download Error",
+        description: "No metadata available to download",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (isUnlocked) {
       const dataStr = JSON.stringify(metadata, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
@@ -298,6 +313,16 @@ export default function Results() {
   };
 
   const handlePDFExport = () => {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata) {
+      toast({
+        title: "Export Error",
+        description: "No metadata available to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!isUnlocked) {
       setShowPayment(true);
       return;
@@ -332,13 +357,13 @@ export default function Results() {
     // File Info
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`File: ${metadata.filename}`, 20, yPosition);
+    doc.text(`File: ${metadata.filename || 'Unknown'}`, 20, yPosition);
     yPosition += 8;
     doc.text(`Size: ${metadata.filesize || 0} bytes`, 20, yPosition);
     yPosition += 8;
-    doc.text(`Type: ${metadata.filetype}`, 20, yPosition);
+    doc.text(`Type: ${metadata.filetype || 'Unknown'}`, 20, yPosition);
     yPosition += 8;
-    doc.text(`MIME Type: ${metadata.mime_type}`, 20, yPosition);
+    doc.text(`MIME Type: ${metadata.mime_type || 'Unknown'}`, 20, yPosition);
     yPosition += 8;
     doc.text(`Analyzed: ${new Date().toLocaleString()}`, 20, yPosition);
     yPosition += 15;
@@ -417,11 +442,11 @@ export default function Results() {
     const keyFields = [
       {
         label: 'MD5 Hash',
-        value: metadata.hashes?.md5 || metadata.file_integrity?.md5,
+        value: metadata.hashes?.md5 || metadata.file_integrity?.md5 || 'N/A',
       },
       {
         label: 'SHA256 Hash',
-        value: metadata.hashes?.sha256 || metadata.file_integrity?.sha256,
+        value: metadata.hashes?.sha256 || metadata.file_integrity?.sha256 || 'N/A',
       },
       { label: 'Capture Date', value: captureDate || 'Not embedded' },
       {
@@ -466,12 +491,29 @@ export default function Results() {
   };
 
   const onPaymentSuccess = () => {
-    setIsUnlocked(true);
+    // CRITICAL FIX: Only unlock if metadata exists
+    if (metadata) {
+      setIsUnlocked(true);
+    } else {
+      toast({
+        title: "Payment Error",
+        description: "No metadata available to unlock",
+        variant: "destructive",
+      });
+    }
   };
 
   // Advanced analysis API calls
   const runAdvancedAnalysis = async () => {
-    if (!metadata.filename) return;
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.filename) {
+      toast({
+        title: "Analysis Error",
+        description: "No metadata available for analysis",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsProcessingAdvanced(true);
     try {
@@ -481,8 +523,8 @@ export default function Results() {
       // For demo purposes, we'll use the test.jpg file
       const response = await fetch('/test.jpg');
       const blob = await response.blob();
-      const file = new File([blob], metadata.filename, {
-        type: metadata.mime_type,
+      const file = new File([blob], metadata?.filename || 'unknown', {
+        type: metadata?.mime_type || 'application/octet-stream',
       });
 
       formData.append('file', file);
@@ -630,6 +672,11 @@ export default function Results() {
   };
 
   const totalFields = useMemo(() => {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata) {
+      return 0;
+    }
+    
     if (metadata.fields_extracted && metadata.fields_extracted > 0) {
       return metadata.fields_extracted;
     }
@@ -654,7 +701,8 @@ export default function Results() {
   }, [metadata]);
 
   const flatXmpNamespaces = useMemo(() => {
-    if (!metadata.xmp_namespaces || metadata.xmp_namespaces._locked) {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.xmp_namespaces || metadata.xmp_namespaces._locked) {
       return {};
     }
     const flat: Record<string, any> = {};
@@ -665,42 +713,47 @@ export default function Results() {
       });
     });
     return flat;
-  }, [metadata.xmp_namespaces]);
+  }, [metadata]);
 
   const flatEmbeddedThumbnails = useMemo(() => {
-    if (!metadata.embedded_thumbnails || metadata.embedded_thumbnails._locked) {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.embedded_thumbnails || metadata.embedded_thumbnails._locked) {
       return {};
     }
     return flattenForDisplay(metadata.embedded_thumbnails);
-  }, [metadata.embedded_thumbnails]);
+  }, [metadata]);
 
   const flatCamera360 = useMemo(() => {
-    if (!metadata.camera_360) {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.camera_360) {
       return {};
     }
     return flattenForDisplay(metadata.camera_360);
-  }, [metadata.camera_360]);
+  }, [metadata]);
 
   const flatScientific = useMemo(() => {
-    if (!metadata.scientific || metadata.scientific._locked) {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.scientific || metadata.scientific._locked) {
       return {};
     }
     return flattenForDisplay(metadata.scientific);
-  }, [metadata.scientific]);
+  }, [metadata]);
 
   const flatScientificData = useMemo(() => {
-    if (!metadata.scientific_data || metadata.scientific_data._locked) {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.scientific_data || metadata.scientific_data._locked) {
       return {};
     }
     return flattenForDisplay(metadata.scientific_data);
-  }, [metadata.scientific_data]);
+  }, [metadata]);
 
   const flatTelemetry = useMemo(() => {
-    if (!metadata.video || !metadata.video.telemetry) {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.video || !metadata.video.telemetry) {
       return {};
     }
     return flattenForDisplay(metadata.video.telemetry);
-  }, [metadata.video]);
+  }, [metadata]);
 
   const getGpsCoords = (gps: Record<string, any> | null | undefined) => {
     if (!gps || typeof gps !== 'object') return null;
@@ -726,7 +779,13 @@ export default function Results() {
     return { latitude: lat, longitude: lon };
   };
 
-  const gpsCoords = getGpsCoords(metadata.gps as any);
+  const gpsCoords = useMemo(() => {
+    // CRITICAL FIX: Handle null metadata gracefully
+    if (!metadata || !metadata.gps) {
+      return null;
+    }
+    return getGpsCoords(metadata.gps as any);
+  }, [metadata?.gps]);
   const hasGPS = !!gpsCoords;
 
   const isFieldLocked = (value: any): boolean => {
@@ -845,6 +904,71 @@ export default function Results() {
     </h4>
   );
 
+  // Show loading state while fetching metadata
+  if (loading) {
+    return (
+      <UIAdaptationProvider initialMetadata={null}>
+        <Layout>
+          <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="text-white text-lg">Loading metadata...</p>
+              <p className="text-slate-400 text-sm">Fetching from database</p>
+            </div>
+          </div>
+        </Layout>
+      </UIAdaptationProvider>
+    );
+  }
+
+  // Show error state if there was an error
+  if (error) {
+    return (
+      <UIAdaptationProvider initialMetadata={null}>
+        <Layout>
+          <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+            <div className="max-w-md w-full bg-red-900/30 border border-red-700/50 rounded-lg p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-white mb-2">Error Loading Metadata</h2>
+              <p className="text-slate-300 mb-4">{error}</p>
+              <Button
+                onClick={() => navigate('/images_mvp')}
+                className="bg-[#6366f1] hover:bg-[#5855eb] text-white w-full"
+              >
+                Upload a file
+              </Button>
+            </div>
+          </div>
+        </Layout>
+      </UIAdaptationProvider>
+    );
+  }
+
+  // Show error if no metadata was loaded
+  if (!metadata) {
+    return (
+      <UIAdaptationProvider initialMetadata={null}>
+        <Layout>
+          <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+            <div className="max-w-md w-full bg-[#11121a] border border-white/10 rounded-lg p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-white mb-2">No Results Yet</h2>
+              <p className="text-slate-300 mb-4">
+                Upload a file to view extracted metadata and analysis here.
+              </p>
+              <Button
+                onClick={() => navigate('/images_mvp')}
+                className="bg-[#6366f1] hover:bg-[#5855eb] text-white w-full"
+              >
+                Start extraction
+              </Button>
+            </div>
+          </div>
+        </Layout>
+      </UIAdaptationProvider>
+    );
+  }
+
   return (
     <UIAdaptationProvider initialMetadata={metadata}>
       <Layout>
@@ -870,19 +994,20 @@ export default function Results() {
                       className="text-xl font-bold text-white font-mono tracking-tight"
                       data-testid="text-filename"
                     >
-                      {metadata.filename}
+                      {metadata?.filename || 'Unknown'}
                     </h1>
                     <div className="flex gap-4 text-xs text-slate-500 font-mono mt-1">
                       <span data-testid="text-filesize">
-                        SIZE: {metadata.filesize}
+                        SIZE: {metadata?.filesize || 'Unknown'}
                       </span>
                       <span data-testid="text-filetype">
-                        TYPE: {metadata.filetype}
+                        TYPE: {metadata?.filetype || 'Unknown'}
                       </span>
                       <span className="text-primary" data-testid="text-hash">
                         SHA256:{' '}
-                        {metadata.file_integrity?.sha256?.substring(0, 12) ||
-                          metadata.hash?.substring(0, 12)}
+                        {metadata?.file_integrity?.sha256?.substring(0, 12) ||
+                          metadata?.hash?.substring(0, 12) ||
+                          'N/A'}
                         ...
                       </span>
                       <ContextIndicator />
@@ -927,7 +1052,7 @@ export default function Results() {
                   {import.meta.env.DEV && (
                     <Button
                       onClick={() =>
-                        navigate('/results-v2', { state: { metadata } })
+                        navigate('/results-v2', { state: { metadata: metadata } })
                       }
                       variant="outline"
                       className="gap-2 font-mono text-xs tracking-wider border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
@@ -980,17 +1105,17 @@ export default function Results() {
                           {hasGPS ? 'Present' : 'Not Embedded'}
                         </div>
                       </div>
-                      {metadata.calculated && (
+                      {metadata?.calculated && (
                         <div>
                           <div className="text-[10px] text-slate-500 uppercase">
                             Dimensions
                           </div>
                           <div className="text-sm font-mono text-white">
-                            {metadata.calculated.megapixels
-                              ? `${metadata.calculated.megapixels} MP`
+                            {metadata?.calculated?.megapixels
+                              ? `${metadata?.calculated?.megapixels} MP`
                               : 'N/A'}
-                            {metadata.calculated.aspect_ratio &&
-                              ` (${metadata.calculated.aspect_ratio})`}
+                            {metadata?.calculated?.aspect_ratio &&
+                              ` (${metadata?.calculated?.aspect_ratio})`}
                           </div>
                         </div>
                       )}
@@ -1012,7 +1137,7 @@ export default function Results() {
                     </div>
                   </div>
 
-                  {hasGPS && metadata.gps?.google_maps_url && (
+                  {hasGPS && metadata?.gps?.google_maps_url && (
                     <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg">
                       <h3 className="text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2">
                         GPS Location
@@ -1027,7 +1152,7 @@ export default function Results() {
                           {gpsCoords?.longitude.toFixed(6)}
                         </div>
                         <a
-                          href={metadata.gps.google_maps_url}
+                          href={metadata?.gps?.google_maps_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mt-3"
@@ -1076,9 +1201,9 @@ export default function Results() {
 
                 <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
                   {/* PERSONA DISPLAY - Show Sarah-friendly answers first */}
-                  {(metadata.persona_interpretation) && (
+                  {(metadata?.persona_interpretation) && (
                     <div className="p-4 border-b border-white/10 bg-black/20">
-                      <PersonaDisplay interpretation={metadata.persona_interpretation} />
+                      <PersonaDisplay interpretation={metadata?.persona_interpretation} />
                     </div>
                   )}
                   
@@ -1104,7 +1229,7 @@ export default function Results() {
                           EXPLORER
                           <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
                         </TabsTrigger>
-                        {metadata.medical_imaging?.available && (
+                        {metadata?.medical_imaging?.available && (
                           <TabsTrigger
                             value="medical"
                             className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
@@ -1181,13 +1306,13 @@ export default function Results() {
 
                           <TabsContent value="medical" className="mt-0">
                             <MedicalAnalysisResult
-                              data={(metadata.medical_imaging || { available: false }) as any}
+                              data={(metadata?.medical_imaging || { available: false }) as any}
                               isUnlocked={isUnlocked}
                             />
                           </TabsContent>
 
                           <TabsContent value="all" className="mt-0 space-y-6">
-                            {metadata.file_integrity && (
+                            {metadata?.file_integrity && (
                               <section>
                                 <SectionHeader
                                   icon={Hash}
@@ -1198,13 +1323,13 @@ export default function Results() {
                                 <div className="grid grid-cols-1 gap-y-1">
                                   <FieldRow
                                     label="MD5"
-                                    value={metadata.file_integrity.md5}
+                                    value={metadata?.file_integrity?.md5 || 'N/A'}
                                     copyable
                                     index={0}
                                   />
                                   <FieldRow
                                     label="SHA256"
-                                    value={metadata.file_integrity.sha256}
+                                    value={metadata?.file_integrity?.sha256 || 'N/A'}
                                     copyable
                                     index={1}
                                   />
@@ -1212,23 +1337,23 @@ export default function Results() {
                               </section>
                             )}
 
-                            {metadata.metadata_comparison &&
-                              (metadata.fields_extracted === 0 ||
-                                metadata.metadata_comparison.summary
+                            {metadata?.metadata_comparison &&
+                              (metadata?.fields_extracted === 0 ||
+                                metadata?.metadata_comparison?.summary
                                   ?.overall_status !== 'no_metadata' ||
-                                metadata.metadata_comparison.has_both) && (
+                                metadata?.metadata_comparison?.has_both) && (
                                 <section>
                                   <MetadataComparisonDisplay
-                                    comparison={metadata.metadata_comparison}
+                                    comparison={metadata?.metadata_comparison}
                                   />
                                 </section>
                               )}
 
-                            {metadata.burned_metadata &&
-                              metadata.burned_metadata.has_burned_metadata && (
+                            {metadata?.burned_metadata &&
+                              metadata?.burned_metadata?.has_burned_metadata && (
                                 <section>
                                   <BurnedMetadataDisplay
-                                    burned_metadata={metadata.burned_metadata}
+                                    burned_metadata={metadata?.burned_metadata}
                                     isUnlocked={isUnlocked}
                                   />
                                 </section>
@@ -1361,9 +1486,9 @@ export default function Results() {
                             {!isUnlocked && (
                               <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                 <p className="text-xs text-slate-400 font-mono mb-2">
-                                  {Object.keys(metadata.makernote || {})
+                                  {Object.keys(metadata?.makernote || {})
                                     .length +
-                                    Object.keys(metadata.extended || {})
+                                    Object.keys(metadata?.extended || {})
                                       .length}{' '}
                                   ADDITIONAL FIELDS AVAILABLE
                                 </p>
@@ -1389,7 +1514,7 @@ export default function Results() {
                               tier={
                                 import.meta.env.DEV
                                   ? 'enterprise'
-                                  : metadata.tier || 'free'
+                                  : metadata?.tier || 'free'
                               }
                               onUpgrade={() => setShowPayment(true)}
                               onRunAdvancedAnalysis={runAdvancedAnalysis}
@@ -1403,19 +1528,19 @@ export default function Results() {
                             value="forensic"
                             className="mt-0 space-y-6"
                           >
-                            {metadata.metadata_comparison && (
+                            {metadata?.metadata_comparison && (
                               <section>
                                 <MetadataComparisonDisplay
-                                  comparison={metadata.metadata_comparison}
+                                  comparison={metadata?.metadata_comparison}
                                 />
                               </section>
                             )}
 
-                            {metadata.burned_metadata &&
-                              metadata.burned_metadata.has_burned_metadata && (
+                            {metadata?.burned_metadata &&
+                              metadata?.burned_metadata?.has_burned_metadata && (
                                 <section>
                                   <BurnedMetadataDisplay
-                                    burned_metadata={metadata.burned_metadata}
+                                    burned_metadata={metadata?.burned_metadata}
                                     isUnlocked={isUnlocked}
                                   />
                                 </section>
@@ -1430,7 +1555,7 @@ export default function Results() {
                               <div className="space-y-1">
                                 <FieldRow
                                   label="MD5"
-                                  value={metadata.file_integrity?.md5 || 'N/A'}
+                                  value={metadata?.file_integrity?.md5 || 'N/A'}
                                   locked={!isUnlocked}
                                   copyable
                                   index={0}
@@ -1438,7 +1563,7 @@ export default function Results() {
                                 <FieldRow
                                   label="SHA256"
                                   value={
-                                    metadata.file_integrity?.sha256 || 'N/A'
+                                    metadata?.file_integrity?.sha256 || 'N/A'
                                   }
                                   locked={!isUnlocked}
                                   copyable
@@ -1540,8 +1665,8 @@ export default function Results() {
                               </section>
                             )}
 
-                            {(metadata.makernote?._count > 0 ||
-                              Object.keys(metadata.makernote || {}).length >
+                            {(metadata?.makernote?._count > 0 ||
+                              Object.keys(metadata?.makernote || {}).length >
                                 1) && (
                               <section>
                                 <SectionHeader
@@ -1549,11 +1674,11 @@ export default function Results() {
                                   title="MakerNote (Vendor-Specific)"
                                   color="text-orange-400"
                                   count={
-                                    metadata.makernote?._count ||
-                                    Object.keys(metadata.makernote || {}).length
+                                    metadata?.makernote?._count ||
+                                    Object.keys(metadata?.makernote || {}).length
                                   }
                                 />
-                                {!isSectionLocked(metadata.makernote) &&
+                                {!isSectionLocked(metadata?.makernote) &&
                                 isUnlocked ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                     {filterFields(metadata.makernote || {})
@@ -1571,7 +1696,7 @@ export default function Results() {
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
                                     <p className="text-xs text-slate-400 font-mono mb-2">
-                                      {metadata.makernote?._count || 0}{' '}
+                                      {metadata?.makernote?._count || 0}{' '}
                                       VENDOR-SPECIFIC FIELDS LOCKED
                                     </p>
                                     <Button
@@ -1636,7 +1761,7 @@ export default function Results() {
                               </section>
                             )}
 
-                            {(metadata.xmp_namespaces?._locked ||
+                            {(metadata?.xmp_namespaces?._locked ||
                               Object.keys(flatXmpNamespaces).length > 0) && (
                               <section>
                                 <SectionHeader
@@ -1644,11 +1769,11 @@ export default function Results() {
                                   title="XMP Namespaces"
                                   color="text-fuchsia-400"
                                   count={
-                                    metadata.xmp_namespaces?._count ||
+                                    metadata?.xmp_namespaces?._count ||
                                     Object.keys(flatXmpNamespaces).length
                                   }
                                 />
-                                {!isSectionLocked(metadata.xmp_namespaces) &&
+                                {!isSectionLocked(metadata?.xmp_namespaces) &&
                                 isUnlocked ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                     {filterFields(flatXmpNamespaces)
@@ -1666,7 +1791,7 @@ export default function Results() {
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
                                     <p className="text-xs text-slate-400 font-mono mb-2">
-                                      {metadata.xmp_namespaces?._count || 0}{' '}
+                                      {metadata?.xmp_namespaces?._count || 0}{' '}
                                       NAMESPACE FIELDS LOCKED
                                     </p>
                                     <Button
@@ -1736,7 +1861,7 @@ export default function Results() {
                               </section>
                             )}
 
-                            {(metadata.embedded_thumbnails?._locked ||
+                            {(metadata?.embedded_thumbnails?._locked ||
                               Object.keys(flatEmbeddedThumbnails).length >
                                 0) && (
                               <section>
@@ -1745,12 +1870,12 @@ export default function Results() {
                                   title="Embedded Thumbnails"
                                   color="text-yellow-400"
                                   count={
-                                    metadata.embedded_thumbnails?._count ||
+                                    metadata?.embedded_thumbnails?._count ||
                                     Object.keys(flatEmbeddedThumbnails).length
                                   }
                                 />
                                 {!isSectionLocked(
-                                  metadata.embedded_thumbnails
+                                  metadata?.embedded_thumbnails
                                 ) && isUnlocked ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                     {filterFields(flatEmbeddedThumbnails).map(
@@ -1768,7 +1893,7 @@ export default function Results() {
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
                                     <p className="text-xs text-slate-400 font-mono mb-2">
-                                      {metadata.embedded_thumbnails?._count ||
+                                      {metadata?.embedded_thumbnails?._count ||
                                         0}{' '}
                                       EMBEDDED THUMBNAILS LOCKED
                                     </p>
@@ -1811,7 +1936,7 @@ export default function Results() {
                               </section>
                             )}
 
-                            {(metadata.scientific?._locked ||
+                            {(metadata?.scientific?._locked ||
                               Object.keys(flatScientific).length > 0) && (
                               <section>
                                 <SectionHeader
@@ -1819,11 +1944,11 @@ export default function Results() {
                                   title="Scientific Metadata"
                                   color="text-sky-400"
                                   count={
-                                    metadata.scientific?._count ||
+                                    metadata?.scientific?._count ||
                                     Object.keys(flatScientific).length
                                   }
                                 />
-                                {!isSectionLocked(metadata.scientific) ? (
+                                {!isSectionLocked(metadata?.scientific) ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                     {filterFields(flatScientific).map(
                                       ([key, val], i) => (
@@ -1854,7 +1979,7 @@ export default function Results() {
                               </section>
                             )}
 
-                            {(metadata.scientific_data?._locked ||
+                            {(metadata?.scientific_data?._locked ||
                               Object.keys(flatScientificData).length > 0) && (
                               <section>
                                 <SectionHeader
@@ -1862,11 +1987,11 @@ export default function Results() {
                                   title="Scientific Data (HDF5/NetCDF)"
                                   color="text-emerald-400"
                                   count={
-                                    metadata.scientific_data?._count ||
+                                    metadata?.scientific_data?._count ||
                                     Object.keys(flatScientificData).length
                                   }
                                 />
-                                {!isSectionLocked(metadata.scientific_data) ? (
+                                {!isSectionLocked(metadata?.scientific_data) ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                                     {filterFields(flatScientificData).map(
                                       ([key, val], i) => (
@@ -1949,7 +2074,7 @@ export default function Results() {
                               <div className="font-mono text-xs text-slate-400">
                                 <div className="mb-4 text-xs text-slate-500 uppercase tracking-widest">
                                   Extended Fields:{' '}
-                                  {Object.keys(metadata.extended || {}).length}
+                                  {Object.keys(metadata?.extended || {}).length}
                                 </div>
                                 <div className="space-y-1">
                                   {filterFields(metadata.extended || {})
@@ -1981,7 +2106,7 @@ export default function Results() {
                                 </h3>
                                 <p className="text-slate-500 max-w-sm mb-6 text-sm">
                                   Access to{' '}
-                                  {Object.keys(metadata.extended || {}).length}{' '}
+                                  {Object.keys(metadata?.extended || {}).length}{' '}
                                   extended metadata fields including MakerNotes,
                                   IPTC, XMP, and proprietary tags requires a
                                   license.

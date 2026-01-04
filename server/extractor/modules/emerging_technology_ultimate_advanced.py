@@ -37,28 +37,28 @@ logger = logging.getLogger(__name__)
 
 # AI/ML Libraries
 try:
-    import torch
+    import torch  # type: ignore[reportMissingImports]
     TORCH_AVAILABLE = True
 except ImportError:
     torch: Any = None
     TORCH_AVAILABLE = False
 
 try:
-    import tensorflow as tf
+    import tensorflow as tf  # type: ignore[reportMissingImports]
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     tf: Any = None
     TENSORFLOW_AVAILABLE = False
 
 try:
-    import onnx
+    import onnx  # type: ignore[reportMissingImports]
     ONNX_AVAILABLE = True
 except ImportError:
     onnx: Any = None
     ONNX_AVAILABLE = False
 
 try:
-    from transformers import AutoConfig, AutoTokenizer
+    from transformers import AutoConfig, AutoTokenizer  # type: ignore[reportMissingImports]
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     AutoConfig: Any = None
@@ -67,7 +67,7 @@ except ImportError:
 
 # Quantum Computing
 try:
-    import qiskit
+    import qiskit  # type: ignore[reportMissingImports]
     QISKIT_AVAILABLE = True
 except ImportError:
     qiskit: Any = None
@@ -75,7 +75,7 @@ except ImportError:
 
 # Extended Reality
 try:
-    import open3d
+    import open3d  # type: ignore[reportMissingImports]
     OPEN3D_AVAILABLE = True
 except ImportError:
     open3d: Any = None
@@ -83,7 +83,7 @@ except ImportError:
 
 # IoT and Sensor Data
 try:
-    import paho.mqtt.client as mqtt
+    import paho.mqtt.client as mqtt  # type: ignore[reportMissingImports]
     MQTT_AVAILABLE = True
 except ImportError:
     mqtt: Any = None
@@ -91,8 +91,8 @@ except ImportError:
 
 # Blockchain/Web3
 try:
-    from web3 import Web3
-    import eth_utils
+    from web3 import Web3  # type: ignore[reportMissingImports]
+    import eth_utils  # type: ignore[reportMissingImports]
     WEB3_AVAILABLE = True
 except ImportError:
     WEB3_AVAILABLE = False
@@ -100,7 +100,7 @@ except ImportError:
 # Advanced Media Analysis
 try:
     import cv2
-    import numpy as np
+    import numpy as np  # type: ignore[reportMissingImports]
     OPENCV_AVAILABLE = True
 except ImportError:
     cv2: Any = None
@@ -108,16 +108,18 @@ except ImportError:
     OPENCV_AVAILABLE = False
 
 try:
-    import librosa
-    import soundfile as sf
+    import librosa  # type: ignore[reportMissingImports]
+    import soundfile as sf  # type: ignore[reportMissingImports]
     LIBROSA_AVAILABLE = True
 except ImportError:
+    librosa: Any = None
+    sf: Any = None
     LIBROSA_AVAILABLE = False
 
 # Satellite/Remote Sensing
 try:
-    import rasterio
-    from rasterio.enums import Resampling
+    import rasterio  # type: ignore[reportMissingImports]
+    from rasterio.enums import Resampling  # type: ignore[reportMissingImports]
     RASTERIO_AVAILABLE = True
 except ImportError:
     RASTERIO_AVAILABLE = False
@@ -541,7 +543,7 @@ class ExtendedRealityEngine:
             return {"available": False, "reason": "open3d not installed"}
         
         try:
-            import open3d as o3d
+            import open3d as o3d  # type: ignore[reportMissingImports]
             
             result: Dict[str, Any] = {
                 "available": True,
@@ -909,10 +911,10 @@ class BiometricDataEngine:
                 if OPENCV_AVAILABLE and file_ext in ['.jpg', '.png', '.bmp']:
                     try:
                         import cv2
-                        img = cv2.imread(filepath)
+                        img = cv2.imread(filepath) if hasattr(cv2, 'imread') else None
                         if img is not None:
                             # Basic face detection
-                            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                            face_cascade = cv2.CascadeClassifier(getattr(cv2, 'data', '') + 'haarcascade_frontalface_default.xml')
                             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                             faces = face_cascade.detectMultiScale(gray, 1.1, 4)
                             
@@ -972,8 +974,8 @@ class SatelliteRemoteSensingEngine:
             return {"available": False, "reason": "rasterio not installed"}
         
         try:
-            import rasterio
-            from rasterio.enums import Resampling
+            import rasterio  # type: ignore[reportMissingImports]
+            from rasterio.enums import Resampling  # type: ignore[reportMissingImports]
             
             with rasterio.open(filepath) as src:
                 result: Dict[str, Any] = {
@@ -1102,9 +1104,8 @@ class SyntheticMediaEngine:
             # Image analysis
             if file_ext in ['.jpg', '.jpeg', '.png', '.bmp'] and OPENCV_AVAILABLE:
                 import cv2
-                import numpy as np
                 
-                img = cv2.imread(filepath)
+                img = cv2.imread(filepath) if hasattr(cv2, 'imread') else None
                 if img is not None:
                     # Basic artifact detection
                     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -1128,7 +1129,10 @@ class SyntheticMediaEngine:
                     
                     # Edge analysis (AI images often have different edge characteristics)
                     edges = cv2.Canny(gray, 50, 150)
-                    edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
+                    if np is not None:
+                        edge_density = float(np.sum(edges > 0) / (edges.shape[0] * edges.shape[1]))
+                    else:
+                        edge_density = 0.0
                     
                     result["generation_artifacts"]["edge_analysis"] = {
                         "edge_density": float(edge_density),
@@ -1137,7 +1141,10 @@ class SyntheticMediaEngine:
                     
                     # Color analysis
                     color_hist = cv2.calcHist([img], [0, 1, 2], None, [8, 8, 8], [0, 256, 0, 256, 0, 256])
-                    color_entropy = -np.sum(color_hist * np.log2(color_hist + 1e-10))
+                    if np is not None:
+                        color_entropy = float(-np.sum(color_hist * np.log2(color_hist + 1e-10)))
+                    else:
+                        color_entropy = 0.0
                     
                     result["generation_artifacts"]["color_analysis"] = {
                         "color_entropy": float(color_entropy),
@@ -1146,25 +1153,37 @@ class SyntheticMediaEngine:
             
             # Audio analysis for synthetic speech
             elif file_ext in ['.wav', '.mp3', '.flac'] and LIBROSA_AVAILABLE:
-                import librosa
+                import librosa  # type: ignore[reportMissingImports]
                 
                 y, sr = librosa.load(filepath)
                 
                 # Spectral analysis for synthetic speech detection
-                spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-                spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
-                mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+                if np is not None:
+                    spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+                    spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
+                    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+
+                    spectral_centroid_mean = float(np.mean(spectral_centroids))
+                    spectral_rolloff_mean = float(np.mean(spectral_rolloff))
+                    mfcc_variance = float(np.var(mfccs))
+                else:
+                    spectral_centroid_mean = 0.0
+                    spectral_rolloff_mean = 0.0
+                    mfcc_variance = 0.0
                 
                 result["ai_indicators"]["audio"] = {
-                    "spectral_centroid_mean": float(np.mean(spectral_centroids)),
-                    "spectral_rolloff_mean": float(np.mean(spectral_rolloff)),
-                    "mfcc_variance": float(np.var(mfccs)),
+                    "spectral_centroid_mean": spectral_centroid_mean,
+                    "spectral_rolloff_mean": spectral_rolloff_mean,
+                    "mfcc_variance": mfcc_variance,
                     "duration_seconds": len(y) / sr
                 }
                 
                 # Check for unnatural patterns in synthetic speech
                 zero_crossing_rate = librosa.feature.zero_crossing_rate(y)[0]
-                zcr_variance = np.var(zero_crossing_rate)
+                if np is not None:
+                    zcr_variance = float(np.var(zero_crossing_rate))
+                else:
+                    zcr_variance = 0.0
                 
                 result["ai_indicators"]["speech_patterns"] = {
                     "zero_crossing_variance": float(zcr_variance),

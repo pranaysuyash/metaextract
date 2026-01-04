@@ -303,6 +303,8 @@ TIER_CONFIGS = {
         file_hashes=True, filesystem_details=True, calculated_fields=True,
         gps_data=True, audio_details=True, pdf_details=True, forensic_details=True,
         perceptual_hashes=True, thumbnails=True,
+        # Phase 3 capabilities
+        email_metadata=True,
     ),
     Tier.PREMIUM: TierConfig(
         file_hashes=True, filesystem_details=True, calculated_fields=True,
@@ -1742,12 +1744,17 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
                 result["font"] = font_data
         except ImportError:
             pass  # Module not available
-
+    
     # Email and Communication metadata (.eml, .msg, .mbox)
     elif ext in [".eml", ".msg", ".mbox"]:
         if tier_config.email_metadata:
             try:
-                from .modules.email_metadata import extract_email_complete
+                # Try relative import first (works when part of package)
+                try:
+                    from .modules.email_metadata import extract_email_complete
+                except ImportError:
+                    # Fall back to absolute import (works when running standalone)
+                    from modules.email_metadata import extract_email_complete
                 email_data = extract_email_complete(filepath)
                 if email_data:
                     result["email"] = email_data

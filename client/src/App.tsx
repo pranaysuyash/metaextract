@@ -17,7 +17,7 @@ import ImagesMvpLanding from "@/pages/images-mvp";
 import ImagesMvpResults from "@/pages/images-mvp/results";
 import ImagesMvpCreditsSuccess from "@/pages/images-mvp/credits-success";
 import ImagesMvpAnalytics from "@/pages/images-mvp/analytics";
-import Dashboard from "@/pages/dashboard";
+import DashboardImproved from "@/pages/dashboard-improved";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CreditsSuccess from "@/pages/credits-success";
 
@@ -66,7 +66,7 @@ function AppRouter() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <DashboardImproved />
               </ProtectedRoute>
             }
           />
@@ -92,6 +92,10 @@ function AppRouter() {
           <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
           <Route path="/images_mvp/credits/success" element={<ImagesMvpCreditsSuccess />} />
           <Route path="/images_mvp/analytics" element={<ImagesMvpAnalytics />} />
+          <Route path="/images-mvp" element={<Navigate to="/images_mvp" replace />} />
+          <Route path="/images-mvp/results" element={<Navigate to="/images_mvp/results" replace />} />
+          <Route path="/images-mvp/credits/success" element={<Navigate to="/images_mvp/credits/success" replace />} />
+          <Route path="/images-mvp/analytics" element={<Navigate to="/images_mvp/analytics" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

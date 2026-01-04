@@ -587,8 +587,11 @@ export async function extractMetadataWithPython(
 
     // Log the Python process startup
     console.log(
-      `Starting Python extraction process: ${pythonExecutable} ${args.join(' ')}`
+      `[DEBUG] extractMetadataWithPython: tier=${tier}, file=${path.basename(filePath)}`
     );
+    console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
+    console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
+    console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
 
     const python = spawn(pythonExecutable, args);
 

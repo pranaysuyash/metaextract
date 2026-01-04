@@ -1,0 +1,110 @@
+[
+  {
+    "url": "http://localhost:3000/api/extract/health",
+    "status_code": null,
+    "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=5)",
+    "success": false
+  },
+  {
+    "url": "http://localhost:3000/api/auth/me",
+    "status_code": 200,
+    "content_type": "application/json; charset=utf-8",
+    "response_size": 35,
+    "success": true,
+    "error": null,
+    "json_response": {
+      "authenticated": false,
+      "user": null
+    }
+  },
+  {
+    "url": "http://localhost:3000/api/auth/dev/users",
+    "status_code": 404,
+    "content_type": "application/json; charset=utf-8",
+    "response_size": 281,
+    "success": true,
+    "error": null,
+    "json_response": {
+      "error": "API endpoint not found",
+      "message": "The endpoint /api/auth/dev/users does not exist",
+      "availableEndpoints": [
+        "GET /api/auth/me",
+        "POST /api/auth/register",
+        "POST /api/auth/login",
+        "POST /api/auth/logout",
+        "GET /api/extract/health",
+        "POST /api/extract",
+        "POST /api/extract/batch"
+      ]
+    }
+  },
+  {
+    "url": "http://localhost:3000/api/invalid/route",
+    "status_code": 404,
+    "content_type": "application/json; charset=utf-8",
+    "response_size": 280,
+    "success": true,
+    "error": null,
+    "json_response": {
+      "error": "API endpoint not found",
+      "message": "The endpoint /api/invalid/route does not exist",
+      "availableEndpoints": [
+        "GET /api/auth/me",
+        "POST /api/auth/register",
+        "POST /api/auth/login",
+        "POST /api/auth/logout",
+        "GET /api/extract/health",
+        "POST /api/extract",
+        "POST /api/extract/batch"
+      ]
+    }
+  },
+  {
+    "url": "http://localhost:5173/",
+    "status_code": 200,
+    "content_type": "text/html",
+    "response_size": 2485,
+    "success": true,
+    "error": null
+  },
+  {
+    "url": "http://localhost:5173/results",
+    "status_code": 200,
+    "content_type": "text/html",
+    "response_size": 2485,
+    "success": true,
+    "error": null
+  },
+  {
+    "url": "http://localhost:5173/dashboard",
+    "status_code": 200,
+    "content_type": "text/html",
+    "response_size": 2485,
+    "success": true,
+    "error": null
+  },
+  {
+    "url": "http://localhost:5173/invalid-route",
+    "status_code": 200,
+    "content_type": "text/html",
+    "response_size": 2485,
+    "success": true,
+    "error": null
+  },
+  {
+    "url": "http://localhost:5173/images_mvp",
+    "status_code": 200,
+    "content_type": "text/html",
+    "response_size": 2485,
+    "success": true,
+    "error": null
+  },
+  {
+    "url": "http://localhost:5173/images_mvp/results",
+    "status_code": 200,
+    "content_type": "text/html",
+    "response_size": 2485,
+    "success": true,
+    "error": null
+  }
+]

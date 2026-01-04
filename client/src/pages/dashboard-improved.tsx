@@ -1,101 +1,30 @@
 /**
- * Dashboard Page
- * 
- * Protected dashboard showing user information and system status
+ * Settings Page
+ *
+ * Account, subscription, and preference management for authenticated users.
  */
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   User, 
-  Shield, 
-  Activity, 
-  FileText, 
-  Upload, 
-  Settings,
+  CreditCard,
+  Shield,
+  LogOut,
+  Upload,
+  BarChart3,
   CheckCircle2,
-  AlertCircle,
-  Clock
+  AlertCircle
 } from "lucide-react";
 import Navigation from "@/components/navigation";
 
-interface SystemStatus {
-  server: "online" | "offline" | "checking";
-  auth: "active" | "inactive" | "checking";
-  processing: "ready" | "busy" | "checking";
-}
-
-export default function Dashboard() {
-  const { user, isAuthenticated } = useAuth();
-  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
-    server: "checking",
-    auth: "checking", 
-    processing: "checking"
-  });
-
-  useEffect(() => {
-    checkSystemStatus();
-  }, []);
-
-  const checkSystemStatus = async () => {
-    try {
-      // Check server health
-      const healthResponse = await fetch("/api/health");
-      const serverStatus = healthResponse.ok ? "online" : "offline";
-
-      // Check auth status
-      const authResponse = await fetch("/api/auth/me");
-      const authData = await authResponse.json();
-      const authStatus = authData.authenticated ? "active" : "inactive";
-
-      setSystemStatus({
-        server: serverStatus,
-        auth: authStatus,
-        processing: "ready"
-      });
-    } catch (error) {
-      setSystemStatus({
-        server: "offline",
-        auth: "inactive",
-        processing: "ready"
-      });
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "online":
-      case "active":
-      case "ready":
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case "offline":
-      case "inactive":
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case "busy":
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "online":
-      case "active":
-      case "ready":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      case "offline":
-      case "inactive":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      case "busy":
-        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      default:
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-    }
-  };
+export default function DashboardImproved() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -144,6 +73,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleNavigate = (path: string) => {
+    navigate(path, { replace: false });
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/', { replace: true });
+  };
+
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen bg-[#0B0C10]">
@@ -153,7 +91,7 @@ export default function Dashboard() {
             <CardContent className="p-6 text-center">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
               <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-              <p className="text-slate-400">Please log in to access the dashboard.</p>
+              <p className="text-slate-400">Please log in to access settings.</p>
             </CardContent>
           </Card>
         </div>
@@ -168,8 +106,8 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-slate-400">Welcome back, {user.username}! Here's your account overview.</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+          <p className="text-slate-400">Manage your account, subscription, and preferences.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -178,7 +116,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
-                Account Information
+                Account
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -201,90 +139,97 @@ export default function Dashboard() {
                   </span>
                 </div>
               </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  onClick={() => handleNavigate('/images_mvp')}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Start New Extraction
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start text-slate-400 hover:text-white hover:bg-white/10"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          {/* System Status */}
+          {/* Plan & Credits */}
           <Card className="bg-[#1a1a2e] border-white/10 text-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                System Status
+                <CreditCard className="w-5 h-5" />
+                Plan & Credits
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm">Server</span>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(systemStatus.server)}
-                  <Badge className={getStatusColor(systemStatus.server)}>
-                    {systemStatus.server}
-                  </Badge>
-                </div>
+                <span className="text-sm text-slate-400">Current Plan</span>
+                <Badge className={`${getTierColor(user.tier)} text-white`}>
+                  {user.tier.toUpperCase()}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Authentication</span>
+                <span className="text-sm text-slate-400">Status</span>
                 <div className="flex items-center gap-2">
-                  {getStatusIcon(systemStatus.auth)}
-                  <Badge className={getStatusColor(systemStatus.auth)}>
-                    {systemStatus.auth}
-                  </Badge>
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-green-400">
+                    {user.subscriptionStatus || "active"}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Processing</span>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(systemStatus.processing)}
-                  <Badge className={getStatusColor(systemStatus.processing)}>
-                    {systemStatus.processing}
-                  </Badge>
-                </div>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  onClick={() => handleNavigate('/#pricing')}
+                >
+                  View Pricing & Credits
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  onClick={() => handleNavigate('/images_mvp/analytics')}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Usage Analytics
+                </Button>
               </div>
-              <Button 
-                onClick={checkSystemStatus}
-                variant="outline" 
-                size="sm" 
-                className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
-              >
-                Refresh Status
-              </Button>
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
+          {/* Security */}
           <Card className="bg-[#1a1a2e] border-white/10 text-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Quick Actions
+                <Shield className="w-5 h-5" />
+                Security
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button 
-                className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
-                onClick={() => window.location.href = "/"}
+              <div className="text-sm text-slate-400">
+                Security controls are coming soon. For now, you can sign out and manage your plan.
+              </div>
+              <Button
+                variant="outline"
+                className="w-full border-white/20 text-slate-400"
+                disabled
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Files
+                Change Password
               </Button>
-              <Button 
-                variant="outline" 
-                className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
-                onClick={() => window.location.href = "/results"}
+              <Button
+                variant="outline"
+                className="w-full border-white/20 text-slate-400"
+                disabled
               >
-                <FileText className="w-4 h-4 mr-2" />
-                View Results
+                Manage Devices
               </Button>
-              {process.env.NODE_ENV === 'development' && (
-                <Button 
-                  variant="outline" 
-                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
-                  onClick={() => window.open("/api/dev/auth-test", "_blank")}
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Test Authentication (Dev)
-                </Button>
-              )}
             </CardContent>
           </Card>
         </div>

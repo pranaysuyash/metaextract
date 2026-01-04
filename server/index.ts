@@ -116,6 +116,23 @@ app.use((req, res, next) => {
   // Register main API routes
   await registerRoutes(httpServer, app);
 
+  // CRITICAL FIX: Add API 404 handler for undefined API routes
+  app.use('/api/*', (req: Request, res: Response) => {
+    res.status(404).json({
+      error: 'API endpoint not found',
+      message: `The endpoint ${req.originalUrl} does not exist`,
+      availableEndpoints: [
+        'GET /api/auth/me',
+        'POST /api/auth/register', 
+        'POST /api/auth/login',
+        'POST /api/auth/logout',
+        'GET /api/extract/health',
+        'POST /api/extract',
+        'POST /api/extract/batch'
+      ]
+    });
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Internal Server Error';

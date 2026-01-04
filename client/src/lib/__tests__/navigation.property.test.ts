@@ -161,7 +161,7 @@ describe('Navigation Configuration - Property Tests', () => {
     it('should match exact paths', () => {
       fc.assert(
         fc.property(
-          fc.constantFrom('/dashboard', '/settings', '/analytics', '/results'),
+          fc.constantFrom('/dashboard', '/images_mvp', '/images_mvp/analytics', '/images_mvp/results'),
           (path) => {
             return isActivePath(path, path) === true;
           }
@@ -172,9 +172,9 @@ describe('Navigation Configuration - Property Tests', () => {
 
     it('should not match different paths', () => {
       const pathPairs = [
-        ['/dashboard', '/settings'],
-        ['/analytics', '/monitoring'],
-        ['/results', '/security'],
+        ['/dashboard', '/images_mvp'],
+        ['/images_mvp/analytics', '/images_mvp/results'],
+        ['/images_mvp/results', '/images_mvp/analytics'],
       ];
       
       fc.assert(
@@ -195,14 +195,14 @@ describe('Navigation Configuration - Property Tests', () => {
     });
 
     it('should handle nested routes', () => {
-      expect(isActivePath('/settings/profile', '/settings')).toBe(true);
-      expect(isActivePath('/settings/security', '/settings')).toBe(true);
-      expect(isActivePath('/dashboard', '/settings')).toBe(false);
+      expect(isActivePath('/images_mvp/results/123', '/images_mvp/results')).toBe(true);
+      expect(isActivePath('/images_mvp/analytics/weekly', '/images_mvp/analytics')).toBe(true);
+      expect(isActivePath('/dashboard', '/images_mvp/results')).toBe(false);
     });
 
     it('should not match root path for non-root items', () => {
       expect(isActivePath('/', '/dashboard')).toBe(false);
-      expect(isActivePath('/', '/settings')).toBe(false);
+      expect(isActivePath('/', '/images_mvp')).toBe(false);
     });
   });
 
