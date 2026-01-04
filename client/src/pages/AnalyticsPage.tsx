@@ -2,17 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Activity, 
   AlertTriangle, 
-  Clock, 
-  Database, 
-  TrendingUp, 
   Server,
-  CheckCircle,
-  XCircle,
-  BarChart3,
-  FileText,
-  Users
+  BarChart3
 } from 'lucide-react';
 import { 
   LineChart, 

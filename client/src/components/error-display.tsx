@@ -27,7 +27,6 @@ import { cn } from '@/lib/utils';
 import { 
   UserFriendlyError, 
   ErrorSeverity,
-  calculateRetryDelay,
   shouldRetry 
 } from '@/lib/error-messages';
 

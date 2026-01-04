@@ -2099,6 +2099,1144 @@ class InvestigatorMikeInterpreter:
         return stego
 
 
+# Security Analyst Sam - Cybersecurity Professional
+class SecurityAnalystSamInterpreter(BasePersonaInterpreter):
+    """Security-focused interpreter for cybersecurity professionals"""
+
+    def __init__(self, metadata: Dict[str, Any]):
+        super().__init__(metadata)
+        self.persona_name = "security_analyst_sam"
+        self.persona_icon = "🔒"
+
+    def interpret(self) -> Dict[str, Any]:
+        """Generate security-focused interpretation"""
+        return {
+            "persona": self.persona_name,
+            "key_findings": self._generate_security_findings(),
+            "security_analysis": self._analyze_security_threats(),
+            "osint_opportunities": self._identify_osint_opportunities(),
+            "metadata_risks": self._assess_metadata_risks(),
+            "recommendations": self._generate_security_recommendations()
+        }
+
+    def _generate_security_findings(self) -> List[str]:
+        """Generate security-focused key findings"""
+        findings = []
+
+        # Check for sensitive data exposure
+        if self.metadata.get("gps"):
+            findings.append("🔍 GPS coordinates present - location data exposure")
+
+        # Check device fingerprinting
+        device = self.metadata.get("exif", {}).get("Model")
+        if device:
+            findings.append(f"📱 Device fingerprinting possible: {device}")
+
+        # Check for network indicators
+        if self.metadata.get("exif", {}).get("Software"):
+            findings.append("⚠️ Software metadata may reveal system information")
+
+        # Check for metadata consistency
+        if self.metadata.get("forensic", {}).get("authentication_is_authenticated"):
+            findings.append("✅ Image appears cryptographically authenticated")
+        else:
+            findings.append("❌ No cryptographic authentication detected")
+
+        # Check for embedded data
+        if self.metadata.get("thumbnail"):
+            findings.append("🖼️ Contains embedded thumbnail - potential data hiding")
+
+        return findings
+
+    def _analyze_security_threats(self) -> Dict[str, Any]:
+        """Analyze potential security threats"""
+        threats = {
+            "threat_indicators": {
+                "steganography_detected": False,
+                "embedded_urls": [],
+                "suspicious_metadata": [],
+                "hidden_files": [],
+                "encrypted_content": False
+            },
+            "data_exposure": {
+                "level": "unknown",
+                "exposed_data": [],
+                "risk_score": 0
+            },
+            "device_fingerprinting": {
+                "possible": False,
+                "uniqueness": "unknown",
+                "tracking_risk": "unknown"
+            }
+        }
+
+        # Analyze EXIF for device fingerprinting
+        exif = self.metadata.get("exif", {})
+        if exif.get("Make") or exif.get("Model") or exif.get("SerialNumber"):
+            threats["device_fingerprinting"]["possible"] = True
+            threats["device_fingerprinting"]["uniqueness"] = "high"
+            threats["device_fingerprinting"]["tracking_risk"] = "high"
+
+        # Analyze GPS for location exposure
+        gps = self.metadata.get("gps")
+        if gps:
+            threats["data_exposure"]["exposed_data"].append("precise_location")
+            threats["data_exposure"]["level"] = "high"
+            threats["data_exposure"]["risk_score"] += 40
+
+        # Analyze timestamp for temporal tracking
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            threats["data_exposure"]["exposed_data"].append("capture_timestamp")
+            threats["data_exposure"]["risk_score"] += 20
+
+        # Check for software signatures that might reveal system info
+        if exif.get("Software") or exif.get("InternalSoftware"):
+            threats["threat_indicators"]["suspicious_metadata"].append("software_version")
+            threats["data_exposure"]["risk_score"] += 15
+
+        # Check for network-related metadata
+        if self.metadata.get("exif", {}).get("WiFiInfo") or self.metadata.get("network_data"):
+            threats["data_exposure"]["exposed_data"].append("network_information")
+            threats["data_exposure"]["risk_score"] += 25
+
+        return threats
+
+    def _identify_osint_opportunities(self) -> Dict[str, Any]:
+        """Identify Open Source Intelligence opportunities"""
+        osint = {
+            "location_data": {"present": False, "type": None},
+            "device_info": {"present": False, "details": None},
+            "network_indicators": {"present": False, "details": None},
+            "temporal_data": {"present": False, "details": None},
+            "personally_identifiable_info": {"level": "none", "details": []}
+        }
+
+        # Location OSINT
+        if self.metadata.get("gps"):
+            osint["location_data"]["present"] = True
+            osint["location_data"]["type"] = "precise_coordinates"
+
+            # Add reverse geocoded location if available
+            location = self.metadata.get("location_analysis")
+            if location and location.get("address"):
+                osint["location_data"]["address"] = location["address"]
+
+        # Device OSINT
+        exif = self.metadata.get("exif", {})
+        if exif.get("Make") or exif.get("Model"):
+            osint["device_info"]["present"] = True
+            osint["device_info"]["details"] = {
+                "make": exif.get("Make"),
+                "model": exif.get("Model"),
+                "serial": exif.get("SerialNumber", "not_present"),
+                "uniqueness": "high" if exif.get("SerialNumber") else "medium"
+            }
+
+        # Temporal OSINT
+        if exif.get("DateTimeOriginal"):
+            osint["temporal_data"]["present"] = True
+            osint["temporal_data"]["details"] = exif.get("DateTimeOriginal")
+
+        # PII assessment
+        pii_indicators = []
+        if exif.get("OwnerName"):
+            pii_indicators.append("owner_name")
+        if exif.get("Artist"):
+            pii_indicators.append("creator_name")
+        if self.metadata.get("iptc", {}).get("Contact"):
+            pii_indicators.append("contact_info")
+
+        if pii_indicators:
+            osint["personally_identifiable_info"]["level"] = "high"
+            osint["personally_identifiable_info"]["details"] = pii_indicators
+
+        return osint
+
+    def _assess_metadata_risks(self) -> Dict[str, Any]:
+        """Assess metadata-related security risks"""
+        risks = {
+            "exposure_level": "unknown",
+            "sensitive_data": [],
+            "sanitization_needed": False,
+            "recommendations": []
+        }
+
+        # Collect all potentially sensitive metadata fields
+        sensitive_fields = []
+
+        # GPS data
+        if self.metadata.get("gps"):
+            sensitive_fields.append("GPS coordinates (precise location)")
+            risks["sanitization_needed"] = True
+
+        # Device identifiers
+        exif = self.metadata.get("exif", {})
+        if exif.get("SerialNumber"):
+            sensitive_fields.append("Device serial number")
+            risks["sanitization_needed"] = True
+        if exif.get("InternalSerialNumber"):
+            sensitive_fields.append("Internal device serial")
+            risks["sanitization_needed"] = True
+
+        # Owner information
+        if exif.get("OwnerName"):
+            sensitive_fields.append("Device owner name")
+            risks["sanitization_needed"] = True
+
+        # Network information
+        if exif.get("WiFiInfo") or exif.get("NetworkInfo"):
+            sensitive_fields.append("Network configuration")
+            risks["sanitization_needed"] = True
+
+        # Timestamps (tracking risk)
+        if exif.get("DateTimeOriginal"):
+            sensitive_fields.append("Capture timestamp")
+
+        # Software/OS version
+        if exif.get("Software") or exif.get("OSVersion"):
+            sensitive_fields.append("System software version")
+
+        risks["sensitive_data"] = sensitive_fields
+
+        # Determine overall exposure level
+        if len(sensitive_fields) >= 4:
+            risks["exposure_level"] = "critical"
+        elif len(sensitive_fields) >= 2:
+            risks["exposure_level"] = "high"
+        elif len(sensitive_fields) >= 1:
+            risks["exposure_level"] = "medium"
+        else:
+            risks["exposure_level"] = "low"
+
+        # Generate recommendations
+        if risks["sanitization_needed"]:
+            risks["recommendations"].append("Remove GPS coordinates before sharing")
+            risks["recommendations"].append("Strip device serial numbers")
+            risks["recommendations"].append("Consider removing EXIF timestamp data")
+            risks["recommendations"].append("Use metadata sanitization tools")
+
+        if self.metadata.get("thumbnail"):
+            risks["recommendations"].append("Be aware that thumbnails may retain removed metadata")
+
+        return risks
+
+    def _generate_security_recommendations(self) -> List[str]:
+        """Generate security-focused recommendations"""
+        recommendations = []
+
+        # Risk-based recommendations
+        metadata_risks = self._assess_metadata_risks()
+
+        if metadata_risks["sanitization_needed"]:
+            recommendations.append("🔒 Sanitize metadata before sharing publicly")
+            recommendations.append("🛡️ Use tools like ExifTool or ImageMagick for metadata removal")
+
+        if self.metadata.get("gps"):
+            recommendations.append("📍 GPS data reveals exact location - remove for privacy")
+
+        if self.metadata.get("exif", {}).get("SerialNumber"):
+            recommendations.append("🔢 Device serial number can link to original owner - remove")
+
+        # Best practices
+        recommendations.append("✅ Always verify image sources for security-sensitive contexts")
+        recommendations.append("🔍 Consider using separate devices for sensitive photography")
+        recommendations.append("📱 Keep device software updated for security patches")
+
+        # Context-specific recommendations
+        if self.metadata.get("forensic", {}).get("authentication_is_authenticated"):
+            recommendations.append("✅ Image contains cryptographic signatures - useful for verification")
+        else:
+            recommendations.append("⚠️ No cryptographic authentication - authenticity cannot be verified")
+
+        return recommendations
+
+
+# Social Media Manager Sophia - Content Creator Professional
+class SocialMediaManagerSophiaInterpreter(BasePersonaInterpreter):
+    """Social media optimization interpreter for content creators"""
+
+    def __init__(self, metadata: Dict[str, Any]):
+        super().__init__(metadata)
+        self.persona_name = "social_media_manager_sophia"
+        self.persona_icon = "📱"
+
+    def interpret(self) -> Dict[str, Any]:
+        """Generate social media optimization interpretation"""
+        return {
+            "persona": self.persona_name,
+            "key_findings": self._generate_social_findings(),
+            "platform_optimization": self._analyze_platform_compatibility(),
+            "content_analysis": self._analyze_content_characteristics(),
+            "engagement_prediction": self._predict_engagement(),
+            "posting_recommendations": self._generate_posting_advice(),
+            "hashtag_suggestions": self._suggest_hashtags(),
+            "content_enhancement": self._suggest_content_improvements()
+        }
+
+    def _generate_social_findings(self) -> List[str]:
+        """Generate social media-focused key findings"""
+        findings = []
+
+        # Image dimensions
+        if self.metadata.get("image"):
+            width = self.metadata.get("image", {}).get("width", 0)
+            height = self.metadata.get("image", {}).get("height", 0)
+
+            # Check for optimal social media sizes
+            if width == 1080 and height == 1080:
+                findings.append("✅ Perfect square format for Instagram")
+            elif width == 1080 and height == 1350:
+                findings.append("✅ Optimal Instagram portrait format (4:5)")
+            elif width == 1200 and height == 675:
+                findings.append("✅ Twitter-optimized landscape format")
+            else:
+                findings.append(f"📐 Current dimensions: {width}x{height} - may need cropping")
+
+        # Image quality
+        if self.metadata.get("image", {}).get("format") == "JPEG":
+            findings.append("🖼️ JPEG format - good compression for web sharing")
+        elif self.metadata.get("image", {}).get("format") == "PNG":
+            findings.append("🖼️ PNG format - better quality but larger file size")
+
+        # GPS for location tagging
+        if self.metadata.get("gps"):
+            findings.append("📍 GPS data available - automatic location tagging possible")
+
+        # Timestamp for optimal timing
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            findings.append("⏰ Capture time available - can analyze best posting times")
+
+        return findings
+
+    def _analyze_platform_compatibility(self) -> Dict[str, Any]:
+        """Analyze compatibility with different social platforms"""
+        platforms = {
+            "instagram": {"score": 0, "recommendations": [], "format": "unknown"},
+            "twitter": {"score": 0, "recommendations": [], "format": "unknown"},
+            "facebook": {"score": 0, "recommendations": [], "format": "unknown"},
+            "linkedin": {"score": 0, "recommendations": [], "format": "unknown"},
+            "tiktok": {"score": 0, "recommendations": [], "format": "unknown"}
+        }
+
+        # Get image dimensions
+        width = self.metadata.get("image", {}).get("width", 0)
+        height = self.metadata.get("image", {}).get("height", 0)
+        aspect_ratio = width / height if height > 0 else 1
+
+        # Instagram analysis
+        if width == 1080 and height == 1080:
+            platforms["instagram"]["score"] = 100
+            platforms["instagram"]["format"] = "optimal_square"
+        elif width == 1080 and height in [1350, 1920]:
+            platforms["instagram"]["score"] = 95
+            platforms["instagram"]["format"] = "optimal_portrait"
+        elif width >= 1080 and height >= 1080:
+            platforms["instagram"]["score"] = 80
+            platforms["instagram"]["recommendations"].append("High resolution, but may be compressed")
+        else:
+            platforms["instagram"]["score"] = 60
+            platforms["instagram"]["recommendations"].append("Resize to 1080px minimum dimension")
+
+        # Twitter analysis
+        if aspect_ratio >= 1.91 and aspect_ratio <= 2.1:
+            platforms["twitter"]["score"] = 95
+            platforms["twitter"]["format"] = "optimal_landscape"
+        elif aspect_ratio >= 0.5 and aspect_ratio <= 1.0:
+            platforms["twitter"]["score"] = 85
+            platforms["twitter"]["format"] = "good_square_portrait"
+        else:
+            platforms["twitter"]["score"] = 70
+            platforms["twitter"]["recommendations"].append("Consider cropping for optimal display")
+
+        # Facebook analysis
+        if width >= 1200 and aspect_ratio >= 1.5:
+            platforms["facebook"]["score"] = 90
+            platforms["facebook"]["format"] = "good_landscape"
+        else:
+            platforms["facebook"]["score"] = 75
+            platforms["facebook"]["recommendations"].append("Facebook accepts most formats")
+
+        # LinkedIn analysis
+        if width >= 1200 and aspect_ratio >= 1.91:
+            platforms["linkedin"]["score"] = 85
+            platforms["linkedin"]["format"] = "professional_landscape"
+        else:
+            platforms["linkedin"]["score"] = 70
+            platforms["linkedin"]["recommendations"].append("LinkedIn prefers wider formats")
+
+        # TikTok analysis
+        if aspect_ratio == 9/16 or aspect_ratio == 3/4:
+            platforms["tiktok"]["score"] = 90
+            platforms["tiktok"]["format"] = "optimal_vertical"
+        else:
+            platforms["tiktok"]["score"] = 50
+            platforms["tiktok"]["recommendations"].append("TikTok requires vertical video format")
+
+        return platforms
+
+    def _analyze_content_characteristics(self) -> Dict[str, Any]:
+        """Analyze content characteristics for social optimization"""
+        content = {
+            "category": "unknown",
+            "mood": "unknown",
+            "dominant_colors": [],
+            "subject": "unknown",
+            "quality_assessment": "unknown"
+        }
+
+        # Analyze colors from perceptual hashes or image analysis
+        if self.metadata.get("perceptual_hashes"):
+            content["quality_assessment"] = "has_image_analysis_data"
+
+        # Analyze dimensions for content type hints
+        width = self.metadata.get("image", {}).get("width", 0)
+        height = self.metadata.get("image", {}).get("height", 0)
+
+        if aspect_ratio := width / height if height > 0 else 1:
+            if aspect_ratio == 1.0:
+                content["category"] = "square_composition"
+            elif aspect_ratio > 1.2:
+                content["category"] = "landscape_composition"
+            elif aspect_ratio < 0.8:
+                content["category"] = "portrait_composition"
+
+        # Analyze EXIF for content hints
+        exif = self.metadata.get("exif", {})
+
+        # Check for photography hints
+        if exif.get("FNumber"):
+            aperture = float(exif.get("FNumber", 0))
+            if aperture <= 2.8:
+                content["subject"] = "portrait_shallow_dof"
+            elif aperture >= 8:
+                content["subject"] = "landscape_deep_dof"
+
+        # Check for GPS location for context
+        if self.metadata.get("gps"):
+            content["category"] = "location_based_content"
+
+        return content
+
+    def _predict_engagement(self) -> Dict[str, Any]:
+        """Predict engagement potential across platforms"""
+        engagement = {
+            "overall_score": 0,
+            "platform_predictions": {},
+            "confidence": "low",
+            "factors": []
+        }
+
+        # Base score on image characteristics
+        score = 50  # Start with neutral score
+
+        # Quality factors
+        if self.metadata.get("image", {}).get("width", 0) >= 1080:
+            score += 15
+            engagement["factors"].append("High resolution suitable for social platforms")
+
+        # Format factors
+        width = self.metadata.get("image", {}).get("width", 0)
+        height = self.metadata.get("image", {}).get("height", 0)
+
+        if width == 1080 and height == 1080:
+            score += 20
+            engagement["factors"].append("Optimal Instagram format")
+
+        if width >= 1200 and height >= 630:
+            score += 15
+            engagement["factors"].append("Good for Twitter/Facebook sharing")
+
+        # GPS availability for location tagging
+        if self.metadata.get("gps"):
+            score += 10
+            engagement["factors"].append("Location data available for geo-tagging")
+
+        engagement["overall_score"] = min(score, 100)
+
+        # Platform-specific predictions
+        engagement["platform_predictions"] = {
+            "instagram": "high" if score >= 80 else "medium" if score >= 60 else "low",
+            "twitter": "medium" if score >= 70 else "low",
+            "facebook": "medium" if score >= 60 else "low"
+        }
+
+        engagement["confidence"] = "high" if score >= 80 else "medium" if score >= 60 else "low"
+
+        return engagement
+
+    def _generate_posting_advice(self) -> List[str]:
+        """Generate posting strategy recommendations"""
+        advice = []
+
+        # Timing advice
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            original_time = self.metadata.get("exif", {}).get("DateTimeOriginal")
+            try:
+                from datetime import datetime
+                # Parse the time to suggest optimal posting times
+                advice.append("⏰ Best posting times: 6-9 AM or 6-9 PM on weekdays")
+                advice.append("📅 Weekends: 9-11 AM often perform well")
+            except:
+                pass
+
+        # Format advice
+        width = self.metadata.get("image", {}).get("width", 0)
+        height = self.metadata.get("image", {}).get("height", 0)
+
+        if width == 1080 and height == 1080:
+            advice.append("✅ Perfect for Instagram - no cropping needed")
+        elif width < 1080 or height < 1080:
+            advice.append("📐 Consider upscaling to 1080px minimum for best quality")
+
+        # Location advice
+        if self.metadata.get("gps"):
+            advice.append("📍 Use GPS location for automatic location tagging")
+            advice.append("🗺️ Location tags can increase discoverability by up to 50%")
+
+        # Platform-specific advice
+        advice.append("📱 Instagram: Post during high-engagement hours (6-9 PM)")
+        advice.append("🐦 Twitter: Include relevant hashtags and mentions")
+        advice.append("👤 Facebook: Consider sharing in relevant groups")
+
+        return advice
+
+    def _suggest_hashtags(self) -> List[str]:
+        """Suggest relevant hashtags based on content analysis"""
+        hashtags = []
+
+        # Generic popular hashtags
+        hashtags.extend(["#photography", "#photooftheday"])
+
+        # Analyze content for specific hashtags
+        if self.metadata.get("gps"):
+            hashtags.extend(["#travel", "#location", "#geotag"])
+
+        # Time-based hashtags
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            from datetime import datetime
+            try:
+                date_str = self.metadata.get("exif", {}).get("DateTimeOriginal")
+                if "2024" in date_str:
+                    hashtags.append("#2024")
+            except:
+                pass
+
+        # Quality-based hashtags
+        if self.metadata.get("image", {}).get("width", 0) >= 2000:
+            hashtags.extend(["#highresolution", "#quality"])
+
+        return list(set(hashtags))  # Remove duplicates
+
+    def _suggest_content_improvements(self) -> List[str]:
+        """Suggest content enhancements"""
+        improvements = []
+
+        # Resolution improvements
+        width = self.metadata.get("image", {}).get("width", 0)
+        if width < 1080:
+            improvements.append("📐 Upscale to 1080px minimum for optimal social media quality")
+
+        # Format improvements
+        height = self.metadata.get("image", {}).get("height", 0)
+        if width != height and width != 1080:
+            improvements.append("✂️ Consider creating multiple versions for different platforms")
+
+        # Metadata improvements
+        if not self.metadata.get("gps"):
+            improvements.append("📍 Consider adding location data for better engagement")
+
+        # Content suggestions
+        improvements.append("✨ Add engaging caption with call-to-action")
+        improvements.append("👥 Tag relevant accounts to increase reach")
+        improvements.append("🔥 Use trending hashtags in your niche")
+
+        return improvements
+
+
+# Genealogy Researcher Grace - Family Historian
+class GenealogyResearcherGraceInterpreter(BasePersonaInterpreter):
+    """Genealogy-focused interpreter for family historians"""
+
+    def __init__(self, metadata: Dict[str, Any]):
+        super().__init__(metadata)
+        self.persona_name = "genealogy_researcher_grace"
+        self.persona_icon = "👨‍👩‍👧‍👦"
+
+    def interpret(self) -> Dict[str, Any]:
+        """Generate genealogy research interpretation"""
+        return {
+            "persona": self.persona_name,
+            "key_findings": self._generate_genealogy_findings(),
+            "era_context": self._analyze_historical_context(),
+            "location_history": self._analyze_location_history(),
+            "archival_recommendations": self._generate_archival_advice(),
+            "preservation_priority": self._assess_preservation_needs()
+        }
+
+    def _generate_genealogy_findings(self) -> List[str]:
+        """Generate genealogy-focused key findings"""
+        findings = []
+
+        # Date analysis
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            date_str = self.metadata.get("exif", {}).get("DateTimeOriginal")
+            findings.append(f"📅 Photo dated: {date_str}")
+
+        # Location analysis
+        if self.metadata.get("gps"):
+            findings.append("📍 GPS location available for mapping family history")
+        else:
+            findings.append("🗺️ No GPS data - location may need manual identification")
+
+        # Device analysis
+        exif = self.metadata.get("exif", {})
+        if exif.get("Make") or exif.get("Model"):
+            device = f"{exif.get('Make', '')} {exif.get('Model', '')}"
+            findings.append(f"📷 Taken with: {device.strip()}")
+
+        # Quality assessment
+        if self.metadata.get("image", {}).get("width", 0) >= 2000:
+            findings.append("✅ High resolution - good for archival purposes")
+
+        return findings
+
+    def _analyze_historical_context(self) -> Dict[str, Any]:
+        """Analyze historical context for the photo"""
+        context = {
+            "estimated_decade": "unknown",
+            "historical_events": [],
+            "technology_context": "unknown",
+            "fashion_indicators": [],
+            "cultural_context": "unknown"
+        }
+
+        # Analyze date for historical context
+        date_str = self.metadata.get("exif", {}).get("DateTimeOriginal", "")
+        if date_str:
+            try:
+                year = int(date_str.split(":")[0])
+                decade = (year // 10) * 10
+
+                context["estimated_decade"] = f"{decade}s"
+
+                # Add historical events based on decade
+                if decade == 2020:
+                    context["historical_events"] = ["COVID-19 pandemic", "Remote work era", "Smartphone dominance"]
+                elif decade == 2010:
+                    context["historical_events"] = ["Social media rise", "iPhone era", "Digital photography mainstream"]
+                elif decade == 2000:
+                    context["historical_events"] = ["Digital revolution", "Early internet era", "Mobile phone emergence"]
+                elif decade == 1990:
+                    context["historical_events"] = ["Pre-digital era", "Film photography", "Analog technology"]
+
+                # Technology context
+                if year >= 2010:
+                    context["technology_context"] = "Modern smartphone and digital camera era"
+                elif year >= 2000:
+                    context["technology_context"] = "Early digital photography, camera phones emerging"
+                elif year >= 1990:
+                    context["technology_context"] = "Film photography dominant, early digital adoption"
+
+            except (ValueError, IndexError):
+                context["estimated_decade"] = "unknown"
+
+        return context
+
+    def _analyze_location_history(self) -> Dict[str, Any]:
+        """Analyze location for genealogical research"""
+        location_history = {
+            "modern_address": "unknown",
+            "historical_context": "unknown",
+            "genealogical_relevance": "unknown",
+            "family_history_clues": []
+        }
+
+        # Analyze GPS data
+        if self.metadata.get("gps"):
+            # Modern address would come from reverse geocoding
+            location_history["modern_address"] = "GPS coordinates available - requires reverse geocoding"
+            location_history["genealogical_relevance"] = "exact_location_available"
+
+        # Check for any location hints in metadata
+        exif = self.metadata.get("exif", {})
+        if exif.get("Location"):
+            location_history["family_history_clues"].append(f"Location mentioned: {exif.get('Location')}")
+
+        return location_history
+
+    def _generate_archival_advice(self) -> Dict[str, Any]:
+        """Generate archival and preservation recommendations"""
+        advice = {
+            "preservation_priority": "medium",
+            "storage_conditions": [],
+            "digitization": {},
+            "metadata_to_add": [],
+            "family_tree_integration": []
+        }
+
+        # Assess preservation priority
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            # Older photos have higher priority
+            try:
+                year = int(self.metadata.get("exif", {}).get("DateTimeOriginal", "").split(":")[0])
+                if year < 2000:
+                    advice["preservation_priority"] = "high"
+                elif year < 2010:
+                    advice["preservation_priority"] = "medium-high"
+            except:
+                pass
+
+        # Storage conditions
+        advice["storage_conditions"] = [
+            "Store in cool, dry, dark place (65-70°F, 40-50% humidity)",
+            "Use acid-free sleeves for physical prints",
+            "Keep away from direct sunlight and UV sources",
+            "Store vertically to prevent curling"
+        ]
+
+        # Digitization advice
+        if self.metadata.get("image", {}).get("width", 0) < 300:
+            advice["digitization"] = {
+                "recommended_dpi": "300 DPI minimum for archival",
+                "format": "TIFF for preservation, JPEG for sharing",
+                "color_space": "Use sRGB for web, Adobe RGB for print"
+            }
+
+        # Metadata enrichment suggestions
+        advice["metadata_to_add"] = [
+            "Identify and name people in the photo",
+            "Estimate date if not known",
+            "Record location/occasion",
+            "Note source and provenance",
+            "Add family tree connections"
+        ]
+
+        # Family tree integration
+        advice["family_tree_integration"] = [
+            "Link to individuals in family tree software",
+            "Add source citations",
+            "Create family stories around the photo",
+            "Share with relatives for additional identification"
+        ]
+
+        return advice
+
+    def _assess_preservation_needs(self) -> Dict[str, Any]:
+        """Assess immediate preservation needs"""
+        needs = {
+            "urgency": "low",
+            "format_stability": "good",
+            "backup_recommendations": [],
+            "sharing_guidelines": []
+        }
+
+        # Format stability
+        if self.metadata.get("image", {}).get("format") == "JPEG":
+            needs["format_stability"] = "good - widely supported format"
+
+        # Backup recommendations
+        needs["backup_recommendations"] = [
+            "Create 3+ copies on different storage media",
+            "Use cloud storage (Google Photos, Amazon Photos, etc.)",
+            "Keep one copy offsite for disaster recovery",
+            "Consider using archival-quality storage for long-term preservation"
+        ]
+
+        # Sharing guidelines
+        needs["sharing_guidelines"] = [
+            "Share lower-resolution copies (1080px) to preserve originals",
+            "Include metadata captions when sharing with family",
+            "Use family groups for collaborative identification",
+            "Document any stories or memories associated with the photo"
+        ]
+
+        return needs
+
+
+# Legal Investigator Liam - Legal Professional
+class LegalInvestigatorLiamInterpreter(BasePersonaInterpreter):
+    """Legal-focused interpreter for legal professionals"""
+
+    def __init__(self, metadata: Dict[str, Any]):
+        super().__init__(metadata)
+        self.persona_name = "legal_investigator_liam"
+        self.persona_icon = "⚖️"
+
+    def interpret(self) -> Dict[str, Any]:
+        """Generate legal-focused interpretation"""
+        return {
+            "persona": self.persona_name,
+            "key_findings": self._generate_legal_findings(),
+            "admissibility_assessment": self._assess_admissibility(),
+            "chain_of_custody": self._analyze_chain_of_custody(),
+            "compliance_issues": self._check_compliance(),
+            "legal_recommendations": self._generate_legal_recommendations()
+        }
+
+    def _generate_legal_findings(self) -> List[str]:
+        """Generate legal-focused key findings"""
+        findings = []
+
+        # Timestamp verification
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            findings.append("⏰ Original timestamp available for temporal evidence")
+
+        # Location verification
+        if self.metadata.get("gps"):
+            findings.append("📍 GPS coordinates available for location verification")
+
+        # Authentication status
+        if self.metadata.get("forensic", {}).get("authentication_is_authenticated"):
+            findings.append("✅ Image contains cryptographic authentication")
+        else:
+            findings.append("⚠️ No cryptographic authentication - may require expert testimony")
+
+        # Original file integrity
+        if self.metadata.get("file_integrity", {}).get("sha256"):
+            findings.append("🔐 File hash available for integrity verification")
+
+        return findings
+
+    def _assess_admissibility(self) -> Dict[str, Any]:
+        """Assess legal admissibility as evidence"""
+        admissibility = {
+            "score": "unknown",
+            "foundation_requirements": [],
+            "authentication_basis": [],
+            "hearsay_exceptions": [],
+            "challenges": []
+        }
+
+        # Authentication basis
+        auth_basis = []
+
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            auth_basis.append("EXIF timestamp provides temporal authentication")
+
+        if self.metadata.get("gps"):
+            auth_basis.append("GPS data provides location authentication")
+
+        if self.metadata.get("file_integrity"):
+            auth_basis.append("Cryptographic hash provides file integrity verification")
+
+        if self.metadata.get("forensic", {}).get("authentication_is_authenticated"):
+            auth_basis.append("Digital signatures provide strong authentication")
+
+        admissibility["authentication_basis"] = auth_basis
+
+        # Foundation requirements
+        foundation_requirements = []
+
+        # Witness requirements
+        foundation_requirements.append("Testimony from photographer or custodian of records")
+
+        # Original evidence
+        if self.metadata.get("file_integrity"):
+            foundation_requirements.append("Original file or authenticated copy available")
+
+        admissibility["foundation_requirements"] = foundation_requirements
+
+        # Hearsay exceptions
+        hearsay_exceptions = []
+
+        # Business records exception
+        if self.metadata.get("exif", {}).get("Software"):
+            hearsay_exceptions.append("May qualify as business record if from business context")
+
+        # Silent witness doctrine
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            hearsay_exceptions.append("EXIF data may qualify under 'silent witness' doctrine")
+
+        admissibility["hearsay_exceptions"] = hearsay_exceptions
+
+        # Overall admissibility score
+        if len(auth_basis) >= 3:
+            admissibility["score"] = "highly_admissible"
+        elif len(auth_basis) >= 2:
+            admissibility["score"] = "likely_admissible"
+        elif len(auth_basis) >= 1:
+            admissibility["score"] = "potentially_admissible"
+        else:
+            admissibility["score"] = "requires_authentication"
+
+        return admissibility
+
+    def _analyze_chain_of_custody(self) -> Dict[str, Any]:
+        """Analyze chain of custody for legal purposes"""
+        custody = {
+            "documented": False,
+            "gaps": [],
+            "witnesses_required": 1,
+            "foundation_testimony": "unknown",
+            "custodial_issues": []
+        }
+
+        # Check for custody documentation
+        if self.metadata.get("filesystem", {}).get("created"):
+            custody["documented"] = True
+
+        # Check for potential gaps
+        if not self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            custody["gaps"].append("Original creation timestamp missing")
+
+        if not self.metadata.get("gps"):
+            custody["gaps"].append("Location data missing")
+
+        # Determine witness requirements
+        if custody["gaps"]:
+            custody["witnesses_required"] = 2
+            custody["foundation_testimony"] = "Multiple witnesses needed due to gaps"
+        else:
+            custody["witnesses_required"] = 1
+            custody["foundation_testimony"] = "Single witness (photographer/custodian) sufficient"
+
+        return custody
+
+    def _check_compliance(self) -> Dict[str, Any]:
+        """Check legal and regulatory compliance"""
+        compliance = {
+            "privacy_concerns": [],
+            "gdpr_relevance": False,
+            "copyright_issues": [],
+            "recommendations": []
+        }
+
+        # Privacy concerns
+        if self.metadata.get("gps"):
+            compliance["privacy_concerns"].append("GPS location data - consider redaction for privacy")
+
+        if self.metadata.get("exif", {}).get("OwnerName"):
+            compliance["privacy_concerns"].append("Device owner name - personal identifiable information")
+
+        # GDPR relevance
+        if compliance["privacy_concerns"]:
+            compliance["gdpr_relevance"] = True
+            compliance["recommendations"].append("May contain personal data under GDPR - consider consent requirements")
+
+        # Copyright considerations
+        if self.metadata.get("exif", {}).get("Copyright"):
+            compliance["copyright_issues"].append("Copyright notice present in metadata")
+
+        compliance["recommendations"].extend([
+            "Review all metadata for privacy concerns before submission",
+            "Consider redacting sensitive information (GPS, personal names)",
+            "Document source and permissions for use",
+            "Preserve original metadata for evidentiary purposes"
+        ])
+
+        return compliance
+
+    def _generate_legal_recommendations(self) -> List[str]:
+        """Generate legal-focused recommendations"""
+        recommendations = []
+
+        # Evidence preservation
+        recommendations.extend([
+            "🔒 Preserve original file and metadata without alteration",
+            "📋 Document chain of custody thoroughly",
+            "✍️ Create hash verification certificates for file integrity",
+            "👥 Identify and prepare witnesses for foundation testimony"
+        ])
+
+        # Authentication support
+        if self.metadata.get("exif"):
+            recommendations.append("🔍 Use EXIF metadata to support authentication")
+
+        if self.metadata.get("forensic", {}).get("authentication_is_authenticated"):
+            recommendations.append("✅ Cryptographic authentication strengthens admissibility")
+
+        # Privacy protection
+        if self.metadata.get("gps") or self.metadata.get("exif", {}).get("OwnerName"):
+            recommendations.extend([
+                "🛡️ Consider redacting sensitive location or personal information",
+                "⚖️ Balance probative value against privacy concerns"
+            ])
+
+        # Expert witness preparation
+        recommendations.extend([
+            "👨‍⚖️ Consider retaining digital forensics expert for complex authentication",
+            "📊 Prepare demonstrative exhibits showing metadata authentication",
+            "📝 Create detailed reports explaining technical evidence"
+        ])
+
+        return recommendations
+
+
+# Insurance Adjuster Ivy - Claims Professional
+class InsuranceAdjusterIvyInterpreter(BasePersonaInterpreter):
+    """Insurance-focused interpreter for claims processing"""
+
+    def __init__(self, metadata: Dict[str, Any]):
+        super().__init__(metadata)
+        self.persona_name = "insurance_adjuster_ivy"
+        self.persona_icon = "💼"
+
+    def interpret(self) -> Dict[str, Any]:
+        """Generate insurance-focused interpretation"""
+        return {
+            "persona": self.persona_name,
+            "key_findings": self._generate_insurance_findings(),
+            "coverage_analysis": self._analyze_coverage(),
+            "incident_context": self._analyze_incident_context(),
+            "fraud_detection": self._assess_fraud_risk(),
+            "vehicle_detection": self._detect_vehicles(),
+            "damage_assessment": self._assess_damage()
+        }
+
+    def _generate_insurance_findings(self) -> List[str]:
+        """Generate insurance-focused key findings"""
+        findings = []
+
+        # Timestamp for coverage period
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            date_str = self.metadata.get("exif", {}).get("DateTimeOriginal")
+            findings.append(f"⏰ Incident timestamp: {date_str}")
+
+        # Location verification
+        if self.metadata.get("gps"):
+            findings.append("📍 GPS coordinates available for location verification")
+
+        # Weather conditions (if available from location/time)
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            findings.append("🌤️ Timestamp allows weather condition lookup")
+
+        # Device quality for detail assessment
+        if self.metadata.get("image", {}).get("width", 0) >= 2000:
+            findings.append("✅ High resolution - good for damage assessment detail")
+
+        return findings
+
+    def _analyze_coverage(self) -> Dict[str, Any]:
+        """Analyze insurance coverage implications"""
+        coverage = {
+            "policy_period_check": "unknown",
+            "location_verification": "unknown",
+            "timestamp_verification": "unknown",
+            "coverage_issues": []
+        }
+
+        # Timestamp verification
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            coverage["timestamp_verification"] = "timestamp_available_for_coverage_check"
+            coverage["policy_period_check"] = "can_verify_against_policy_dates"
+
+        # Location verification
+        if self.metadata.get("gps"):
+            coverage["location_verification"] = "gps_confirms_policy_territory"
+
+        return coverage
+
+    def _analyze_incident_context(self) -> Dict[str, Any]:
+        """Analyze incident context from metadata"""
+        context = {
+            "weather_conditions": "lookup_required",
+            "lighting_conditions": "unknown",
+            "location_accuracy": "unknown",
+            "timing_accuracy": "unknown"
+        }
+
+        # GPS accuracy
+        if self.metadata.get("gps"):
+            context["location_accuracy"] = "GPS accurate within 3-5 meters"
+
+        # Timing accuracy
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            context["timing_accuracy"] = "EXIF timestamp accurate to seconds"
+
+        # Lighting conditions from EXIF
+        exif = self.metadata.get("exif", {})
+        if exif.get("ISOSpeedRatings"):
+            iso = int(exif.get("ISOSpeedRatings", 0))
+            if iso <= 100:
+                context["lighting_conditions"] = "good_lighting_low_iso"
+            elif iso <= 400:
+                context["lighting_conditions"] = "moderate_lighting"
+            elif iso <= 1600:
+                context["lighting_conditions"] = "low_light_or_indoor"
+            else:
+                context["lighting_conditions"] = "very_low_light_or_night"
+
+        return context
+
+    def _assess_fraud_risk(self) -> Dict[str, Any]:
+        """Assess fraud detection indicators"""
+        fraud = {
+            "authenticity_score": 0,
+            "manipulation_indicators": [],
+            "timestamp_consistency": "unknown",
+            "location_consistency": "unknown",
+            "metadata_anomalies": []
+        }
+
+        # Base authenticity score
+        score = 70  # Start with neutral score
+
+        # Positive indicators
+        if self.metadata.get("exif", {}).get("DateTimeOriginal"):
+            score += 15  # Has original timestamp
+
+        if self.metadata.get("gps"):
+            score += 10  # Has location data
+
+        if self.metadata.get("file_integrity", {}).get("sha256"):
+            score += 5  # Has hash for integrity verification
+
+        # Negative indicators
+        if self.metadata.get("forensic", {}).get("manipulation_detection", {}).get("detected"):
+            score -= 30
+            fraud["manipulation_indicators"].append("Potential manipulation detected")
+
+        if not self.metadata.get("exif"):
+            score -= 20
+            fraud["metadata_anomalies"].append("Missing EXIF data - suspicious")
+
+        fraud["authenticity_score"] = max(0, min(100, score))
+
+        # Consistency checks
+        fraud["timestamp_consistency"] = "consistent" if score >= 80 else "needs_verification"
+        fraud["location_consistency"] = "consistent" if self.metadata.get("gps") else "verification_needed"
+
+        return fraud
+
+    def _detect_vehicles(self) -> Dict[str, Any]:
+        """Detect vehicle information if applicable"""
+        vehicles = {
+            "detected": False,
+            "make_model": None,
+            "color": None,
+            "damage_assessment": None,
+            "license_plate": None
+        }
+
+        # Note: Actual vehicle detection would require OCR/image analysis
+        # This is a placeholder for future enhancement
+        vehicles["detected"] = False
+        vehicles["note"] = "Vehicle detection requires advanced image analysis not available in current metadata"
+
+        return vehicles
+
+    def _assess_damage(self) -> Dict[str, Any]:
+        """Assess damage from image (placeholder for future enhancement)"""
+        damage = {
+            "visible_damage": False,
+            "severity": "unknown",
+            "type": "unknown",
+            "affected_areas": [],
+            "recommendations": []
+        }
+
+        # Note: Actual damage assessment would require AI image analysis
+        # This is a placeholder for future enhancement
+        damage["visible_damage"] = "requires_visual_analysis"
+        damage["recommendations"].extend([
+            "High-resolution images needed for detailed damage assessment",
+            "Multiple angles recommended for comprehensive documentation",
+            "Include scale reference in photos when possible"
+        ])
+
+        return damage
+
+
 def add_persona_interpretation(metadata: Dict[str, Any], persona: str = "phone_photo_sarah") -> Dict[str, Any]:
     """
     Add persona-friendly interpretation to raw metadata
@@ -2123,6 +3261,21 @@ def add_persona_interpretation(metadata: Dict[str, Any], persona: str = "phone_p
         result["persona_interpretation"] = interpreter.interpret()
     elif persona == "investigator_mike":
         interpreter = InvestigatorMikeInterpreter(metadata)
+        result["persona_interpretation"] = interpreter.interpret()
+    elif persona == "security_analyst_sam":
+        interpreter = SecurityAnalystSamInterpreter(metadata)
+        result["persona_interpretation"] = interpreter.interpret()
+    elif persona == "social_media_manager_sophia":
+        interpreter = SocialMediaManagerSophiaInterpreter(metadata)
+        result["persona_interpretation"] = interpreter.interpret()
+    elif persona == "genealogy_researcher_grace":
+        interpreter = GenealogyResearcherGraceInterpreter(metadata)
+        result["persona_interpretation"] = interpreter.interpret()
+    elif persona == "legal_investigator_liam":
+        interpreter = LegalInvestigatorLiamInterpreter(metadata)
+        result["persona_interpretation"] = interpreter.interpret()
+    elif persona == "insurance_adjuster_ivy":
+        interpreter = InsuranceAdjusterIvyInterpreter(metadata)
         result["persona_interpretation"] = interpreter.interpret()
 
     return result

@@ -113,7 +113,7 @@ Test content.
         assert result['dkim_domain'] == 'example.com'
         assert result['dkim_selector'] == 'selector'
         assert result['dkim_algorithm'] == 'rsa-sha256'
-        assert result['email_spf_result'] == 'pass'
+        assert result['spf_result'] == 'pass'  # Parsed SPF result
         assert result['email_authentication_results'] == 'example.com; spf=pass; dkim=pass'
         assert result['email_spam_status'] == 'No, score=0.0'
         assert result['email_virus_scanned'] == 'ClamAV using ClamSMTP'

@@ -2,14 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-    Activity,
     User,
-    FileText,
     Monitor,
     Settings,
     Calendar,
     Layers,
-    Camera,
     HeartPulse,
 } from 'lucide-react';
 

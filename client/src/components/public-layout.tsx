@@ -155,6 +155,7 @@ export function PublicLayout({
             <div className="md:hidden bg-[#0B0C10] border-t border-white/5">
               <div className="container mx-auto px-4 py-4 space-y-4">
                 <nav className="flex flex-col gap-2">
+                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                   <Link 
                     to="/#features" 
                     className="text-sm text-slate-300 hover:text-white py-2"
@@ -162,6 +163,7 @@ export function PublicLayout({
                   >
                     Features
                   </Link>
+                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                   <Link 
                     to="/#pricing" 
                     className="text-sm text-slate-300 hover:text-white py-2"
@@ -169,6 +171,7 @@ export function PublicLayout({
                   >
                     Pricing
                   </Link>
+                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                   <Link 
                     to="/docs" 
                     className="text-sm text-slate-300 hover:text-white py-2"

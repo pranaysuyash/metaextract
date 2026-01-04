@@ -15,6 +15,7 @@ import { registerLLMFindingsRoutes } from './llm-findings';
 import { registerTierRoutes } from './tiers';
 import { registerAdminRoutes } from './admin';
 import { registerPaymentRoutes } from '../payments';
+import { registerGeocodingRoutes } from './geocoding';
 import { rateLimitManager } from '../rateLimitRedis';
 import { rateLimitAPI } from '../rateLimitMiddleware';
 
@@ -48,6 +49,7 @@ export async function registerRoutes(
   registerTierRoutes(app);
   registerAdminRoutes(app);
   registerPaymentRoutes(app);
+  registerGeocodingRoutes(app);
 
   return httpServer;
 }

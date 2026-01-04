@@ -49,29 +49,17 @@ import {
   Clock,
   Shield,
   Tag,
-  ChevronRight,
   ExternalLink,
   Copy,
   Eye,
-  EyeOff,
   Layers,
   Info,
   Lock,
 } from 'lucide-react';
 import { getFieldExplanation, hasExplanation } from '@/utils/fieldExplanations';
-import {
-  METADATA_CATEGORIES,
-  getCategoryDefinition,
-  getDefaultExpandedCategories,
-  categorizeField,
-  groupFieldsByCategory,
-} from '@/utils/metadataCategories';
+import { getCategoryDefinition } from '@/utils/metadataCategories';
 import { loadPreferences, savePreferences } from '@/utils/userPreferences';
-import {
-  searchMetadata,
-  type SearchOptions,
-  type SearchResult,
-} from '@/utils/metadataSearch';
+import { searchMetadata } from '@/utils/metadataSearch';
 import { EducationalExamples } from '@/components/educational-examples';
 import { AdvancedAnalysisResults } from '@/components/AdvancedAnalysisResults';
 

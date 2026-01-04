@@ -33,26 +33,26 @@ describe('Interactive Feedback System - Property Tests', () => {
      */
     it('all interactive state classes are non-empty strings', () => {
       // Test hover states
-      Object.entries(interactiveStates.hover).forEach(([key, value]) => {
+      Object.entries(interactiveStates.hover).forEach(([_key, value]) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
         expect(value.trim()).toBe(value); // No leading/trailing whitespace
       });
       
       // Test focus states
-      Object.entries(interactiveStates.focus).forEach(([key, value]) => {
+      Object.entries(interactiveStates.focus).forEach(([_key, value]) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
       });
       
       // Test active states
-      Object.entries(interactiveStates.active).forEach(([key, value]) => {
+      Object.entries(interactiveStates.active).forEach(([_key, value]) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
       });
       
       // Test disabled states
-      Object.entries(interactiveStates.disabled).forEach(([key, value]) => {
+      Object.entries(interactiveStates.disabled).forEach(([_key, value]) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
       });
@@ -62,7 +62,7 @@ describe('Interactive Feedback System - Property Tests', () => {
      * Property: All transition classes should be non-empty strings
      */
     it('all transition classes are non-empty strings', () => {
-      Object.entries(transitionClasses).forEach(([key, value]) => {
+      Object.entries(transitionClasses).forEach(([_key, value]) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
       });
@@ -72,8 +72,8 @@ describe('Interactive Feedback System - Property Tests', () => {
      * Property: All component feedback classes should be non-empty strings
      */
     it('all component feedback classes are non-empty strings', () => {
-      Object.entries(componentFeedback).forEach(([component, variants]) => {
-        Object.entries(variants).forEach(([variant, classes]) => {
+      Object.entries(componentFeedback).forEach(([_component, variants]) => {
+        Object.entries(variants).forEach(([_variant, classes]) => {
           expect(typeof classes).toBe('string');
           expect(classes.length).toBeGreaterThan(0);
         });
@@ -84,7 +84,7 @@ describe('Interactive Feedback System - Property Tests', () => {
      * Property: All micro-interaction classes should be non-empty strings
      */
     it('all micro-interaction classes are non-empty strings', () => {
-      Object.entries(microInteractions).forEach(([key, value]) => {
+      Object.entries(microInteractions).forEach(([_key, value]) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
       });
@@ -280,7 +280,7 @@ describe('Interactive Feedback System - Property Tests', () => {
      * Property: All component types should have a 'default' variant
      */
     it('all component types have a default variant', () => {
-      Object.entries(componentFeedback).forEach(([component, variants]) => {
+      Object.entries(componentFeedback).forEach(([_component, variants]) => {
         // Check if 'default' exists or if there's at least one variant
         const hasDefault = 'default' in variants;
         const hasVariants = Object.keys(variants).length > 0;

@@ -385,8 +385,12 @@ def _extract_communication_patterns(msg: EmailMessage, raw_content: str) -> Dict
             if re.search(r'\b(fw|fwd):\s*', subject, re.IGNORECASE):
                 patterns['email_is_forward'] = True
 
-        # Thread level (number of Re: prefixes)
-        re_count = len(re.findall(r'^re:\s*', subject, re.IGNORECASE | re.MULTILINE))
+        # Thread level (number of Re: prefixes at start of subject)
+        re_count = 0
+        remaining = subject
+        while re.match(r'(?i)^re:\s*', remaining):
+            re_count += 1
+            remaining = re.sub(r'(?i)^re:\s*', '', remaining, count=1)
         patterns['email_thread_level'] = re_count
 
     # Message size analysis
@@ -401,7 +405,21 @@ def _extract_communication_patterns(msg: EmailMessage, raw_content: str) -> Dict
     # Priority indicators
     priority = msg.get('x-priority') or msg.get('importance')
     if priority:
-        patterns['email_priority'] = priority.lower()
+        priority_str = str(priority).lower().strip()
+        # Map X-Priority numeric values to human-readable
+        priority_map = {
+            '1': 'high',
+            '2': 'high',
+            '3': 'normal',
+            '4': 'low',
+            '5': 'low',
+            'high': 'high',
+            'normal': 'normal',
+            'low': 'low',
+            'urgent': 'high',
+            'non-urgent': 'low',
+        }
+        patterns['email_priority'] = priority_map.get(priority_str, priority_str)
 
     return patterns
 
@@ -517,13 +535,21 @@ def _parse_spf_header(spf_str: str) -> Dict[str, Any]:
     spf_data = {}
 
     try:
-        # Look for pass/fail/neutral
-        if 'pass' in spf_str.lower():
-            spf_data['spf_result'] = 'pass'
-        elif 'fail' in spf_str.lower():
+        spf_lower = spf_str.lower()
+        if 'fail' in spf_lower:
             spf_data['spf_result'] = 'fail'
-        elif 'neutral' in spf_str.lower():
+        elif 'softfail' in spf_lower:
+            spf_data['spf_result'] = 'softfail'
+        elif 'neutral' in spf_lower:
             spf_data['spf_result'] = 'neutral'
+        elif 'pass' in spf_lower:
+            spf_data['spf_result'] = 'pass'
+        elif 'none' in spf_lower:
+            spf_data['spf_result'] = 'none'
+        elif 'permerror' in spf_lower:
+            spf_data['spf_result'] = 'permerror'
+        elif 'temperror' in spf_lower:
+            spf_data['spf_result'] = 'temperror'
     except:
         pass
 

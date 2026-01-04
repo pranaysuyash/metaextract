@@ -55,6 +55,7 @@ const Navigation: React.FC<NavigationProps> = ({
               const Icon = item.icon;
               const active = isActivePath(location.pathname, item.href);
               return (
+                // eslint-disable-next-line jsx-a11y/anchor-is-valid
                 <Link
                   key={item.id}
                   to={item.href}
@@ -108,8 +109,11 @@ const Navigation: React.FC<NavigationProps> = ({
       {isMobileMenuOpen && (
         <div 
           className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          role="button"
+          tabIndex={0}
           onClick={() => setIsMobileMenuOpen(false)}
-          aria-hidden="true"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsMobileMenuOpen(false); }}
+          aria-label="Close menu"
         />
       )}
 
@@ -125,6 +129,7 @@ const Navigation: React.FC<NavigationProps> = ({
       >
         {/* Mobile Header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-white/5">
+          {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
           <Link to="/" className="flex items-center gap-2" onClick={handleNavClick}>
             <div className={cn('w-7 h-7 rounded flex items-center justify-center', brandConfig.logo.bgColor)}>
               <Cpu className={cn('w-4 h-4', brandConfig.logo.textColor)} />

@@ -10,8 +10,6 @@ import * as fc from 'fast-check';
 import {
   helpTopics,
   metadataFieldDocs,
-  HelpTopic,
-  MetadataFieldDoc,
   HelpCategory,
   MetadataCategory,
   searchHelpTopics,

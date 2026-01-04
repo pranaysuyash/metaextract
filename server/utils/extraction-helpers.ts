@@ -115,6 +115,8 @@ export interface PythonMetadataResponse {
   environmental_sustainability?: Record<string, any> | null;
   social_media_digital?: Record<string, any> | null;
   gaming_entertainment?: Record<string, any> | null;
+  // Email and Communication metadata
+  email?: EmailMetadata | null;
   error?: string;
 }
 
@@ -165,6 +167,105 @@ export interface PersonaInterpretation {
   recommendations: string[];
 }
 
+export interface EmailMetadata {
+  available: boolean;
+  registry?: {
+    available: boolean;
+    fields_extracted: number;
+    tags: Record<string, any>;
+    unknown_tags: Record<string, any>;
+    field_catalog: string[];
+  };
+  email_from?: string;
+  email_from_name?: string;
+  email_from_address?: string;
+  email_to?: string;
+  email_to_count?: number;
+  email_to_addresses?: string[];
+  email_cc?: string;
+  email_cc_count?: number;
+  email_cc_addresses?: string[];
+  email_bcc?: string;
+  email_bcc_count?: number;
+  email_bcc_addresses?: string[];
+  email_subject?: string;
+  email_date?: string;
+  email_message_id?: string;
+  email_in_reply_to?: string;
+  email_references?: string;
+  email_reply_to?: string;
+  email_sender?: string;
+  email_return_path?: string;
+  email_delivered_to?: string;
+  email_received_headers?: string[];
+  email_content_type?: string;
+  email_content_transfer_encoding?: string;
+  email_content_disposition?: string;
+  email_user_agent?: string;
+  email_x_mailer?: string;
+  email_originating_ip?: string;
+  email_x_sender?: string;
+  email_x_receiver?: string;
+  email_dkim_present?: boolean;
+  email_spf_result?: string;
+  email_authentication_results?: string;
+  email_spam_status?: string;
+  email_spam_score?: string;
+  email_virus_scanned?: string;
+  email_dkim?: Record<string, any>;
+  email_is_multipart?: boolean;
+  email_part_count?: number;
+  email_text_parts?: number;
+  email_html_parts?: number;
+  email_attachment_parts?: number;
+  email_content_main_type?: string;
+  email_content_charset?: string;
+  email_content_boundary?: string;
+  email_received_count?: number;
+  email_first_ip?: string;
+  email_first_hostname?: string;
+  email_first_protocol?: string;
+  email_last_ip?: string;
+  email_last_hostname?: string;
+  email_last_protocol?: string;
+  email_return_path_parsed?: string;
+  email_datetime_parsed?: string;
+  email_timestamp?: number;
+  email_day_of_week?: string;
+  email_hour_of_day?: number;
+  email_is_weekend?: boolean;
+  email_timezone?: string;
+  email_timezone_offset?: number;
+  email_is_reply?: boolean;
+  email_is_direct_reply?: boolean;
+  email_is_forward?: boolean;
+  email_thread_level?: number;
+  email_subject_length?: number;
+  email_raw_size?: number;
+  email_header_size?: number;
+  email_content_language?: string;
+  email_priority?: string;
+  email_encrypted?: boolean;
+  email_attachment_count?: number;
+  email_attachments?: Array<{
+    filename: string;
+    content_type: string;
+    size: number;
+    disposition?: string;
+  }>;
+  email_attachments_total_size?: number;
+  email_attachment_types?: string[];
+  email_contains_calendar?: boolean;
+  email_contains_vcard?: boolean;
+  calendar?: Record<string, any>;
+  vcard?: Record<string, any>;
+  spf_result?: string;
+  dkim_domain?: string;
+  dkim_selector?: string;
+  dkim_algorithm?: string;
+  [key: string]: any;
+}
+
 export interface FrontendMetadataResponse {
   filename: string;
   filesize: string;
@@ -200,6 +301,8 @@ export interface FrontendMetadataResponse {
     authenticity_assessment: string;
   };
   persona_interpretation?: PersonaInterpretation;
+  // Email and Communication metadata
+  email: EmailMetadata | null;
   [key: string]: any;
 }
 
@@ -369,6 +472,7 @@ export function transformMetadataForFrontend(
         ? Object.keys(raw.perceptual_hashes).length
         : 0,
     },
+    email: raw.email ? Object.keys(raw.email).length - 1 : 0,
   };
 
   return {
@@ -450,6 +554,9 @@ export function transformMetadataForFrontend(
     environmental_sustainability: raw.environmental_sustainability ?? null,
     social_media_digital: raw.social_media_digital ?? null,
     gaming_entertainment: raw.gaming_entertainment ?? null,
+
+    // Email and Communication metadata
+    email: raw.email ?? null,
 
     // Persona interpretation (if available from Python backend)
     persona_interpretation: (raw as any).persona_interpretation ?? undefined,

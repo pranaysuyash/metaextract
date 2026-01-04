@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { KeyFindings } from '@/components/v2-results/KeyFindings';
+import { KeyFindings, KeyFindingsCompact } from '@/components/v2-results/KeyFindings';
+import { ProgressiveDisclosure, ProgressiveDisclosureMobile, type ProgressiveDisclosureData } from '@/components/v2-results/ProgressiveDisclosure';
+import { ActionsToolbar, ActionsToolbarCompact } from '@/components/v2-results/ActionsToolbar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, FileText, Cpu } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Cpu, Smartphone } from 'lucide-react';
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
 import { cn } from '@/lib/utils';
+import { extractKeyFindings } from '@/utils/metadataTransformers';
+import type { LocationData } from '@/components/v2-results/LocationSection';
 
 interface MetadataResponse {
   filename: string;
@@ -37,6 +41,17 @@ export default function ResultsV2() {
   const { toast } = useToast();
   const [metadata, setMetadata] = useState<MetadataResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Handle window resize for responsive design
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     // Priority 1: Load from navigation state (handles large payloads, fresh upload)
@@ -79,6 +94,53 @@ export default function ResultsV2() {
       setIsLoading(false);
     }
   }, [location.state, toast]);
+
+  // Transform metadata for ProgressiveDisclosure
+  const progressiveDisclosureData = useMemo<ProgressiveDisclosureData | null>(() => {
+    if (!metadata) return null;
+
+    // Extract key findings
+    const keyFindings = extractKeyFindings(metadata);
+
+    // Extract quick details
+    const quickDetails = {
+      resolution: metadata.resolution || metadata.exif?.image_width && metadata.exif?.image_height
+        ? `${metadata.exif.image_width}x${metadata.exif.image_height}`
+        : undefined,
+      fileSize: metadata.filesize,
+      dimensions: metadata.exif?.image_width && metadata.exif?.image_height
+        ? `${metadata.exif.image_width} x ${metadata.exif.image_height} pixels`
+        : undefined,
+      colorSpace: metadata.exif?.color_space,
+      iso: metadata.exif?.iso_speed,
+      focalLength: metadata.exif?.focal_length,
+      exposure: metadata.exif?.exposure_time,
+      aperture: metadata.exif?.f_number,
+    };
+
+    // Extract location data
+    const locationData: LocationData | undefined = metadata.gps?.latitude && metadata.gps?.longitude
+      ? {
+          latitude: metadata.gps.latitude,
+          longitude: metadata.gps.longitude,
+        }
+      : undefined;
+
+    // Extract advanced metadata
+    const advancedMetadata = {
+      ...metadata,
+      filename: undefined, // Remove redundant fields
+      filesize: undefined,
+      filetype: undefined,
+    };
+
+    return {
+      keyFindings,
+      quickDetails,
+      location: locationData,
+      advancedMetadata,
+    };
+  }, [metadata]);
 
   // Priority 3: Fetch from DB if ID param exists and no data loaded yet
   useEffect(() => {
@@ -246,20 +308,23 @@ export default function ResultsV2() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="max-w-7xl mx-auto space-y-8">
-          {/* File Header - Matching your forensic theme */}
+          {/* File Header - Matching forensic theme */}
           <div className="flex items-center justify-between pb-6 border-b border-white/10">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center flex-shrink-0">
                 <Cpu className="w-6 h-6 text-primary" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white font-mono tracking-tight">
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-white font-mono tracking-tight truncate">
                   {metadata.filename}
                 </h1>
-                <div className="flex gap-4 text-xs text-slate-500 font-mono mt-1">
+                <div className={cn(
+                  'text-xs text-slate-500 font-mono mt-1',
+                  isMobile ? 'flex flex-col gap-1' : 'flex gap-4'
+                )}>
                   <span>SIZE: {metadata.filesize}</span>
-                  <span>TYPE: {metadata.filetype}</span>
-                  <span className="text-primary">
+                  <span className="hidden sm:inline">TYPE: {metadata.filetype}</span>
+                  <span className="text-primary hidden md:inline">
                     SHA256:{' '}
                     {metadata.file_integrity?.sha256?.substring(0, 12) || 'N/A'}
                     ...
@@ -267,24 +332,44 @@ export default function ResultsV2() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* V2 Key Findings Section */}
-          <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-6 shadow-lg">
-            <KeyFindings metadata={metadata} />
-          </div>
-
-          {/* More V2 sections coming soon */}
-          <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-8 shadow-lg">
-            <div className="text-center">
-              <p className="text-slate-400 font-mono text-sm">
-                [ Additional V2 features coming soon: Quick Details, Location
-                Map, Camera Info, etc. ]
-              </p>
-              <div className="mt-4 text-xs text-slate-600 font-mono">
-                Current view: V2 Key Findings • Toggle to V1 for comparison
+            {isMobile && (
+              <div className="ml-2 flex-shrink-0">
+                <Smartphone className="w-5 h-5 text-blue-400" />
               </div>
+            )}
+          </div>
+
+          {/* Progressive Disclosure Section */}
+          {progressiveDisclosureData && (
+            <div className={cn(
+              'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg',
+              isMobile ? 'p-4' : 'p-6'
+            )}>
+              {isMobile ? (
+                <ProgressiveDisclosureMobile data={progressiveDisclosureData} />
+              ) : (
+                <ProgressiveDisclosure data={progressiveDisclosureData} />
+              )}
             </div>
+          )}
+
+          {/* Actions Toolbar */}
+          <div className={cn(
+            'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
+          )}>
+            {isMobile ? (
+              <ActionsToolbarCompact
+                filename={metadata.filename}
+                metadata={metadata}
+                className="m-4"
+              />
+            ) : (
+              <ActionsToolbar
+                filename={metadata.filename}
+                metadata={metadata}
+                className="p-6"
+              />
+            )}
           </div>
         </div>
       </div>

@@ -158,7 +158,7 @@ describe('Onboarding System Property Tests', () => {
         industry: fc.option(fc.string(), { nil: undefined }),
         goals: fc.array(fc.string(), { minLength: 1, maxLength: 3 })
       }),
-      (userProfile) => {
+      (_userProfile) => {
         // Render the component multiple times with the same profile
         const { unmount: unmount1 } = render(
           <TestWrapper>
@@ -203,7 +203,7 @@ describe('Onboarding System Property Tests', () => {
         primaryFileTypes: fc.array(fc.string({ minLength: 1 }), { minLength: 1, maxLength: 5 }),
         goals: fc.array(fc.string({ minLength: 1 }), { minLength: 1, maxLength: 3 })
       }),
-      (userProfile) => {
+      (_userProfile) => {
         const { unmount } = render(
           <TestWrapper>
             <OnboardingTestComponent />
@@ -565,10 +565,6 @@ describe('Onboarding System Property Tests', () => {
       fc.array(fc.string({ minLength: 1, maxLength: 10 }), { minLength: 0, maxLength: 10 }),
       (completedSteps) => {
         // Define a chain of prerequisites
-        const stepA = { id: 'step-a', prerequisites: ['step-b'] };
-        const stepB = { id: 'step-b', prerequisites: ['step-c'] };
-        const stepC = { id: 'step-c', prerequisites: [] };
-
         // Check if step-c is completed
         const cCompleted = completedSteps.includes('step-c');
         

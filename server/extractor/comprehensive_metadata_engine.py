@@ -2932,10 +2932,19 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[st
             if mime_type.startswith("image/"):
                 print(f"[persona_debug] Adding persona interpretation for {persona}", file=sys.stderr)
                 logger.info(f"[persona_adding] Adding persona interpretation for {persona}")
-                persona_result = add_persona_interpretation(result, persona)
+                persona_enhanced_result = add_persona_interpretation(result, persona)
+
+                # Debug: Check what we got back
+                print(f"[persona_debug] Type of result: {type(persona_enhanced_result)}", file=sys.stderr)
+                print(f"[persona_debug] Keys in result: {list(persona_enhanced_result.keys()) if isinstance(persona_enhanced_result, dict) else 'Not a dict'}", file=sys.stderr)
+
                 # Add the persona interpretation to the existing result
-                result["persona_interpretation"] = persona_result.get("persona_interpretation")
-                print(f"[persona_debug] Successfully added persona interpretation", file=sys.stderr)
+                persona_interpretation = persona_enhanced_result.get("persona_interpretation")
+                print(f"[persona_debug] Persona interpretation extracted: {persona_interpretation is not None}", file=sys.stderr)
+                print(f"[persona_debug] Persona interpretation type: {type(persona_interpretation)}", file=sys.stderr)
+
+                result["persona_interpretation"] = persona_interpretation
+                print(f"[persona_debug] Successfully added persona interpretation to result", file=sys.stderr)
                 logger.info(f"[persona_success] Successfully added persona interpretation for {persona}")
             else:
                 print(f"[persona_debug] Not an image file, skipping", file=sys.stderr)

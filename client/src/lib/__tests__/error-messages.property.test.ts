@@ -12,7 +12,6 @@ import {
   ErrorCode,
   ErrorCategory,
   ErrorSeverity,
-  UserFriendlyError,
   mapHttpStatusToErrorCode,
   detectErrorCode,
   getUserFriendlyError,

@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { PricingModal } from "@/components/images-mvp/pricing-modal";
+import { ProgressTracker } from "@/components/images-mvp/progress-tracker";
+import { QualityIndicator } from "@/components/images-mvp/quality-indicator";
 import { PublicLayout as Layout } from "@/components/public-layout";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -70,6 +72,7 @@ export default function ImagesMvpResults() {
     const [showPurposeModal, setShowPurposeModal] = useState(false);
     const [densityMode, setDensityMode] = useState<DensityMode>("normal");
     const [showPricingModal, setShowPricingModal] = useState(false);
+    const [sessionId, setSessionId] = useState<string>('');
     const navigate = useNavigate();
     const { toast } = useToast();
     const purposePromptLogged = useRef(false);
@@ -218,7 +221,11 @@ export default function ImagesMvpResults() {
         }
     }, [metadata, trackEvent]);
 
-    if (!metadata) return null;
+    // All hooks must be called before this guard
+    if (!metadata) {
+        // Render null after hooks are called to avoid hook order violations
+        return null;
+    }
 
     const isTrialLimited = metadata._trial_limited || (metadata.access?.trial_granted);
     const canExport = !isTrialLimited;
@@ -549,21 +556,27 @@ export default function ImagesMvpResults() {
         });
     }
 
-    const preferredIntent =
-        purpose === "authenticity"
-            ? "Authenticity"
-            : purpose === "photography"
-              ? "Photography"
-              : "Privacy";
-    const orderedHighlights = useMemo(() => {
-        const sorted = [...highlights];
-        sorted.sort((a, b) => {
+    // Compute preferred intent (moved outside of useMemo to fix hook order issues)
+    const preferredIntent = purpose === "authenticity"
+        ? "Authenticity"
+        : purpose === "photography"
+          ? "Photography"
+          : "Privacy";
+
+    // Order highlights by preferred intent (moved outside of useMemo to fix hook order issues)
+    const orderedHighlights = (() => {
+        // Create a copy of highlights to avoid mutating the original array
+        const highlightsCopy = [...highlights];
+        
+        // Sort by preferred intent
+        highlightsCopy.sort((a, b) => {
             const aScore = a.intent === preferredIntent ? 1 : 0;
             const bScore = b.intent === preferredIntent ? 1 : 0;
             return bScore - aScore;
         });
-        return sorted;
-    }, [highlights, preferredIntent]);
+        
+        return highlightsCopy;
+    })();
 
     const buildSummaryLines = () => {
         const intentLabel = purpose
@@ -724,9 +737,9 @@ export default function ImagesMvpResults() {
                       e.valuePreview.toLowerCase().includes(q)
               )
               .slice(0, 80)
-        : allRawPaths.slice(0, 40);
-
-    return (
+              : allRawPaths.slice(0, 40);
+              
+              return (
         <Layout showHeader={true} showFooter={true}>
             <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
                 <div className="container mx-auto px-4 max-w-4xl">
@@ -790,13 +803,13 @@ export default function ImagesMvpResults() {
                     </Dialog>
 
                     {/* Header */}
-                    <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
+                    <div className="mb-8 flex flex-col gap-4">
+                        <div className="min-w-full">
                             <h1 className="text-2xl font-bold flex items-center gap-2">
-                                <FileImage className="w-6 h-6 text-primary" />
-                                {metadata.filename}
+                                <FileImage className="w-6 h-6 text-primary shrink-0" />
+                                <span title={metadata.filename}>{metadata.filename}</span>
                             </h1>
-                            <p className="text-slate-400 text-sm font-mono mt-1">
+                            <p className="text-slate-400 text-sm font-mono mt-1 truncate">
                                 {metadata.filesize} • {metadata.mime_type}
                             </p>
                         </div>
@@ -905,6 +918,21 @@ export default function ImagesMvpResults() {
                                         Analyze another file
                                     </Button>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Quality Metrics Section */}
+                    {metadata.quality_metrics && (
+                        <Card className="bg-[#121217] border-white/5 mb-6">
+                            <CardHeader>
+                                <CardTitle className="text-sm font-mono text-slate-400">EXTRACTION QUALITY</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <QualityIndicator 
+                                    qualityMetrics={metadata.quality_metrics}
+                                    processingInsights={metadata.processing_insights}
+                                />
                             </CardContent>
                         </Card>
                     )}

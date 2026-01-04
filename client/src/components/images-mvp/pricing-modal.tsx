@@ -53,7 +53,7 @@ export function PricingModal({
           ([id, pack]) => ({ id, ...(pack as Omit<CreditPack, 'id'>) })
         );
         setPacks(packEntries);
-      } catch (error) {
+      } catch {
         toast({
           title: 'Unable to load pricing',
           description: 'Please try again in a moment.',

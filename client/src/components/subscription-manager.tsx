@@ -15,9 +15,7 @@ import {
   Check,
   X,
   Loader2,
-  CreditCard,
   Calendar,
-  Zap,
   Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,8 +44,6 @@ import {
   cancelSubscription,
   reactivateSubscription,
   getSubscriptionUsage,
-  checkUsageAgainstTier,
-  getEffectiveTier,
 } from '@/lib/subscription';
 import {
   type SubscriptionTier,
@@ -80,7 +76,6 @@ export function SubscriptionManager({
   const [success, setSuccess] = useState<string | null>(null);
 
   const currentTier = getPricingTier(subscription.tier);
-  const effectiveTier = getEffectiveTier(subscription);
 
   useEffect(() => {
     setCurrency(detectUserCurrency());
@@ -120,7 +115,7 @@ export function SubscriptionManager({
       } else {
         setError(result.error || result.message);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
@@ -143,7 +138,7 @@ export function SubscriptionManager({
       } else {
         setError(result.error || result.message);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
@@ -163,7 +158,7 @@ export function SubscriptionManager({
       } else {
         setError(result.error || result.message);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
@@ -344,7 +339,15 @@ export function SubscriptionManager({
                       ? 'border-primary bg-primary/10'
                       : 'border-white/10 hover:border-white/30 bg-white/5'
                   }`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => !isCurrentTier && handleTierSelect(tier.id)}
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      !isCurrentTier && handleTierSelect(tier.id);
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-white">{tier.name}</h4>

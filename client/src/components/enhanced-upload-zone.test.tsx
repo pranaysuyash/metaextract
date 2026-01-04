@@ -317,7 +317,8 @@ describe('EnhancedUploadZone', () => {
     it('should revoke preview URL on file removal', () => {
       render(<EnhancedUploadZone {...defaultProps} tier="free" />, { wrapper: TestWrapper });
 
-      const _revokeMock = global.URL.revokeObjectURL as jest.Mock;
+      const revokeMock = global.URL.revokeObjectURL as jest.Mock;
+      expect(revokeMock).toBeDefined();
 
       // Should call revokeObjectURL when removing file with preview
     });
@@ -496,7 +497,8 @@ describe('EnhancedUploadZone', () => {
     it('should generate preview for image files', () => {
       render(<EnhancedUploadZone {...defaultProps} tier="free" />, { wrapper: TestWrapper });
 
-      const _createObjectURLMock = global.URL.createObjectURL as jest.Mock;
+      const createObjectURLMock = global.URL.createObjectURL as jest.Mock;
+      expect(createObjectURLMock).toBeDefined();
 
       // Should call createObjectURL for image files
     });

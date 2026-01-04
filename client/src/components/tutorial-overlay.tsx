@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, SkipForward, Pause, Play, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOnboarding, type OnboardingStep } from '@/lib/onboarding';
+import { useOnboarding } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -219,16 +219,8 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     // Move back one step
     const prevIndex = session.progress.currentStepIndex - 1;
     if (prevIndex >= 0) {
-      // Update progress to go back
-      const updatedProgress = {
-        ...session.progress,
-        currentStepIndex: prevIndex
-      };
-
       // Note: This would need to be implemented in the onboarding context
-      // For now, just log it
-      console.log('Navigate to previous step:', prevIndex);
-      
+      // The context should handle updating progress; for now we show feedback.
       toast({
         title: 'Going Back',
         description: 'Returning to previous step',
@@ -323,6 +315,13 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
       ref={overlayRef}
       className="fixed inset-0 z-50 tutorial-overlay"
       onClick={handleOverlayClick}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target === overlayRef.current && currentStep?.skippable) {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       role="dialog"
       aria-modal="true"
       aria-labelledby="tutorial-title"

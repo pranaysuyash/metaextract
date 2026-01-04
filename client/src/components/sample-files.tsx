@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Download, 
   Image, 
   Video, 
   Music, 
@@ -11,7 +10,6 @@ import {
   MapPin, 
   Camera, 
   Zap,
-  Clock,
   HardDrive,
   Loader2
 } from "lucide-react";

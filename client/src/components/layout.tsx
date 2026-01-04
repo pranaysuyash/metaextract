@@ -18,7 +18,6 @@ import { cn } from '@/lib/utils';
 import {
   dashboardNavSections,
   navStyles,
-  brandConfig,
   isActivePath,
 } from '@/lib/navigation-config';
 
@@ -165,7 +164,11 @@ export const Layout = ({
             {sidebarOpen && (
               <div
                 className='lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm'
+                role='button'
+                tabIndex={0}
                 onClick={() => setSidebarOpen(false)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSidebarOpen(false); }}
+                aria-label='Close sidebar'
               />
             )}
 
@@ -178,6 +181,7 @@ export const Layout = ({
             >
               {/* Logo */}
               <div className='flex items-center justify-between px-4 h-14 border-b border-white/5'>
+                {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                 <Link
                   to='/'
                   className='flex items-center gap-2'
@@ -206,6 +210,7 @@ export const Layout = ({
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   return (
+                    // eslint-disable-next-line jsx-a11y/anchor-is-valid
                     <Link
                       key={item.id}
                       to={item.href}

@@ -13,7 +13,7 @@
 
 import * as fc from 'fast-check';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import {
   Spinner,
   LoadingDots,
@@ -23,7 +23,6 @@ import {
   SkeletonAvatar,
   SkeletonButton,
   SkeletonInput,
-  SkeletonImage,
   LoadingOverlay,
   InlineLoading,
   EstimatedTime,
