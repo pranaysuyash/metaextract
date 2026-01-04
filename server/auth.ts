@@ -318,7 +318,10 @@ export function registerAuthRoutes(app: Express) {
           credits: 0, // New users start with 0 credits
         });
       } catch (creditError) {
-        console.error('Could not create initial credit balance for user:', creditError);
+        console.error(
+          'Could not create initial credit balance for user:',
+          creditError
+        );
         // Continue registration even if credit balance creation fails
       }
 

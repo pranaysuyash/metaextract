@@ -1,6 +1,6 @@
 /**
  * New extraction helpers using the refactored metadata engine.
- * 
+ *
  * This module provides compatibility functions that use the new modular
  * architecture while maintaining the same API as the original helpers.
  */
@@ -24,7 +24,7 @@ export {
   transformMetadataForFrontend,
   normalizeEmail,
   getSessionId,
-  cleanupTempFile
+  cleanupTempFile,
 } from './extraction-helpers';
 
 // Re-export the original types for compatibility
@@ -111,17 +111,17 @@ export async function extractMetadataWithPythonNew(
     const fileStats = await fs.stat(filePath);
     const pathInfo = path.parse(filePath);
     const mimeType = await detectMimeType(filePath);
-    
+
     // Record start time for performance tracking
     const startTime = Date.now();
-    
+
     // Use the new refactored engine
     // const result = await extract_comprehensive_metadata_new(filePath, tier);
     // TODO: Implement proper Python interop for the new engine
     const result = { error: 'New engine not yet implemented in TypeScript' };
-    
+
     const processingTime = Date.now() - startTime;
-    
+
     // Transform the new format to the old format for compatibility
     return transformNewResultToOldFormat(
       result,
@@ -134,7 +134,6 @@ export async function extractMetadataWithPythonNew(
       includePerformanceMetrics,
       enableAdvancedAnalysis
     );
-    
   } catch (error) {
     console.error('New extraction failed, falling back to old engine:', error);
     // Fallback to the original extraction method
@@ -164,7 +163,7 @@ function transformNewResultToOldFormat(
 ): PythonMetadataResponse {
   const metadata = newResult.metadata || {};
   const extractionInfo = newResult.extraction_info || {};
-  
+
   // Extract different metadata categories
   const fileInfo = metadata.file_info || {};
   const exifData = metadata.exif || {};
@@ -172,7 +171,7 @@ function transformNewResultToOldFormat(
   const iptcData = metadata.iptc || {};
   const xmpData = metadata.xmp || {};
   const pilData = metadata.pil || {};
-  
+
   // Create registry summary for frontend
   const registrySummary = {
     image: {
@@ -181,16 +180,16 @@ function transformNewResultToOldFormat(
       xmp: Object.keys(xmpData).length,
       mobile: 0, // Will be populated when mobile extractor is added
       perceptual_hashes: 0, // Will be populated when hash extractor is added
-    }
+    },
   };
-  
+
   // Determine locked fields based on tier
   const lockedFields = getLockedFields(tier, metadata);
-  
+
   // Calculate field counts
   const totalFields = countFields(metadata);
   const lockedCategories = Math.max(0, 5 - getTierLevel(tier)); // Simplified logic
-  
+
   return {
     extraction_info: {
       timestamp: new Date().toISOString(),
@@ -228,7 +227,9 @@ function transformNewResultToOldFormat(
     registry_summary: registrySummary,
     // Add other fields as they become available
     burned_metadata: null,
-    advanced_analysis: enableAdvancedAnalysis ? createAdvancedAnalysis(metadata) : null,
+    advanced_analysis: enableAdvancedAnalysis
+      ? createAdvancedAnalysis(metadata)
+      : null,
   };
 }
 
@@ -263,66 +264,78 @@ async function detectMimeType(filePath: string): Promise<string> {
  */
 function createSummary(metadata: Record<string, any>): Record<string, any> {
   const summary: Record<string, any> = {};
-  
+
   // Add key summary information
   if (metadata.exif) {
     summary.has_exif = Object.keys(metadata.exif).length > 0;
     summary.exif_field_count = Object.keys(metadata.exif).length;
   }
-  
+
   if (metadata.gps) {
     summary.has_gps = Object.keys(metadata.gps).length > 0;
     summary.gps_coordinates = metadata.gps.latitude && metadata.gps.longitude;
   }
-  
+
   if (metadata.iptc) {
     summary.has_iptc = Object.keys(metadata.iptc).length > 0;
     summary.iptc_field_count = Object.keys(metadata.iptc).length;
   }
-  
+
   return summary;
 }
 
 /**
  * Create calculated fields.
  */
-function createCalculatedFields(metadata: Record<string, any>): Record<string, any> {
+function createCalculatedFields(
+  metadata: Record<string, any>
+): Record<string, any> {
   const calculated: Record<string, any> = {};
-  
+
   // Add any calculated fields based on the metadata
   if (metadata.exif) {
     calculated.exif_field_count = Object.keys(metadata.exif).length;
   }
-  
+
   if (metadata.gps) {
-    calculated.has_location = !!(metadata.gps.latitude && metadata.gps.longitude);
+    calculated.has_location = !!(
+      metadata.gps.latitude && metadata.gps.longitude
+    );
   }
-  
+
   return calculated;
 }
 
 /**
  * Extract maker notes from EXIF data.
  */
-function extractMakerNotes(exifData: Record<string, any>): Record<string, any> | null {
+function extractMakerNotes(
+  exifData: Record<string, any>
+): Record<string, any> | null {
   const makerNotes: Record<string, any> = {};
-  
+
   for (const [key, value] of Object.entries(exifData)) {
-    if (key.toLowerCase().includes('maker') || key.toLowerCase().includes('makernote')) {
+    if (
+      key.toLowerCase().includes('maker') ||
+      key.toLowerCase().includes('makernote')
+    ) {
       makerNotes[key] = value;
     }
   }
-  
+
   return Object.keys(makerNotes).length > 0 ? makerNotes : null;
 }
 
 /**
  * Get locked fields based on tier.
  */
-function getLockedFields(tier: string, metadata: Record<string, any>): string[] {
+function getLockedFields(
+  tier: string,
+  metadata: Record<string, any>
+): string[] {
   const tierLevel = getTierLevel(tier);
   const lockedFields: string[] = [];
-  
+
   // Simple logic: higher tiers unlock more fields
   if (tierLevel < 2) {
     // Lock some advanced fields for lower tiers
@@ -331,7 +344,7 @@ function getLockedFields(tier: string, metadata: Record<string, any>): string[] 
       lockedFields.push(...exifKeys.slice(10)); // Lock fields beyond the first 10
     }
   }
-  
+
   return lockedFields;
 }
 
@@ -340,11 +353,11 @@ function getLockedFields(tier: string, metadata: Record<string, any>): string[] 
  */
 function getTierLevel(tier: string): number {
   const tierMap: Record<string, number> = {
-    'free': 0,
-    'basic': 1,
-    'super': 2,
-    'premium': 3,
-    'enterprise': 4,
+    free: 0,
+    basic: 1,
+    super: 2,
+    premium: 3,
+    enterprise: 4,
   };
   return tierMap[tier.toLowerCase()] || 0;
 }
@@ -354,13 +367,13 @@ function getTierLevel(tier: string): number {
  */
 function countFields(metadata: Record<string, any>): number {
   let count = 0;
-  
+
   for (const section of Object.values(metadata)) {
     if (typeof section === 'object' && section !== null) {
       count += Object.keys(section).length;
     }
   }
-  
+
   return count;
 }
 

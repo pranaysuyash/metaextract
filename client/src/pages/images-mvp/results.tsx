@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { trackImagesMvpEvent } from "@/lib/images-mvp-analytics";
 
@@ -94,60 +95,6 @@ export default function ImagesMvpResults() {
             setLoadState("empty");
         }
     }, [navigate]);
-
-    if (loadState === "loading") {
-        return (
-            <Layout showHeader={true} showFooter={true}>
-                <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
-                    <div className="container mx-auto px-4 max-w-3xl">
-                        <Card className="bg-[#11121a] border-white/10">
-                            <CardContent className="p-8 text-center text-slate-300">
-                                Loading results...
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            </Layout>
-        );
-    }
-
-    if (loadState === "empty" || !metadata) {
-        return (
-            <Layout showHeader={true} showFooter={true}>
-                <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
-                    <div className="container mx-auto px-4 max-w-3xl">
-                        <Card className="bg-[#11121a] border-white/10">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FileImage className="w-5 h-5 text-primary" />
-                                    No results yet
-                                </CardTitle>
-                                <CardDescription className="text-slate-400">
-                                    Upload an image to extract metadata and view the analysis here.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-3">
-                                <Button
-                                    className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
-                                    onClick={() => navigate('/images_mvp')}
-                                >
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Upload an image
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
-                                    onClick={() => navigate('/#pricing')}
-                                >
-                                    Learn about plans
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            </Layout>
-        );
-    }
 
     const isTabValue = (value: string): value is TabValue =>
         value === "privacy" || value === "authenticity" || value === "photography" || value === "raw";
@@ -277,10 +224,58 @@ export default function ImagesMvpResults() {
         }
     }, [metadata, trackEvent]);
 
-    // All hooks must be called before this guard
-    if (!metadata) {
-        // Render null after hooks are called to avoid hook order violations
-        return null;
+    if (loadState === "loading") {
+        return (
+            <Layout showHeader={true} showFooter={true}>
+                <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+                    <div className="container mx-auto px-4 max-w-3xl">
+                        <Card className="bg-[#11121a] border-white/10">
+                            <CardContent className="p-8 text-center text-slate-300">
+                                Loading results...
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (loadState === "empty" || !metadata) {
+        return (
+            <Layout showHeader={true} showFooter={true}>
+                <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+                    <div className="container mx-auto px-4 max-w-3xl">
+                        <Card className="bg-[#11121a] border-white/10">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileImage className="w-5 h-5 text-primary" />
+                                    No results yet
+                                </CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Upload an image to extract metadata and view the analysis here.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+                                <Button
+                                    className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                                    onClick={() => navigate('/images_mvp')}
+                                >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Upload an image
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                                    onClick={() => navigate('/#pricing')}
+                                >
+                                    Learn about plans
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </Layout>
+        );
     }
 
     const isTrialLimited = metadata._trial_limited || (metadata.access?.trial_granted);
@@ -974,21 +969,6 @@ export default function ImagesMvpResults() {
                                         Analyze another file
                                     </Button>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Quality Metrics Section */}
-                    {metadata.quality_metrics && (
-                        <Card className="bg-[#121217] border-white/5 mb-6">
-                            <CardHeader>
-                                <CardTitle className="text-sm font-mono text-slate-400">EXTRACTION QUALITY</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <QualityIndicator 
-                                    qualityMetrics={metadata.quality_metrics}
-                                    processingInsights={metadata.processing_insights}
-                                />
                             </CardContent>
                         </Card>
                     )}
@@ -1782,6 +1762,58 @@ export default function ImagesMvpResults() {
                             </TabsContent>
                         )}
                     </Tabs>
+                    {(metadata.quality_metrics || metadata.processing_insights) && (
+                        <div className="mt-8 flex items-center gap-2 text-xs text-slate-500">
+                            <span>Extraction details</span>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-white/10 text-slate-400 hover:text-white hover:bg-white/5"
+                                        aria-label="Extraction details"
+                                    >
+                                        i
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                                    <div className="space-y-1">
+                                        {metadata.quality_metrics?.confidence_score ? (
+                                            <div>
+                                                Confidence: {(metadata.quality_metrics.confidence_score * 100).toFixed(0)}%
+                                            </div>
+                                        ) : null}
+                                        {metadata.quality_metrics?.extraction_completeness ? (
+                                            <div>
+                                                Coverage: {(metadata.quality_metrics.extraction_completeness * 100).toFixed(0)}%
+                                            </div>
+                                        ) : null}
+                                        {metadata.processing_insights?.total_fields_extracted ? (
+                                            <div>
+                                                Fields extracted: {metadata.processing_insights.total_fields_extracted.toLocaleString()}
+                                            </div>
+                                        ) : null}
+                                        {metadata.processing_insights?.processing_time_ms ? (
+                                            <div>
+                                                Processing time: {(metadata.processing_insights.processing_time_ms / 1000).toFixed(1)}s
+                                            </div>
+                                        ) : null}
+                                        {metadata.quality_metrics?.format_support_level ? (
+                                            <div>
+                                                Format support: {metadata.quality_metrics.format_support_level.replace(/_/g, ' ')}
+                                            </div>
+                                        ) : null}
+                                        {!metadata.quality_metrics?.confidence_score &&
+                                        !metadata.quality_metrics?.extraction_completeness &&
+                                        !metadata.processing_insights?.total_fields_extracted &&
+                                        !metadata.processing_insights?.processing_time_ms &&
+                                        !metadata.quality_metrics?.format_support_level ? (
+                                            <div>Quality data not reported for this file.</div>
+                                        ) : null}
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
+                    )}
                 </div>
             </div>
         </Layout>

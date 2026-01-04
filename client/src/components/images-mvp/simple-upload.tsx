@@ -20,7 +20,7 @@ const SUPPORTED_EXTENSIONS = [
   '.png',
   '.heic',
   '.heif',
-  '.webp'
+  '.webp',
 ];
 
 const SUPPORTED_MIMES = [
@@ -29,7 +29,7 @@ const SUPPORTED_MIMES = [
   'image/png',
   'image/heic',
   'image/heif',
-  'image/webp'
+  'image/webp',
 ];
 
 export function SimpleUploadZone() {
@@ -104,7 +104,8 @@ export function SimpleUploadZone() {
       });
       toast({
         title: 'Unsupported File',
-        description: 'Please upload a photo (JPG, PNG, HEIC from iPhone, or WebP).',
+        description:
+          'Please upload a photo (JPG, PNG, HEIC from iPhone, or WebP).',
         variant: 'destructive',
       });
       return;
@@ -122,10 +123,10 @@ export function SimpleUploadZone() {
     setIsUploading(true);
     setUploadProgress(0);
     const startedAt = Date.now();
-    
+
     // Simulate progress over time
     const progressInterval = setInterval(() => {
-      setUploadProgress((prev) => {
+      setUploadProgress(prev => {
         const next = prev + Math.random() * 30;
         return next > 90 ? 90 : next;
       });
@@ -170,40 +171,43 @@ export function SimpleUploadZone() {
       }
 
       if (!res.ok) {
-         const errorMessage =
-           typeof data?.error === 'string'
-             ? data.error
-             : data?.error?.message || data?.message || responseText || 'Extraction failed';
-         trackImagesMvpEvent('analysis_completed', {
-           success: false,
-           status: res.status,
-           error_message: errorMessage,
-           extension,
-           mime_type: mimeType,
-           size_bucket: sizeBucket,
-           elapsed_ms: Date.now() - startedAt,
-         });
+        const errorMessage =
+          typeof data?.error === 'string'
+            ? data.error
+            : data?.error?.message ||
+              data?.message ||
+              responseText ||
+              'Extraction failed';
+        trackImagesMvpEvent('analysis_completed', {
+          success: false,
+          status: res.status,
+          error_message: errorMessage,
+          extension,
+          mime_type: mimeType,
+          size_bucket: sizeBucket,
+          elapsed_ms: Date.now() - startedAt,
+        });
 
-         if (res.status === 402) {
-           // Trigger Credit Purchase Flow
-           trackImagesMvpEvent('paywall_viewed', {
-             reason: 'trial_exhausted',
-             extension,
-             mime_type: mimeType,
-           });
-           toast({
-             title: 'Trial Limit Reached',
-             description:
-               "You've used your 2 free checks. Unlock more with credits.",
-             variant: 'destructive',
-           });
-           setShowPricingModal(true);
-           return;
-         }
-         setUploadError(true);
-         setTimeout(() => setUploadError(false), 3000);
-         throw new Error(errorMessage);
-       }
+        if (res.status === 402) {
+          // Trigger Credit Purchase Flow
+          trackImagesMvpEvent('paywall_viewed', {
+            reason: 'trial_exhausted',
+            extension,
+            mime_type: mimeType,
+          });
+          toast({
+            title: 'Trial Limit Reached',
+            description:
+              "You've used your 2 free checks. Unlock more with credits.",
+            variant: 'destructive',
+          });
+          setShowPricingModal(true);
+          return;
+        }
+        setUploadError(true);
+        setTimeout(() => setUploadError(false), 3000);
+        throw new Error(errorMessage);
+      }
 
       // Success
       const processingMs =
@@ -227,30 +231,30 @@ export function SimpleUploadZone() {
       setTimeout(() => {
         navigate('/images_mvp/results', { state: { metadata: data } });
       }, 500);
-      } catch (err: any) {
-       console.error(err);
-       const fallbackMessage =
-         typeof err?.message === 'string' ? err.message : 'Network error';
-       setUploadError(true);
-       setTimeout(() => setUploadError(false), 3000);
-       if (fallbackMessage.toLowerCase().includes('failed to fetch')) {
-         toast({
-           title: 'Backend unavailable',
-           description:
-             'API is not reachable. Start the server with `npm run dev:server`.',
-           variant: 'destructive',
-         });
-         return;
-       }
-       toast({
-         title: 'Error',
-         description: err.message || 'Upload failed',
-         variant: 'destructive',
-       });
-     } finally {
-       clearInterval(progressInterval);
-       setIsUploading(false);
-     }
+    } catch (err: any) {
+      console.error(err);
+      const fallbackMessage =
+        typeof err?.message === 'string' ? err.message : 'Network error';
+      setUploadError(true);
+      setTimeout(() => setUploadError(false), 3000);
+      if (fallbackMessage.toLowerCase().includes('failed to fetch')) {
+        toast({
+          title: 'Backend unavailable',
+          description:
+            'API is not reachable. Start the server with `npm run dev:server`.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({
+        title: 'Error',
+        description: err.message || 'Upload failed',
+        variant: 'destructive',
+      });
+    } finally {
+      clearInterval(progressInterval);
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -278,14 +282,16 @@ export function SimpleUploadZone() {
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        onClick={() => !isUploading && document.getElementById('mvp-upload')?.click()}
+        onClick={() =>
+          !isUploading && document.getElementById('mvp-upload')?.click()
+        }
         className={cn(
           'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer overflow-hidden group',
           isUploading
             ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
             : isDragActive
-            ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
-            : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
+              ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
+              : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
         )}
       >
         <input
@@ -316,7 +322,9 @@ export function SimpleUploadZone() {
               <p className="text-white font-mono text-sm">
                 {uploadError ? 'Upload Failed' : 'Extracting Metadata...'}
               </p>
-              <span className={`text-xs font-mono ${uploadError ? 'text-red-400' : 'text-emerald-400'}`}>
+              <span
+                className={`text-xs font-mono ${uploadError ? 'text-red-400' : 'text-emerald-400'}`}
+              >
                 {uploadError ? 'Error' : `${Math.round(uploadProgress)}%`}
               </span>
             </div>
@@ -332,7 +340,8 @@ export function SimpleUploadZone() {
               Drop your image here
             </h3>
             <p className="text-slate-400 text-sm mb-6">
-              Supports popular photo formats: JPG, PNG, HEIC (iPhone), WebP <br />
+              Supports popular photo formats: JPG, PNG, HEIC (iPhone), WebP{' '}
+              <br />
               <span className="text-primary/80 text-xs font-mono mt-1 block">
                 <Zap className="w-3 h-3 inline mr-1" />2 Free Checks Included
               </span>

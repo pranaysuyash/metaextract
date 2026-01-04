@@ -1,8 +1,8 @@
 /**
  * Property Tests for Help and Documentation System
- * 
+ *
  * Tests universal correctness properties of the help system.
- * 
+ *
  * @validates Requirements 2.6, 3.3 - Contextual help and metadata documentation
  */
 
@@ -31,16 +31,29 @@ describe('Help System Property Tests', () => {
   // ========================================================================
   // Help Topic Coverage (Property 10: Contextual help availability)
   // ========================================================================
-  
+
   describe('Contextual Help Availability', () => {
     const allHelpTopics = Object.values(helpTopics);
     const allCategories: HelpCategory[] = [
-      'getting-started', 'upload', 'metadata', 'analysis',
-      'export', 'account', 'pricing', 'security', 'troubleshooting'
+      'getting-started',
+      'upload',
+      'metadata',
+      'analysis',
+      'export',
+      'account',
+      'pricing',
+      'security',
+      'troubleshooting',
     ];
     const allContexts: HelpContext[] = [
-      'upload-zone', 'results-view', 'metadata-panel', 'forensic-panel',
-      'export-dialog', 'pricing-page', 'settings-page', 'dashboard'
+      'upload-zone',
+      'results-view',
+      'metadata-panel',
+      'forensic-panel',
+      'export-dialog',
+      'pricing-page',
+      'settings-page',
+      'dashboard',
     ];
 
     it('every help topic should have required fields', () => {
@@ -113,12 +126,22 @@ describe('Help System Property Tests', () => {
   // ========================================================================
   // Metadata Field Documentation (Property 11)
   // ========================================================================
-  
+
   describe('Metadata Field Documentation', () => {
     const allFieldDocs = Object.values(metadataFieldDocs);
     const allMetadataCategories: MetadataCategory[] = [
-      'basic', 'camera', 'location', 'datetime', 'technical',
-      'color', 'copyright', 'software', 'forensic', 'audio', 'video', 'document'
+      'basic',
+      'camera',
+      'location',
+      'datetime',
+      'technical',
+      'color',
+      'copyright',
+      'software',
+      'forensic',
+      'audio',
+      'video',
+      'document',
     ];
 
     it('every metadata field should have required documentation', () => {
@@ -143,7 +166,7 @@ describe('Help System Property Tests', () => {
     it('common fields should exist for essential metadata', () => {
       const commonFields = getCommonMetadataFields();
       expect(commonFields.length).toBeGreaterThanOrEqual(5);
-      
+
       // Essential fields that should be marked as common
       const essentialFields = ['fileName', 'fileSize', 'dateTimeOriginal'];
       essentialFields.forEach(field => {
@@ -161,15 +184,28 @@ describe('Help System Property Tests', () => {
     });
 
     it('field types should be valid', () => {
-      const validTypes = ['string', 'number', 'date', 'boolean', 'array', 'object'];
+      const validTypes = [
+        'string',
+        'number',
+        'date',
+        'boolean',
+        'array',
+        'object',
+      ];
       allFieldDocs.forEach(doc => {
         expect(validTypes).toContain(doc.type);
       });
     });
 
     it('descriptions should be user-friendly (no technical jargon)', () => {
-      const technicalTerms = ['null', 'undefined', 'NaN', 'exception', 'error code'];
-      
+      const technicalTerms = [
+        'null',
+        'undefined',
+        'NaN',
+        'exception',
+        'error code',
+      ];
+
       allFieldDocs.forEach(doc => {
         const descLower = doc.description.toLowerCase();
         technicalTerms.forEach(term => {
@@ -191,17 +227,21 @@ describe('Help System Property Tests', () => {
   // ========================================================================
   // Search Functionality
   // ========================================================================
-  
+
   describe('Search Functionality', () => {
     it('empty search should return all topics', () => {
       expect(searchHelpTopics('').length).toBe(Object.keys(helpTopics).length);
-      expect(searchHelpTopics('  ').length).toBe(Object.keys(helpTopics).length);
+      expect(searchHelpTopics('  ').length).toBe(
+        Object.keys(helpTopics).length
+      );
     });
 
     it('search should find topics by title', () => {
       const results = searchHelpTopics('upload');
       expect(results.length).toBeGreaterThan(0);
-      expect(results.some(t => t.title.toLowerCase().includes('upload'))).toBe(true);
+      expect(results.some(t => t.title.toLowerCase().includes('upload'))).toBe(
+        true
+      );
     });
 
     it('search should find topics by keywords', () => {
@@ -213,14 +253,14 @@ describe('Help System Property Tests', () => {
       const lowerResults = searchHelpTopics('metadata');
       const upperResults = searchHelpTopics('METADATA');
       const mixedResults = searchHelpTopics('MetaData');
-      
+
       expect(lowerResults.length).toBe(upperResults.length);
       expect(lowerResults.length).toBe(mixedResults.length);
     });
 
     it('search results should be sorted by relevance', () => {
       const results = searchHelpTopics('upload file');
-      
+
       // First result should have highest relevance (title match)
       if (results.length > 1) {
         const firstTitle = results[0].title.toLowerCase();
@@ -233,24 +273,21 @@ describe('Help System Property Tests', () => {
     it('metadata field search should work correctly', () => {
       const results = searchMetadataFields('camera');
       expect(results.length).toBeGreaterThan(0);
-      
+
       const emptyResults = searchMetadataFields('');
       expect(emptyResults.length).toBe(Object.keys(metadataFieldDocs).length);
     });
 
     it('search should handle arbitrary input safely', () => {
       fc.assert(
-        fc.property(
-          fc.string({ maxLength: 100 }),
-          (query) => {
-            // Should not throw
-            const results = searchHelpTopics(query);
-            expect(Array.isArray(results)).toBe(true);
-            
-            const fieldResults = searchMetadataFields(query);
-            expect(Array.isArray(fieldResults)).toBe(true);
-          }
-        ),
+        fc.property(fc.string({ maxLength: 100 }), query => {
+          // Should not throw
+          const results = searchHelpTopics(query);
+          expect(Array.isArray(results)).toBe(true);
+
+          const fieldResults = searchMetadataFields(query);
+          expect(Array.isArray(fieldResults)).toBe(true);
+        }),
         { numRuns: 50 }
       );
     });
@@ -259,14 +296,14 @@ describe('Help System Property Tests', () => {
   // ========================================================================
   // Lookup Functions
   // ========================================================================
-  
+
   describe('Lookup Functions', () => {
     it('getHelpTopic should return correct topic or undefined', () => {
       // Valid ID
       const topic = getHelpTopic('getting-started');
       expect(topic).toBeDefined();
       expect(topic?.id).toBe('getting-started');
-      
+
       // Invalid ID
       const invalid = getHelpTopic('nonexistent-topic');
       expect(invalid).toBeUndefined();
@@ -277,7 +314,7 @@ describe('Help System Property Tests', () => {
       const doc = getMetadataFieldDoc('fileName');
       expect(doc).toBeDefined();
       expect(doc?.field).toBe('fileName');
-      
+
       // Invalid field
       const invalid = getMetadataFieldDoc('nonexistentField');
       expect(invalid).toBeUndefined();
@@ -286,7 +323,7 @@ describe('Help System Property Tests', () => {
     it('getRelatedTopics should return valid topics', () => {
       const related = getRelatedTopics('getting-started');
       expect(Array.isArray(related)).toBe(true);
-      
+
       related.forEach(topic => {
         expect(topic.id).toBeDefined();
         expect(topic.title).toBeDefined();
@@ -297,12 +334,12 @@ describe('Help System Property Tests', () => {
       const tooltip = getFieldTooltip('exposureTime');
       expect(tooltip).toBeDefined();
       expect(tooltip).toContain('Example:');
-      
+
       // Field without example
       const tooltipNoExample = getFieldTooltip('editHistory');
       expect(tooltipNoExample).toBeDefined();
       expect(tooltipNoExample).not.toContain('Example:');
-      
+
       // Invalid field
       const invalidTooltip = getFieldTooltip('nonexistent');
       expect(invalidTooltip).toBeUndefined();
@@ -310,7 +347,7 @@ describe('Help System Property Tests', () => {
 
     it('getHelpTopicsByCategory should return only topics in that category', () => {
       const uploadTopics = getHelpTopicsByCategory('upload');
-      
+
       uploadTopics.forEach(topic => {
         expect(topic.category).toBe('upload');
       });
@@ -318,7 +355,7 @@ describe('Help System Property Tests', () => {
 
     it('getMetadataFieldsByCategory should return only fields in that category', () => {
       const cameraFields = getMetadataFieldsByCategory('camera');
-      
+
       cameraFields.forEach(field => {
         expect(field.category).toBe('camera');
       });
@@ -328,7 +365,7 @@ describe('Help System Property Tests', () => {
   // ========================================================================
   // Content Quality
   // ========================================================================
-  
+
   describe('Content Quality', () => {
     it('help topics should have meaningful keywords', () => {
       Object.values(helpTopics).forEach(topic => {
@@ -344,8 +381,8 @@ describe('Help System Property Tests', () => {
         if (topic.externalLink) {
           // Should start with / or be a valid URL pattern
           expect(
-            topic.externalLink.startsWith('/') || 
-            topic.externalLink.startsWith('http')
+            topic.externalLink.startsWith('/') ||
+              topic.externalLink.startsWith('http')
           ).toBe(true);
         }
       });
@@ -356,7 +393,7 @@ describe('Help System Property Tests', () => {
         if (doc.example) {
           // Examples should be non-empty strings
           expect(doc.example.length).toBeGreaterThan(0);
-          
+
           // Number types should have numeric examples
           if (doc.type === 'number') {
             const numericPart = doc.example.replace(/[^0-9.-]/g, '');
@@ -368,7 +405,7 @@ describe('Help System Property Tests', () => {
 
     it('standards should be recognized metadata standards', () => {
       const validStandards = ['EXIF', 'IPTC', 'XMP', 'ICC', 'ID3', 'RIFF'];
-      
+
       Object.values(metadataFieldDocs).forEach(doc => {
         if (doc.standard) {
           expect(validStandards).toContain(doc.standard);
@@ -380,7 +417,7 @@ describe('Help System Property Tests', () => {
   // ========================================================================
   // Completeness
   // ========================================================================
-  
+
   describe('Documentation Completeness', () => {
     it('should have getting started content', () => {
       const gettingStarted = getHelpTopicsByCategory('getting-started');
@@ -394,7 +431,7 @@ describe('Help System Property Tests', () => {
 
     it('should document common EXIF fields', () => {
       const exifFields = ['make', 'model', 'exposureTime', 'fNumber', 'iso'];
-      
+
       exifFields.forEach(field => {
         const doc = getMetadataFieldDoc(field);
         expect(doc).toBeDefined();
@@ -404,7 +441,7 @@ describe('Help System Property Tests', () => {
 
     it('should document GPS fields', () => {
       const gpsFields = ['gpsLatitude', 'gpsLongitude'];
-      
+
       gpsFields.forEach(field => {
         const doc = getMetadataFieldDoc(field);
         expect(doc).toBeDefined();
@@ -415,10 +452,11 @@ describe('Help System Property Tests', () => {
     it('should have security/privacy documentation', () => {
       const securityTopics = getHelpTopicsByCategory('security');
       expect(securityTopics.length).toBeGreaterThanOrEqual(1);
-      
-      const hasPrivacyTopic = securityTopics.some(t => 
-        t.title.toLowerCase().includes('privacy') ||
-        t.keywords.includes('privacy')
+
+      const hasPrivacyTopic = securityTopics.some(
+        t =>
+          t.title.toLowerCase().includes('privacy') ||
+          t.keywords.includes('privacy')
       );
       expect(hasPrivacyTopic).toBe(true);
     });

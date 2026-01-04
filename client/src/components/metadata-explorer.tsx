@@ -74,7 +74,7 @@ interface MetadataField {
   description?: string;
   significance?: string;
   locked?: boolean;
-  highlightedKey?: string;   // HTML string with <mark> tags
+  highlightedKey?: string; // HTML string with <mark> tags
   highlightedValue?: string; // HTML string with <mark> tags
 }
 
@@ -173,11 +173,11 @@ const FIELD_SIGNIFICANCE: Record<string, string> = {
 // ============================================================================
 
 function getFileIcon(type: string) {
-  if (type.startsWith('image/')) return <FileImage className='h-4 w-4' />;
-  if (type.startsWith('video/')) return <FileVideo className='h-4 w-4' />;
-  if (type.startsWith('audio/')) return <FileAudio className='h-4 w-4' />;
-  if (type === 'application/pdf') return <FileText className='h-4 w-4' />;
-  return <File className='h-4 w-4' />;
+  if (type.startsWith('image/')) return <FileImage className="h-4 w-4" />;
+  if (type.startsWith('video/')) return <FileVideo className="h-4 w-4" />;
+  if (type.startsWith('audio/')) return <FileAudio className="h-4 w-4" />;
+  if (type === 'application/pdf') return <FileText className="h-4 w-4" />;
+  return <File className="h-4 w-4" />;
 }
 
 function getDensityColor(density: 'low' | 'medium' | 'high') {
@@ -206,22 +206,22 @@ function getCategoryIcon(category: string) {
   switch (category.toLowerCase()) {
     case 'exif':
     case 'camera':
-      return <Camera className='h-4 w-4' />;
+      return <Camera className="h-4 w-4" />;
     case 'gps':
     case 'location':
-      return <MapPin className='h-4 w-4' />;
+      return <MapPin className="h-4 w-4" />;
     case 'filesystem':
     case 'dates':
-      return <Clock className='h-4 w-4' />;
+      return <Clock className="h-4 w-4" />;
     case 'forensic':
     case 'security':
-      return <Shield className='h-4 w-4' />;
+      return <Shield className="h-4 w-4" />;
     case 'iptc':
     case 'xmp':
     case 'tags':
-      return <Tag className='h-4 w-4' />;
+      return <Tag className="h-4 w-4" />;
     default:
-      return <Layers className='h-4 w-4' />;
+      return <Layers className="h-4 w-4" />;
   }
 }
 
@@ -241,12 +241,15 @@ function copyToClipboard(text: string) {
 /**
  * Component to safely render HTML with highlighted matches
  */
-const HighlightedText = ({ text, className }: { text: string; className?: string }) => {
+const HighlightedText = ({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) => {
   return (
-    <span
-      className={className}
-      dangerouslySetInnerHTML={{ __html: text }}
-    />
+    <span className={className} dangerouslySetInnerHTML={{ __html: text }} />
   );
 };
 
@@ -272,43 +275,44 @@ function FileBrowser({
     if (!searchQuery) return files;
     const query = searchQuery.toLowerCase();
     return files.filter(
-      (file) =>
+      file =>
         file.name.toLowerCase().includes(query) ||
         file.type.toLowerCase().includes(query)
     );
   }, [files, searchQuery]);
 
   return (
-    <div className='flex h-full flex-col' data-testid='metadata-file-browser'>
-      <div className='border-b p-3'>
-        <div className='relative'>
-          <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
+    <div className="flex h-full flex-col" data-testid="metadata-file-browser">
+      <div className="border-b p-3">
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder='Search files...'
-            aria-label='Search files'
+            placeholder="Search files..."
+            aria-label="Search files"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className='pl-8'
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-8"
           />
         </div>
       </div>
 
-      <ScrollArea className='flex-1'>
-        <div className='p-2'>
-          {filteredFiles.map((file) => (
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {filteredFiles.map(file => (
             <button
               key={file.id}
               onClick={() => onFileSelect(file.id)}
-              className={`mb-1 flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${selectedFileId === file.id
-                ? 'bg-primary/10 text-primary'
-                : 'hover:bg-muted'
-                }`}
+              className={`mb-1 flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${
+                selectedFileId === file.id
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-muted'
+              }`}
             >
-              <div className='shrink-0'>{getFileIcon(file.type)}</div>
+              <div className="shrink-0">{getFileIcon(file.type)}</div>
 
-              <div className='min-w-0 flex-1'>
-                <p className='truncate text-sm font-medium'>{file.name}</p>
-                <p className='text-xs text-muted-foreground'>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{file.name}</p>
+                <p className="text-xs text-muted-foreground">
                   {file.size} • {file.fieldCount} fields
                 </p>
               </div>
@@ -331,7 +335,7 @@ function FileBrowser({
           ))}
 
           {filteredFiles.length === 0 && (
-            <div className='py-8 text-center text-sm text-muted-foreground'>
+            <div className="py-8 text-center text-sm text-muted-foreground">
               No files match your search
             </div>
           )}
@@ -375,13 +379,13 @@ function MetadataTree({
     // so the accordion isn't rendered collapsed in cases where the defaults are
     // legacy keys.
     if (file) {
-      const available = new Set(file.categories.map((c) => c.name));
-      const valid = expandedStrings.filter((c) => available.has(c));
+      const available = new Set(file.categories.map(c => c.name));
+      const valid = expandedStrings.filter(c => available.has(c));
       if (valid.length > 0) return valid;
 
       const preferredOrder = ['summary', 'exif', 'gps', 'image', 'filesystem'];
-      const defaults = preferredOrder.filter((name) => available.has(name));
-      const fallback = file.categories.slice(0, 3).map((c) => c.name);
+      const defaults = preferredOrder.filter(name => available.has(name));
+      const fallback = file.categories.slice(0, 3).map(c => c.name);
       return defaults.length > 0 ? defaults : fallback;
     }
 
@@ -393,15 +397,15 @@ function MetadataTree({
   useEffect(() => {
     if (!file) return;
     const preferredOrder = ['summary', 'exif', 'gps', 'image', 'filesystem'];
-    const available = new Set(file.categories.map((c) => c.name));
-    const hasAnyValid = expandedCategories.some((c) => available.has(c));
+    const available = new Set(file.categories.map(c => c.name));
+    const hasAnyValid = expandedCategories.some(c => available.has(c));
     if (expandedCategories.length > 0 && hasAnyValid) return;
 
-    const defaults = preferredOrder.filter((name) => available.has(name));
+    const defaults = preferredOrder.filter(name => available.has(name));
 
     // If none of our preferred categories exist (custom test fixtures, new formats),
     // expand the first few categories so the UI isn't an empty accordion.
-    const fallback = file.categories.slice(0, 3).map((c) => c.name);
+    const fallback = file.categories.slice(0, 3).map(c => c.name);
     setExpandedCategories(defaults.length > 0 ? defaults : fallback);
   }, [file, expandedCategories]);
 
@@ -428,46 +432,50 @@ function MetadataTree({
         'image',
         'filesystem',
       ];
-      categories = categories.filter((c) =>
+      categories = categories.filter(c =>
         simpleCategories.includes(c.name.toLowerCase())
       );
     }
 
     // Apply active search
     if (searchQuery.trim()) {
-      return categories.map(category => {
-        // Build data record for search util
-        const categoryData: Record<string, any> = {};
-        const fieldMap = new Map<string, MetadataField>();
+      return categories
+        .map(category => {
+          // Build data record for search util
+          const categoryData: Record<string, any> = {};
+          const fieldMap = new Map<string, MetadataField>();
 
-        category.fields.forEach(field => {
-          categoryData[field.key] = field.value;
-          fieldMap.set(field.key, field);
-        });
+          category.fields.forEach(field => {
+            categoryData[field.key] = field.value;
+            fieldMap.set(field.key, field);
+          });
 
-        const results = searchMetadata(categoryData, {
-          query: searchQuery,
-          fuzzyMatch: true,
-          caseSensitive: false
-        });
+          const results = searchMetadata(categoryData, {
+            query: searchQuery,
+            fuzzyMatch: true,
+            caseSensitive: false,
+          });
 
-        // Reconstruct fields with highlighting
-        const matchedFields = results.map(result => {
-          const originalField = fieldMap.get(result.fieldKey);
-          if (!originalField) return null;
+          // Reconstruct fields with highlighting
+          const matchedFields = results
+            .map(result => {
+              const originalField = fieldMap.get(result.fieldKey);
+              if (!originalField) return null;
+
+              return {
+                ...originalField,
+                highlightedKey: result.highlightedField,
+                highlightedValue: result.highlightedValue,
+              };
+            })
+            .filter(isMetadataField);
 
           return {
-            ...originalField,
-            highlightedKey: result.highlightedField,
-            highlightedValue: result.highlightedValue
+            ...category,
+            fields: matchedFields,
           };
-        }).filter(isMetadataField);
-
-        return {
-          ...category,
-          fields: matchedFields
-        };
-      }).filter(cat => cat.fields.length > 0);
+        })
+        .filter(cat => cat.fields.length > 0);
     }
 
     return categories;
@@ -482,30 +490,30 @@ function MetadataTree({
 
   if (!file) {
     return (
-      <div className='flex h-full items-center justify-center overflow-auto bg-muted/5'>
+      <div className="flex h-full items-center justify-center overflow-auto bg-muted/5">
         <EducationalExamples />
       </div>
     );
   }
 
   return (
-    <div className='flex h-full flex-col' data-testid='metadata-tree'>
-      <div className='border-b p-3'>
-        <div className='relative'>
-          <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
+    <div className="flex h-full flex-col" data-testid="metadata-tree">
+      <div className="border-b p-3">
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder='Search fields...'
-            aria-label='Search fields'
+            placeholder="Search fields..."
+            aria-label="Search fields"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className='pl-8'
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-8"
           />
         </div>
       </div>
 
       {/* Advanced Analysis Results */}
       {file.advancedAnalysis && (
-        <div className='border-b p-4'>
+        <div className="border-b p-4">
           <AdvancedAnalysisResults
             steganography={file.rawMetadata.steganography_analysis}
             manipulation={file.rawMetadata.manipulation_detection}
@@ -515,38 +523,38 @@ function MetadataTree({
         </div>
       )}
 
-      <ScrollArea className='flex-1'>
+      <ScrollArea className="flex-1">
         <Accordion
-          type='multiple'
+          type="multiple"
           value={expandedCategories}
           onValueChange={handleCategoryExpand}
-          className='p-2'
+          className="p-2"
         >
-          {visibleCategories.map((category) => (
+          {visibleCategories.map(category => (
             <AccordionItem
               key={category.name}
               value={category.name}
-              className='border-none'
+              className="border-none"
             >
-              <AccordionTrigger className='rounded-lg px-3 py-2 hover:bg-muted hover:no-underline'>
-                <div className='flex flex-col items-start gap-1 flex-1'>
-                  <div className='flex items-center gap-2 w-full'>
+              <AccordionTrigger className="rounded-lg px-3 py-2 hover:bg-muted hover:no-underline">
+                <div className="flex flex-col items-start gap-1 flex-1">
+                  <div className="flex items-center gap-2 w-full">
                     {getCategoryIcon(category.name)}
-                    <span className='font-medium'>{category.displayName}</span>
-                    <Badge variant='secondary' className='ml-auto'>
+                    <span className="font-medium">{category.displayName}</span>
+                    <Badge variant="secondary" className="ml-auto">
                       {category.fieldCount > category.fields.length
                         ? `${category.fields.length}/${category.fieldCount}`
                         : category.fieldCount}
                     </Badge>
                     {category.locked && (
-                      <Lock className='h-3 w-3 text-muted-foreground' />
+                      <Lock className="h-3 w-3 text-muted-foreground" />
                     )}
                   </div>
                   {(() => {
                     const catDef = getCategoryDefinition(category.name);
                     return (
                       catDef?.description && (
-                        <span className='text-xs text-muted-foreground'>
+                        <span className="text-xs text-muted-foreground">
                           {catDef.description}
                         </span>
                       )
@@ -555,58 +563,60 @@ function MetadataTree({
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <div className='space-y-1 pl-4'>
-                  {category.fields.map((field) => {
+                <div className="space-y-1 pl-4">
+                  {category.fields.map(field => {
                     if (!field) return null;
                     return (
                       <button
                         key={field.key}
                         onClick={() => onFieldSelect(field)}
-                        className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm transition-colors ${selectedField?.key === field.key
-                          ? 'bg-primary/10 text-primary'
-                          : 'hover:bg-muted'
-                          }`}
+                        className={`flex w-full items-center justify-between rounded-md p-2 text-left text-sm transition-colors ${
+                          selectedField?.key === field.key
+                            ? 'bg-primary/10 text-primary'
+                            : 'hover:bg-muted'
+                        }`}
                       >
-                        <div className='flex items-center gap-2'>
+                        <div className="flex items-center gap-2">
                           {field.highlightedKey ? (
                             <HighlightedText
                               text={field.highlightedKey}
                               className="font-medium [&>mark]:bg-yellow-200 [&>mark]:text-black dark:[&>mark]:bg-yellow-800 dark:[&>mark]:text-white"
                             />
                           ) : (
-                            <span className='font-medium'>{field.key}</span>
+                            <span className="font-medium">{field.key}</span>
                           )}
-                          {(hasExplanation(field.key) || field.significance) && (
+                          {(hasExplanation(field.key) ||
+                            field.significance) && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className='inline-flex items-center'>
-                                    <Info className='h-3 w-3 text-muted-foreground' />
+                                  <span className="inline-flex items-center">
+                                    <Info className="h-3 w-3 text-muted-foreground" />
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent className='max-w-sm'>
+                                <TooltipContent className="max-w-sm">
                                   {(() => {
                                     const explanation = getFieldExplanation(
                                       field.key
                                     );
                                     if (explanation) {
                                       return (
-                                        <div className='space-y-2'>
+                                        <div className="space-y-2">
                                           <div>
-                                            <p className='font-semibold'>
+                                            <p className="font-semibold">
                                               {explanation.title}
                                             </p>
-                                            <p className='text-sm mt-1'>
+                                            <p className="text-sm mt-1">
                                               {explanation.description}
                                             </p>
                                           </div>
                                           {explanation.details &&
                                             explanation.details.length > 0 && (
                                               <div>
-                                                <p className='text-xs font-semibold mb-1'>
+                                                <p className="text-xs font-semibold mb-1">
                                                   Details:
                                                 </p>
-                                                <ul className='text-xs space-y-1'>
+                                                <ul className="text-xs space-y-1">
                                                   {explanation.details.map(
                                                     (detail, idx) => (
                                                       <li key={idx}>
@@ -620,10 +630,10 @@ function MetadataTree({
                                           {explanation.useCases &&
                                             explanation.useCases.length > 0 && (
                                               <div>
-                                                <p className='text-xs font-semibold mb-1'>
+                                                <p className="text-xs font-semibold mb-1">
                                                   Use Cases:
                                                 </p>
-                                                <ul className='text-xs space-y-1'>
+                                                <ul className="text-xs space-y-1">
                                                   {explanation.useCases.map(
                                                     (useCase, idx) => (
                                                       <li key={idx}>
@@ -646,7 +656,7 @@ function MetadataTree({
                             </TooltipProvider>
                           )}
                         </div>
-                        <span className='truncate text-muted-foreground max-w-30'>
+                        <span className="truncate text-muted-foreground max-w-30">
                           {field.highlightedValue ? (
                             <HighlightedText
                               text={field.highlightedValue}
@@ -682,11 +692,11 @@ function DetailView({
   if (!field) {
     return (
       <div
-        className='flex h-full items-center justify-center p-8 text-center text-muted-foreground'
-        data-testid='metadata-detail-view'
+        className="flex h-full items-center justify-center p-8 text-center text-muted-foreground"
+        data-testid="metadata-detail-view"
       >
         <div>
-          <Layers className='mx-auto mb-4 h-12 w-12 opacity-50' />
+          <Layers className="mx-auto mb-4 h-12 w-12 opacity-50" />
           <p>Select a field to see details</p>
         </div>
       </div>
@@ -703,35 +713,35 @@ function DetailView({
     typeof field.value === 'string' && field.value.startsWith('http');
 
   return (
-    <div className='flex h-full flex-col' data-testid='metadata-detail-view'>
-      <div className='border-b p-4'>
-        <h3 className='text-lg font-semibold'>{field.key}</h3>
-        <p className='text-sm text-muted-foreground'>{field.category}</p>
+    <div className="flex h-full flex-col" data-testid="metadata-detail-view">
+      <div className="border-b p-4">
+        <h3 className="text-lg font-semibold">{field.key}</h3>
+        <p className="text-sm text-muted-foreground">{field.category}</p>
       </div>
 
-      <ScrollArea className='flex-1 p-4'>
-        <div className='space-y-4'>
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
           {/* Value Display */}
           <Card>
-            <CardHeader className='pb-2'>
-              <CardTitle className='flex items-center justify-between text-sm'>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between text-sm">
                 Value
                 <Button
-                  variant='ghost'
-                  size='sm'
+                  variant="ghost"
+                  size="sm"
                   onClick={() => copyToClipboard(formattedValue)}
                 >
-                  <Copy className='h-4 w-4' />
+                  <Copy className="h-4 w-4" />
                 </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLongValue ? (
-                <pre className='overflow-x-auto rounded-md bg-muted p-3 text-sm'>
+                <pre className="overflow-x-auto rounded-md bg-muted p-3 text-sm">
                   {formattedValue}
                 </pre>
               ) : (
-                <p className='text-lg font-medium'>{formattedValue}</p>
+                <p className="text-lg font-medium">{formattedValue}</p>
               )}
             </CardContent>
           </Card>
@@ -739,11 +749,11 @@ function DetailView({
           {/* Significance */}
           {field.significance && (
             <Card>
-              <CardHeader className='pb-2'>
-                <CardTitle className='text-sm'>Why This Matters</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Why This Matters</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className='text-sm text-muted-foreground'>
+                <p className="text-sm text-muted-foreground">
                   {field.significance}
                 </p>
               </CardContent>
@@ -753,27 +763,27 @@ function DetailView({
           {/* GPS Link */}
           {isGPS && file?.rawMetadata?.gps && (
             <Card>
-              <CardHeader className='pb-2'>
-                <CardTitle className='flex items-center gap-2 text-sm'>
-                  <MapPin className='h-4 w-4' />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4" />
                   Location
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className='space-y-2'>
+                <div className="space-y-2">
                   {file.rawMetadata.gps.google_maps_url && (
                     <a
                       href={file.rawMetadata.gps.google_maps_url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='flex items-center gap-2 text-sm text-primary hover:underline'
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-primary hover:underline"
                     >
-                      <ExternalLink className='h-4 w-4' />
+                      <ExternalLink className="h-4 w-4" />
                       Open in Google Maps
                     </a>
                   )}
                   {file.rawMetadata.gps.coordinates && (
-                    <p className='text-sm text-muted-foreground'>
+                    <p className="text-sm text-muted-foreground">
                       {file.rawMetadata.gps.coordinates}
                     </p>
                   )}
@@ -785,17 +795,17 @@ function DetailView({
           {/* URL Link */}
           {isUrl && (
             <Card>
-              <CardHeader className='pb-2'>
-                <CardTitle className='text-sm'>Link</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Link</CardTitle>
               </CardHeader>
               <CardContent>
                 <a
                   href={field.value}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='flex items-center gap-2 text-sm text-primary hover:underline'
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
                 >
-                  <ExternalLink className='h-4 w-4' />
+                  <ExternalLink className="h-4 w-4" />
                   Open Link
                 </a>
               </CardContent>
@@ -804,21 +814,21 @@ function DetailView({
 
           {/* Technical Info */}
           <Card>
-            <CardHeader className='pb-2'>
-              <CardTitle className='text-sm'>Technical Details</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Technical Details</CardTitle>
             </CardHeader>
-            <CardContent className='space-y-2 text-sm'>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Category</span>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Category</span>
                 <span>{field.category}</span>
               </div>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Type</span>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Type</span>
                 <span>{typeof field.value}</span>
               </div>
               {typeof field.value === 'string' && (
-                <div className='flex justify-between'>
-                  <span className='text-muted-foreground'>Length</span>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Length</span>
                   <span>{field.value.length} characters</span>
                 </div>
               )}
@@ -865,7 +875,7 @@ export function MetadataExplorer({
   }, [activeViewMode]);
 
   const selectedFile = useMemo(
-    () => files.find((f) => f.id === activeFileId) ?? null,
+    () => files.find(f => f.id === activeFileId) ?? null,
     [files, activeFileId]
   );
 
@@ -891,39 +901,39 @@ export function MetadataExplorer({
   );
 
   return (
-    <div className='flex h-full flex-col'>
+    <div className="flex h-full flex-col">
       {/* View Mode Tabs */}
-      <div className='flex items-center justify-between border-b px-4 py-2'>
-        <h2 className='font-semibold'>Metadata Explorer</h2>
+      <div className="flex items-center justify-between border-b px-4 py-2">
+        <h2 className="font-semibold">Metadata Explorer</h2>
         <Tabs
           value={activeViewMode}
-          onValueChange={(v) =>
+          onValueChange={v =>
             handleViewModeChange(v as 'simple' | 'advanced' | 'raw')
           }
         >
           <TabsList>
             <TabsTrigger
-              value='simple'
-              className='flex items-center gap-1'
+              value="simple"
+              className="flex items-center gap-1"
               onClick={() => handleViewModeChange('simple')}
             >
-              <Eye className='h-3 w-3' />
+              <Eye className="h-3 w-3" />
               Simple
             </TabsTrigger>
             <TabsTrigger
-              value='advanced'
-              className='flex items-center gap-1'
+              value="advanced"
+              className="flex items-center gap-1"
               onClick={() => handleViewModeChange('advanced')}
             >
-              <Layers className='h-3 w-3' />
+              <Layers className="h-3 w-3" />
               Advanced
             </TabsTrigger>
             <TabsTrigger
-              value='raw'
-              className='flex items-center gap-1'
+              value="raw"
+              className="flex items-center gap-1"
               onClick={() => handleViewModeChange('raw')}
             >
-              <FileText className='h-3 w-3' />
+              <FileText className="h-3 w-3" />
               Raw
             </TabsTrigger>
           </TabsList>
@@ -931,7 +941,7 @@ export function MetadataExplorer({
       </div>
 
       {/* Three-Pane Layout */}
-      <ResizablePanelGroup direction='horizontal' className='flex-1'>
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left Pane: File Browser */}
         <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
           <FileBrowser
@@ -946,8 +956,8 @@ export function MetadataExplorer({
         {/* Middle Pane: Metadata Tree */}
         <ResizablePanel defaultSize={40} minSize={30}>
           {activeViewMode === 'raw' ? (
-            <ScrollArea className='h-full p-4'>
-              <pre className='text-xs' data-testid='metadata-raw-json'>
+            <ScrollArea className="h-full p-4">
+              <pre className="text-xs" data-testid="metadata-raw-json">
                 {JSON.stringify(selectedFile?.rawMetadata ?? {}, null, 2)}
               </pre>
             </ScrollArea>
@@ -1053,7 +1063,7 @@ export function convertMetadataToProcessedFile(
     size: metadata.filesize || 'Unknown',
     metadataDensity: density,
     fieldCount: totalFields,
-    categories: categories.filter((c) => c.fieldCount > 0 || c.locked),
+    categories: categories.filter(c => c.fieldCount > 0 || c.locked),
     rawMetadata: metadata,
     tier: metadata.tier || 'free',
     processedAt: new Date().toISOString(),

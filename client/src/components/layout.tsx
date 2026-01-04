@@ -39,7 +39,7 @@ export const Layout = ({
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems = dashboardNavSections.flatMap((section) => section.items);
+  const navItems = dashboardNavSections.flatMap(section => section.items);
 
   const isActive = (path: string) => isActivePath(location.pathname, path);
 
@@ -54,55 +54,55 @@ export const Layout = ({
   }
 
   return (
-    <div className='min-h-screen bg-[#0B0C10] text-white'>
+    <div className="min-h-screen bg-[#0B0C10] text-white">
       {/* Mobile Header */}
       {!hideHeader && (
-        <header className='lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#0B0C10]/95 backdrop-blur-xl border-b border-white/5'>
-          <div className='flex items-center justify-between px-4 h-14'>
-            <Link to='/' className='flex items-center gap-2'>
-              <div className='w-7 h-7 bg-primary rounded flex items-center justify-center'>
-                <Cpu className='w-4 h-4 text-black' />
+        <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#0B0C10]/95 backdrop-blur-xl border-b border-white/5">
+          <div className="flex items-center justify-between px-4 h-14">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-primary rounded flex items-center justify-center">
+                <Cpu className="w-4 h-4 text-black" />
               </div>
-              <span className='font-bold text-sm'>
-                Meta<span className='text-primary'>Extract</span>
+              <span className="font-bold text-sm">
+                Meta<span className="text-primary">Extract</span>
               </span>
             </Link>
 
             <Button
-              variant='ghost'
-              size='icon'
+              variant="ghost"
+              size="icon"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className='text-white hover:bg-white/10'
+              className="text-white hover:bg-white/10"
             >
               {sidebarOpen ? (
-                <X className='w-5 h-5' />
+                <X className="w-5 h-5" />
               ) : (
-                <Menu className='w-5 h-5' />
+                <Menu className="w-5 h-5" />
               )}
             </Button>
           </div>
         </header>
       )}
 
-      <div className='flex'>
+      <div className="flex">
         {/* Sidebar */}
         {!hideSidebar && (
           <>
             {/* Desktop Sidebar */}
-            <aside className='hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-[#0a0a0f] border-r border-white/5'>
+            <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-[#0a0a0f] border-r border-white/5">
               {/* Logo */}
-              <div className='flex items-center gap-3 px-6 h-16 border-b border-white/5'>
-                <div className='w-8 h-8 bg-primary rounded flex items-center justify-center'>
-                  <Cpu className='w-5 h-5 text-black' />
+              <div className="flex items-center gap-3 px-6 h-16 border-b border-white/5">
+                <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+                  <Cpu className="w-5 h-5 text-black" />
                 </div>
-                <span className='font-bold text-lg tracking-tight'>
-                  Meta<span className='text-primary'>Extract</span>
+                <span className="font-bold text-lg tracking-tight">
+                  Meta<span className="text-primary">Extract</span>
                 </span>
               </div>
 
               {/* Navigation */}
-              <nav className='flex-1 px-3 py-4 space-y-1 overflow-y-auto'>
-                {navItems.map((item) => {
+              <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                {navItems.map(item => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   return (
@@ -129,31 +129,31 @@ export const Layout = ({
 
               {/* User Section */}
               {isAuthenticated && user && (
-                <div className='p-4 border-t border-white/5'>
-                  <div className='flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5'>
-                    <div className='w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center'>
-                      <User className='w-4 h-4 text-primary' />
+                <div className="p-4 border-t border-white/5">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary" />
                     </div>
-                    <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-white truncate'>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
                         {user.username}
                       </p>
-                      <p className='text-xs text-slate-500 truncate'>
+                      <p className="text-xs text-slate-500 truncate">
                         {user.tier}
                       </p>
                     </div>
                   </div>
-                  <div className='mt-2 flex items-center justify-between'>
-                    <span className='text-xs text-slate-500'>Theme</span>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Theme</span>
                     <ThemeToggle />
                   </div>
                   <Button
-                    variant='ghost'
-                    size='sm'
+                    variant="ghost"
+                    size="sm"
                     onClick={handleLogout}
-                    className='w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start'
+                    className="w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start"
                   >
-                    <LogOut className='w-4 h-4 mr-2' />
+                    <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </Button>
                 </div>
@@ -163,12 +163,14 @@ export const Layout = ({
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
               <div
-                className='lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm'
-                role='button'
+                className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                role="button"
                 tabIndex={0}
                 onClick={() => setSidebarOpen(false)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSidebarOpen(false); }}
-                aria-label='Close sidebar'
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') setSidebarOpen(false);
+                }}
+                aria-label="Close sidebar"
               />
             )}
 
@@ -180,33 +182,33 @@ export const Layout = ({
               )}
             >
               {/* Logo */}
-              <div className='flex items-center justify-between px-4 h-14 border-b border-white/5'>
+              <div className="flex items-center justify-between px-4 h-14 border-b border-white/5">
                 {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                 <Link
-                  to='/'
-                  className='flex items-center gap-2'
+                  to="/"
+                  className="flex items-center gap-2"
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <div className='w-7 h-7 bg-primary rounded flex items-center justify-center'>
-                    <Cpu className='w-4 h-4 text-black' />
+                  <div className="w-7 h-7 bg-primary rounded flex items-center justify-center">
+                    <Cpu className="w-4 h-4 text-black" />
                   </div>
-                  <span className='font-bold text-sm'>
-                    Meta<span className='text-primary'>Extract</span>
+                  <span className="font-bold text-sm">
+                    Meta<span className="text-primary">Extract</span>
                   </span>
                 </Link>
                 <Button
-                  variant='ghost'
-                  size='icon'
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSidebarOpen(false)}
-                  className='text-white hover:bg-white/10'
+                  className="text-white hover:bg-white/10"
                 >
-                  <X className='w-5 h-5' />
+                  <X className="w-5 h-5" />
                 </Button>
               </div>
 
               {/* Navigation */}
-              <nav className='flex-1 px-3 py-4 space-y-1 overflow-y-auto'>
-                {navItems.map((item) => {
+              <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                {navItems.map(item => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   return (
@@ -235,34 +237,34 @@ export const Layout = ({
 
               {/* User Section */}
               {isAuthenticated && user && (
-                <div className='p-4 border-t border-white/5'>
-                  <div className='flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5'>
-                    <div className='w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center'>
-                      <User className='w-4 h-4 text-primary' />
+                <div className="p-4 border-t border-white/5">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary" />
                     </div>
-                    <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-white truncate'>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
                         {user.username}
                       </p>
-                      <p className='text-xs text-slate-500 truncate'>
+                      <p className="text-xs text-slate-500 truncate">
                         {user.tier}
                       </p>
                     </div>
                   </div>
-                  <div className='mt-3'>
-                    <p className='text-xs text-slate-500 mb-2'>Theme</p>
+                  <div className="mt-3">
+                    <p className="text-xs text-slate-500 mb-2">Theme</p>
                     <ThemeToggle />
                   </div>
                   <Button
-                    variant='ghost'
-                    size='sm'
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       handleLogout();
                       setSidebarOpen(false);
                     }}
-                    className='w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start'
+                    className="w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start"
                   >
-                    <LogOut className='w-4 h-4 mr-2' />
+                    <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </Button>
                 </div>

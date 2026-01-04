@@ -1,8 +1,8 @@
 /**
  * Property Tests for User-Friendly Error Messaging System
- * 
+ *
  * Tests universal correctness properties of the error messaging system.
- * 
+ *
  * @validates Requirements 1.4, 3.4 - User-friendly error messaging
  */
 
@@ -30,10 +30,10 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Error Code Coverage
   // ========================================================================
-  
+
   describe('Error Code Coverage', () => {
     const allErrorCodes = Object.values(ERROR_CODES);
-    
+
     it('should have a template for every error code', () => {
       allErrorCodes.forEach(code => {
         const error = getUserFriendlyError(code);
@@ -58,10 +58,10 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // User-Friendly Message Properties
   // ========================================================================
-  
+
   describe('User-Friendly Message Properties', () => {
     const allErrorCodes = Object.values(ERROR_CODES);
-    
+
     it('every error should have a non-empty title', () => {
       allErrorCodes.forEach(code => {
         const error = getUserFriendlyError(code);
@@ -113,11 +113,11 @@ describe('Error Messages Property Tests', () => {
         'segfault',
         'core dump',
       ];
-      
+
       allErrorCodes.forEach(code => {
         const error = getUserFriendlyError(code);
         const fullText = `${error.title} ${error.message}`.toLowerCase();
-        
+
         technicalTerms.forEach(term => {
           expect(fullText).not.toContain(term.toLowerCase());
         });
@@ -128,15 +128,28 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Error Category and Severity Properties
   // ========================================================================
-  
+
   describe('Error Category and Severity Properties', () => {
     const validCategories: ErrorCategory[] = [
-      'network', 'upload', 'processing', 'authentication',
-      'authorization', 'validation', 'server', 'timeout', 'quota', 'unknown'
+      'network',
+      'upload',
+      'processing',
+      'authentication',
+      'authorization',
+      'validation',
+      'server',
+      'timeout',
+      'quota',
+      'unknown',
     ];
-    
-    const validSeverities: ErrorSeverity[] = ['info', 'warning', 'error', 'critical'];
-    
+
+    const validSeverities: ErrorSeverity[] = [
+      'info',
+      'warning',
+      'error',
+      'critical',
+    ];
+
     it('every error should have a valid category', () => {
       Object.values(ERROR_CODES).forEach(code => {
         const error = getUserFriendlyError(code);
@@ -156,7 +169,7 @@ describe('Error Messages Property Tests', () => {
         const error = getUserFriendlyError(code);
         return error.severity === 'critical';
       });
-      
+
       // Critical should be used sparingly
       expect(criticalErrors.length).toBeLessThanOrEqual(3);
     });
@@ -167,7 +180,7 @@ describe('Error Messages Property Tests', () => {
         ERROR_CODES.NETWORK_TIMEOUT,
         ERROR_CODES.NETWORK_UNREACHABLE,
       ];
-      
+
       networkCodes.forEach(code => {
         const error = getUserFriendlyError(code);
         expect(['network', 'timeout']).toContain(error.category);
@@ -178,39 +191,33 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // HTTP Status Code Mapping Properties
   // ========================================================================
-  
+
   describe('HTTP Status Code Mapping', () => {
     it('should map all 4xx client errors to appropriate codes', () => {
       fc.assert(
-        fc.property(
-          fc.integer({ min: 400, max: 499 }),
-          (status) => {
-            const code = mapHttpStatusToErrorCode(status);
-            expect(code).toBeDefined();
-            expect(typeof code).toBe('string');
-            
-            // Should not map to server errors
-            const error = getUserFriendlyError(code);
-            expect(error.category).not.toBe('server');
-          }
-        ),
+        fc.property(fc.integer({ min: 400, max: 499 }), status => {
+          const code = mapHttpStatusToErrorCode(status);
+          expect(code).toBeDefined();
+          expect(typeof code).toBe('string');
+
+          // Should not map to server errors
+          const error = getUserFriendlyError(code);
+          expect(error.category).not.toBe('server');
+        }),
         { numRuns: 50 }
       );
     });
 
     it('should map all 5xx server errors to server-related codes', () => {
       fc.assert(
-        fc.property(
-          fc.integer({ min: 500, max: 599 }),
-          (status) => {
-            const code = mapHttpStatusToErrorCode(status);
-            expect(code).toBeDefined();
-            
-            const error = getUserFriendlyError(code);
-            // Server errors should be server, timeout, or unknown category
-            expect(['server', 'timeout', 'unknown']).toContain(error.category);
-          }
-        ),
+        fc.property(fc.integer({ min: 500, max: 599 }), status => {
+          const code = mapHttpStatusToErrorCode(status);
+          expect(code).toBeDefined();
+
+          const error = getUserFriendlyError(code);
+          // Server errors should be server, timeout, or unknown category
+          expect(['server', 'timeout', 'unknown']).toContain(error.category);
+        }),
         { numRuns: 50 }
       );
     });
@@ -224,7 +231,7 @@ describe('Error Messages Property Tests', () => {
         [500, ERROR_CODES.SERVER_INTERNAL],
         [503, ERROR_CODES.SERVER_MAINTENANCE],
       ];
-      
+
       mappings.forEach(([status, expectedCode]) => {
         expect(mapHttpStatusToErrorCode(status)).toBe(expectedCode);
       });
@@ -234,26 +241,25 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Error Detection Properties
   // ========================================================================
-  
+
   describe('Error Detection', () => {
     it('should always return a valid error code', () => {
       fc.assert(
-        fc.property(
-          fc.anything(),
-          (input) => {
-            const code = detectErrorCode(input);
-            expect(code).toBeDefined();
-            expect(Object.values(ERROR_CODES)).toContain(code);
-          }
-        ),
+        fc.property(fc.anything(), input => {
+          const code = detectErrorCode(input);
+          expect(code).toBeDefined();
+          expect(Object.values(ERROR_CODES)).toContain(code);
+        }),
         { numRuns: 100 }
       );
     });
 
     it('should detect network errors from Error objects', () => {
       const networkError = new Error('Network request failed');
-      expect(detectErrorCode(networkError)).toBe(ERROR_CODES.NETWORK_UNREACHABLE);
-      
+      expect(detectErrorCode(networkError)).toBe(
+        ERROR_CODES.NETWORK_UNREACHABLE
+      );
+
       const fetchError = new Error('fetch failed');
       expect(detectErrorCode(fetchError)).toBe(ERROR_CODES.NETWORK_UNREACHABLE);
     });
@@ -278,7 +284,7 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Retry Logic Properties
   // ========================================================================
-  
+
   describe('Retry Logic', () => {
     it('should calculate increasing delays with exponential backoff', () => {
       const config: RetryConfig = {
@@ -286,16 +292,13 @@ describe('Error Messages Property Tests', () => {
         baseDelay: 1000,
         exponentialBackoff: true,
       };
-      
+
       fc.assert(
-        fc.property(
-          fc.integer({ min: 1, max: 10 }),
-          (attempt) => {
-            const delay = calculateRetryDelay(attempt, config);
-            const expectedDelay = config.baseDelay * Math.pow(2, attempt - 1);
-            expect(delay).toBe(expectedDelay);
-          }
-        ),
+        fc.property(fc.integer({ min: 1, max: 10 }), attempt => {
+          const delay = calculateRetryDelay(attempt, config);
+          const expectedDelay = config.baseDelay * Math.pow(2, attempt - 1);
+          expect(delay).toBe(expectedDelay);
+        }),
         { numRuns: 10 }
       );
     });
@@ -307,15 +310,12 @@ describe('Error Messages Property Tests', () => {
         exponentialBackoff: true,
         maxDelay: 5000,
       };
-      
+
       fc.assert(
-        fc.property(
-          fc.integer({ min: 1, max: 20 }),
-          (attempt) => {
-            const delay = calculateRetryDelay(attempt, config);
-            expect(delay).toBeLessThanOrEqual(config.maxDelay!);
-          }
-        ),
+        fc.property(fc.integer({ min: 1, max: 20 }), attempt => {
+          const delay = calculateRetryDelay(attempt, config);
+          expect(delay).toBeLessThanOrEqual(config.maxDelay!);
+        }),
         { numRuns: 20 }
       );
     });
@@ -326,28 +326,31 @@ describe('Error Messages Property Tests', () => {
         baseDelay: 2000,
         exponentialBackoff: false,
       };
-      
+
       fc.assert(
-        fc.property(
-          fc.integer({ min: 1, max: 10 }),
-          (attempt) => {
-            const delay = calculateRetryDelay(attempt, config);
-            expect(delay).toBe(config.baseDelay);
-          }
-        ),
+        fc.property(fc.integer({ min: 1, max: 10 }), attempt => {
+          const delay = calculateRetryDelay(attempt, config);
+          expect(delay).toBe(config.baseDelay);
+        }),
         { numRuns: 10 }
       );
     });
 
     it('should correctly determine if retry is allowed', () => {
-      const recoverableError = getUserFriendlyError(ERROR_CODES.NETWORK_TIMEOUT);
-      const nonRecoverableError = getUserFriendlyError(ERROR_CODES.UPLOAD_FILE_TOO_LARGE);
-      
+      const recoverableError = getUserFriendlyError(
+        ERROR_CODES.NETWORK_TIMEOUT
+      );
+      const nonRecoverableError = getUserFriendlyError(
+        ERROR_CODES.UPLOAD_FILE_TOO_LARGE
+      );
+
       // Recoverable errors should allow retry up to maxAttempts
       expect(shouldRetry(recoverableError, 0)).toBe(true);
       expect(shouldRetry(recoverableError, 1)).toBe(true);
-      expect(shouldRetry(recoverableError, recoverableError.retry!.maxAttempts)).toBe(false);
-      
+      expect(
+        shouldRetry(recoverableError, recoverableError.retry!.maxAttempts)
+      ).toBe(false);
+
       // Non-recoverable errors should never allow retry
       expect(shouldRetry(nonRecoverableError, 0)).toBe(false);
       expect(shouldRetry(nonRecoverableError, 1)).toBe(false);
@@ -357,24 +360,21 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Error Conversion Properties
   // ========================================================================
-  
+
   describe('Error Conversion', () => {
     it('toUserFriendlyError should always return valid UserFriendlyError', () => {
       fc.assert(
-        fc.property(
-          fc.anything(),
-          (input) => {
-            const error = toUserFriendlyError(input);
-            
-            expect(error.code).toBeDefined();
-            expect(error.category).toBeDefined();
-            expect(error.severity).toBeDefined();
-            expect(error.title).toBeDefined();
-            expect(error.message).toBeDefined();
-            expect(Array.isArray(error.suggestions)).toBe(true);
-            expect(typeof error.recoverable).toBe('boolean');
-          }
-        ),
+        fc.property(fc.anything(), input => {
+          const error = toUserFriendlyError(input);
+
+          expect(error.code).toBeDefined();
+          expect(error.category).toBeDefined();
+          expect(error.severity).toBeDefined();
+          expect(error.title).toBeDefined();
+          expect(error.message).toBeDefined();
+          expect(Array.isArray(error.suggestions)).toBe(true);
+          expect(typeof error.recoverable).toBe('boolean');
+        }),
         { numRuns: 50 }
       );
     });
@@ -386,7 +386,7 @@ describe('Error Messages Property Tests', () => {
           fc.string({ minLength: 1, maxLength: 200 }),
           (title, message) => {
             const error = createUserFriendlyError({ title, message });
-            
+
             expect(error.title).toBe(title);
             expect(error.message).toBe(message);
             expect(error.code).toBeDefined();
@@ -402,10 +402,15 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Display Utility Properties
   // ========================================================================
-  
+
   describe('Display Utilities', () => {
-    const validSeverities: ErrorSeverity[] = ['info', 'warning', 'error', 'critical'];
-    
+    const validSeverities: ErrorSeverity[] = [
+      'info',
+      'warning',
+      'error',
+      'critical',
+    ];
+
     it('should return valid icon names for all severities', () => {
       validSeverities.forEach(severity => {
         const icon = getErrorIcon(severity);
@@ -430,9 +435,9 @@ describe('Error Messages Property Tests', () => {
       Object.values(ERROR_CODES).forEach(code => {
         const error = getUserFriendlyError(code, 'Test technical details');
         const logged = formatErrorForLogging(error);
-        
+
         expect(() => JSON.parse(logged)).not.toThrow();
-        
+
         const parsed = JSON.parse(logged);
         expect(parsed.code).toBe(code);
         expect(parsed.timestamp).toBeDefined();
@@ -443,7 +448,7 @@ describe('Error Messages Property Tests', () => {
       Object.values(ERROR_CODES).forEach(code => {
         const error = getUserFriendlyError(code);
         const display = formatErrorForDisplay(error);
-        
+
         expect(display).toContain(error.title);
         expect(display).toContain(error.message);
         expect(display.length).toBeLessThan(300);
@@ -454,12 +459,12 @@ describe('Error Messages Property Tests', () => {
   // ========================================================================
   // Recoverability Properties
   // ========================================================================
-  
+
   describe('Recoverability Properties', () => {
     it('recoverable errors should have retry config', () => {
       Object.values(ERROR_CODES).forEach(code => {
         const error = getUserFriendlyError(code);
-        
+
         if (error.recoverable) {
           expect(error.retry).toBeDefined();
           expect(error.retry!.maxAttempts).toBeGreaterThan(0);
@@ -472,16 +477,16 @@ describe('Error Messages Property Tests', () => {
     it('non-recoverable errors should not suggest retry', () => {
       Object.values(ERROR_CODES).forEach(code => {
         const error = getUserFriendlyError(code);
-        
+
         if (!error.recoverable) {
           // Suggestions should not include "try again" for non-recoverable errors
           const suggestionsText = error.suggestions.join(' ').toLowerCase();
           // Allow "try again" only if it's about trying something different
           if (suggestionsText.includes('try again')) {
             expect(
-              suggestionsText.includes('different') || 
-              suggestionsText.includes('later') ||
-              suggestionsText.includes('new')
+              suggestionsText.includes('different') ||
+                suggestionsText.includes('later') ||
+                suggestionsText.includes('new')
             ).toBe(true);
           }
         }
@@ -494,7 +499,7 @@ describe('Error Messages Property Tests', () => {
         ERROR_CODES.NETWORK_TIMEOUT,
         ERROR_CODES.NETWORK_UNREACHABLE,
       ];
-      
+
       networkCodes.forEach(code => {
         const error = getUserFriendlyError(code);
         expect(error.recoverable).toBe(true);
@@ -507,7 +512,7 @@ describe('Error Messages Property Tests', () => {
         ERROR_CODES.VALIDATION_INVALID_FORMAT,
         ERROR_CODES.VALIDATION_OUT_OF_RANGE,
       ];
-      
+
       validationCodes.forEach(code => {
         const error = getUserFriendlyError(code);
         expect(error.recoverable).toBe(false);

@@ -31,7 +31,18 @@ export function QualityIndicator({
   processingInsights, 
   className 
 }: QualityIndicatorProps) {
-  if (!qualityMetrics && !processingInsights) {
+  const hasProcessingInsights =
+    !!processingInsights &&
+    (processingInsights.processing_time_ms > 0 ||
+      processingInsights.total_fields_extracted > 0 ||
+      processingInsights.memory_usage_mb > 0);
+  const hasQualityMetrics =
+    !!qualityMetrics &&
+    (qualityMetrics.confidence_score > 0 ||
+      qualityMetrics.extraction_completeness > 0 ||
+      !!qualityMetrics.format_support_level);
+
+  if (!hasQualityMetrics && !hasProcessingInsights) {
     return null;
   }
 
@@ -68,6 +79,19 @@ export function QualityIndicator({
     return `${mb.toFixed(1)}MB`;
   };
 
+  const supportLevelLabel = qualityMetrics?.format_support_level
+    ? qualityMetrics.format_support_level.replace(/_/g, ' ')
+    : '';
+
+  const showCompleteness =
+    !!qualityMetrics && qualityMetrics.extraction_completeness > 0;
+  const showFieldsExtracted =
+    !!processingInsights && processingInsights.total_fields_extracted > 0;
+  const showProcessingTime =
+    !!processingInsights && processingInsights.processing_time_ms > 0;
+  const showMemoryUsage =
+    !!processingInsights && processingInsights.memory_usage_mb > 0;
+
   return (
     <div className={cn("bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-4 space-y-4", className)}>
       {/* Header */}
@@ -80,9 +104,14 @@ export function QualityIndicator({
           </span>
         )}
       </div>
+      {supportLevelLabel && (
+        <p className="text-xs text-white/50">
+          Format support: {supportLevelLabel}
+        </p>
+      )}
 
       {/* Quality Metrics */}
-      {qualityMetrics && (
+      {hasQualityMetrics && qualityMetrics && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Confidence Score */}
           <div className="bg-white/5 rounded-lg p-3">
@@ -104,82 +133,101 @@ export function QualityIndicator({
           </div>
 
           {/* Extraction Completeness */}
-          <div className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Completeness</span>
-              <CheckCircle className="w-4 h-4 text-blue-400" />
+          {showCompleteness ? (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-white/70">Completeness</span>
+                <CheckCircle className="w-4 h-4 text-blue-400" />
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {(qualityMetrics.extraction_completeness * 100).toFixed(0)}%
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2 mt-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full"
+                  style={{ width: `${qualityMetrics.extraction_completeness * 100}%` }}
+                />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-white">
-              {(qualityMetrics.extraction_completeness * 100).toFixed(0)}%
+          ) : (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-white/70">Completeness</span>
+                <Info className="w-4 h-4 text-white/40" />
+              </div>
+              <div className="text-lg font-semibold text-white">Not reported</div>
+              <div className="text-xs text-white/40 mt-1">Depends on file metadata</div>
             </div>
-            <div className="w-full bg-white/10 rounded-full h-2 mt-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full"
-                style={{ width: `${qualityMetrics.extraction_completeness * 100}%` }}
-              />
-            </div>
-          </div>
+          )}
 
           {/* Format Support Level */}
-          <div className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Support Level</span>
-              <span className={`px-2 py-1 text-xs rounded-full ${getFormatSupportBadge(qualityMetrics.format_support_level)}`}>
-                {qualityMetrics.format_support_level}
-              </span>
-            </div>
-            {qualityMetrics.streaming_enabled && (
-              <div className="text-sm text-green-400 flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span>Streaming Enabled</span>
+          {qualityMetrics.format_support_level && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-white/70">Support Level</span>
+                <span className={`px-2 py-1 text-xs rounded-full ${getFormatSupportBadge(qualityMetrics.format_support_level)}`}>
+                  {qualityMetrics.format_support_level}
+                </span>
               </div>
-            )}
-          </div>
+              {qualityMetrics.streaming_enabled && (
+                <div className="text-sm text-green-400 flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span>Streaming Enabled</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Processing Insights */}
-      {processingInsights && (
+      {hasProcessingInsights && processingInsights && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Processing Time */}
-          <div className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full" />
-              <span className="text-sm text-white/70">Processing Time</span>
+          {showProcessingTime && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                <span className="text-sm text-white/70">Processing Time</span>
+              </div>
+              <div className="text-lg font-semibold text-white">
+                {formatTime(processingInsights.processing_time_ms)}
+              </div>
+              {processingInsights.streaming_enabled && (
+                <div className="text-xs text-green-400 mt-1">Optimized with streaming</div>
+              )}
             </div>
-            <div className="text-lg font-semibold text-white">
-              {formatTime(processingInsights.processing_time_ms)}
-            </div>
-            {processingInsights.streaming_enabled && (
-              <div className="text-xs text-green-400 mt-1">Optimized with streaming</div>
-            )}
-          </div>
+          )}
 
           {/* Fields Extracted */}
-          <div className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-purple-400 rounded-full" />
-              <span className="text-sm text-white/70">Fields Extracted</span>
+          {showFieldsExtracted && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-2 h-2 bg-purple-400 rounded-full" />
+                <span className="text-sm text-white/70">Fields Extracted</span>
+              </div>
+              <div className="text-lg font-semibold text-white">
+                {processingInsights.total_fields_extracted.toLocaleString()}
+              </div>
+              <div className="text-xs text-white/50 mt-1">Comprehensive metadata</div>
             </div>
-            <div className="text-lg font-semibold text-white">
-              {processingInsights.total_fields_extracted.toLocaleString()}
-            </div>
-            <div className="text-xs text-white/50 mt-1">Comprehensive metadata</div>
-          </div>
+          )}
 
           {/* Memory Usage */}
-          <div className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-orange-400 rounded-full" />
-              <span className="text-sm text-white/70">Memory Used</span>
+          {showMemoryUsage && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                <span className="text-sm text-white/70">Memory Used</span>
+              </div>
+              <div className="text-lg font-semibold text-white">
+                {formatMemory(processingInsights.memory_usage_mb)}
+              </div>
+              {processingInsights.streaming_enabled && (
+                <div className="text-xs text-green-400 mt-1">Memory optimized</div>
+              )}
             </div>
-            <div className="text-lg font-semibold text-white">
-              {formatMemory(processingInsights.memory_usage_mb)}
-            </div>
-            {processingInsights.streaming_enabled && (
-              <div className="text-xs text-green-400 mt-1">Memory optimized</div>
-            )}
-          </div>
+          )}
         </div>
       )}
 

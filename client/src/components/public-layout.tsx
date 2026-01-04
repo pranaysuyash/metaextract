@@ -1,6 +1,6 @@
 /**
  * Public Layout Component
- * 
+ *
  * Clean layout for public-facing pages (landing, pricing, about).
  * No sidebar, minimal header with logo and auth buttons.
  * Uses the dark forensic theme consistent with the landing page design.
@@ -24,17 +24,19 @@ interface PublicLayoutProps {
   headerContent?: React.ReactNode;
 }
 
-export function PublicLayout({ 
-  children, 
-  showHeader = true, 
+export function PublicLayout({
+  children,
+  showHeader = true,
   showFooter = true,
-  headerContent 
+  headerContent,
 }: PublicLayoutProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>(
+    'login'
+  );
 
   const openLogin = () => {
     setAuthModalMode('login');
@@ -71,20 +73,20 @@ export function PublicLayout({
               {/* Desktop Navigation */}
               {!isAuthenticated && (
                 <nav className="hidden md:flex items-center gap-6">
-                  <Link 
-                    to="/#features" 
+                  <Link
+                    to="/#features"
                     className="text-sm text-slate-300 hover:text-white transition-colors"
                   >
                     Features
                   </Link>
-                  <Link 
-                    to="/#pricing" 
+                  <Link
+                    to="/#pricing"
                     className="text-sm text-slate-300 hover:text-white transition-colors"
                   >
                     Pricing
                   </Link>
-                  <Link 
-                    to="/docs" 
+                  <Link
+                    to="/docs"
                     className="text-sm text-slate-300 hover:text-white transition-colors"
                   >
                     Docs
@@ -147,7 +149,11 @@ export function PublicLayout({
                 className="md:hidden text-white"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {mobileMenuOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -159,24 +165,24 @@ export function PublicLayout({
                 {!isAuthenticated && (
                   <nav className="flex flex-col gap-2">
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                    <Link 
-                      to="/#features" 
+                    <Link
+                      to="/#features"
                       className="text-sm text-slate-300 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Features
                     </Link>
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                    <Link 
-                      to="/#pricing" 
+                    <Link
+                      to="/#pricing"
                       className="text-sm text-slate-300 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Pricing
                     </Link>
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                    <Link 
-                      to="/docs" 
+                    <Link
+                      to="/docs"
                       className="text-sm text-slate-300 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -184,13 +190,16 @@ export function PublicLayout({
                     </Link>
                   </nav>
                 )}
-                
+
                 <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
                   {isAuthenticated && user ? (
                     <>
                       <Button
                         variant="ghost"
-                        onClick={() => { navigate('/images_mvp'); setMobileMenuOpen(false); }}
+                        onClick={() => {
+                          navigate('/images_mvp');
+                          setMobileMenuOpen(false);
+                        }}
                         className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
                       >
                         <Upload className="w-4 h-4 mr-2" />
@@ -198,7 +207,10 @@ export function PublicLayout({
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                        onClick={() => {
+                          handleLogout();
+                          setMobileMenuOpen(false);
+                        }}
                         className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
@@ -209,14 +221,20 @@ export function PublicLayout({
                     <>
                       <Button
                         variant="ghost"
-                        onClick={() => { openLogin(); setMobileMenuOpen(false); }}
+                        onClick={() => {
+                          openLogin();
+                          setMobileMenuOpen(false);
+                        }}
                         className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
                       >
                         <LogIn className="w-4 h-4 mr-2" />
                         Sign In
                       </Button>
                       <Button
-                        onClick={() => { openRegister(); setMobileMenuOpen(false); }}
+                        onClick={() => {
+                          openRegister();
+                          setMobileMenuOpen(false);
+                        }}
                         className="bg-primary hover:bg-primary/90 text-black font-medium"
                       >
                         <UserPlus className="w-4 h-4 mr-2" />
@@ -261,10 +279,38 @@ export function PublicLayout({
               <div>
                 <h4 className="font-semibold text-white mb-4">Product</h4>
                 <ul className="space-y-2 text-sm text-slate-400">
-                  <li><Link to="/#features" className="hover:text-white transition-colors">Features</Link></li>
-                  <li><Link to="/#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                  <li><Link to="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
-                  <li><Link to="/api" className="hover:text-white transition-colors">API</Link></li>
+                  <li>
+                    <Link
+                      to="/#features"
+                      className="hover:text-white transition-colors"
+                    >
+                      Features
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/#pricing"
+                      className="hover:text-white transition-colors"
+                    >
+                      Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/docs"
+                      className="hover:text-white transition-colors"
+                    >
+                      Documentation
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/api"
+                      className="hover:text-white transition-colors"
+                    >
+                      API
+                    </Link>
+                  </li>
                 </ul>
               </div>
 
@@ -272,9 +318,30 @@ export function PublicLayout({
               <div>
                 <h4 className="font-semibold text-white mb-4">Company</h4>
                 <ul className="space-y-2 text-sm text-slate-400">
-                  <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
-                  <li><Link to="/blog" className="hover:text-white transition-colors">Blog</Link></li>
-                  <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                  <li>
+                    <Link
+                      to="/about"
+                      className="hover:text-white transition-colors"
+                    >
+                      About
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/blog"
+                      className="hover:text-white transition-colors"
+                    >
+                      Blog
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/contact"
+                      className="hover:text-white transition-colors"
+                    >
+                      Contact
+                    </Link>
+                  </li>
                 </ul>
               </div>
 
@@ -282,9 +349,30 @@ export function PublicLayout({
               <div>
                 <h4 className="font-semibold text-white mb-4">Legal</h4>
                 <ul className="space-y-2 text-sm text-slate-400">
-                  <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                  <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                  <li><Link to="/security" className="hover:text-white transition-colors">Security</Link></li>
+                  <li>
+                    <Link
+                      to="/privacy"
+                      className="hover:text-white transition-colors"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/terms"
+                      className="hover:text-white transition-colors"
+                    >
+                      Terms of Service
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/security"
+                      className="hover:text-white transition-colors"
+                    >
+                      Security
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -306,8 +394,8 @@ export function PublicLayout({
       )}
 
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={authModalOpen} 
+      <AuthModal
+        isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         defaultTab={authModalMode}
       />

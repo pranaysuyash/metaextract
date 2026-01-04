@@ -5,7 +5,9 @@ interface PersonaDisplayProps {
   interpretation: PersonaInterpretation;
 }
 
-export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }) => {
+export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({
+  interpretation,
+}) => {
   if (!interpretation) {
     return null;
   }
@@ -56,7 +58,9 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
           {getPersonaIcon(persona)} Key Findings
         </h2>
         <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-          {persona.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+          {persona
+            .replace('_', ' ')
+            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
         </span>
       </div>
 
@@ -81,18 +85,31 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
         <div className="bg-blue-50 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <span className="text-2xl mr-3">📅</span>
-            <h4 className="font-semibold text-gray-800">When was this photo taken?</h4>
+            <h4 className="font-semibold text-gray-800">
+              When was this photo taken?
+            </h4>
           </div>
           <div className="ml-9">
             <p className="text-xl font-bold text-gray-900">
               {plain_english_answers.when_taken.answer}
             </p>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <p><strong>Details:</strong> {plain_english_answers.when_taken.details}</p>
-              <p className={getConfidenceColor(plain_english_answers.when_taken.confidence)}>
-                <strong>Confidence:</strong> {plain_english_answers.when_taken.confidence}
+              <p>
+                <strong>Details:</strong>{' '}
+                {plain_english_answers.when_taken.details}
               </p>
-              <p><strong>Source:</strong> {plain_english_answers.when_taken.source}</p>
+              <p
+                className={getConfidenceColor(
+                  plain_english_answers.when_taken.confidence
+                )}
+              >
+                <strong>Confidence:</strong>{' '}
+                {plain_english_answers.when_taken.confidence}
+              </p>
+              <p>
+                <strong>Source:</strong>{' '}
+                {plain_english_answers.when_taken.source}
+              </p>
             </div>
           </div>
         </div>
@@ -101,37 +118,59 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
         <div className="bg-green-50 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <span className="text-2xl mr-3">📍</span>
-            <h4 className="font-semibold text-gray-800">Where was I when I took this?</h4>
+            <h4 className="font-semibold text-gray-800">
+              Where was I when I took this?
+            </h4>
           </div>
           <div className="ml-9">
             <p className="text-xl font-bold text-gray-900">
               {plain_english_answers.location.answer}
             </p>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <p><strong>Details:</strong> {plain_english_answers.location.details}</p>
+              <p>
+                <strong>Details:</strong>{' '}
+                {plain_english_answers.location.details}
+              </p>
 
-              {plain_english_answers.location.has_location && plain_english_answers.location.coordinates && (
-                <>
-                  <p><strong>Coordinates:</strong> {plain_english_answers.location.coordinates.formatted}</p>
-                  {plain_english_answers.location.readable_location && (
-                    <p><strong>Location:</strong> {plain_english_answers.location.readable_location}</p>
-                  )}
-                </>
-              )}
+              {plain_english_answers.location.has_location &&
+                plain_english_answers.location.coordinates && (
+                  <>
+                    <p>
+                      <strong>Coordinates:</strong>{' '}
+                      {plain_english_answers.location.coordinates.formatted}
+                    </p>
+                    {plain_english_answers.location.readable_location && (
+                      <p>
+                        <strong>Location:</strong>{' '}
+                        {plain_english_answers.location.readable_location}
+                      </p>
+                    )}
+                  </>
+                )}
 
-              {!plain_english_answers.location.has_location && plain_english_answers.location.possible_reasons && (
-                <div className="mt-2">
-                  <p><strong>Possible reasons:</strong></p>
-                  <ul className="list-disc ml-5">
-                    {plain_english_answers.location.possible_reasons.map((reason: string, index: number) => (
-                      <li key={index}>{reason}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {!plain_english_answers.location.has_location &&
+                plain_english_answers.location.possible_reasons && (
+                  <div className="mt-2">
+                    <p>
+                      <strong>Possible reasons:</strong>
+                    </p>
+                    <ul className="list-disc ml-5">
+                      {plain_english_answers.location.possible_reasons.map(
+                        (reason: string, index: number) => (
+                          <li key={index}>{reason}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
 
-              <p className={getConfidenceColor(plain_english_answers.location.confidence)}>
-                <strong>Confidence:</strong> {plain_english_answers.location.confidence}
+              <p
+                className={getConfidenceColor(
+                  plain_english_answers.location.confidence
+                )}
+              >
+                <strong>Confidence:</strong>{' '}
+                {plain_english_answers.location.confidence}
               </p>
             </div>
           </div>
@@ -141,19 +180,32 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
         <div className="bg-purple-50 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <span className="text-2xl mr-3">📱</span>
-            <h4 className="font-semibold text-gray-800">What phone took this?</h4>
+            <h4 className="font-semibold text-gray-800">
+              What phone took this?
+            </h4>
           </div>
           <div className="ml-9">
             <p className="text-xl font-bold text-gray-900">
               {plain_english_answers.device.answer}
             </p>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <p><strong>Device Type:</strong> {plain_english_answers.device.device_type}</p>
-              <p className={getConfidenceColor(plain_english_answers.device.confidence)}>
-                <strong>Confidence:</strong> {plain_english_answers.device.confidence}
+              <p>
+                <strong>Device Type:</strong>{' '}
+                {plain_english_answers.device.device_type}
+              </p>
+              <p
+                className={getConfidenceColor(
+                  plain_english_answers.device.confidence
+                )}
+              >
+                <strong>Confidence:</strong>{' '}
+                {plain_english_answers.device.confidence}
               </p>
               {plain_english_answers.device.details.software && (
-                <p><strong>Software:</strong> {plain_english_answers.device.details.software}</p>
+                <p>
+                  <strong>Software:</strong>{' '}
+                  {plain_english_answers.device.details.software}
+                </p>
               )}
             </div>
           </div>
@@ -163,32 +215,57 @@ export const PersonaDisplay: React.FC<PersonaDisplayProps> = ({ interpretation }
         <div className="bg-orange-50 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <span className="text-2xl mr-3">✨</span>
-            <h4 className="font-semibold text-gray-800">Is this photo authentic?</h4>
+            <h4 className="font-semibold text-gray-800">
+              Is this photo authentic?
+            </h4>
           </div>
           <div className="ml-9">
             <div className="flex items-center">
-              <span className="text-2xl mr-2">{getAuthenticityIcon(plain_english_answers.authenticity.assessment)}</span>
+              <span className="text-2xl mr-2">
+                {getAuthenticityIcon(
+                  plain_english_answers.authenticity.assessment
+                )}
+              </span>
               <p className="text-xl font-bold text-gray-900">
                 {plain_english_answers.authenticity.answer}
               </p>
             </div>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <p><strong>Score:</strong> {plain_english_answers.authenticity.score}/100</p>
-              <p className={getConfidenceColor(plain_english_answers.authenticity.confidence)}>
-                <strong>Confidence:</strong> {plain_english_answers.authenticity.confidence}
+              <p>
+                <strong>Score:</strong>{' '}
+                {plain_english_answers.authenticity.score}/100
               </p>
-              <p><strong>Assessment:</strong> {plain_english_answers.authenticity.assessment.replace(/_/g, ' ')}</p>
+              <p
+                className={getConfidenceColor(
+                  plain_english_answers.authenticity.confidence
+                )}
+              >
+                <strong>Confidence:</strong>{' '}
+                {plain_english_answers.authenticity.confidence}
+              </p>
+              <p>
+                <strong>Assessment:</strong>{' '}
+                {plain_english_answers.authenticity.assessment.replace(
+                  /_/g,
+                  ' '
+                )}
+              </p>
 
-              {plain_english_answers.authenticity.reasons && plain_english_answers.authenticity.reasons.length > 0 && (
-                <div className="mt-2">
-                  <p><strong>Reasons:</strong></p>
-                  <ul className="list-disc ml-5">
-                    {plain_english_answers.authenticity.reasons.map((reason: string, index: number) => (
-                      <li key={index}>{reason}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {plain_english_answers.authenticity.reasons &&
+                plain_english_answers.authenticity.reasons.length > 0 && (
+                  <div className="mt-2">
+                    <p>
+                      <strong>Reasons:</strong>
+                    </p>
+                    <ul className="list-disc ml-5">
+                      {plain_english_answers.authenticity.reasons.map(
+                        (reason: string, index: number) => (
+                          <li key={index}>{reason}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
             </div>
           </div>
         </div>

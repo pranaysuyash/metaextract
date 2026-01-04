@@ -4,7 +4,12 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ErrorBoundary, MetadataErrorBoundary, NetworkErrorBoundary, withErrorBoundary } from '@/components/error-boundary';
+import {
+  ErrorBoundary,
+  MetadataErrorBoundary,
+  NetworkErrorBoundary,
+  withErrorBoundary,
+} from '@/components/error-boundary';
 import '@testing-library/jest-dom';
 
 // ============================================================================
@@ -12,7 +17,13 @@ import '@testing-library/jest-dom';
 // ============================================================================
 
 // Helper to simulate a component that throws an error
-const ThrowError = ({ shouldThrow, errorMessage = 'Test error' }: { shouldThrow: boolean; errorMessage?: string }) => {
+const ThrowError = ({
+  shouldThrow,
+  errorMessage = 'Test error',
+}: {
+  shouldThrow: boolean;
+  errorMessage?: string;
+}) => {
   if (shouldThrow) {
     throw new Error(errorMessage);
   }
@@ -59,7 +70,9 @@ describe('ErrorBoundary', () => {
     });
 
     it('should render custom fallback when provided', () => {
-      const customFallback = <div data-testid="custom-fallback">Custom Error UI</div>;
+      const customFallback = (
+        <div data-testid="custom-fallback">Custom Error UI</div>
+      );
 
       render(
         <ErrorBoundary fallback={customFallback}>
@@ -96,7 +109,10 @@ describe('ErrorBoundary', () => {
     it('should detect network errors at page level', () => {
       render(
         <ErrorBoundary level="page">
-          <ThrowError shouldThrow={true} errorMessage="Network error: failed to fetch" />
+          <ThrowError
+            shouldThrow={true}
+            errorMessage="Network error: failed to fetch"
+          />
         </ErrorBoundary>
       );
 
@@ -116,7 +132,10 @@ describe('ErrorBoundary', () => {
     it('should detect permission errors at page level', () => {
       render(
         <ErrorBoundary level="page">
-          <ThrowError shouldThrow={true} errorMessage="Unauthorized: permission denied" />
+          <ThrowError
+            shouldThrow={true}
+            errorMessage="Unauthorized: permission denied"
+          />
         </ErrorBoundary>
       );
 
@@ -126,7 +145,10 @@ describe('ErrorBoundary', () => {
     it('should detect not found errors at page level', () => {
       render(
         <ErrorBoundary level="page">
-          <ThrowError shouldThrow={true} errorMessage="404: Resource not found" />
+          <ThrowError
+            shouldThrow={true}
+            errorMessage="404: Resource not found"
+          />
         </ErrorBoundary>
       );
 
@@ -156,7 +178,10 @@ describe('ErrorBoundary', () => {
     it('should detect permission errors', () => {
       render(
         <ErrorBoundary level="page">
-          <ThrowError shouldThrow={true} errorMessage="Unauthorized: permission denied" />
+          <ThrowError
+            shouldThrow={true}
+            errorMessage="Unauthorized: permission denied"
+          />
         </ErrorBoundary>
       );
 
@@ -166,14 +191,17 @@ describe('ErrorBoundary', () => {
     it('should detect not found errors at page level', () => {
       render(
         <ErrorBoundary level="page">
-          <ThrowError shouldThrow={true} errorMessage="404: Resource not found" />
+          <ThrowError
+            shouldThrow={true}
+            errorMessage="404: Resource not found"
+          />
         </ErrorBoundary>
       );
 
       expect(screen.getByText('Resource Not Found')).toBeInTheDocument();
       // Verify error message is present
-      const errorText = screen.getByText((content) =>
-        content.includes('not found') || content.includes('Resource')
+      const errorText = screen.getByText(
+        content => content.includes('not found') || content.includes('Resource')
       );
       expect(errorText).toBeInTheDocument();
     });
@@ -290,7 +318,9 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('Check your internet connection')).toBeInTheDocument();
+      expect(
+        screen.getByText('Check your internet connection')
+      ).toBeInTheDocument();
     });
 
     it('should show loading-specific suggestions for loading errors', () => {
@@ -362,9 +392,7 @@ describe('withErrorBoundary HOC', () => {
   it('should wrap component with error boundary', () => {
     const WrappedComponent = withErrorBoundary(SuccessComponent);
 
-    render(
-      <WrappedComponent text="Wrapped Success" />
-    );
+    render(<WrappedComponent text="Wrapped Success" />);
 
     expect(screen.getByText('Wrapped Success')).toBeInTheDocument();
   });
@@ -372,9 +400,7 @@ describe('withErrorBoundary HOC', () => {
   it('should catch errors in wrapped component', () => {
     const WrappedThrowError = withErrorBoundary(ThrowError);
 
-    render(
-      <WrappedThrowError shouldThrow={true} />
-    );
+    render(<WrappedThrowError shouldThrow={true} />);
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
@@ -382,9 +408,7 @@ describe('withErrorBoundary HOC', () => {
   it('should pass through props to wrapped component', () => {
     const WrappedComponent = withErrorBoundary(SuccessComponent);
 
-    render(
-      <WrappedComponent text="Custom Text" />
-    );
+    render(<WrappedComponent text="Custom Text" />);
 
     expect(screen.getByText('Custom Text')).toBeInTheDocument();
   });
@@ -393,9 +417,7 @@ describe('withErrorBoundary HOC', () => {
     const onError = jest.fn();
     const WrappedComponent = withErrorBoundary(SuccessComponent, { onError });
 
-    render(
-      <WrappedComponent text="Wrapped Success" />
-    );
+    render(<WrappedComponent text="Wrapped Success" />);
 
     // Should render successfully, no error
     expect(screen.getByText('Wrapped Success')).toBeInTheDocument();

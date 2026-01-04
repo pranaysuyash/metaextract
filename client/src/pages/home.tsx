@@ -106,6 +106,8 @@ export default function Home() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading } = useAuth();
 
+
+
   const handleUploadResults = (results: any[]) => {
     if (results.length > 0) {
       const result = results[0];

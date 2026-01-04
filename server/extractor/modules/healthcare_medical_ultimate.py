@@ -28,7 +28,7 @@ import xml.etree.ElementTree as ET
 import csv
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, List, Union, Tuple
+from typing import Any, Dict, Optional, List, Union, Tuple, cast
 from datetime import datetime, timedelta
 import hashlib
 import base64
@@ -40,14 +40,14 @@ try:
     import pandas as pd  # type: ignore[reportMissingImports]
     PANDAS_AVAILABLE = True
 except ImportError:
-    pd: Any = None
+    pd = None  # type: ignore[assignment]
     PANDAS_AVAILABLE = False
 
 try:
     import numpy as np
     NUMPY_AVAILABLE = True
 except ImportError:
-    np: Any = None
+    np = None  # type: ignore[assignment]
     NUMPY_AVAILABLE = False
 
 try:
@@ -402,7 +402,7 @@ def _analyze_clinical_trial_data(filepath: str, file_ext: str) -> Dict[str, Any]
         elif 'odm' in filename:
             result["trial_analysis"]["data_standard"] = "ODM"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Look for clinical trial indicators
@@ -466,7 +466,7 @@ def _analyze_laboratory_results(filepath: str, file_ext: str) -> Dict[str, Any]:
             }
         }
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Detect laboratory test types
@@ -489,7 +489,12 @@ def _analyze_laboratory_results(filepath: str, file_ext: str) -> Dict[str, Any]:
             result["lab_analysis"]["test_type"] = detected_tests
             
             # Analyze test results
-            numeric_cols = df.select_dtypes(include=[np.number])
+            if np is not None:
+                numeric_cols = df.select_dtypes(include=[np.number])
+                numeric_cols = cast(Any, numeric_cols)
+            else:
+                numeric_cols = df.iloc[0:0]
+                numeric_cols = cast(Any, numeric_cols)
             if not numeric_cols.empty:
                 result["lab_analysis"]["test_results"] = {
                     "numeric_tests": len(numeric_cols.columns),
@@ -555,7 +560,7 @@ def _analyze_pharmaceutical_data(filepath: str, file_ext: str) -> Dict[str, Any]
         elif any(term in filename for term in ['pk', 'pharmacokinetic', 'adme']):
             result["pharma_analysis"]["data_type"] = "pharmacokinetics"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Drug information analysis
@@ -624,7 +629,7 @@ def _analyze_telemedicine_data(filepath: str, file_ext: str) -> Dict[str, Any]:
         elif any(term in filename for term in ['activity', 'steps', 'fitness']):
             result["telemedicine_analysis"]["monitoring_type"] = "activity"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Vital signs detection
@@ -664,11 +669,16 @@ def _analyze_telemedicine_data(filepath: str, file_ext: str) -> Dict[str, Any]:
                 }
             
             # Alert threshold analysis
-            numeric_cols = df.select_dtypes(include=[np.number])
+            if np is not None:
+                numeric_cols = df.select_dtypes(include=[np.number])
+                numeric_cols = cast(Any, numeric_cols)
+            else:
+                numeric_cols = df.iloc[0:0]
+                numeric_cols = cast(Any, numeric_cols)
             if not numeric_cols.empty:
                 threshold_analysis = {}
                 for col in numeric_cols.columns:
-                    col_data = numeric_cols[col].dropna()
+                    col_data = cast(Any, numeric_cols[col]).dropna()
                     if len(col_data) > 1:
                         # Simple threshold detection based on outliers
                         mean_val = col_data.mean()
@@ -762,7 +772,7 @@ def _analyze_fhir_resource(filepath: str) -> Dict[str, Any]:
 def _analyze_cda_document(filepath: str) -> Dict[str, Any]:
     """Analyze CDA/CCDA documents"""
     try:
-        result = {
+        result: Dict[str, Any] = {
             "cda_info": {
                 "document_type": "unknown",
                 "template_ids": [],
@@ -783,7 +793,8 @@ def _analyze_cda_document(filepath: str) -> Dict[str, Any]:
             for template in root.findall('.//{urn:hl7-org:v3}templateId'):
                 root_attr = template.get('root')
                 if root_attr:
-                    result["cda_info"]["template_ids"].append(root_attr)
+                    template_ids = cast(List[str], result["cda_info"].setdefault("template_ids", []))
+                    template_ids.append(root_attr)
             
             # Extract document type from code
             code_elem = root.find('.//{urn:hl7-org:v3}code')
@@ -795,7 +806,8 @@ def _analyze_cda_document(filepath: str) -> Dict[str, Any]:
                 section_code = section.find('.//{urn:hl7-org:v3}code')
                 if section_code is not None:
                     section_name = section_code.get('displayName', 'unknown')
-                    result["cda_info"]["sections"].append(section_name)
+                    sections = cast(List[str], result["cda_info"].setdefault("sections", []))
+                    sections.append(section_name)
         
         except ET.ParseError:
             # Not valid XML
@@ -812,7 +824,7 @@ def _analyze_nifti_imaging(filepath: str) -> Dict[str, Any]:
     try:
         img = nib.load(filepath)
         
-        result = {
+        result: Dict[str, Any] = {
             "modality": "neuroimaging",
             "anatomy": "brain",
             "image_properties": {
@@ -840,7 +852,7 @@ def _analyze_nifti_imaging(filepath: str) -> Dict[str, Any]:
 def _analyze_img_format(filepath: str) -> Dict[str, Any]:
     """Analyze Analyze/IMG format files"""
     try:
-        result = {
+        result: Dict[str, Any] = {
             "modality": "medical_imaging",
             "format": "analyze_img",
             "image_properties": {},
@@ -857,13 +869,14 @@ def _analyze_img_format(filepath: str) -> Dict[str, Any]:
                     # Extract key fields (basic implementation)
                     import struct
                     dims = struct.unpack('8h', header_data[40:56])
-                    result["image_properties"]["dimensions"] = dims[1:4]  # Skip first element
+                    img_props = cast(Dict[str, Any], result["image_properties"])
+                    img_props["dimensions"] = dims[1:4]  # Skip first element
                     
                     datatype = struct.unpack('h', header_data[70:72])[0]
-                    result["image_properties"]["data_type"] = datatype
+                    img_props["data_type"] = datatype
                     
                     voxel_size = struct.unpack('8f', header_data[76:108])
-                    result["image_properties"]["voxel_size"] = voxel_size[1:4]  # Skip first element
+                    img_props["voxel_size"] = voxel_size[1:4]  # Skip first element
         
         return result
         
@@ -874,7 +887,7 @@ def _analyze_img_format(filepath: str) -> Dict[str, Any]:
 def _analyze_genomic_medicine_data(filepath: str, file_ext: str) -> Dict[str, Any]:
     """Analyze genomic and precision medicine data"""
     try:
-        result = {
+        result: Dict[str, Any] = {
             "genomic_analysis": {
                 "data_type": "unknown",
                 "sequence_info": {},
@@ -897,7 +910,7 @@ def _analyze_genomic_medicine_data(filepath: str, file_ext: str) -> Dict[str, An
         elif any(term in filename for term in ['pharmacogenomic', 'pgx']):
             result["genomic_analysis"]["data_type"] = "pharmacogenomics"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Genomic data indicators
@@ -933,7 +946,8 @@ def _analyze_genomic_medicine_data(filepath: str, file_ext: str) -> Dict[str, An
                     chr_columns = [col for col in df.columns if 'chr' in col.lower()]
                     if chr_columns:
                         chr_dist = df[chr_columns[0]].value_counts().to_dict()
-                        result["genomic_analysis"]["variant_data"]["chromosome_distribution"] = chr_dist
+                        variant_data = cast(Dict[str, Any], result["genomic_analysis"]["variant_data"])
+                        variant_data["chromosome_distribution"] = chr_dist
             
             # Clinical significance analysis
             clinical_columns = [col for col in df.columns if any(clin_term in col.lower() 
@@ -977,7 +991,7 @@ def _analyze_medical_device_data(filepath: str, file_ext: str) -> Dict[str, Any]
         elif any(term in filename for term in ['monitor', 'vital', 'bedside']):
             result["device_analysis"]["device_type"] = "patient_monitor"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Device monitoring indicators
@@ -1015,7 +1029,9 @@ def _analyze_medical_device_data(filepath: str, file_ext: str) -> Dict[str, Any]
                         alert_data[col] = alert_counts
                     else:
                         # Numeric alert data
-                        col_data = pd.to_numeric(df[col], errors='coerce').dropna()
+                        col_series = pd.to_numeric(df[col], errors='coerce')
+                        col_series = cast(Any, col_series)
+                        col_data = col_series.dropna()
                         if len(col_data) > 0:
                             alert_data[col] = {
                                 "total_alerts": int(col_data.sum()),
@@ -1067,7 +1083,7 @@ def _analyze_public_health_data(filepath: str, file_ext: str) -> Dict[str, Any]:
         elif any(term in filename for term in ['environmental', 'air_quality', 'water']):
             result["public_health_analysis"]["data_type"] = "environmental_health"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Epidemiological indicators
@@ -1101,7 +1117,9 @@ def _analyze_public_health_data(filepath: str, file_ext: str) -> Dict[str, Any]:
             if case_columns:
                 case_analysis = {}
                 for col in case_columns:
-                    col_data = pd.to_numeric(df[col], errors='coerce').dropna()
+                    col_series = pd.to_numeric(df[col], errors='coerce')
+                    col_series = cast(Any, col_series)
+                    col_data = col_series.dropna()
                     if len(col_data) > 0:
                         case_analysis[col] = {
                             "total_cases": int(col_data.sum()),
@@ -1122,7 +1140,9 @@ def _analyze_public_health_data(filepath: str, file_ext: str) -> Dict[str, Any]:
                     if df[col].dtype == 'object':
                         vaccine_data[col] = df[col].value_counts().to_dict()
                     else:
-                        col_data = pd.to_numeric(df[col], errors='coerce').dropna()
+                        col_series = pd.to_numeric(df[col], errors='coerce')
+                        col_series = cast(Any, col_series)
+                        col_data = col_series.dropna()
                         if len(col_data) > 0:
                             vaccine_data[col] = {
                                 "total_doses": int(col_data.sum()),
@@ -1262,7 +1282,7 @@ def _analyze_healthcare_analytics(filepath: str, file_ext: str) -> Dict[str, Any
         elif any(term in filename for term in ['population', 'risk', 'stratification']):
             result["analytics_analysis"]["metrics_type"] = "population_health"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Quality indicator analysis
@@ -1372,7 +1392,7 @@ def _analyze_regulatory_data(filepath: str, file_ext: str) -> Dict[str, Any]:
         elif any(term in filename for term in ['safety', 'incident', 'report']):
             result["regulatory_analysis"]["regulation_type"] = "safety_reporting"
         
-        if file_ext == '.csv' and PANDAS_AVAILABLE:
+        if file_ext == '.csv' and PANDAS_AVAILABLE and pd is not None:
             df = pd.read_csv(filepath, nrows=10000)
             
             # Adverse event analysis

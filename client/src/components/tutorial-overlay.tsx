@@ -1,15 +1,31 @@
 /**
  * Tutorial Overlay System
- * 
+ *
  * Provides interactive tutorial overlays with spotlight effects, step navigation,
  * and contextual guidance for onboarding users.
  */
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, SkipForward, Pause, Play, RotateCcw, CheckCircle2 } from 'lucide-react';
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  SkipForward,
+  Pause,
+  Play,
+  RotateCcw,
+  CheckCircle2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useOnboarding } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -46,12 +62,16 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     getNextStep,
     getPreviousStep,
     session,
-    startOnboarding
+    startOnboarding,
   } = useOnboarding();
 
   const { toast } = useToast();
-  const [spotlightPosition, setSpotlightPosition] = useState<SpotlightPosition | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [spotlightPosition, setSpotlightPosition] =
+    useState<SpotlightPosition | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -81,7 +101,7 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
       top: rect.top - padding,
       left: rect.left - padding,
       width: rect.width + padding * 2,
-      height: rect.height + padding * 2
+      height: rect.height + padding * 2,
     });
 
     // Tooltip position based on step position preference
@@ -161,11 +181,14 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
   }, [isOpen, onClose, getNextStep, getPreviousStep]);
 
   // Handle click outside to close (if skippable)
-  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === overlayRef.current && currentStep?.skippable) {
-      onClose();
-    }
-  }, [currentStep, onClose]);
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === overlayRef.current && currentStep?.skippable) {
+        onClose();
+      }
+    },
+    [currentStep, onClose]
+  );
 
   // Navigation handlers
   const handleNext = useCallback(async () => {
@@ -178,18 +201,21 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
 
       // Check if the required interaction has occurred
       const interactionValue = currentStep.completionCriteria.value;
-      const targetElement = currentStep.targetElement 
+      const targetElement = currentStep.targetElement
         ? document.querySelector(currentStep.targetElement)
         : null;
 
       // Simple validation: check if target element exists and has been interacted with
       if (interactionValue && !targetElement) {
-        setValidationError('Please complete the required action before continuing');
+        setValidationError(
+          'Please complete the required action before continuing'
+        );
         setIsValidating(false);
         toast({
           title: 'Action Required',
-          description: 'Please complete the highlighted action before moving to the next step',
-          variant: 'destructive'
+          description:
+            'Please complete the highlighted action before moving to the next step',
+          variant: 'destructive',
         });
         return;
       }
@@ -200,14 +226,14 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     await completeStep(currentStep.id, {
       action: 'next',
       timestamp: new Date().toISOString(),
-      validated: true
+      validated: true,
     });
 
     // Show success feedback
     toast({
       title: 'Step Complete!',
       description: `${currentStep.title} completed successfully`,
-      duration: 2000
+      duration: 2000,
     });
 
     setValidationError(null);
@@ -224,7 +250,7 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
       toast({
         title: 'Going Back',
         description: 'Returning to previous step',
-        duration: 2000
+        duration: 2000,
       });
     }
   }, [session, currentPath, toast]);
@@ -233,11 +259,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     if (!currentStep) return;
 
     await skipStep(currentStep.id, 'user-skip');
-    
+
     toast({
       title: 'Step Skipped',
       description: 'You can always come back to this later',
-      duration: 2000
+      duration: 2000,
     });
 
     setValidationError(null);
@@ -248,7 +274,7 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
 
     await completeStep(currentStep.id, {
       action: 'complete',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Complete the entire onboarding
@@ -256,8 +282,8 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
 
     toast({
       title: 'Congratulations! 🎉',
-      description: 'You\'ve completed the onboarding tutorial',
-      duration: 3000
+      description: "You've completed the onboarding tutorial",
+      duration: 3000,
     });
 
     onClose();
@@ -266,22 +292,22 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
   const handlePause = useCallback(async () => {
     setIsPaused(true);
     await pauseOnboarding();
-    
+
     toast({
       title: 'Tutorial Paused',
       description: 'Resume anytime from where you left off',
-      duration: 2000
+      duration: 2000,
     });
   }, [pauseOnboarding, toast]);
 
   const handleResume = useCallback(async () => {
     setIsPaused(false);
     await resumeOnboarding();
-    
+
     toast({
       title: 'Tutorial Resumed',
-      description: 'Let\'s continue!',
-      duration: 2000
+      description: "Let's continue!",
+      duration: 2000,
     });
   }, [resumeOnboarding, toast]);
 
@@ -290,11 +316,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
 
     // Restart the onboarding from the beginning
     await startOnboarding(session.userProfile);
-    
+
     toast({
       title: 'Tutorial Restarted',
       description: 'Starting from the beginning',
-      duration: 2000
+      duration: 2000,
     });
 
     setIsPaused(false);
@@ -316,7 +342,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
       className="fixed inset-0 z-50 tutorial-overlay"
       onClick={handleOverlayClick}
       onKeyDown={(e: React.KeyboardEvent) => {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target === overlayRef.current && currentStep?.skippable) {
+        if (
+          (e.key === 'Enter' || e.key === ' ') &&
+          e.target === overlayRef.current &&
+          currentStep?.skippable
+        ) {
           e.preventDefault();
           onClose();
         }
@@ -339,7 +369,7 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
               height: spotlightPosition.height,
               boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
               borderRadius: '8px',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
             }}
           />
         )}
@@ -349,22 +379,29 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
       <Card
         ref={tooltipRef}
         className={cn(
-          "absolute w-[400px] shadow-2xl transition-all duration-300 ease-out",
-          "bg-[#1F2937] border-[#45A29E] text-white"
+          'absolute w-[400px] shadow-2xl transition-all duration-300 ease-out',
+          'bg-[#1F2937] border-[#45A29E] text-white'
         )}
-        style={tooltipPosition ? {
-          top: tooltipPosition.top,
-          left: tooltipPosition.left
-        } : {
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)'
-        }}
+        style={
+          tooltipPosition
+            ? {
+                top: tooltipPosition.top,
+                left: tooltipPosition.left,
+              }
+            : {
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              }
+        }
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle id="tutorial-title" className="text-lg font-semibold text-white">
+              <CardTitle
+                id="tutorial-title"
+                className="text-lg font-semibold text-white"
+              >
                 {currentStep.title}
               </CardTitle>
               <CardDescription className="text-sm text-gray-300 mt-1">
@@ -381,7 +418,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
                 aria-label={isPaused ? 'Resume tutorial' : 'Pause tutorial'}
                 title={isPaused ? 'Resume' : 'Pause'}
               >
-                {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                {isPaused ? (
+                  <Play className="h-4 w-4" />
+                ) : (
+                  <Pause className="h-4 w-4" />
+                )}
               </Button>
 
               {/* Restart button */}
@@ -414,7 +455,10 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
         </CardHeader>
 
         <CardContent className="pb-4">
-          <p id="tutorial-description" className="text-sm text-gray-200 leading-relaxed">
+          <p
+            id="tutorial-description"
+            className="text-sm text-gray-200 leading-relaxed"
+          >
             {currentStep.description}
           </p>
 
@@ -437,7 +481,9 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
           <div className="mt-4 w-full bg-gray-700 rounded-full h-1.5">
             <div
               className="bg-[#45A29E] h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
+              style={{
+                width: `${((currentStepIndex + 1) / totalSteps) * 100}%`,
+              }}
               role="progressbar"
               aria-valuenow={currentStepIndex + 1}
               aria-valuemin={0}
@@ -475,9 +521,9 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
                 Skip
               </Button>
             )}
-            
-            {!isPaused && (
-              hasNext ? (
+
+            {!isPaused &&
+              (hasNext ? (
                 <Button
                   size="sm"
                   onClick={handleNext}
@@ -497,8 +543,7 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
                   <CheckCircle2 className="h-4 w-4 mr-1" />
                   Complete
                 </Button>
-              )
-            )}
+              ))}
           </div>
         </CardFooter>
       </Card>
@@ -531,6 +576,6 @@ export function useTutorialOverlay() {
     isOpen,
     open,
     close,
-    toggle
+    toggle,
   };
 }

@@ -24,13 +24,13 @@ export function ThemeToggle() {
   const getIcon = () => {
     switch (mode) {
       case 'light':
-        return <Sun className='h-4 w-4' aria-hidden="true" />;
+        return <Sun className="h-4 w-4" aria-hidden="true" />;
       case 'dark':
-        return <Moon className='h-4 w-4' aria-hidden="true" />;
+        return <Moon className="h-4 w-4" aria-hidden="true" />;
       case 'system':
-        return <Monitor className='h-4 w-4' aria-hidden="true" />;
+        return <Monitor className="h-4 w-4" aria-hidden="true" />;
       default:
-        return <Monitor className='h-4 w-4' aria-hidden="true" />;
+        return <Monitor className="h-4 w-4" aria-hidden="true" />;
     }
   };
 
@@ -51,42 +51,42 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant='ghost'
-          size='sm'
-          className='h-8 w-8 px-0'
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 px-0"
           aria-label={`Current theme: ${getThemeLabel()}. Toggle theme menu.`}
         >
           {getIcon()}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align='end'
+        align="end"
         className="min-w-[160px]"
         aria-label="Theme selection menu"
       >
         <DropdownMenuRadioGroup
           value={mode}
-          onValueChange={(v) => setMode(v as ThemeMode)}
+          onValueChange={v => setMode(v as ThemeMode)}
         >
           <DropdownMenuRadioItem
             value="light"
             className={mode === 'light' ? 'bg-accent' : ''}
           >
-            <Sun className='mr-2 h-4 w-4' aria-hidden="true" />
+            <Sun className="mr-2 h-4 w-4" aria-hidden="true" />
             Light
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="dark"
             className={mode === 'dark' ? 'bg-accent' : ''}
           >
-            <Moon className='mr-2 h-4 w-4' aria-hidden="true" />
+            <Moon className="mr-2 h-4 w-4" aria-hidden="true" />
             Dark
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="system"
             className={mode === 'system' ? 'bg-accent' : ''}
           >
-            <Monitor className='mr-2 h-4 w-4' aria-hidden="true" />
+            <Monitor className="mr-2 h-4 w-4" aria-hidden="true" />
             System
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>

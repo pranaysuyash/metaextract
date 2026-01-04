@@ -459,7 +459,10 @@ async function fetchMetadataForFile(fileId: string): Promise<any> {
   return { id: fileId, metadata: { size: '1MB', type: 'image/jpeg' } };
 }
 
-async function updateFileMetadata(fileId: string, metadata: any): Promise<void> {
+async function updateFileMetadata(
+  fileId: string,
+  metadata: any
+): Promise<void> {
   // Stub: In real implementation, this would update the database
   console.log('Updating metadata for file:', fileId, metadata);
 }
@@ -481,7 +484,11 @@ async function getUserPreferences(userId: string): Promise<any> {
 
 async function checkSystemHealth(): Promise<any> {
   // Stub: In real implementation, this would check system components
-  return { status: 'healthy', uptime: '99.9%', services: ['db', 'cache', 'api'] };
+  return {
+    status: 'healthy',
+    uptime: '99.9%',
+    services: ['db', 'cache', 'api'],
+  };
 }
 
 async function authenticateUser(credentials: any): Promise<any> {

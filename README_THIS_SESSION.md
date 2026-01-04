@@ -2,6 +2,12 @@
 
 ## Quick Status: ✅ ALL TASKS DONE
 
+## Aug 2026 – Images MVP Extraction Details UI
+
+- Option A (previous): Collapsible “Extraction details” `<details>` block after results.
+- Option B (current): Minimal “Extraction details” label with tooltip (info icon) showing confidence/coverage/fields/time/support.
+- Current choice: Tooltip (Option B).
+
 **Session:** January 1, 2026  
 **Duration:** ~3.5 hours  
 **Tasks Completed:** 5 of 5  
@@ -105,5 +111,4 @@ Example:
 ./scripts/run-pyright.sh --version
 ./scripts/run-pyright.sh
 ```
-
 ````

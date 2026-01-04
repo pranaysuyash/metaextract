@@ -63,13 +63,14 @@ function AppRouter() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route
-            path="/dashboard"
+            path="/settings"
             element={
               <ProtectedRoute>
                 <DashboardImproved />
               </ProtectedRoute>
             }
           />
+          <Route path="/dashboard" element={<Navigate to="/settings" replace />} />
           <Route path="/results" element={<Results />} />
           <Route path="/results-v2" element={<ResultsV2 />} />
           <Route

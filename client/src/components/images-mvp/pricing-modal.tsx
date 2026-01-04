@@ -119,7 +119,7 @@ export function PricingModal({
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={(open) => {
+      onOpenChange={open => {
         if (!open) onClose();
       }}
     >
@@ -153,7 +153,7 @@ export function PricingModal({
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               placeholder="name@example.com"
               className="w-full px-3 py-2 bg-[#1A1A1A] border border-white/10 rounded-md text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-600"
             />
@@ -165,7 +165,7 @@ export function PricingModal({
             </div>
           ) : (
             <div className="grid gap-4">
-              {sortedPacks.map((pack) => (
+              {sortedPacks.map(pack => (
                 <div
                   key={pack.id}
                   className="border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4"

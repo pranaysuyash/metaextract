@@ -1,47 +1,53 @@
 /**
  * Error Display Components
- * 
+ *
  * React components for displaying user-friendly errors with
  * progressive disclosure, actionable suggestions, and retry functionality.
- * 
+ *
  * @module error-display
  * @validates Requirements 1.4, 3.4 - User-friendly error messaging
  */
 
 import React, { useState, useCallback } from 'react';
-import { 
-  AlertCircle, 
-  AlertTriangle, 
-  Info, 
-  XCircle, 
+import {
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  XCircle,
   AlertOctagon,
   ChevronDown,
   ChevronUp,
   RefreshCw,
   ExternalLink,
   X,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { 
-  UserFriendlyError, 
+import {
+  UserFriendlyError,
   ErrorSeverity,
-  shouldRetry 
+  shouldRetry,
 } from '@/lib/error-messages';
 
 // ============================================================================
 // Icon Components
 // ============================================================================
 
-const severityIcons: Record<ErrorSeverity, React.ComponentType<{ className?: string }>> = {
+const severityIcons: Record<
+  ErrorSeverity,
+  React.ComponentType<{ className?: string }>
+> = {
   info: Info,
   warning: AlertTriangle,
   error: XCircle,
   critical: AlertOctagon,
 };
 
-const severityColors: Record<ErrorSeverity, { bg: string; border: string; text: string; icon: string }> = {
+const severityColors: Record<
+  ErrorSeverity,
+  { bg: string; border: string; text: string; icon: string }
+> = {
   info: {
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/20',
@@ -98,10 +104,10 @@ export function ErrorAlert({
 
   const handleRetry = useCallback(async () => {
     if (!onRetry || !error.recoverable) return;
-    
+
     setRetrying(true);
     setRetryAttempt(prev => prev + 1);
-    
+
     try {
       await onRetry();
     } finally {
@@ -109,7 +115,8 @@ export function ErrorAlert({
     }
   }, [onRetry, error.recoverable]);
 
-  const canRetry = error.recoverable && onRetry && shouldRetry(error, retryAttempt);
+  const canRetry =
+    error.recoverable && onRetry && shouldRetry(error, retryAttempt);
 
   return (
     <div
@@ -124,14 +131,14 @@ export function ErrorAlert({
     >
       <div className="flex items-start gap-3">
         <Icon className={cn('w-5 h-5 mt-0.5 flex-shrink-0', colors.icon)} />
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-medium text-white">{error.title}</h3>
               <p className={cn('text-sm mt-1', colors.text)}>{error.message}</p>
             </div>
-            
+
             {onDismiss && (
               <button
                 onClick={onDismiss}
@@ -157,11 +164,11 @@ export function ErrorAlert({
                 )}
                 {expanded ? 'Hide suggestions' : 'Show suggestions'}
               </button>
-              
+
               {expanded && (
                 <ul className="mt-2 space-y-1.5">
                   {error.suggestions.map((suggestion, index) => (
-                    <li 
+                    <li
                       key={index}
                       className="flex items-start gap-2 text-sm text-slate-300"
                     >
@@ -196,11 +203,13 @@ export function ErrorAlert({
                 disabled={retrying}
                 className="border-white/10 hover:bg-white/5"
               >
-                <RefreshCw className={cn('w-4 h-4 mr-2', retrying && 'animate-spin')} />
+                <RefreshCw
+                  className={cn('w-4 h-4 mr-2', retrying && 'animate-spin')}
+                />
                 {retrying ? 'Retrying...' : 'Try again'}
               </Button>
             )}
-            
+
             {error.helpLink && (
               <Button
                 size="sm"
@@ -208,7 +217,11 @@ export function ErrorAlert({
                 asChild
                 className="text-slate-400 hover:text-white"
               >
-                <a href={error.helpLink} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={error.helpLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Learn more
                 </a>
@@ -237,8 +250,11 @@ interface InlineErrorProps {
 
 export function InlineError({ message, className }: InlineErrorProps) {
   return (
-    <p 
-      className={cn('text-sm text-red-400 mt-1 flex items-center gap-1', className)}
+    <p
+      className={cn(
+        'text-sm text-red-400 mt-1 flex items-center gap-1',
+        className
+      )}
       role="alert"
     >
       <AlertCircle className="w-3.5 h-3.5" />
@@ -257,10 +273,10 @@ interface ErrorToastProps {
   autoHideDuration?: number;
 }
 
-export function ErrorToast({ 
-  error, 
-  onDismiss, 
-  autoHideDuration = 5000 
+export function ErrorToast({
+  error,
+  onDismiss,
+  autoHideDuration = 5000,
 }: ErrorToastProps) {
   const Icon = severityIcons[error.severity];
   const colors = severityColors[error.severity];
@@ -310,11 +326,11 @@ interface FullPageErrorProps {
   onGoHome?: () => void;
 }
 
-export function FullPageError({ 
-  error, 
-  onRetry, 
-  onGoBack, 
-  onGoHome 
+export function FullPageError({
+  error,
+  onRetry,
+  onGoBack,
+  onGoHome,
 }: FullPageErrorProps) {
   const Icon = severityIcons[error.severity];
   const colors = severityColors[error.severity];
@@ -322,20 +338,22 @@ export function FullPageError({
   return (
     <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
-        <div className={cn(
-          'w-16 h-16 rounded-full mx-auto flex items-center justify-center',
-          colors.bg
-        )}>
+        <div
+          className={cn(
+            'w-16 h-16 rounded-full mx-auto flex items-center justify-center',
+            colors.bg
+          )}
+        >
           <Icon className={cn('w-8 h-8', colors.icon)} />
         </div>
-        
+
         <h1 className="mt-6 text-2xl font-bold text-white">{error.title}</h1>
         <p className="mt-2 text-slate-400">{error.message}</p>
-        
+
         {error.suggestions.length > 0 && (
           <ul className="mt-6 space-y-2 text-left">
             {error.suggestions.map((suggestion, index) => (
-              <li 
+              <li
                 key={index}
                 className="flex items-start gap-2 text-sm text-slate-300"
               >
@@ -345,29 +363,38 @@ export function FullPageError({
             ))}
           </ul>
         )}
-        
+
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
           {onRetry && error.recoverable && (
-            <Button onClick={onRetry} className="bg-primary hover:bg-primary/90 text-black">
+            <Button
+              onClick={onRetry}
+              className="bg-primary hover:bg-primary/90 text-black"
+            >
               <RefreshCw className="w-4 h-4 mr-2" />
               Try again
             </Button>
           )}
           {onGoBack && (
-            <Button variant="outline" onClick={onGoBack} className="border-white/10">
+            <Button
+              variant="outline"
+              onClick={onGoBack}
+              className="border-white/10"
+            >
               Go back
             </Button>
           )}
           {onGoHome && (
-            <Button variant="ghost" onClick={onGoHome} className="text-slate-400">
+            <Button
+              variant="ghost"
+              onClick={onGoHome}
+              className="text-slate-400"
+            >
               Go to homepage
             </Button>
           )}
         </div>
-        
-        <p className="mt-8 text-xs text-slate-600">
-          Error code: {error.code}
-        </p>
+
+        <p className="mt-8 text-xs text-slate-600">Error code: {error.code}</p>
       </div>
     </div>
   );
@@ -408,7 +435,9 @@ export function ErrorProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ErrorContext.Provider value={{ errors, addError, removeError, clearErrors }}>
+    <ErrorContext.Provider
+      value={{ errors, addError, removeError, clearErrors }}
+    >
       {children}
       {/* Render error toasts */}
       <div className="fixed bottom-4 right-4 space-y-2 z-50">
@@ -436,7 +465,4 @@ export function useErrors() {
 // Export All
 // ============================================================================
 
-export {
-  severityIcons,
-  severityColors,
-};
+export { severityIcons, severityColors };

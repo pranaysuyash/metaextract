@@ -1,9 +1,9 @@
 /**
  * Navigation Component
- * 
+ *
  * Consistent navigation component using the dark forensic theme.
  * Uses centralized navigation configuration for consistency across pages.
- * 
+ *
  * @validates Requirements 1.6 - Navigation consistency
  */
 
@@ -12,11 +12,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { 
-  dashboardNavSections, 
-  navStyles, 
+import {
+  dashboardNavSections,
+  navStyles,
   brandConfig,
-  isActivePath 
+  isActivePath,
 } from '@/lib/navigation-config';
 
 interface NavigationProps {
@@ -28,10 +28,10 @@ interface NavigationProps {
   onNavClick?: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ 
+const Navigation: React.FC<NavigationProps> = ({
   showSectionTitles = false,
   className,
-  onNavClick 
+  onNavClick,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -43,7 +43,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
   const renderNavItems = (closeMobileMenu: boolean = false) => (
     <div className="space-y-6">
-      {dashboardNavSections.map((section) => (
+      {dashboardNavSections.map(section => (
         <div key={section.id}>
           {showSectionTitles && section.title && (
             <h3 className="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -51,7 +51,7 @@ const Navigation: React.FC<NavigationProps> = ({
             </h3>
           )}
           <div className="space-y-1">
-            {section.items.map((item) => {
+            {section.items.map(item => {
               const Icon = item.icon;
               const active = isActivePath(location.pathname, item.href);
               return (
@@ -67,7 +67,12 @@ const Navigation: React.FC<NavigationProps> = ({
                   title={item.description}
                   aria-current={active ? 'page' : undefined}
                 >
-                  <Icon className={cn(navStyles.item.icon, active && navStyles.item.iconActive)} />
+                  <Icon
+                    className={cn(
+                      navStyles.item.icon,
+                      active && navStyles.item.iconActive
+                    )}
+                  />
                   <span>{item.name}</span>
                   {item.badge && (
                     <span className="ml-auto bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full">
@@ -84,7 +89,11 @@ const Navigation: React.FC<NavigationProps> = ({
   );
 
   return (
-    <nav className={cn('h-full', navStyles.sidebar.bg, className)} role="navigation" aria-label="Main navigation">
+    <nav
+      className={cn('h-full', navStyles.sidebar.bg, className)}
+      role="navigation"
+      aria-label="Main navigation"
+    >
       {/* Mobile menu button */}
       <div className="lg:hidden p-4 border-b border-white/5">
         <Button
@@ -96,7 +105,11 @@ const Navigation: React.FC<NavigationProps> = ({
           aria-controls="mobile-navigation"
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
         >
-          {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {isMobileMenuOpen ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Menu className="h-5 w-5" />
+          )}
         </Button>
       </div>
 
@@ -107,18 +120,20 @@ const Navigation: React.FC<NavigationProps> = ({
 
       {/* Mobile Navigation Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           role="button"
           tabIndex={0}
           onClick={() => setIsMobileMenuOpen(false)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsMobileMenuOpen(false); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') setIsMobileMenuOpen(false);
+          }}
           aria-label="Close menu"
         />
       )}
 
       {/* Mobile Navigation Panel */}
-      <div 
+      <div
         id="mobile-navigation"
         className={cn(
           'lg:hidden fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300',
@@ -130,8 +145,17 @@ const Navigation: React.FC<NavigationProps> = ({
         {/* Mobile Header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-white/5">
           {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-          <Link to="/" className="flex items-center gap-2" onClick={handleNavClick}>
-            <div className={cn('w-7 h-7 rounded flex items-center justify-center', brandConfig.logo.bgColor)}>
+          <Link
+            to="/"
+            className="flex items-center gap-2"
+            onClick={handleNavClick}
+          >
+            <div
+              className={cn(
+                'w-7 h-7 rounded flex items-center justify-center',
+                brandConfig.logo.bgColor
+              )}
+            >
               <Cpu className={cn('w-4 h-4', brandConfig.logo.textColor)} />
             </div>
             <span className="font-bold text-sm text-white">

@@ -211,7 +211,7 @@ export default function Results() {
           // Fetch from database via API
           const response = await fetch(`/api/extract/results/${metadataId}`, {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+              Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
             },
           });
 
@@ -223,7 +223,9 @@ export default function Results() {
             console.warn('[Results] Metadata not found in database');
             setMetadata(null);
           } else {
-            throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+            throw new Error(
+              `Failed to fetch metadata: ${response.status} ${response.statusText}`
+            );
           }
         } else {
           // No metadata ID provided, show empty state
@@ -291,13 +293,13 @@ export default function Results() {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata) {
       toast({
-        title: "Download Error",
-        description: "No metadata available to download",
-        variant: "destructive",
+        title: 'Download Error',
+        description: 'No metadata available to download',
+        variant: 'destructive',
       });
       return;
     }
-    
+
     if (isUnlocked) {
       const dataStr = JSON.stringify(metadata, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
@@ -316,9 +318,9 @@ export default function Results() {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata) {
       toast({
-        title: "Export Error",
-        description: "No metadata available to export",
-        variant: "destructive",
+        title: 'Export Error',
+        description: 'No metadata available to export',
+        variant: 'destructive',
       });
       return;
     }
@@ -446,7 +448,8 @@ export default function Results() {
       },
       {
         label: 'SHA256 Hash',
-        value: metadata.hashes?.sha256 || metadata.file_integrity?.sha256 || 'N/A',
+        value:
+          metadata.hashes?.sha256 || metadata.file_integrity?.sha256 || 'N/A',
       },
       { label: 'Capture Date', value: captureDate || 'Not embedded' },
       {
@@ -496,9 +499,9 @@ export default function Results() {
       setIsUnlocked(true);
     } else {
       toast({
-        title: "Payment Error",
-        description: "No metadata available to unlock",
-        variant: "destructive",
+        title: 'Payment Error',
+        description: 'No metadata available to unlock',
+        variant: 'destructive',
       });
     }
   };
@@ -508,9 +511,9 @@ export default function Results() {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata || !metadata.filename) {
       toast({
-        title: "Analysis Error",
-        description: "No metadata available for analysis",
-        variant: "destructive",
+        title: 'Analysis Error',
+        description: 'No metadata available for analysis',
+        variant: 'destructive',
       });
       return;
     }
@@ -676,7 +679,7 @@ export default function Results() {
     if (!metadata) {
       return 0;
     }
-    
+
     if (metadata.fields_extracted && metadata.fields_extracted > 0) {
       return metadata.fields_extracted;
     }
@@ -702,7 +705,11 @@ export default function Results() {
 
   const flatXmpNamespaces = useMemo(() => {
     // CRITICAL FIX: Handle null metadata gracefully
-    if (!metadata || !metadata.xmp_namespaces || metadata.xmp_namespaces._locked) {
+    if (
+      !metadata ||
+      !metadata.xmp_namespaces ||
+      metadata.xmp_namespaces._locked
+    ) {
       return {};
     }
     const flat: Record<string, any> = {};
@@ -717,7 +724,11 @@ export default function Results() {
 
   const flatEmbeddedThumbnails = useMemo(() => {
     // CRITICAL FIX: Handle null metadata gracefully
-    if (!metadata || !metadata.embedded_thumbnails || metadata.embedded_thumbnails._locked) {
+    if (
+      !metadata ||
+      !metadata.embedded_thumbnails ||
+      metadata.embedded_thumbnails._locked
+    ) {
       return {};
     }
     return flattenForDisplay(metadata.embedded_thumbnails);
@@ -741,7 +752,11 @@ export default function Results() {
 
   const flatScientificData = useMemo(() => {
     // CRITICAL FIX: Handle null metadata gracefully
-    if (!metadata || !metadata.scientific_data || metadata.scientific_data._locked) {
+    if (
+      !metadata ||
+      !metadata.scientific_data ||
+      metadata.scientific_data._locked
+    ) {
       return {};
     }
     return flattenForDisplay(metadata.scientific_data);
@@ -929,7 +944,9 @@ export default function Results() {
           <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
             <div className="max-w-md w-full bg-red-900/30 border border-red-700/50 rounded-lg p-6 text-center">
               <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">Error Loading Metadata</h2>
+              <h2 className="text-xl font-bold text-white mb-2">
+                Error Loading Metadata
+              </h2>
               <p className="text-slate-300 mb-4">{error}</p>
               <Button
                 onClick={() => navigate('/images_mvp')}
@@ -952,7 +969,9 @@ export default function Results() {
           <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
             <div className="max-w-md w-full bg-[#11121a] border border-white/10 rounded-lg p-6 text-center">
               <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">No Results Yet</h2>
+              <h2 className="text-xl font-bold text-white mb-2">
+                No Results Yet
+              </h2>
               <p className="text-slate-300 mb-4">
                 Upload a file to view extracted metadata and analysis here.
               </p>
@@ -1052,7 +1071,9 @@ export default function Results() {
                   {import.meta.env.DEV && (
                     <Button
                       onClick={() =>
-                        navigate('/results-v2', { state: { metadata: metadata } })
+                        navigate('/results-v2', {
+                          state: { metadata: metadata },
+                        })
                       }
                       variant="outline"
                       className="gap-2 font-mono text-xs tracking-wider border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
@@ -1165,26 +1186,6 @@ export default function Results() {
                     </div>
                   )}
 
-                  {/* PROMINENT DEBUG WARNING */}
-                  {metadata === (MOCK_METADATA as any) && (
-                    <div className="mb-4 p-4 bg-red-600 text-white rounded-lg shadow-xl border-4 border-red-800 animate-pulse">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="w-8 h-8" />
-                        <div>
-                          <h3 className="text-xl font-bold">
-                            ⚠️ USING MOCK DATA
-                          </h3>
-                          <p className="font-mono text-sm">
-                            Real extraction failed or data was lost.
-                          </p>
-                          <p className="text-xs opacity-75 mt-1">
-                            Check console logs for details.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 shadow-lg">
                     <h3 className="text-xs font-bold text-white mb-4 uppercase tracking-widest border-b border-white/5 pb-2">
                       File Preview
@@ -1201,12 +1202,14 @@ export default function Results() {
 
                 <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
                   {/* PERSONA DISPLAY - Show Sarah-friendly answers first */}
-                  {(metadata?.persona_interpretation) && (
+                  {metadata?.persona_interpretation && (
                     <div className="p-4 border-b border-white/10 bg-black/20">
-                      <PersonaDisplay interpretation={metadata?.persona_interpretation} />
+                      <PersonaDisplay
+                        interpretation={metadata?.persona_interpretation}
+                      />
                     </div>
                   )}
-                  
+
                   <Tabs defaultValue="all" className="flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4">
                       <TabsList className="bg-white/5 border border-white/5 h-9 w-full md:w-auto">
@@ -1306,7 +1309,11 @@ export default function Results() {
 
                           <TabsContent value="medical" className="mt-0">
                             <MedicalAnalysisResult
-                              data={(metadata?.medical_imaging || { available: false }) as any}
+                              data={
+                                (metadata?.medical_imaging || {
+                                  available: false,
+                                }) as any
+                              }
                               isUnlocked={isUnlocked}
                             />
                           </TabsContent>
@@ -1323,13 +1330,17 @@ export default function Results() {
                                 <div className="grid grid-cols-1 gap-y-1">
                                   <FieldRow
                                     label="MD5"
-                                    value={metadata?.file_integrity?.md5 || 'N/A'}
+                                    value={
+                                      metadata?.file_integrity?.md5 || 'N/A'
+                                    }
                                     copyable
                                     index={0}
                                   />
                                   <FieldRow
                                     label="SHA256"
-                                    value={metadata?.file_integrity?.sha256 || 'N/A'}
+                                    value={
+                                      metadata?.file_integrity?.sha256 || 'N/A'
+                                    }
                                     copyable
                                     index={1}
                                   />
@@ -1350,7 +1361,8 @@ export default function Results() {
                               )}
 
                             {metadata?.burned_metadata &&
-                              metadata?.burned_metadata?.has_burned_metadata && (
+                              metadata?.burned_metadata
+                                ?.has_burned_metadata && (
                                 <section>
                                   <BurnedMetadataDisplay
                                     burned_metadata={metadata?.burned_metadata}
@@ -1537,7 +1549,8 @@ export default function Results() {
                             )}
 
                             {metadata?.burned_metadata &&
-                              metadata?.burned_metadata?.has_burned_metadata && (
+                              metadata?.burned_metadata
+                                ?.has_burned_metadata && (
                                 <section>
                                   <BurnedMetadataDisplay
                                     burned_metadata={metadata?.burned_metadata}
@@ -1675,7 +1688,8 @@ export default function Results() {
                                   color="text-orange-400"
                                   count={
                                     metadata?.makernote?._count ||
-                                    Object.keys(metadata?.makernote || {}).length
+                                    Object.keys(metadata?.makernote || {})
+                                      .length
                                   }
                                 />
                                 {!isSectionLocked(metadata?.makernote) &&

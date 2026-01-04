@@ -106,7 +106,9 @@ export const uiEvents = pgTable('ui_events', {
   eventName: text('event_name').notNull(),
   sessionId: text('session_id'),
   userId: varchar('user_id').references(() => users.id),
-  properties: jsonb('properties').notNull().default(sql`'{}'::jsonb`),
+  properties: jsonb('properties')
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
