@@ -326,7 +326,7 @@ def extract_office_documents_complete_metadata(filepath: str) -> Dict[str, Any]:
     """
     Extract complete Office document metadata - Ultimate Edition.
     """
-    result = {'office_complete_extraction': True}
+    result: Dict[str, Any] = {'office_complete_extraction': True}
     
     try:
         ext = Path(filepath).suffix.lower()
@@ -357,7 +357,7 @@ def extract_office_documents_complete_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_word_complete_metadata(filepath: str) -> Dict[str, Any]:
     """Extract complete Word document metadata."""
-    result = {'office_document_type': 'word', 'word_complete_extraction': True}
+    result: Dict[str, Any] = {'office_document_type': 'word', 'word_complete_extraction': True}
     
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -380,7 +380,7 @@ def _extract_word_complete_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_excel_complete_metadata(filepath: str) -> Dict[str, Any]:
     """Extract complete Excel workbook metadata."""
-    result = {'office_document_type': 'excel', 'excel_complete_extraction': True}
+    result: Dict[str, Any] = {'office_document_type': 'excel', 'excel_complete_extraction': True}
     
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -407,7 +407,7 @@ def _extract_excel_complete_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_powerpoint_complete_metadata(filepath: str) -> Dict[str, Any]:
     """Extract complete PowerPoint presentation metadata."""
-    result = {'office_document_type': 'powerpoint', 'powerpoint_complete_extraction': True}
+    result: Dict[str, Any] = {'office_document_type': 'powerpoint', 'powerpoint_complete_extraction': True}
     
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -433,7 +433,7 @@ def _extract_powerpoint_complete_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_ooxml_core_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract complete core properties from OOXML."""
-    props = {'ooxml_core_complete_extraction': True}
+    props: Dict[str, Any] = {'ooxml_core_complete_extraction': True}
     
     try:
         if 'docProps/core.xml' in zf.namelist():
@@ -457,7 +457,7 @@ def _extract_ooxml_core_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_ooxml_app_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract complete app/extended properties from OOXML."""
-    props = {'ooxml_app_complete_extraction': True}
+    props: Dict[str, Any] = {'ooxml_app_complete_extraction': True}
     
     try:
         if 'docProps/app.xml' in zf.namelist():
@@ -481,7 +481,7 @@ def _extract_ooxml_app_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_word_document_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Word document statistics."""
-    stats = {'word_stats_complete': True}
+    stats: Dict[str, Any] = {'word_stats_complete': True}
     
     try:
         if 'word/document.xml' in zf.namelist():
@@ -520,7 +520,7 @@ def _extract_word_document_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_workbook_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel workbook statistics."""
-    stats = {'excel_workbook_stats': True}
+    stats: Dict[str, Any] = {'excel_workbook_stats': True}
     
     try:
         if 'xl/workbook.xml' in zf.namelist():
@@ -551,7 +551,7 @@ def _extract_excel_workbook_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_worksheet_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel worksheet statistics."""
-    stats = {'excel_worksheet_stats': True}
+    stats: Dict[str, Any] = {'excel_worksheet_stats': True}
     
     try:
         total_sheets = 0
@@ -590,7 +590,7 @@ def _extract_excel_worksheet_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_formulas_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel formula information."""
-    formulas = {'excel_formulas_complete': True}
+    formulas: Dict[str, Any] = {'excel_formulas_complete': True}
     
     try:
         total_formulas = 0
@@ -619,7 +619,7 @@ def _extract_excel_formulas_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_charts_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel chart information."""
-    charts = {'excel_charts_complete': True}
+    charts: Dict[str, Any] = {'excel_charts_complete': True}
     
     try:
         chart_count = 0
@@ -666,7 +666,7 @@ def _extract_excel_charts_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_named_ranges_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel named ranges information."""
-    named_ranges = {'excel_named_ranges_complete': True}
+    named_ranges: Dict[str, Any] = {'excel_named_ranges_complete': True}
     
     try:
         named_range_count = 0
@@ -695,7 +695,7 @@ def _extract_excel_named_ranges_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_pivot_tables_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel pivot table information."""
-    pivot_tables = {'excel_pivot_tables_complete': True}
+    pivot_tables: Dict[str, Any] = {'excel_pivot_tables_complete': True}
     
     try:
         pivot_table_count = 0
@@ -718,7 +718,7 @@ def _extract_excel_pivot_tables_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_tables_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel table information."""
-    tables = {'excel_tables_complete': True}
+    tables: Dict[str, Any] = {'excel_tables_complete': True}
     
     try:
         table_count = 0
@@ -737,7 +737,7 @@ def _extract_excel_tables_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_data_validation_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel data validation information."""
-    validation = {'excel_data_validation_complete': True}
+    validation: Dict[str, Any] = {'excel_data_validation_complete': True}
     
     try:
         validation_count = 0
@@ -771,7 +771,7 @@ def _extract_excel_data_validation_complete(zf: zipfile.ZipFile) -> Dict[str, An
 
 def _extract_excel_conditional_format_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel conditional formatting information."""
-    cf = {'excel_conditional_format_complete': True}
+    cf: Dict[str, Any] = {'excel_conditional_format_complete': True}
     
     try:
         cf_count = 0
@@ -808,7 +808,7 @@ def _extract_excel_conditional_format_complete(zf: zipfile.ZipFile) -> Dict[str,
 
 def _extract_excel_links_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel links information."""
-    links = {'excel_links_complete': True}
+    links: Dict[str, Any] = {'excel_links_complete': True}
     
     try:
         link_count = 0
@@ -837,7 +837,7 @@ def _extract_excel_links_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_excel_protection_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract Excel protection information."""
-    protection = {'excel_protection_complete': True}
+    protection: Dict[str, Any] = {'excel_protection_complete': True}
     
     try:
         if 'xl/workbook.xml' in zf.namelist():
@@ -864,7 +864,7 @@ def _extract_excel_protection_complete(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_slide_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint slide statistics."""
-    stats = {'powerpoint_slide_stats': True}
+    stats: Dict[str, Any] = {'powerpoint_slide_stats': True}
     
     try:
         slide_count = 0
@@ -901,7 +901,7 @@ def _extract_powerpoint_slide_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
 
 def _extract_powerpoint_master_stats(zf: zipfile.ZipFile) -> Dict[str, Any]:
     """Extract PowerPoint master slide statistics."""
-    stats = {'powerpoint_master_stats': True}
+    stats: Dict[str, Any] = {'powerpoint_master_stats': True}
     
     try:
         slide_master_count = 0
@@ -1323,7 +1323,7 @@ def _extract_zip_stats(zf: zipfile.ZipFile, filepath: str) -> Dict[str, Any]:
 
 def _extract_odf_text_metadata(filepath: str) -> Dict[str, Any]:
     """Extract ODF text document metadata."""
-    result = {'office_format': 'odf_text', 'odf_text_extraction': True}
+    result: Dict[str, Any] = {'office_format': 'odf_text', 'odf_text_extraction': True}
     
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -1346,7 +1346,7 @@ def _extract_odf_text_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_odf_spreadsheet_metadata(filepath: str) -> Dict[str, Any]:
     """Extract ODF spreadsheet metadata."""
-    result = {'office_format': 'odf_spreadsheet', 'odf_spreadsheet_extraction': True}
+    result: Dict[str, Any] = {'office_format': 'odf_spreadsheet', 'odf_spreadsheet_extraction': True}
     
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -1369,7 +1369,7 @@ def _extract_odf_spreadsheet_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_odf_presentation_metadata(filepath: str) -> Dict[str, Any]:
     """Extract ODF presentation metadata."""
-    result = {'office_format': 'odf_presentation', 'odf_presentation_extraction': True}
+    result: Dict[str, Any] = {'office_format': 'odf_presentation', 'odf_presentation_extraction': True}
     
     try:
         with zipfile.ZipFile(filepath, 'r') as zf:
@@ -1392,7 +1392,7 @@ def _extract_odf_presentation_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_rtf_metadata(filepath: str) -> Dict[str, Any]:
     """Extract RTF document metadata."""
-    result = {'office_format': 'rtf', 'rtf_extraction': True}
+    result: Dict[str, Any] = {'office_format': 'rtf', 'rtf_extraction': True}
     
     try:
         with open(filepath, 'rb') as f:

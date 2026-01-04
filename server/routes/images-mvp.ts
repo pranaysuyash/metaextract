@@ -20,6 +20,8 @@ import {
   sendInvalidRequestError,
   sendInternalServerError,
 } from '../utils/error-response';
+import { freeQuotaMiddleware } from '../middleware/free-quota';
+import { generateClientToken, verifyClientToken, getClientUsage, incrementUsage, handleQuotaExceeded } from '../utils/free-quota-enforcement';
 import { IMAGES_MVP_CREDIT_PACKS, DODO_IMAGES_MVP_PRODUCTS } from '../payments';
 
 // ============================================================================
@@ -792,6 +794,60 @@ export function registerImagesMvpRoutes(app: Express) {
           } catch (error) {
             console.error('Failed to record trial usage:', error);
           }
+        }
+
+        // Check free quota for non-trial users
+        if (!useTrial && !trialEmail) {
+          // Get client IP for usage tracking
+          const ip = req.ip || req.socket.remoteAddress || 'unknown';
+          
+          // Check if user has exceeded free quota
+          let clientToken = req.cookies?.metaextract_client;
+          let decoded = verifyClientToken(clientToken);
+          let isNewToken = false;
+          
+          if (!decoded) {
+            // New user - generate token and allow first request
+            clientToken = generateClientToken();
+            res.cookie('metaextract_client', clientToken, {
+              maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+              path: '/',
+              httpOnly: true,
+              sameSite: 'strict'
+            });
+            decoded = verifyClientToken(clientToken);
+            isNewToken = true;
+          }
+          
+          if (!decoded) {
+            // Should not happen, but just in case
+            return res.status(429).json({
+              error: 'Invalid session',
+              message: 'Please refresh the page to continue.',
+              requires_refresh: true
+            });
+          }
+          
+          // Check quota
+          const usage = await getClientUsage(decoded.clientId);
+          const currentCount = usage?.freeUsed || 0;
+          
+          if (currentCount >= 2) { // CONFIG.FREE_LIMIT
+            // Quota exceeded - show appropriate response
+            await handleQuotaExceeded(req, res, decoded.clientId, ip);
+            return;
+          }
+          
+          // Within quota - proceed but track usage
+          await incrementUsage(decoded.clientId, ip);
+          
+          // Log successful free usage
+          // trackImagesMvpEvent('free_extraction_used', {
+          //   client_id: decoded.clientId,
+          //   ip: ip,
+          //   usage_count: currentCount + 1,
+          //   is_new_token: !clientToken,
+          // });
         }
 
         res.json(metadata);

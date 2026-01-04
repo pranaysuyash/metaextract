@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { db } from './db';
-import { users, subscriptions } from '@shared/schema';
+import { users, subscriptions, creditBalances } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { normalizeTier } from '@shared/tierConfig';
 
@@ -311,6 +311,17 @@ export function registerAuthRoutes(app: Express) {
       // ✅ Use helper to set cookie
       setAuthCookie(res, token);
 
+      // Create initial credit balance for new user
+      try {
+        await db.insert(creditBalances).values({
+          userId: newUser.id,
+          credits: 0, // New users start with 0 credits
+        });
+      } catch (creditError) {
+        console.error('Could not create initial credit balance for user:', creditError);
+        // Continue registration even if credit balance creation fails
+      }
+
       res.status(201).json({
         success: true,
         user: {
@@ -318,6 +329,7 @@ export function registerAuthRoutes(app: Express) {
           email: newUser.email,
           username: newUser.username,
           tier: newUser.tier,
+          credits: 0, // New users start with 0 credits
         },
         token,
       });
@@ -425,6 +437,23 @@ export function registerAuthRoutes(app: Express) {
       // ✅ Use helper to set cookie
       setAuthCookie(res, token);
 
+      // Get user's credit balance
+      let creditBalance = 0;
+      try {
+        const [balance] = await db
+          .select({ credits: creditBalances.credits })
+          .from(creditBalances)
+          .where(eq(creditBalances.userId, user.id))
+          .limit(1);
+
+        if (balance) {
+          creditBalance = balance.credits;
+        }
+      } catch (creditError) {
+        console.warn('Could not fetch credit balance for user:', creditError);
+        // Continue without credit info if there's an error
+      }
+
       res.json({
         success: true,
         user: {
@@ -433,6 +462,7 @@ export function registerAuthRoutes(app: Express) {
           username: user.username,
           tier: currentTier,
           subscriptionStatus,
+          credits: creditBalance, // Include credit balance in user response
         },
         token,
       });

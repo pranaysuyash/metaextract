@@ -301,3 +301,32 @@ export interface PersonaInterpretation {
   warnings: string[];
   recommendations: string[];
 }
+
+// ============================================================================
+// Free Quota Tracking Schema
+// ============================================================================
+
+export const clientUsage = pgTable('client_usage', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').notNull().unique(),
+  freeUsed: integer('free_used').notNull().default(0),
+  lastIp: text('last_ip'),
+  lastUserAgent: text('last_user_agent'),
+  fingerprintHash: varchar('fingerprint_hash', { length: 64 }),
+  abuseScore: text('abuse_score').default('0.00'),
+  firstSeen: timestamp('first_seen').notNull().defaultNow(),
+  lastUsed: timestamp('last_used').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const insertClientUsageSchema = createInsertSchema(clientUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertClientUsage = z.infer<typeof insertClientUsageSchema>;
+export type ClientUsage = typeof clientUsage.$inferSelect;

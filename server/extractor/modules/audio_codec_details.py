@@ -1560,7 +1560,7 @@ def _parse_dsdiff_header(filepath: str) -> Dict[str, Any]:
 def _parse_wave_fmt(data: bytes) -> Dict[str, Any]:
     if len(data) < 16:
         return {}
-    result = {}
+    result: Dict[str, Any] = {}
     audio_format = struct.unpack("<H", data[0:2])[0]
     result["audio_format"] = audio_format
     result["channels"] = struct.unpack("<H", data[2:4])[0]
@@ -2001,7 +2001,7 @@ def extract_audio_codec_details(filepath: str) -> Dict[str, Any]:
     
     Target: ~240 fields
     """
-    result = {
+    result: Dict[str, Any] = {
         "detection": {},
         "id3_details": {},
         "ape_details": {},
@@ -2128,16 +2128,21 @@ def extract_audio_codec_details(filepath: str) -> Dict[str, Any]:
             result["generic_audio"] = extract_generic_audio_properties(primary_stream)
 
         # ReplayGain consolidation
-        replaygain = {}
-        for source in [
-            result["id3_details"].get("id3v2", {}).get("text_frames", {}),
-            result["id3_details"].get("id3v1", {}),
+        replaygain: Dict[str, Any] = {}
+        # Build typed list of candidate sources and skip non-mappings to satisfy static type checks
+        raw_sources = [
+            result.get("id3_details", {}).get("id3v2", {}).get("text_frames", {}),
+            result.get("id3_details", {}).get("id3v1", {}),
             result.get("flac_details", {}).get("vorbis_comments", {}).get("comment_map", {}),
             result.get("vorbis_details", {}).get("vorbis_comments", {}).get("comments", {}),
             result.get("opus_details", {}).get("opus_tags", {}).get("comments", {}),
             result.get("mp4_details", {}).get("tags", {}),
             result.get("ape_details", {}).get("items", {}),
-        ]:
+        ]
+        for src in raw_sources:
+            if not isinstance(src, dict):
+                continue
+            source: Dict[str, Any] = src
             for key, value in source.items():
                 key_lower = key.lower()
                 if "replaygain" in key_lower:
@@ -2190,7 +2195,7 @@ def extract_mp3_details(filepath: str, stream: Dict) -> Dict[str, Any]:
     - Frame header details
     - Encoder delay/padding
     """
-    result = {}
+    result: Dict[str, Any] = {}
     
     # Basic codec info
     result["codec_name"] = stream.get("codec_name")
@@ -2315,7 +2320,7 @@ def extract_mp3_details(filepath: str, stream: Dict) -> Dict[str, Any]:
 
 def parse_mp3_frame_header(header: bytes) -> Dict[str, Any]:
     """Parse MP3 frame header."""
-    result = {}
+    result: Dict[str, Any] = {}
     
     # Byte 1: sync word (0xFF)
     result["sync_word"] = hex(header[0])
@@ -2585,7 +2590,7 @@ def extract_flac_details(filepath: str) -> Dict[str, Any]:
 
 def parse_flac_streaminfo(data: bytes) -> Dict[str, Any]:
     """Parse FLAC STREAMINFO block."""
-    result = {}
+    result: Dict[str, Any] = {}
     
     # Min block size (16 bits)
     result["min_block_size"] = (data[0] << 8) | data[1]
@@ -2627,7 +2632,7 @@ def parse_flac_streaminfo(data: bytes) -> Dict[str, Any]:
 
 def parse_flac_vorbis_comment(data: bytes) -> Dict[str, Any]:
     """Parse FLAC Vorbis comment block."""
-    result = {}
+    result: Dict[str, Any] = {}
     
     try:
         offset = 0
@@ -2646,8 +2651,11 @@ def parse_flac_vorbis_comment(data: bytes) -> Dict[str, Any]:
         offset += 4
         
         result["comment_count"] = comment_count
-        result["comments"] = []
-        result["comment_map"] = {}
+        # Use typed locals to satisfy static type checks
+        comments: List[str] = []
+        comment_map: Dict[str, Any] = {}
+        result["comments"] = comments
+        result["comment_map"] = comment_map
         
         for i in range(comment_count):
             if offset + 4 > len(data):
@@ -2660,17 +2668,17 @@ def parse_flac_vorbis_comment(data: bytes) -> Dict[str, Any]:
                 break
             
             comment = data[offset:offset+comment_len].decode('utf-8', errors='ignore')
-            result["comments"].append(comment)
+            comments.append(comment)
             if "=" in comment:
                 key, val = comment.split("=", 1)
                 key_lower = key.lower()
-                if key_lower in result["comment_map"]:
-                    if isinstance(result["comment_map"][key_lower], list):
-                        result["comment_map"][key_lower].append(val)
+                if key_lower in comment_map:
+                    if isinstance(comment_map[key_lower], list):
+                        comment_map[key_lower].append(val)
                     else:
-                        result["comment_map"][key_lower] = [result["comment_map"][key_lower], val]
+                        comment_map[key_lower] = [comment_map[key_lower], val]
                 else:
-                    result["comment_map"][key_lower] = val
+                    comment_map[key_lower] = val
             offset += comment_len
     
     except Exception as e:
@@ -2897,7 +2905,7 @@ def extract_vorbis_details(filepath: str, stream: Dict, ogg_packets: Optional[Li
 
 def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
     """Extract generic audio properties applicable to all codecs."""
-    result = {}
+    result: Dict[str, Any] = {}
     
     # Codec
     result["codec_name"] = stream.get("codec_name")

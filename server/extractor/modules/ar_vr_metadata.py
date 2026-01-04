@@ -131,7 +131,7 @@ def _detect_ar_vr_format(filepath: str, file_ext: str) -> Optional[str]:
 
 def _extract_obj_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from OBJ files."""
-    obj_data = {'obj_format_present': True}
+    obj_data: Dict[str, Any] = {'obj_format_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -188,10 +188,11 @@ def _extract_obj_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_gltf_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from GLTF/GLB files."""
-    gltf_data = {'gltf_format_present': True}
+    gltf_data: Dict[str, Any] = {'gltf_format_present': True}
 
     try:
         file_ext = Path(filepath).suffix.lower()
+        content: str = ""
 
         if file_ext == '.glb':
             # GLB is binary, extract JSON header
@@ -199,18 +200,30 @@ def _extract_gltf_metadata(filepath: str) -> Dict[str, Any]:
                 # GLB header: magic (4), version (4), length (4)
                 header = f.read(12)
                 if len(header) >= 12:
-                    magic, version, length = struct.unpack('<III', header)
-                    gltf_data['gltf_version'] = version
-                    gltf_data['gltf_total_length'] = length
+                    try:
+                        magic, version, length = struct.unpack('<III', header)
+                        gltf_data['gltf_version'] = version
+                        gltf_data['gltf_total_length'] = length
 
-                    # Find JSON chunk
-                    json_length = struct.unpack('<I', f.read(4))[0]
-                    json_data = f.read(json_length)
-                    content = json_data.decode('utf-8', errors='ignore')
+                        # Find JSON chunk
+                        json_length_bytes = f.read(4)
+                        if len(json_length_bytes) == 4:
+                            json_length = struct.unpack('<I', json_length_bytes)[0]
+                            json_data = f.read(json_length)
+                            content = json_data.decode('utf-8', errors='ignore')
+                    except Exception:
+                        # If parsing fails, leave content empty and let outer except capture the error
+                        content = ""
         else:
             # GLTF is JSON
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
+
+        # Parse JSON content only if present
+        if content:
+            data = json.loads(content)
+        else:
+            gltf_data['gltf_extraction_error'] = 'no gltf content parsed' 
 
         # Parse JSON content
         data = json.loads(content)
@@ -275,7 +288,7 @@ def _extract_gltf_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_fbx_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from FBX files."""
-    fbx_data = {'fbx_format_present': True}
+    fbx_data: Dict[str, Any] = {'fbx_format_present': True}
 
     try:
         with open(filepath, 'rb') as f:
@@ -303,7 +316,7 @@ def _extract_fbx_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_dae_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from COLLADA DAE files."""
-    dae_data = {'dae_format_present': True}
+    dae_data: Dict[str, Any] = {'dae_format_present': True}
 
     try:
         tree = ET.parse(filepath)
@@ -352,7 +365,7 @@ def _extract_dae_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_usd_metadata(filepath: str) -> Dict[str, Any]:
     """Extract metadata from USD files."""
-    usd_data = {'usd_format_present': True}
+    usd_data: Dict[str, Any] = {'usd_format_present': True}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -387,13 +400,13 @@ def _extract_usd_metadata(filepath: str) -> Dict[str, Any]:
 
 def _extract_general_3d_properties(filepath: str) -> Dict[str, Any]:
     """Extract general 3D file properties."""
-    props = {}
+    props: Dict[str, Any] = {}
 
     try:
         stat_info = Path(filepath).stat()
         props['ar_vr_file_size'] = stat_info.st_size
 
-        filename = Path(filepath).name
+        filename: str = Path(filepath).name
         props['ar_vr_filename'] = filename
 
         # Check for common AR/VR naming patterns
@@ -413,9 +426,10 @@ def _extract_general_3d_properties(filepath: str) -> Dict[str, Any]:
 
 def _analyze_ar_vr_features(filepath: str, format_type: Optional[str]) -> Dict[str, Any]:
     """Analyze file for AR/VR specific features."""
-    analysis = {}
+    analysis: Dict[str, Any] = {}
 
     try:
+        content: str = ""
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read(10240)  # Read first 10KB
 
@@ -429,7 +443,7 @@ def _analyze_ar_vr_features(filepath: str, format_type: Optional[str]) -> Dict[s
             'mobile', 'standalone', 'webvr', 'webxr'
         ]
 
-        found_keywords = [kw for kw in ar_vr_keywords if kw in content.lower()]
+        found_keywords: List[str] = [kw for kw in ar_vr_keywords if kw in content.lower()]
         if found_keywords:
             analysis['ar_vr_keywords_found'] = found_keywords
 
@@ -440,7 +454,7 @@ def _analyze_ar_vr_features(filepath: str, format_type: Optional[str]) -> Dict[s
 
         # Look for texture references
         texture_extensions = ['.png', '.jpg', '.jpeg', '.tga', '.dds', '.ktx']
-        texture_refs = 0
+        texture_refs: int = 0
         for ext in texture_extensions:
             texture_refs += content.count(ext)
 
@@ -449,7 +463,7 @@ def _analyze_ar_vr_features(filepath: str, format_type: Optional[str]) -> Dict[s
 
         # Check for audio references
         audio_extensions = ['.wav', '.mp3', '.ogg', '.m4a']
-        audio_refs = 0
+        audio_refs: int = 0
         for ext in audio_extensions:
             audio_refs += content.count(ext)
 

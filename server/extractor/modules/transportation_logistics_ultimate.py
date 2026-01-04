@@ -38,18 +38,20 @@ try:
     import pandas as pd
     PANDAS_AVAILABLE = True
 except ImportError:
+    pd: Any = None
     PANDAS_AVAILABLE = False
 
 try:
     import numpy as np
     NUMPY_AVAILABLE = True
 except ImportError:
+    np: Any = None
     NUMPY_AVAILABLE = False
 
 def extract_transportation_logistics_metadata(filepath: str) -> Dict[str, Any]:
     """Extract comprehensive transportation and logistics metadata"""
     
-    result = {
+    result: Dict[str, Any] = {
         "available": True,
         "transport_type": "unknown",
         "vehicle_telemetry": {},

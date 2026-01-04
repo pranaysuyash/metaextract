@@ -40,24 +40,29 @@ try:
     import torch
     TORCH_AVAILABLE = True
 except ImportError:
+    torch: Any = None
     TORCH_AVAILABLE = False
 
 try:
     import tensorflow as tf
     TENSORFLOW_AVAILABLE = True
 except ImportError:
+    tf: Any = None
     TENSORFLOW_AVAILABLE = False
 
 try:
     import onnx
     ONNX_AVAILABLE = True
 except ImportError:
+    onnx: Any = None
     ONNX_AVAILABLE = False
 
 try:
     from transformers import AutoConfig, AutoTokenizer
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
+    AutoConfig: Any = None
+    AutoTokenizer: Any = None
     TRANSFORMERS_AVAILABLE = False
 
 # Quantum Computing
@@ -65,6 +70,7 @@ try:
     import qiskit
     QISKIT_AVAILABLE = True
 except ImportError:
+    qiskit: Any = None
     QISKIT_AVAILABLE = False
 
 # Extended Reality
@@ -72,6 +78,7 @@ try:
     import open3d
     OPEN3D_AVAILABLE = True
 except ImportError:
+    open3d: Any = None
     OPEN3D_AVAILABLE = False
 
 # IoT and Sensor Data
@@ -79,6 +86,7 @@ try:
     import paho.mqtt.client as mqtt
     MQTT_AVAILABLE = True
 except ImportError:
+    mqtt: Any = None
     MQTT_AVAILABLE = False
 
 # Blockchain/Web3
@@ -95,6 +103,8 @@ try:
     import numpy as np
     OPENCV_AVAILABLE = True
 except ImportError:
+    cv2: Any = None
+    np: Any = None
     OPENCV_AVAILABLE = False
 
 try:
@@ -129,7 +139,7 @@ class AIModelEngine:
             # Load model checkpoint
             checkpoint = torch.load(filepath, map_location='cpu')
             
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "framework": "pytorch",
                 "model_info": {},
@@ -209,7 +219,7 @@ class AIModelEngine:
             return {"available": False, "reason": "tensorflow not installed"}
         
         try:
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "framework": "tensorflow",
                 "model_info": {},
@@ -301,7 +311,7 @@ class AIModelEngine:
         try:
             model = onnx.load(filepath)
             
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "framework": "onnx",
                 "model_info": {},
@@ -395,7 +405,7 @@ class AIModelEngine:
             return {"available": False, "reason": "transformers not installed"}
         
         try:
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "framework": "huggingface",
                 "model_info": {},
@@ -465,7 +475,7 @@ class QuantumComputingEngine:
             with open(filepath, 'r') as f:
                 content = f.read()
             
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "framework": "qiskit",
                 "circuit_info": {},
@@ -533,7 +543,7 @@ class ExtendedRealityEngine:
         try:
             import open3d as o3d
             
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "model_type": "3d_mesh",
                 "geometry_info": {},
@@ -597,7 +607,7 @@ class ExtendedRealityEngine:
     @staticmethod
     def extract_vr_content_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         """Extract VR-specific content metadata"""
-        result = {
+        result: Dict[str, Any] = {
             "available": True,
             "content_type": "vr",
             "immersive_properties": {},
@@ -632,7 +642,7 @@ class IoTSensorEngine:
     def extract_sensor_data_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         """Extract IoT sensor telemetry metadata"""
         try:
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "sensor_type": "unknown",
                 "telemetry_info": {},
@@ -747,7 +757,7 @@ class BlockchainWeb3Engine:
             with open(filepath, 'r') as f:
                 data = json.load(f)
             
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "asset_type": "nft",
                 "nft_standard": "unknown",
@@ -806,7 +816,7 @@ class BlockchainWeb3Engine:
             with open(filepath, 'r') as f:
                 content = f.read()
             
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "contract_type": "smart_contract",
                 "language": "unknown",
@@ -875,7 +885,7 @@ class BiometricDataEngine:
     def extract_biometric_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         """Extract biometric data metadata"""
         try:
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "biometric_type": "unknown",
                 "data_format": {},
@@ -966,7 +976,7 @@ class SatelliteRemoteSensingEngine:
             from rasterio.enums import Resampling
             
             with rasterio.open(filepath) as src:
-                result = {
+                result: Dict[str, Any] = {
                     "available": True,
                     "data_type": "satellite_imagery",
                     "satellite_info": {},
@@ -1078,7 +1088,7 @@ class SyntheticMediaEngine:
     def detect_synthetic_content(filepath: str) -> Optional[Dict[str, Any]]:
         """Detect potential synthetic/AI-generated content"""
         try:
-            result = {
+            result: Dict[str, Any] = {
                 "available": True,
                 "analysis_type": "synthetic_media_detection",
                 "ai_indicators": {},
@@ -1230,7 +1240,7 @@ class EmergingTechnologyExtractor:
     def extract_emerging_metadata(self, filepath: str) -> Dict[str, Any]:
         """Extract metadata using all emerging technology engines"""
         
-        result = {
+        result: Dict[str, Any] = {
             "emerging_technology_analysis": {
                 "version": "1.0.0",
                 "engines_available": {
