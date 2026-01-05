@@ -155,7 +155,9 @@ export function SimpleUploadZone() {
     const startedAt = Date.now();
 
     // Get session ID for WebSocket progress tracking
-    const sessionId = getImagesMvpSessionId() || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId =
+      getImagesMvpSessionId() ||
+      `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setCurrentSessionId(sessionId);
     setShowProgressTracker(true);
     const formData = new FormData();
@@ -184,7 +186,7 @@ export function SimpleUploadZone() {
       const data = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
-        xhr.upload.onprogress = (event) => {
+        xhr.upload.onprogress = event => {
           if (event.lengthComputable) {
             const percentComplete = (event.loaded / event.total) * 100;
             setUploadProgress(percentComplete);
@@ -194,7 +196,9 @@ export function SimpleUploadZone() {
         xhr.onload = () => {
           let responseData;
           try {
-            responseData = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+            responseData = xhr.responseText
+              ? JSON.parse(xhr.responseText)
+              : null;
           } catch {
             responseData = null;
           }
@@ -206,14 +210,14 @@ export function SimpleUploadZone() {
               typeof responseData?.error === 'string'
                 ? responseData.error
                 : responseData?.error?.message ||
-                responseData?.message ||
-                xhr.responseText ||
-                'Extraction failed';
+                  responseData?.message ||
+                  xhr.responseText ||
+                  'Extraction failed';
 
             reject({
               status: xhr.status,
               message: errorMessage,
-              data: responseData
+              data: responseData,
             });
           }
         };
@@ -255,7 +259,7 @@ export function SimpleUploadZone() {
 
       trackImagesMvpEvent('analysis_completed', {
         success: false,
-        status: status,
+        status,
         error_message: errorMessage,
         extension,
         mime_type: mimeType,
@@ -284,7 +288,10 @@ export function SimpleUploadZone() {
       setShowProgressTracker(false); // Hide progress tracker on error
       setTimeout(() => setUploadError(false), 3000);
 
-      if (errorMessage.toLowerCase().includes('failed to fetch') || errorMessage === 'Network error') {
+      if (
+        errorMessage.toLowerCase().includes('failed to fetch') ||
+        errorMessage === 'Network error'
+      ) {
         toast({
           title: 'Backend unavailable',
           description:
@@ -304,7 +311,7 @@ export function SimpleUploadZone() {
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto">
+    <div className="w-full max-w-lg mx-auto px-4 sm:px-0">
       <TrialAccessModal
         isOpen={showTrialModal}
         onClose={() => {
@@ -326,7 +333,7 @@ export function SimpleUploadZone() {
 
       {/* Real-time Progress Tracker */}
       {showProgressTracker && currentSessionId && (
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <ProgressTracker sessionId={currentSessionId} />
         </div>
       )}
@@ -343,7 +350,7 @@ export function SimpleUploadZone() {
         tabIndex={0}
         aria-label="Upload image drop zone. Drag and drop a file here or press enter to browse."
         className={cn(
-          'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black',
+          'relative border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[240px] sm:min-h-auto',
           isUploading
             ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
             : isDragActive
@@ -357,26 +364,32 @@ export function SimpleUploadZone() {
           className="hidden"
           accept={SUPPORTED_EXTENSIONS.join(',')}
           onChange={handleFileSelect}
+          title="Upload image"
         />
 
         {isUploading ? (
           <>
             {/* Progress bar background */}
-            <div className="absolute inset-0 bg-black/20 rounded-xl" />
+            <div className="absolute inset-0 bg-black/20 rounded-lg sm:rounded-xl" />
             {/* Progress bar fill */}
             <motion.div
-              className={`absolute left-0 top-0 h-full rounded-xl ${uploadError
-                ? 'bg-gradient-to-r from-red-500/40 to-red-500/20'
-                : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'
-                }`}
+              className={`absolute left-0 top-0 h-full rounded-lg sm:rounded-xl ${
+                uploadError
+                  ? 'bg-gradient-to-r from-red-500/40 to-red-500/20'
+                  : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'
+              }`}
               initial={{ width: '0%' }}
               animate={{ width: `${uploadProgress}%` }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
             />
             {/* Content overlay */}
-            <div className="relative flex flex-col items-center justify-center gap-4 w-full h-full">
-              <p className="text-white font-mono text-sm">
-                {uploadError ? 'Upload Failed' : (uploadProgress < 100 ? 'Uploading...' : 'Extracting Metadata...')}
+            <div className="relative flex flex-col items-center justify-center gap-3 sm:gap-4 w-full h-full">
+              <p className="text-white font-mono text-xs sm:text-sm">
+                {uploadError
+                  ? 'Upload Failed'
+                  : uploadProgress < 100
+                    ? 'Uploading...'
+                    : 'Extracting Metadata...'}
               </p>
               <span
                 className={`text-xs font-mono ${uploadError ? 'text-red-300' : 'text-emerald-300'}`}
@@ -387,24 +400,28 @@ export function SimpleUploadZone() {
           </>
         ) : (
           <>
-            <div className="mb-4">
-              <div className="w-16 h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <Upload className="w-8 h-8 text-primary" aria-hidden="true" />
+            <div className="mb-3 sm:mb-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                <Upload
+                  className="w-6 h-6 sm:w-8 sm:h-8 text-primary"
+                  aria-hidden="true"
+                />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
               Drop your image here
             </h3>
-            <p className="text-slate-300 text-sm mb-6">
-              Supports popular photo formats: JPG, PNG, HEIC (iPhone), WebP{' '}
-              <br />
+            <p className="text-slate-300 text-xs sm:text-sm mb-4 sm:mb-6">
+              Supports JPG, PNG, HEIC, WebP <br className="hidden sm:block" />
               <span className="text-primary text-xs font-mono mt-1 block">
-                <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 Free Checks Included
+                <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 Free
+                Checks
               </span>
             </p>
             <Button
               variant="outline"
-              className="border-white/10 hover:bg-white/5 hover:text-white"
+              size="default"
+              className="border-white/10 hover:bg-white/5 hover:text-white w-full sm:w-auto"
             >
               Browse Files
             </Button>

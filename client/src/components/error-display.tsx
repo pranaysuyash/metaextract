@@ -172,7 +172,7 @@ export function ErrorAlert({
                       key={index}
                       className="flex items-start gap-2 text-sm text-slate-300"
                     >
-                      <CheckCircle className="w-4 h-4 mt-0.5 text-slate-500 flex-shrink-0" />
+                      <CheckCircle className="w-4 h-4 mt-0.5 text-slate-500 shrink-0" />
                       {suggestion}
                     </li>
                   ))}
@@ -299,14 +299,16 @@ export function ErrorToast({
       role="alert"
     >
       <div className="flex items-start gap-3">
-        <Icon className={cn('w-5 h-5 flex-shrink-0', colors.icon)} />
+        <Icon className={cn('w-5 h-5 shrink-0', colors.icon)} />
         <div className="flex-1">
           <p className="font-medium text-white">{error.title}</p>
           <p className={cn('text-sm mt-1', colors.text)}>{error.message}</p>
         </div>
         <button
+          type="button"
           onClick={onDismiss}
           className="text-slate-400 hover:text-white transition-colors"
+          aria-label="Dismiss error"
         >
           <X className="w-4 h-4" />
         </button>
@@ -357,7 +359,7 @@ export function FullPageError({
                 key={index}
                 className="flex items-start gap-2 text-sm text-slate-300"
               >
-                <CheckCircle className="w-4 h-4 mt-0.5 text-slate-500 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 mt-0.5 text-slate-500 shrink-0" />
                 {suggestion}
               </li>
             ))}

@@ -826,8 +826,8 @@ export default function ImagesMvpResults() {
 
     return (
         <Layout showHeader={true} showFooter={true}>
-            <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
-                <div className="container mx-auto px-4 max-w-4xl">
+            <div className="min-h-screen bg-[#0B0C10] text-white pt-16 sm:pt-20 pb-20">
+                <div className="container mx-auto px-3 sm:px-4 max-w-4xl">
                     <PricingModal
                         isOpen={showPricingModal}
                         onClose={() => setShowPricingModal(false)}
@@ -888,21 +888,21 @@ export default function ImagesMvpResults() {
                     </Dialog>
 
                     {/* Header */}
-                    <div className="mb-8 flex flex-col gap-4">
+                    <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4">
                         <div className="min-w-full">
-                            <h1 className="text-2xl font-bold flex items-center gap-2">
-                                <FileImage className="w-6 h-6 text-primary shrink-0" />
-                                <span title={metadata.filename}>{metadata.filename}</span>
+                            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 break-words">
+                                <FileImage className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+                                <span title={metadata.filename} className="line-clamp-2">{metadata.filename}</span>
                             </h1>
-                            <p className="text-slate-300 text-sm font-mono mt-1 truncate">
+                            <p className="text-slate-300 text-xs sm:text-sm font-mono mt-1 break-words">
                                 {metadata.filesize} • {metadata.mime_type}
                             </p>
                         </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap items-center">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap items-stretch sm:items-center w-full sm:w-auto">
                             <Button
                                 variant="outline"
                                 onClick={() => navigate('/images_mvp')}
-                                className="border-white/10 hover:bg-white/5"
+                                className="border-white/10 hover:bg-white/5 w-full sm:w-auto"
                             >
                                 Analyze Another Photo
                             </Button>
@@ -910,10 +910,10 @@ export default function ImagesMvpResults() {
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="border-white/10 hover:bg-white/5 flex items-center gap-2"
+                                        className="border-white/10 hover:bg-white/5 flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-between"
                                     >
                                         <Clipboard className="w-4 h-4" />
-                                        Summary actions
+                                        <span className="flex-1 sm:flex-none">Summary actions</span>
                                         <ChevronDown className="w-4 h-4 text-slate-300" />
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -932,10 +932,10 @@ export default function ImagesMvpResults() {
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="border-white/10 hover:bg-white/5 flex items-center gap-2"
+                                        className="border-white/10 hover:bg-white/5 flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-between"
                                     >
                                         <Download className="w-4 h-4" />
-                                        Export data
+                                        <span className="flex-1 sm:flex-none">Export data</span>
                                         <ChevronDown className="w-4 h-4 text-slate-300" />
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -1075,50 +1075,53 @@ export default function ImagesMvpResults() {
                         </CardContent>
                     </Card>
 
-                    <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
-                            <span>Focus: {purposeLabel}</span>
-                            <Button
-                                variant="ghost"
-                                className="text-slate-300 hover:text-white h-7 px-2"
-                                onClick={() => {
-                                    trackEvent("purpose_prompt_opened", { location: "results" });
-                                    setShowPurposeModal(true);
-                                }}
+                    <div className="mb-4 flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 font-mono">
+                                <span className="whitespace-nowrap">Focus: {purposeLabel}</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-slate-300 hover:text-white h-7 px-2 text-xs"
+                                    onClick={() => {
+                                        trackEvent("purpose_prompt_opened", { location: "results" });
+                                        setShowPurposeModal(true);
+                                    }}
+                                >
+                                    Change focus
+                                </Button>
+                            </div>
+                            <ToggleGroup
+                                type="single"
+                                value={densityMode}
+                                onValueChange={handleDensityChange}
+                                className="bg-[#121217] border border-white/10 rounded-lg p-1 w-fit"
                             >
-                                Change focus
-                            </Button>
+                                <ToggleGroupItem
+                                    value="normal"
+                                    className="text-xs px-2 sm:px-3 py-1 text-slate-300 data-[state=on]:bg-white/10 data-[state=on]:text-white"
+                                >
+                                    Normal
+                                </ToggleGroupItem>
+                                <ToggleGroupItem
+                                    value="advanced"
+                                    className="text-xs px-2 sm:px-3 py-1 text-slate-300 data-[state=on]:bg-white/10 data-[state=on]:text-white"
+                                >
+                                    Advanced
+                                </ToggleGroupItem>
+                            </ToggleGroup>
                         </div>
-                        <ToggleGroup
-                            type="single"
-                            value={densityMode}
-                            onValueChange={handleDensityChange}
-                            className="bg-[#121217] border border-white/10 rounded-lg p-1"
-                        >
-                            <ToggleGroupItem
-                                value="normal"
-                                className="text-xs px-3 py-1 text-slate-300 data-[state=on]:bg-white/10 data-[state=on]:text-white"
-                            >
-                                Normal
-                            </ToggleGroupItem>
-                            <ToggleGroupItem
-                                value="advanced"
-                                className="text-xs px-3 py-1 text-slate-300 data-[state=on]:bg-white/10 data-[state=on]:text-white"
-                            >
-                                Advanced
-                            </ToggleGroupItem>
-                        </ToggleGroup>
                     </div>
 
                     <Tabs value={activeTab} onValueChange={(v) => (isTabValue(v) ? setActiveTab(v) : undefined)} className="w-full">
-                        <TabsList className="bg-[#121217] border border-white/5" aria-label="Metadata categories">
-                            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-                            <TabsTrigger value="authenticity">Authenticity</TabsTrigger>
-                            <TabsTrigger value="photography">Photography</TabsTrigger>
+                        <TabsList className="bg-[#121217] border border-white/5 overflow-x-auto flex-nowrap" aria-label="Metadata categories">
+                            <TabsTrigger value="privacy" className="text-xs sm:text-sm whitespace-nowrap">Privacy</TabsTrigger>
+                            <TabsTrigger value="authenticity" className="text-xs sm:text-sm whitespace-nowrap">Authenticity</TabsTrigger>
+                            <TabsTrigger value="photography" className="text-xs sm:text-sm whitespace-nowrap">Photography</TabsTrigger>
                             {isAdvanced && (
-                                <TabsTrigger value="raw">
-                                    <span className="inline-flex items-center gap-2">
-                                        {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" aria-hidden="true" />}
+                                <TabsTrigger value="raw" className="text-xs sm:text-sm whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1 sm:gap-2">
+                                        {!canExport && <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70" aria-hidden="true" />}
                                         Raw
                                     </span>
                                 </TabsTrigger>

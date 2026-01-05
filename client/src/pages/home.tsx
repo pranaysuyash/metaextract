@@ -25,7 +25,6 @@ import {
   Terminal,
   Cpu,
   Share2,
-  FileCode,
   ShieldAlert,
   Zap,
   CheckCircle2,
@@ -106,8 +105,6 @@ export default function Home() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading } = useAuth();
 
-
-
   const handleUploadResults = (results: any[]) => {
     if (results.length > 0) {
       const result = results[0];
@@ -178,11 +175,11 @@ export default function Home() {
   const handleCheckout = async (tier: string) => {
     if (tier === 'free') {
       // Check for reduced motion preference
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
       const behavior = prefersReducedMotion ? 'auto' : 'smooth';
-      document
-        .getElementById('enhanced-upload')
-        ?.scrollIntoView({ behavior });
+      document.getElementById('enhanced-upload')?.scrollIntoView({ behavior });
       return;
     }
 
@@ -197,7 +194,9 @@ export default function Home() {
       // Check if response is ok before parsing JSON
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json().catch(() => {
@@ -667,7 +666,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
 
                 <div className="flex items-center gap-2 mb-4 text-emerald-500 font-mono text-xs">
-                  <FileCode className="w-4 h-4" />
+                  <Terminal className="w-4 h-4" />
                   <span>BINARY_LEVEL_ACCESS</span>
                 </div>
 
