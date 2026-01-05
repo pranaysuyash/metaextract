@@ -129,14 +129,18 @@ function getBaseUrl(): string {
 const processedWebhooks = new Map<string, number>();
 
 // Clean up old entries every 1 hour (webhooks expire after 5 min anyway)
-setInterval(() => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  for (const [webhookId, processedTime] of processedWebhooks.entries()) {
-    if (processedTime < oneHourAgo) {
-      processedWebhooks.delete(webhookId);
+// In tests, avoid keeping the event loop alive.
+if (process.env.NODE_ENV !== 'test') {
+  const timer = setInterval(() => {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    for (const [webhookId, processedTime] of processedWebhooks.entries()) {
+      if (processedTime < oneHourAgo) {
+        processedWebhooks.delete(webhookId);
+      }
     }
-  }
-}, 60 * 60 * 1000);
+  }, 60 * 60 * 1000);
+  timer.unref?.();
+}
 
 // ============================================================================
 // Route Registration

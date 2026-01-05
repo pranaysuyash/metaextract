@@ -253,81 +253,91 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   // WebSocket: Real-time Progress Tracking
   // ---------------------------------------------------------------------------
-  (app as any).ws('/api/images_mvp/progress/:sessionId', (ws: WebSocket, req: Request) => {
-    const sessionId = req.params.sessionId;
-    if (!sessionId) {
-      ws.close(1002, 'Session ID required');
-      return;
-    }
-
-    // Add connection to active connections
-    const connection: ProgressConnection = {
-      ws,
-      sessionId,
-      startTime: Date.now()
-    };
-
-    if (!activeConnections.has(sessionId)) {
-      activeConnections.set(sessionId, []);
-    }
-    activeConnections.get(sessionId)!.push(connection);
-
-    // Send initial connection confirmation
-    ws.send(JSON.stringify({
-      type: 'connected',
-      sessionId,
-      timestamp: Date.now()
-    }));
-
-    // Handle incoming messages (if needed for client acknowledgments)
-    ws.on('message', (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        if (message.type === 'ping') {
-          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+  if (typeof (app as any).ws === 'function') {
+    (app as any).ws(
+      '/api/images_mvp/progress/:sessionId',
+      (ws: WebSocket, req: Request) => {
+        const sessionId = req.params.sessionId;
+        if (!sessionId) {
+          ws.close(1002, 'Session ID required');
+          return;
         }
-      } catch (error) {
-        console.error('WebSocket message parsing error:', error);
-      }
-    });
 
-    // Handle connection close
-    ws.on('close', () => {
-      const connections = activeConnections.get(sessionId);
-      if (connections) {
-        const index = connections.indexOf(connection);
-        if (index > -1) {
-          connections.splice(index, 1);
-        }
-        if (connections.length === 0) {
-          activeConnections.delete(sessionId);
-        }
-      }
-    });
-
-    // Handle connection errors
-    ws.on('error', (error) => {
-      console.error('WebSocket error for session', sessionId, ':', error);
-      cleanupConnections(sessionId);
-    });
-
-    // Send periodic progress updates (every 2 seconds)
-    const progressInterval = setInterval(() => {
-      if (ws.readyState === 1) { // WebSocket.OPEN
-        ws.send(JSON.stringify({
-          type: 'heartbeat',
+        // Add connection to active connections
+        const connection: ProgressConnection = {
+          ws,
           sessionId,
-          timestamp: Date.now()
-        }));
-      } else {
-        clearInterval(progressInterval);
-      }
-    }, 2000);
+          startTime: Date.now(),
+        };
 
-    ws.on('close', () => {
-      clearInterval(progressInterval);
-    });
-  });
+        if (!activeConnections.has(sessionId)) {
+          activeConnections.set(sessionId, []);
+        }
+        activeConnections.get(sessionId)!.push(connection);
+
+        // Send initial connection confirmation
+        ws.send(
+          JSON.stringify({
+            type: 'connected',
+            sessionId,
+            timestamp: Date.now(),
+          })
+        );
+
+        // Handle incoming messages (if needed for client acknowledgments)
+        ws.on('message', data => {
+          try {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'ping') {
+              ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+            }
+          } catch (error) {
+            console.error('WebSocket message parsing error:', error);
+          }
+        });
+
+        // Handle connection close
+        ws.on('close', () => {
+          const connections = activeConnections.get(sessionId);
+          if (connections) {
+            const index = connections.indexOf(connection);
+            if (index > -1) {
+              connections.splice(index, 1);
+            }
+            if (connections.length === 0) {
+              activeConnections.delete(sessionId);
+            }
+          }
+        });
+
+        // Handle connection errors
+        ws.on('error', error => {
+          console.error('WebSocket error for session', sessionId, ':', error);
+          cleanupConnections(sessionId);
+        });
+
+        // Send periodic progress updates (every 2 seconds)
+        const progressInterval = setInterval(() => {
+          if (ws.readyState === 1) {
+            // WebSocket.OPEN
+            ws.send(
+              JSON.stringify({
+                type: 'heartbeat',
+                sessionId,
+                timestamp: Date.now(),
+              })
+            );
+          } else {
+            clearInterval(progressInterval);
+          }
+        }, 2000);
+
+        ws.on('close', () => {
+          clearInterval(progressInterval);
+        });
+      }
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Analytics: Track UI Events (Images MVP)
@@ -822,11 +832,33 @@ export function registerImagesMvpRoutes(app: Express) {
         } else if (hasTrialAvailable) {
           useTrial = true;
         } else {
+          if (trialEmail) {
+            // Trial email provided but trial is exhausted: require credits (do not stack free quota).
+            if (!sessionId) {
+              return sendQuotaExceededError(
+                res,
+                'Trial limit reached. Purchase credits to continue.'
+              );
+            }
+
+            const namespacedSessionId = getImagesMvpBalanceId(sessionId);
+            const balance =
+              await storage.getOrCreateCreditBalance(namespacedSessionId);
+            creditBalanceId = balance?.id ?? null;
+
+            if (!balance || balance.credits < creditCost) {
+              return sendQuotaExceededError(
+                res,
+                `Insufficient credits (required: ${creditCost}, available: ${balance?.credits ?? 0})`
+              );
+            }
+            chargeCredits = true;
+          } else {
           // No trial available: allow up to 2 free extractions per device, then require credits.
           const ip = req.ip || req.socket.remoteAddress || 'unknown';
 
           let clientToken = req.cookies?.metaextract_client;
-          let decoded = verifyClientToken(clientToken);
+          let decoded = verifyClientToken(clientToken ?? '');
 
           if (!decoded) {
             clientToken = generateClientToken();
@@ -872,6 +904,7 @@ export function registerImagesMvpRoutes(app: Express) {
               return;
             }
             chargeCredits = true;
+          }
           }
         }
 

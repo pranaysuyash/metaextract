@@ -11,7 +11,7 @@
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
 import { storage } from '../storage';
-import { authenticateToken } from '../auth';
+import { requireAuth } from '../auth';
 import { rateLimitAPI } from '../rateLimitMiddleware';
 
 // ============================================================================
@@ -224,7 +224,7 @@ export function registerLegalComplianceRoutes(app: Express): void {
   });
 
   // GDPR Compliance Requests (authenticated users only)
-  app.post('/api/legal/gdpr', authenticateToken, legalRateLimiter, async (req: Request, res: Response) => {
+  app.post('/api/legal/gdpr', requireAuth, legalRateLimiter, async (req: Request, res: Response) => {
     try {
       const validationResult = gdprRequestSchema.safeParse(req.body);
       if (!validationResult.success) {
