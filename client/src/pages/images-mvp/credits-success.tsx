@@ -78,6 +78,9 @@ export default function ImagesMvpCreditsSuccess() {
             <p className="text-xs text-slate-500">
               Credits apply only to the Images MVP tool.
             </p>
+            <p className="text-xs text-slate-500 mt-2">
+              Refunds are available within 7 days for unused credit packs only. If any credits are used, the purchase is non-refundable.
+            </p>
           </div>
 
           <Button
