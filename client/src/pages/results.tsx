@@ -635,6 +635,10 @@ export default function Results() {
 
   const filterFields = (fields: Record<string, any>) => {
     if (!fields) return [];
+    // If no search query, return all fields (excluding internal ones)
+    if (!searchQuery.trim()) {
+      return Object.entries(fields).filter(([key]) => !key.startsWith('_'));
+    }
     return Object.entries(fields).filter(([key, val]) => {
       if (key.startsWith('_')) return false;
       const searchLower = searchQuery.toLowerCase();
