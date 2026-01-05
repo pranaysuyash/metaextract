@@ -35,6 +35,20 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  if (process.env.IMAGES_MVP_ONLY === 'true') {
+    registerImagesMvpRoutes(app);
+
+    app.get('/api/health', (_req, res) => {
+      res.json({
+        status: 'ok',
+        service: 'MetaExtract Images MVP API',
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    return httpServer;
+  }
+
   // Initialize rate limiter
   await rateLimitManager.initialize();
 

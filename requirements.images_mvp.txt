@@ -1,0 +1,20 @@
+# Images MVP - Minimal Python Dependencies
+#
+# Goal: support `server/routes/images-mvp.ts` extraction path while keeping
+# the deploy footprint small (avoid heavy scientific/ML stacks used elsewhere).
+#
+# Notes:
+# - Full IPTC/XMP is extracted via the `exiftool` system binary (installed via Nixpacks/Docker),
+#   so we do not depend on Python XMP/IPTC libraries here.
+# - The core engine is designed to degrade gracefully when optional libs are missing.
+
+# Core image parsing
+pillow>=10.0.0
+pillow-heif>=0.16.0
+exifread>=3.0.0
+python-magic>=0.4.27
+piexif>=1.1.3
+imagehash>=4.3.0
+
+# Operational helpers (lightweight)
+psutil>=5.9.0
