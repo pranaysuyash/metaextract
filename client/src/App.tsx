@@ -20,6 +20,9 @@ import ImagesMvpAnalytics from "@/pages/images-mvp/analytics";
 import DashboardImproved from "@/pages/dashboard-improved";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CreditsSuccess from "@/pages/credits-success";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsOfService from "@/pages/terms-of-service";
+import GDPRCompliance from "@/pages/gdpr-compliance";
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -97,6 +100,12 @@ function AppRouter() {
           <Route path="/images-mvp/results" element={<Navigate to="/images_mvp/results" replace />} />
           <Route path="/images-mvp/credits/success" element={<Navigate to="/images_mvp/credits/success" replace />} />
           <Route path="/images-mvp/analytics" element={<Navigate to="/images_mvp/analytics" replace />} />
+
+          {/* Legal Compliance Routes */}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/gdpr" element={<GDPRCompliance />} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

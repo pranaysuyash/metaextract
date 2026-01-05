@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { TrialAccessModal } from '@/components/trial-access-modal';
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
+import { ProgressTracker } from '@/components/images-mvp/progress-tracker';
 import {
   getFileSizeBucket,
   getImagesMvpSessionId,
@@ -41,6 +42,8 @@ export function SimpleUploadZone() {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string>('');
+  const [showProgressTracker, setShowProgressTracker] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -124,13 +127,10 @@ export function SimpleUploadZone() {
     setUploadProgress(0);
     const startedAt = Date.now();
 
-    // Simulate progress over time
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        const next = prev + Math.random() * 30;
-        return next > 90 ? 90 : next;
-      });
-    }, 300);
+    // Get session ID for WebSocket progress tracking
+    const sessionId = getImagesMvpSessionId() || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setCurrentSessionId(sessionId);
+    setShowProgressTracker(true);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('trial_email', email);
@@ -138,11 +138,8 @@ export function SimpleUploadZone() {
       formData.append('client_last_modified', String(file.lastModified));
     }
 
-    // Get session ID (reuse main app session logic)
-    const sessionId = getImagesMvpSessionId();
-    if (sessionId) {
-      formData.append('session_id', sessionId);
-    }
+    // Add session ID for WebSocket progress tracking
+    formData.append('session_id', sessionId);
 
     const sizeBucket = getFileSizeBucket(file.size);
     const mimeType = file.type || 'application/octet-stream';
@@ -205,6 +202,7 @@ export function SimpleUploadZone() {
           return;
         }
         setUploadError(true);
+        setShowProgressTracker(false); // Hide progress tracker on error
         setTimeout(() => setUploadError(false), 3000);
         throw new Error(errorMessage);
       }
@@ -227,7 +225,8 @@ export function SimpleUploadZone() {
 
       setUploadProgress(100);
       sessionStorage.setItem('currentMetadata', JSON.stringify(data));
-      // Wait a moment to show 100% before navigating
+      // Hide progress tracker and navigate to results
+      setShowProgressTracker(false);
       setTimeout(() => {
         navigate('/images_mvp/results', { state: { metadata: data } });
       }, 500);
@@ -236,6 +235,7 @@ export function SimpleUploadZone() {
       const fallbackMessage =
         typeof err?.message === 'string' ? err.message : 'Network error';
       setUploadError(true);
+      setShowProgressTracker(false); // Hide progress tracker on error
       setTimeout(() => setUploadError(false), 3000);
       if (fallbackMessage.toLowerCase().includes('failed to fetch')) {
         toast({
@@ -252,7 +252,6 @@ export function SimpleUploadZone() {
         variant: 'destructive',
       });
     } finally {
-      clearInterval(progressInterval);
       setIsUploading(false);
     }
   };
@@ -277,6 +276,13 @@ export function SimpleUploadZone() {
         onClose={() => setShowPricingModal(false)}
         defaultEmail={trialEmail || undefined}
       />
+
+      {/* Real-time Progress Tracker */}
+      {showProgressTracker && currentSessionId && (
+        <div className="mb-6">
+          <ProgressTracker sessionId={currentSessionId} />
+        </div>
+      )}
 
       <div
         onDragOver={onDragOver}

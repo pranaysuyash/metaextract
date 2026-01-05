@@ -121,6 +121,24 @@ function getBaseUrl(): string {
 }
 
 // ============================================================================
+// Webhook Idempotency Store
+// ============================================================================
+
+// In-memory store to prevent duplicate webhook processing
+// Maps webhook ID to the timestamp it was processed
+const processedWebhooks = new Map<string, number>();
+
+// Clean up old entries every 1 hour (webhooks expire after 5 min anyway)
+setInterval(() => {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  for (const [webhookId, processedTime] of processedWebhooks.entries()) {
+    if (processedTime < oneHourAgo) {
+      processedWebhooks.delete(webhookId);
+    }
+  }
+}, 60 * 60 * 1000);
+
+// ============================================================================
 // Route Registration
 // ============================================================================
 
@@ -502,12 +520,26 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid webhook signature' });
       }
 
+      // ✅ IDEMPOTENCY CHECK: Prevent duplicate webhook processing
+      // If we've already processed this webhook ID recently, skip it
+      if (processedWebhooks.has(webhookId)) {
+        console.log('Webhook already processed (duplicate):', {
+          id: webhookId,
+          type: req.body?.type,
+        });
+        // Return 200 OK to acknowledge receipt without reprocessing
+        return res.json({ received: true, duplicate: true });
+      }
+
       // Log webhook receipt
       console.log('Webhook received and verified:', {
         id: webhookId,
         type: req.body?.type,
         timestamp: webhookTimestamp,
       });
+
+      // Mark this webhook as processed
+      processedWebhooks.set(webhookId, Date.now());
 
       const event = req.body;
 

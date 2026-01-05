@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, Share2, CheckCircle2, Hash, Fingerprint, Search, Info, Clipboard, Upload } from "lucide-react";
+import { MapPin, Camera, Calendar, FileImage, ShieldAlert, Lock, ArrowRight, CheckCircle2, Hash, Fingerprint, Search, Info, Clipboard, Upload, ChevronDown, Download, FileJson, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -16,6 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { trackImagesMvpEvent } from "@/lib/images-mvp-analytics";
 
@@ -297,6 +303,26 @@ export default function ImagesMvpResults() {
         const baseName = metadata.filename?.replace(/\.[^/.]+$/, "") || "metadata";
         link.href = url;
         link.download = `${baseName}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDownloadFullTxt = () => {
+        if (!canExport) {
+            return;
+        }
+        trackEvent("export_full_txt_downloaded", {
+            filetype: metadata.filetype,
+            mime_type: metadata.mime_type,
+            purpose: purpose || "unset",
+        });
+        const payload = JSON.stringify(metadata, null, 2);
+        const blob = new Blob([payload], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const baseName = metadata.filename?.replace(/\.[^/.]+$/, "") || "metadata";
+        link.href = url;
+        link.download = `${baseName}-full.txt`;
         link.click();
         URL.revokeObjectURL(url);
     };
@@ -864,7 +890,7 @@ export default function ImagesMvpResults() {
                                 {metadata.filesize} • {metadata.mime_type}
                             </p>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap items-center">
                             <Button
                                 variant="outline"
                                 onClick={() => navigate('/images_mvp')}
@@ -872,31 +898,56 @@ export default function ImagesMvpResults() {
                             >
                                 Analyze Another Photo
                             </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleCopySummary}
-                                className="border-white/10 hover:bg-white/5"
-                            >
-                                <Clipboard className="w-4 h-4 mr-2" />
-                                Copy Summary
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleDownloadSummary}
-                                className="border-white/10 hover:bg-white/5"
-                            >
-                                <ArrowRight className="w-4 h-4 mr-2" />
-                                Download Summary
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleDownloadJson}
-                                disabled={!canExport}
-                                className="border-white/10 hover:bg-white/5"
-                            >
-                                <Share2 className="w-4 h-4 mr-2" />
-                                Download JSON
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="border-white/10 hover:bg-white/5 flex items-center gap-2"
+                                    >
+                                        <Clipboard className="w-4 h-4" />
+                                        Summary actions
+                                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="border-[#1b1b24] bg-[#050608] text-white">
+                                    <DropdownMenuItem onSelect={handleCopySummary}>
+                                        <Clipboard className="w-4 h-4 text-slate-400" />
+                                        Copy summary
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={handleDownloadSummary}>
+                                        <FileText className="w-4 h-4 text-slate-400" />
+                                        Download summary
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="border-white/10 hover:bg-white/5 flex items-center gap-2"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Export data
+                                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="border-[#1b1b24] bg-[#050608] text-white">
+                                    <DropdownMenuItem
+                                        onSelect={handleDownloadJson}
+                                        disabled={!canExport}
+                                    >
+                                        <FileJson className="w-4 h-4 text-slate-400" />
+                                        Download JSON
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onSelect={handleDownloadFullTxt}
+                                        disabled={!canExport}
+                                    >
+                                        <FileText className="w-4 h-4 text-slate-400" />
+                                        Download full report (txt)
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                     {!canExport && (
