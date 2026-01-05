@@ -65,14 +65,20 @@ export function extractKeyFindings(metadata: any): KeyFindings {
  * Format datetime original into readable format
  * e.g., "January 3, 2025 at 3:45 PM"
  */
-function formatDateTimeOriginal(metadata: any): string | null {
+export function formatDateTimeOriginal(metadata: any): string | null {
   try {
     // Try EXIF DateTimeOriginal first (most accurate)
     const dateTimeOriginal = metadata?.exif?.DateTimeOriginal ||
                             metadata?.metadata?.exif?.DateTimeOriginal;
     if (dateTimeOriginal) {
       const date = parseExifDate(dateTimeOriginal);
-      return formatDateWithTime(date);
+      // If we could parse into a valid Date, present a standardized human-friendly format
+      if (!isNaN(date.getTime())) {
+        return formatDateWithTime(date);
+      }
+
+      // If parsing failed, prefer to display the original EXIF string rather than forcing null
+      return String(dateTimeOriginal);
     }
 
     // Fall back to file modification time

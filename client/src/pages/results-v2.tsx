@@ -126,12 +126,9 @@ export default function ResultsV2() {
       }
       : undefined;
 
-    // Extract advanced metadata
+    // Extract advanced metadata (keep all original fields so advanced view is consistent)
     const advancedMetadata = {
-      ...metadata,
-      filename: undefined, // Remove redundant fields
-      filesize: undefined,
-      filetype: undefined,
+      ...metadata
     };
 
     return {
