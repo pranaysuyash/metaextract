@@ -110,7 +110,6 @@ interface MetadataResponse {
   mime_type: string;
   tier: string;
   fields_extracted: number;
-  fields_available: number;
   file_integrity: { md5: string; sha256: string };
   hashes?: { md5: string; sha256: string };
   hash?: string;
@@ -380,12 +379,6 @@ export default function Results() {
     doc.setFont('helvetica', 'normal');
     doc.text(
       `Fields Extracted: ${metadata.fields_extracted || 0}`,
-      20,
-      yPosition
-    );
-    yPosition += 8;
-    doc.text(
-      `Fields Available: ${metadata.fields_available || 0}`,
       20,
       yPosition
     );

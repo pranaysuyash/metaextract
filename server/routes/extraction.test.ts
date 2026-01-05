@@ -726,7 +726,6 @@ describe('API Endpoint Tests', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('tier', 'free');
-      expect(response.body).toHaveProperty('fields_available', 200);
       expect(response.body).toHaveProperty('locked_fields');
       expect(response.body.locked_fields.length).toBeGreaterThan(0);
       expect(response.body.file_integrity).toHaveProperty('_locked', true);
@@ -782,7 +781,6 @@ describe('API Endpoint Tests', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('tier', 'enterprise');
-      expect(response.body).toHaveProperty('fields_available', 45000);
       expect(response.body.locked_fields).toEqual([]);
       expect(response.body.file_integrity).not.toHaveProperty('_locked');
       expect(response.body.makernote).not.toBeNull();

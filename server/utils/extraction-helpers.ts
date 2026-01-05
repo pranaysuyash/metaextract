@@ -274,7 +274,6 @@ export interface FrontendMetadataResponse {
   mime_type: string;
   tier: string;
   fields_extracted: number;
-  fields_available: number;
   processing_ms: number;
   file_integrity: Record<string, string>;
   filesystem: Record<string, any>;
@@ -337,13 +336,6 @@ export function transformMetadataForFrontend(
   tier: string
 ): FrontendMetadataResponse {
   const normalizedTier = normalizeTier(tier);
-  const fieldsAvailableByTier: Record<string, number> = {
-    free: 200,
-    professional: 1000,
-    forensic: 15000,
-    enterprise: 45000,
-  };
-  const fieldsAvailable = fieldsAvailableByTier[normalizedTier] ?? 45000;
 
   const normalizeGps = (
     gps: Record<string, any> | null
@@ -489,7 +481,6 @@ export function transformMetadataForFrontend(
       'application/octet-stream',
     tier,
     fields_extracted: raw.extraction_info?.fields_extracted || 0,
-    fields_available: fieldsAvailable,
     processing_ms: raw.extraction_info?.processing_ms || 0,
     file_integrity: raw.hashes?._locked ? { _locked: true } : raw.hashes || {},
     filesystem: raw.filesystem || {},

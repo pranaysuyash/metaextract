@@ -53,7 +53,6 @@ function createTestApp() {
       filetype: filetype || 'unknown',
       tier: 'free',
       fields_extracted: 47,
-      fields_available: 7500,
       metadata: {
         summary: {
           filename,

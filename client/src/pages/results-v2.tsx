@@ -18,7 +18,6 @@ interface MetadataResponse {
   mime_type: string;
   tier: string;
   fields_extracted: number;
-  fields_available: number;
   processing_ms: number;
   file_integrity?: {
     md5: string;

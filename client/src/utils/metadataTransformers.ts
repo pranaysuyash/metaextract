@@ -154,9 +154,12 @@ export function parseExifDate(exifDateString: string): Date {
 
     throw new Error(`Unknown date format: ${exifDateString}`);
   } catch (error) {
-    console.warn(`Failed to parse EXIF date: ${exifDateString}`, error);
-    // Return an invalid date (NaN) so calling code can handle gracefully
-    return new Date(NaN); 
+    // Parsing failures are normal for non-standard EXIF strings; keep debug-level logging
+    if (process.env.NODE_ENV === 'test') {
+      // In tests we keep the log to help debugging, but prefer not to spam in other environments
+      console.debug(`Failed to parse EXIF date: ${exifDateString}`, error);
+    }
+    return new Date(NaN);
   }
 }
 
