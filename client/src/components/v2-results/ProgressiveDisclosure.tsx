@@ -101,7 +101,17 @@ interface AdvancedMetadataViewProps {
 function AdvancedMetadataView({
   data
 }: AdvancedMetadataViewProps): React.ReactElement {
-  if (!data || Object.keys(data).length === 0) {
+  if (!data) {
+    return (
+      <div className="p-4 text-center text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
+        No advanced metadata available
+      </div>
+    );
+  }
+
+  // Filter out undefined/null entries to avoid showing 'N/A' for intentionally omitted fields
+  const entries = Object.entries(data).filter(([_, v]) => v !== undefined && v !== null);
+  if (entries.length === 0) {
     return (
       <div className="p-4 text-center text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
         No advanced metadata available
@@ -110,7 +120,7 @@ function AdvancedMetadataView({
   }
 
   // Group metadata by category (if available)
-  const sections = Object.entries(data).map(([key, value]) => ({
+  const sections = entries.map(([key, value]) => ({
     title: formatCategoryName(key),
     content: <MetadataDetails value={value} />
   }));

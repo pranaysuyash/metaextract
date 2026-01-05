@@ -99,7 +99,7 @@ function formatDateTimeOriginal(metadata: any): string | null {
  * - "2025-01-03T15:45:32" (ISO)
  * - "2025/01/03 15:45:32" (Common variation)
  */
-function parseExifDate(exifDateString: string): Date {
+export function parseExifDate(exifDateString: string): Date {
   if (!exifDateString) throw new Error('Invalid EXIF date');
 
   try {
@@ -115,6 +115,19 @@ function parseExifDate(exifDateString: string): Date {
         parseInt(minute),
         parseInt(second)
       );
+    }
+
+    // 1b. Try human-friendly format like "December 25, 2025 at 4:48 PM"
+    const humanMatch = exifDateString.match(/([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (humanMatch) {
+      const [, monthName, dayStr, yearStr, hourStr, minuteStr, ampm] = humanMatch;
+      const month = new Date(`${monthName} 1, ${yearStr}`).getMonth();
+      let hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
+      const year = parseInt(yearStr, 10);
+      if (/pm/i.test(ampm) && hour !== 12) hour += 12;
+      if (/am/i.test(ampm) && hour === 12) hour = 0;
+      return new Date(year, month, parseInt(dayStr, 10), hour, minute);
     }
 
     // 2. Try ISO format or standard Date string
@@ -136,8 +149,7 @@ function parseExifDate(exifDateString: string): Date {
     throw new Error(`Unknown date format: ${exifDateString}`);
   } catch (error) {
     console.warn(`Failed to parse EXIF date: ${exifDateString}`, error);
-    // Return current date as last resort to prevent crash, or rethrow if strict
-    // For UI display, returning Invalid Date is better than crashing
+    // Return an invalid date (NaN) so calling code can handle gracefully
     return new Date(NaN); 
   }
 }
@@ -145,7 +157,9 @@ function parseExifDate(exifDateString: string): Date {
 /**
  * Format date with time: "January 3, 2025 at 3:45 PM"
  */
-function formatDateWithTime(date: Date): string {
+function formatDateWithTime(date: Date): string | null {
+  if (!date || isNaN(date.getTime())) return null;
+
   const dateOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',
