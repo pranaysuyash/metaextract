@@ -10,3 +10,4 @@ export { VideoKeyframesViz } from './VideoKeyframesViz';
 export { ForensicTimeline } from './ForensicTimeline';
 export { MetadataComparison } from './MetadataComparison';
 export { ManipulationDashboard } from './ManipulationDashboard';
+export { PremiumTimeline } from './PremiumTimeline';

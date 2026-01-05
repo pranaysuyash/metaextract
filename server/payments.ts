@@ -187,6 +187,13 @@ export function registerPaymentRoutes(app: Express) {
 
         const session = await dodoClient.checkoutSessions.create({
           product_cart: [{ product_id: productId, quantity: 1 }],
+          allowed_payment_method_types: [
+            'credit',
+            'debit',
+            'apple_pay',
+            'google_pay',
+          ],
+          billing_currency: 'USD',
           customer: email ? { email } : undefined,
           return_url: `${baseUrl}/checkout/success?tier=${normalizedTier}`,
           metadata: {
@@ -250,6 +257,13 @@ export function registerPaymentRoutes(app: Express) {
             quantity: 1,
           },
         ],
+        allowed_payment_method_types: [
+          'credit',
+          'debit',
+          'apple_pay',
+          'google_pay',
+        ],
+        billing_currency: 'USD',
         customer: email ? { email } : undefined,
         return_url: `${baseUrl}/credits/success?pack=${pack}&balanceId=${balance.id}`,
         metadata: {

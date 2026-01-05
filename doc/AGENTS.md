@@ -54,3 +54,7 @@ pytest tests/ -k "test_name" -v
 **Code Quality:** No tech debt. Before deleting code for issue resolution, implement missing or wrong code properly instead of removing functionality.
 
 **Issue Resolution:** Prioritize fixing/implementing over deletion. Understand root cause before modifying code.
+
+**Git Hygiene (multi-agent safety):**
+- Before committing, use `git add -A` (to avoid leaving untracked/modified files behind), OR explicitly `git stash push -u` to keep the working tree clean without losing work.
+- Never run destructive git/cleanup commands (e.g. `git clean`, `git reset --hard`, deleting files/folders) unless the user explicitly asks for it.

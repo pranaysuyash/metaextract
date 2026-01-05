@@ -715,6 +715,13 @@ export function registerImagesMvpRoutes(app: Express) {
               quantity: 1,
             },
           ],
+          allowed_payment_method_types: [
+            'credit',
+            'debit',
+            'apple_pay',
+            'google_pay',
+          ],
+          billing_currency: 'USD',
           customer: email ? { email } : undefined,
           // Redirect to specialized success page
           return_url: `${baseUrl}/images_mvp/credits/success?pack=${pack}&balanceId=${balance.id}`,
