@@ -28,11 +28,11 @@ interface MetadataComparisonDisplayProps {
       gps_comparison: string;
       timestamp_comparison: string;
       overall_status:
-        | 'verified'
-        | 'suspicious'
-        | 'stripped_exif'
-        | 'no_overlay'
-        | 'no_metadata';
+      | 'verified'
+      | 'suspicious'
+      | 'stripped_exif'
+      | 'no_overlay'
+      | 'no_metadata';
     };
   } | null;
 }
@@ -56,8 +56,8 @@ const statusConfig = {
   },
   stripped_exif: {
     icon: Eye,
-    title: '🚨 EXIF STRIPPED',
-    description: 'EXIF data removed but overlay remains',
+    title: '📋 NO EXIF FOUND',
+    description: 'No EXIF metadata detected, but visual overlay present',
     color: 'amber',
     bg: 'bg-amber-500/10 border-amber-500/30',
     textColor: 'text-amber-400',
@@ -136,13 +136,12 @@ export function MetadataComparisonDisplay({
             📍 GPS Comparison
           </h6>
           <div
-            className={`text-xs px-2 py-1 rounded font-mono ${
-              summary.gps_comparison === 'match'
-                ? 'bg-emerald-500/20 text-emerald-300'
-                : summary.gps_comparison === 'mismatch'
+            className={`text-xs px-2 py-1 rounded font-mono ${summary.gps_comparison === 'match'
+              ? 'bg-emerald-500/20 text-emerald-300'
+              : summary.gps_comparison === 'mismatch'
                 ? 'bg-rose-500/20 text-rose-300'
                 : 'bg-slate-500/20 text-slate-300'
-            }`}
+              }`}
           >
             {summary.gps_comparison.toUpperCase()}
           </div>
@@ -150,14 +149,14 @@ export function MetadataComparisonDisplay({
           {/* Show GPS distance if mismatch */}
           {matches.find((m) => m.field === 'gps' && m.matches === true)
             ?.difference && (
-            <div className='text-[10px] text-emerald-400 mt-2 font-mono'>
-              ✓ Match (±
-              {matches
-                .find((m) => m.field === 'gps')
-                ?.difference?.approx_meters?.toFixed(1)}
-              m)
-            </div>
-          )}
+              <div className='text-[10px] text-emerald-400 mt-2 font-mono'>
+                ✓ Match (±
+                {matches
+                  .find((m) => m.field === 'gps')
+                  ?.difference?.approx_meters?.toFixed(1)}
+                m)
+              </div>
+            )}
 
           {discrepancies.find((d) => d.field === 'gps') && (
             <div className='text-[10px] text-rose-400 mt-2'>
@@ -173,13 +172,12 @@ export function MetadataComparisonDisplay({
             🕐 Timestamp Comparison
           </h6>
           <div
-            className={`text-xs px-2 py-1 rounded font-mono ${
-              summary.timestamp_comparison === 'match'
-                ? 'bg-emerald-500/20 text-emerald-300'
-                : summary.timestamp_comparison === 'mismatch'
+            className={`text-xs px-2 py-1 rounded font-mono ${summary.timestamp_comparison === 'match'
+              ? 'bg-emerald-500/20 text-emerald-300'
+              : summary.timestamp_comparison === 'mismatch'
                 ? 'bg-rose-500/20 text-rose-300'
                 : 'bg-slate-500/20 text-slate-300'
-            }`}
+              }`}
           >
             {summary.timestamp_comparison.toUpperCase()}
           </div>
@@ -268,9 +266,9 @@ export function MetadataComparisonDisplay({
         <div className='bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400'>
           <p className='font-semibold text-amber-400 mb-1'>What this means:</p>
           <p>
-            The EXIF metadata has been removed from the image file, but the
-            visual overlay persists. Location/timestamp info is only available
-            from the overlay text.
+            This image has no EXIF metadata (it may have been removed by social
+            media, messaging apps, or image editors). However, location/timestamp
+            info is still visible in the overlay text burned into the image.
           </p>
         </div>
       )}

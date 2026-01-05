@@ -17,14 +17,28 @@ const projectRoot = process.cwd();
 const currentDirPath = path.join(projectRoot, 'server', 'routes');
 import { storage } from '../storage/index';
 import { getRateLimitMetrics, resetRateLimit } from '../rateLimitMiddleware';
+import {
+  adminAuthMiddleware,
+  adminRateLimitMiddleware,
+  healthCheckAuth,
+} from '../middleware/admin-auth';
+import { sanitizeFilename } from '../security-utils';
+
+// Allowed patterns for cache clearing (whitelist)
+const ALLOWED_CACHE_PATTERNS = [
+  /^metadata:\*$/,
+  /^metadata:[\w-]+$/,
+  /^quota:[\w-]+$/,
+  /^activity:[\w-]+$/,
+];
 
 // ============================================================================
 // Route Registration
 // ============================================================================
 
 export function registerAdminRoutes(app: Express): void {
-  // Health check
-  app.get('/api/health', (req, res) => {
+  // Health check - no auth required
+  app.get('/api/health', healthCheckAuth, (req, res) => {
     res.json({
       status: 'ok',
       service: 'MetaExtract API',
@@ -32,6 +46,10 @@ export function registerAdminRoutes(app: Express): void {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // Admin-only endpoints require authentication and rate limiting
+  app.use('/api/admin', adminAuthMiddleware);
+  app.use('/api/admin', adminRateLimitMiddleware);
 
   // Analytics summary
   app.get('/api/admin/analytics', async (req, res) => {
@@ -67,7 +85,7 @@ export function registerAdminRoutes(app: Express): void {
         'utils',
         'cache.py'
       );
-      const cacheStats = await new Promise<any>((resolve) => {
+      const cacheStats = await new Promise<any>(resolve => {
         const python = spawn('python3', [
           '-c',
           `
@@ -80,7 +98,7 @@ print(json.dumps(get_cache_stats()))
         ]);
 
         let stdout = '';
-        python.stdout.on('data', (data) => (stdout += data.toString()));
+        python.stdout.on('data', data => (stdout += data.toString()));
         python.on('close', () => {
           try {
             resolve(JSON.parse(stdout));
@@ -113,7 +131,27 @@ print(json.dumps(get_cache_stats()))
   // Cache management (admin only)
   app.post('/api/performance/cache/clear', async (req, res) => {
     try {
-      const pattern = req.body.pattern || 'metadata:*';
+      let pattern = req.body.pattern || 'metadata:*';
+
+      // Validate pattern against whitelist
+      const isValidPattern = ALLOWED_CACHE_PATTERNS.some(regex =>
+        regex.test(pattern)
+      );
+      if (!isValidPattern) {
+        return res.status(400).json({
+          error: 'Invalid pattern',
+          message: 'Pattern must match one of the allowed patterns',
+          allowed_patterns: [
+            'metadata:*',
+            'metadata:<id>',
+            'quota:<id>',
+            'activity:<id>',
+          ],
+        });
+      }
+
+      // Sanitize the pattern
+      pattern = sanitizeFilename(pattern);
 
       const pythonScript = path.join(
         currentDirPath,
@@ -122,7 +160,7 @@ print(json.dumps(get_cache_stats()))
         'utils',
         'cache.py'
       );
-      const result = await new Promise<number>((resolve) => {
+      const result = await new Promise<number>(resolve => {
         const python = spawn('python3', [
           '-c',
           `
@@ -134,7 +172,9 @@ print(clear_cache_pattern('${pattern}'))
         ]);
 
         let stdout = '';
-        python.stdout.on('data', (data) => (stdout += data.toString()));
+        python.stdout.on('data', data => {
+          stdout += data.toString();
+        });
         python.on('close', () => {
           resolve(parseInt(stdout.trim()) || 0);
         });
@@ -162,7 +202,7 @@ print(clear_cache_pattern('${pattern}'))
     } catch (error) {
       res.status(500).json({
         error: 'Failed to retrieve rate limit metrics',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
@@ -173,7 +213,7 @@ print(clear_cache_pattern('${pattern}'))
     } catch (error) {
       res.status(500).json({
         error: 'Failed to reset rate limit',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
@@ -188,7 +228,12 @@ print(clear_cache_pattern('${pattern}'))
         require.main ? require.main.filename : __filename
       );
 
-      const pythonScript = path.join(currentDir, '..', 'extractor', 'monitoring.py');
+      const pythonScript = path.join(
+        currentDir,
+        '..',
+        'extractor',
+        'monitoring.py'
+      );
       const result = await new Promise<any>((resolve, reject) => {
         const python = spawn('python3', [
           '-c',
@@ -251,7 +296,12 @@ print(json.dumps(get_monitoring_data()))
         require.main ? require.main.filename : __filename
       );
 
-      const pythonScript = path.join(currentDir, '..', 'extractor', 'monitoring.py');
+      const pythonScript = path.join(
+        currentDir,
+        '..',
+        'extractor',
+        'monitoring.py'
+      );
       const result = await new Promise<any>((resolve, reject) => {
         const python = spawn('python3', [
           '-c',
@@ -314,7 +364,12 @@ print(json.dumps(get_performance_summary()))
         require.main ? require.main.filename : __filename
       );
 
-      const pythonScript = path.join(currentDir, '..', 'extractor', 'monitoring.py');
+      const pythonScript = path.join(
+        currentDir,
+        '..',
+        'extractor',
+        'monitoring.py'
+      );
       const result = await new Promise<any>((resolve, reject) => {
         const python = spawn('python3', [
           '-c',

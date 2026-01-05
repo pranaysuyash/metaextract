@@ -266,12 +266,18 @@ export function registerExtractionRoutes(app: Express): void {
         const savedRecord = await storage.saveMetadata({
           userId: req.user?.id,
           fileName: metadata.filename,
-          fileSize: metadata.filesize,
+          fileSize: String(req.file.size),
           mimeType: metadata.mime_type,
           metadata,
         });
         metadata.id = savedRecord.id;
-        console.log(`[Extraction] Saved metadata to DB with ID: ${savedRecord.id}`);
+        metadata.storage = {
+          provider: savedRecord.metadataRef?.provider ?? 'summary-only',
+          has_full_blob: !!savedRecord.metadataRef,
+        };
+        console.log(
+          `[Extraction] Saved metadata summary + blob with ID: ${savedRecord.id}`
+        );
       } catch (dbError) {
         console.error('[Extraction] Failed to save metadata to DB:', dbError);
         // Continue anyway - frontend will use memory fallback
@@ -732,7 +738,67 @@ export function registerExtractionRoutes(app: Express): void {
         'Health check failed with internal error'
       );
     }
-    // Retrieve saved extraction result
+  });
+
+  // Full image extraction health check (ensures EXIF/RAW pipeline stays intact)
+  app.get('/api/extract/health/image', async (_req, res) => {
+    const samplePath =
+      process.env.IMAGE_HEALTHCHECK_PATH ||
+      path.join(process.cwd(), 'sample_with_meta.jpg');
+
+    try {
+      await fs.access(samplePath);
+    } catch {
+      return res.status(503).json({
+        status: 'unhealthy',
+        reason: 'sample_not_found',
+        samplePath,
+        message:
+          'Health check sample image is missing; set IMAGE_HEALTHCHECK_PATH or add sample_with_meta.jpg',
+      });
+    }
+
+    try {
+      const raw = await extractMetadataWithPython(
+        samplePath,
+        'enterprise',
+        true,
+        true,
+        false
+      );
+      const metadata = transformMetadataForFrontend(
+        raw,
+        path.basename(samplePath),
+        'enterprise'
+      );
+
+      const exifCount = metadata.exif ? Object.keys(metadata.exif).length : 0;
+      const fieldsExtracted = metadata.fields_extracted || 0;
+
+      return res.json({
+        status: 'healthy',
+        python_engine: 'available',
+        samplePath,
+        exif_fields: exifCount,
+        fields_extracted: fieldsExtracted,
+        engine_version: raw.extraction_info?.engine_version ?? 'unknown',
+        timestamp: new Date().toISOString(),
+        message:
+          'Full image extractor (EXIF/RAW) responded successfully using the sample image.',
+      });
+    } catch (error) {
+      console.error('[HealthCheck] Full image extractor failed:', error);
+      return res.status(503).json({
+        status: 'unhealthy',
+        python_engine: 'error',
+        samplePath,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  // Retrieve saved extraction result
   app.get('/api/extract/results/:id', async (req: AuthRequest, res) => {
     try {
       const result = await storage.getMetadata(req.params.id);
@@ -746,8 +812,6 @@ export function registerExtractionRoutes(app: Express): void {
     }
   });
 
-  return app;
-});
 }
 
 export { extractMetadataWithPython, transformMetadataForFrontend };

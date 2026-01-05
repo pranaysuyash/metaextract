@@ -44,6 +44,7 @@ export default defineConfig({
   cacheDir: 'node_modules/.vite-cache-v2-update',
   server: {
     host: "0.0.0.0",
+    open: true,  // Automatically open the browser when starting the dev server
     allowedHosts: true,
     proxy: {
       "/api": {

@@ -123,10 +123,10 @@ export function ActionsToolbar({
           variant="outline"
           size="sm"
           onClick={handleExportJSON}
-          className="gap-2 text-xs"
+          className="gap-2 text-xs min-h-[44px]"
           title="Download metadata as JSON"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-4 h-4" aria-hidden="true" />
           JSON
         </Button>
 
@@ -134,10 +134,10 @@ export function ActionsToolbar({
           variant="outline"
           size="sm"
           onClick={handleExportPDF}
-          className="gap-2 text-xs"
+          className="gap-2 text-xs min-h-[44px]"
           title="Export as PDF (coming soon)"
         >
-          <FileText className="w-4 h-4" />
+          <FileText className="w-4 h-4" aria-hidden="true" />
           PDF
         </Button>
 
@@ -146,17 +146,17 @@ export function ActionsToolbar({
           variant="outline"
           size="sm"
           onClick={handleCopyJSON}
-          className="gap-2 text-xs"
+          className="gap-2 text-xs min-h-[44px]"
           title="Copy JSON to clipboard"
         >
           {copiedJson ? (
             <>
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4" aria-hidden="true" />
               Copied
             </>
           ) : (
             <>
-              <Copy className="w-4 h-4" />
+              <Copy className="w-4 h-4" aria-hidden="true" />
               Copy
             </>
           )}
@@ -167,7 +167,7 @@ export function ActionsToolbar({
           variant="outline"
           size="sm"
           onClick={handleCompare}
-          className="gap-2 text-xs"
+          className="gap-2 text-xs min-h-[44px]"
           title="Compare with another file (coming soon)"
         >
           Compare
@@ -178,10 +178,10 @@ export function ActionsToolbar({
           variant="outline"
           size="sm"
           onClick={handleShare}
-          className="gap-2 text-xs"
+          className="gap-2 text-xs min-h-[44px]"
           title="Share results (coming soon)"
         >
-          <Share2 className="w-4 h-4" />
+          <Share2 className="w-4 h-4" aria-hidden="true" />
           Share
         </Button>
       </div>
@@ -261,9 +261,9 @@ export function ActionsToolbarCompact({
         variant="outline"
         size="sm"
         onClick={handleExportJSON}
-        className="gap-2 text-xs"
+        className="gap-2 text-xs min-h-[44px]"
       >
-        <Download className="w-4 h-4" />
+        <Download className="w-4 h-4" aria-hidden="true" />
         Export
       </Button>
 
@@ -271,16 +271,16 @@ export function ActionsToolbarCompact({
         variant="outline"
         size="sm"
         onClick={handleCopyJSON}
-        className="gap-2 text-xs"
+        className="gap-2 text-xs min-h-[44px]"
       >
         {copiedJson ? (
           <>
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4" aria-hidden="true" />
             Copied
           </>
         ) : (
           <>
-            <Copy className="w-4 h-4" />
+            <Copy className="w-4 h-4" aria-hidden="true" />
             Copy
           </>
         )}

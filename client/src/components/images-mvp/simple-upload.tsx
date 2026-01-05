@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +46,7 @@ export function SimpleUploadZone() {
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const shouldReduceMotion = useReducedMotion();
 
   const getExtension = (name: string): string | null => {
     const index = name.lastIndexOf('.');
@@ -73,6 +74,13 @@ export function SimpleUploadZone() {
     setIsDragActive(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) handleFile(files[0]);
+  }, []);
+
+  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      document.getElementById('mvp-upload')?.click();
+    }
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +117,25 @@ export function SimpleUploadZone() {
         title: 'Unsupported File',
         description:
           'Please upload a photo (JPG, PNG, HEIC from iPhone, or WebP).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Client-side file size validation (100MB limit)
+    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      trackImagesMvpEvent('upload_rejected', {
+        extension: ext,
+        mime_type: mimeType,
+        size_bytes: file.size,
+        size_bucket: sizeBucket,
+        reason: 'file_too_large',
+      });
+      toast({
+        title: 'File Too Large',
+        description: `Your file is ${sizeMB}MB. Maximum size is 100MB. Try compressing or resizing the image.`,
         variant: 'destructive',
       });
       return;
@@ -154,58 +181,48 @@ export function SimpleUploadZone() {
     });
 
     try {
-      const res = await fetch('/api/images_mvp/extract', {
-        method: 'POST',
-        body: formData,
+      const data = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100;
+            setUploadProgress(percentComplete);
+          }
+        };
+
+        xhr.onload = () => {
+          let responseData;
+          try {
+            responseData = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+          } catch {
+            responseData = null;
+          }
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(responseData);
+          } else {
+            const errorMessage =
+              typeof responseData?.error === 'string'
+                ? responseData.error
+                : responseData?.error?.message ||
+                responseData?.message ||
+                xhr.responseText ||
+                'Extraction failed';
+
+            reject({
+              status: xhr.status,
+              message: errorMessage,
+              data: responseData
+            });
+          }
+        };
+
+        xhr.onerror = () => reject({ message: 'Network error' });
+
+        xhr.open('POST', '/api/images_mvp/extract');
+        xhr.send(formData);
       });
-
-      const responseText = await res.text();
-      let data: any = null;
-      try {
-        data = responseText ? JSON.parse(responseText) : null;
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok) {
-        const errorMessage =
-          typeof data?.error === 'string'
-            ? data.error
-            : data?.error?.message ||
-              data?.message ||
-              responseText ||
-              'Extraction failed';
-        trackImagesMvpEvent('analysis_completed', {
-          success: false,
-          status: res.status,
-          error_message: errorMessage,
-          extension,
-          mime_type: mimeType,
-          size_bucket: sizeBucket,
-          elapsed_ms: Date.now() - startedAt,
-        });
-
-        if (res.status === 402) {
-          // Trigger Credit Purchase Flow
-          trackImagesMvpEvent('paywall_viewed', {
-            reason: 'trial_exhausted',
-            extension,
-            mime_type: mimeType,
-          });
-          toast({
-            title: 'Trial Limit Reached',
-            description:
-              "You've used your 2 free checks. Unlock more with credits.",
-            variant: 'destructive',
-          });
-          setShowPricingModal(true);
-          return;
-        }
-        setUploadError(true);
-        setShowProgressTracker(false); // Hide progress tracker on error
-        setTimeout(() => setUploadError(false), 3000);
-        throw new Error(errorMessage);
-      }
 
       // Success
       const processingMs =
@@ -232,12 +249,42 @@ export function SimpleUploadZone() {
       }, 500);
     } catch (err: any) {
       console.error(err);
-      const fallbackMessage =
-        typeof err?.message === 'string' ? err.message : 'Network error';
+
+      const errorMessage = err.message || 'Upload failed';
+      const status = err.status || 500;
+
+      trackImagesMvpEvent('analysis_completed', {
+        success: false,
+        status: status,
+        error_message: errorMessage,
+        extension,
+        mime_type: mimeType,
+        size_bucket: sizeBucket,
+        elapsed_ms: Date.now() - startedAt,
+      });
+
+      if (status === 402) {
+        // Trigger Credit Purchase Flow
+        trackImagesMvpEvent('paywall_viewed', {
+          reason: 'trial_exhausted',
+          extension,
+          mime_type: mimeType,
+        });
+        toast({
+          title: 'Trial Limit Reached',
+          description:
+            "You've used your 2 free checks. Unlock more with credits.",
+          variant: 'destructive',
+        });
+        setShowPricingModal(true);
+        return;
+      }
+
       setUploadError(true);
       setShowProgressTracker(false); // Hide progress tracker on error
       setTimeout(() => setUploadError(false), 3000);
-      if (fallbackMessage.toLowerCase().includes('failed to fetch')) {
+
+      if (errorMessage.toLowerCase().includes('failed to fetch') || errorMessage === 'Network error') {
         toast({
           title: 'Backend unavailable',
           description:
@@ -248,7 +295,7 @@ export function SimpleUploadZone() {
       }
       toast({
         title: 'Error',
-        description: err.message || 'Upload failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -291,8 +338,12 @@ export function SimpleUploadZone() {
         onClick={() =>
           !isUploading && document.getElementById('mvp-upload')?.click()
         }
+        onKeyDown={onKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload image drop zone. Drag and drop a file here or press enter to browse."
         className={cn(
-          'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer overflow-hidden group',
+          'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black',
           isUploading
             ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
             : isDragActive
@@ -314,22 +365,21 @@ export function SimpleUploadZone() {
             <div className="absolute inset-0 bg-black/20 rounded-xl" />
             {/* Progress bar fill */}
             <motion.div
-              className={`absolute left-0 top-0 h-full rounded-xl ${
-                uploadError
-                  ? 'bg-gradient-to-r from-red-500/40 to-red-500/20'
-                  : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'
-              }`}
+              className={`absolute left-0 top-0 h-full rounded-xl ${uploadError
+                ? 'bg-gradient-to-r from-red-500/40 to-red-500/20'
+                : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'
+                }`}
               initial={{ width: '0%' }}
               animate={{ width: `${uploadProgress}%` }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
             />
             {/* Content overlay */}
             <div className="relative flex flex-col items-center justify-center gap-4 w-full h-full">
               <p className="text-white font-mono text-sm">
-                {uploadError ? 'Upload Failed' : 'Extracting Metadata...'}
+                {uploadError ? 'Upload Failed' : (uploadProgress < 100 ? 'Uploading...' : 'Extracting Metadata...')}
               </p>
               <span
-                className={`text-xs font-mono ${uploadError ? 'text-red-400' : 'text-emerald-400'}`}
+                className={`text-xs font-mono ${uploadError ? 'text-red-300' : 'text-emerald-300'}`}
               >
                 {uploadError ? 'Error' : `${Math.round(uploadProgress)}%`}
               </span>
@@ -339,17 +389,17 @@ export function SimpleUploadZone() {
           <>
             <div className="mb-4">
               <div className="w-16 h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <Upload className="w-8 h-8 text-primary" />
+                <Upload className="w-8 h-8 text-primary" aria-hidden="true" />
               </div>
             </div>
             <h3 className="text-xl font-bold text-white mb-2">
               Drop your image here
             </h3>
-            <p className="text-slate-400 text-sm mb-6">
+            <p className="text-slate-300 text-sm mb-6">
               Supports popular photo formats: JPG, PNG, HEIC (iPhone), WebP{' '}
               <br />
-              <span className="text-primary/80 text-xs font-mono mt-1 block">
-                <Zap className="w-3 h-3 inline mr-1" />2 Free Checks Included
+              <span className="text-primary text-xs font-mono mt-1 block">
+                <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 Free Checks Included
               </span>
             </p>
             <Button

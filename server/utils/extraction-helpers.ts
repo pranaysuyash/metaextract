@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
+import { sanitizeFilename, isPathSafe } from '../security-utils';
 
 // Get the server directory - resolve from project root
 // During tests, use process.cwd() which is the project root
@@ -570,6 +571,20 @@ export async function extractMetadataWithPython(
   enableAdvancedAnalysis: boolean = false,
   storeMetadata: boolean = false
 ): Promise<PythonMetadataResponse> {
+  // Validate and sanitize the file path
+  const resolvedPath = path.resolve(filePath);
+  const tempDir = '/tmp/metaextract';
+  const allowedDirs = [tempDir, process.cwd()];
+
+  if (!isPathSafe(resolvedPath, allowedDirs)) {
+    throw new Error(`Invalid file path: path is outside allowed directories`);
+  }
+
+  // Ensure the file exists
+  if (!existsSync(resolvedPath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+
   return new Promise((resolve, reject) => {
     const args = [PYTHON_SCRIPT_PATH, filePath, '--tier', tier];
 

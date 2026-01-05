@@ -16,6 +16,11 @@ import { db } from './db';
 import { users, subscriptions, creditBalances } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { normalizeTier } from '@shared/tierConfig';
+import {
+  isLockedOut,
+  recordFailedAttempt,
+  clearFailedAttempts,
+} from './security-utils';
 
 // ============================================================================
 // Configuration
@@ -23,7 +28,11 @@ import { normalizeTier } from '@shared/tierConfig';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required for security');
+  throw new Error(
+    'CRITICAL: JWT_SECRET environment variable is required for security. ' +
+      'Please set this in your .env file before starting the server. ' +
+      'Generate a strong random secret: openssl rand -hex 32'
+  );
 }
 
 // Token and session configuration
@@ -31,11 +40,13 @@ const JWT_EXPIRES_IN = '7d'; // 7 days
 const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // Must match JWT_EXPIRES_IN
 const SALT_ROUNDS = 12;
 
-// Cookie configuration
+// Cookie configuration - enhanced security
 const COOKIE_NAME = 'auth_token';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'lax' as const,
+  sameSite: 'strict' as const,
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: TOKEN_EXPIRY_MS,
 };
 
 // Token parsing
@@ -66,7 +77,16 @@ export interface AuthRequest extends Request {
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   username: z.string().min(3, 'Username must be at least 3 characters').max(50),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(
+      /[^A-Za-z0-9]/,
+      'Password must contain at least one special character'
+    ),
 });
 
 const loginSchema = z.object({
@@ -124,7 +144,7 @@ function generateToken(user: AuthUser): string {
   );
 }
 
-function verifyToken(token: string): AuthUser | null {
+export function verifyToken(token: string): AuthUser | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET!) as AuthUser;
     return decoded;
@@ -351,6 +371,27 @@ export function registerAuthRoutes(app: Express) {
   // -------------------------------------------------------------------------
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
+      // Check for brute force - use email as identifier
+      const loginIdentifier =
+        (req.body?.email as string) || req.ip || 'unknown';
+      const lockStatus = isLockedOut(
+        `login:${loginIdentifier}`,
+        5,
+        15 * 60 * 1000
+      );
+
+      if (lockStatus.locked) {
+        res.setHeader(
+          'Retry-After',
+          Math.ceil((lockStatus.resetTime - Date.now()) / 1000)
+        );
+        return res.status(429).json({
+          error: 'Too many login attempts',
+          message: 'Please wait 15 minutes before trying again',
+          retryAfter: Math.ceil((lockStatus.resetTime - Date.now()) / 1000),
+        });
+      }
+
       // Validate input
       const validation = loginSchema.safeParse(req.body);
       if (!validation.success) {
@@ -378,6 +419,8 @@ export function registerAuthRoutes(app: Express) {
         .limit(1);
 
       if (!user) {
+        // Record failed attempt even for non-existent users (prevent username enumeration)
+        recordFailedAttempt(`login:${loginIdentifier}`, 5, 15 * 60 * 1000);
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS',
@@ -387,11 +430,15 @@ export function registerAuthRoutes(app: Express) {
       // Verify password
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
+        recordFailedAttempt(`login:${loginIdentifier}`, 5, 15 * 60 * 1000);
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS',
         });
       }
+
+      // Clear failed attempts on successful login
+      clearFailedAttempts(`login:${loginIdentifier}`);
 
       // Check subscription status (refresh from DB)
       let currentTier = user.tier;

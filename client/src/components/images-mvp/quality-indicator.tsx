@@ -26,10 +26,10 @@ interface QualityIndicatorProps {
   className?: string;
 }
 
-export function QualityIndicator({ 
-  qualityMetrics, 
-  processingInsights, 
-  className 
+export function QualityIndicator({
+  qualityMetrics,
+  processingInsights,
+  className
 }: QualityIndicatorProps) {
   const hasProcessingInsights =
     !!processingInsights &&
@@ -53,9 +53,9 @@ export function QualityIndicator({
   };
 
   const getConfidenceIcon = (score: number) => {
-    if (score >= 0.8) return <CheckCircle className="w-4 h-4" />;
-    if (score >= 0.6) return <AlertTriangle className="w-4 h-4" />;
-    return <Info className="w-4 h-4" />;
+    if (score >= 0.8) return <CheckCircle className="w-4 h-4" aria-hidden="true" />;
+    if (score >= 0.6) return <AlertTriangle className="w-4 h-4" aria-hidden="true" />;
+    return <Info className="w-4 h-4" aria-hidden="true" />;
   };
 
   const getFormatSupportBadge = (level: string) => {
@@ -65,7 +65,7 @@ export function QualityIndicator({
       'basic': 'bg-yellow-100 text-yellow-800',
       'limited': 'bg-red-100 text-red-800'
     };
-    
+
     return colors[level as keyof typeof colors] || colors.basic;
   };
 
@@ -96,7 +96,7 @@ export function QualityIndicator({
     <div className={cn("bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-4 space-y-4", className)}>
       {/* Header */}
       <div className="flex items-center space-x-2">
-        <Shield className="w-5 h-5 text-primary" />
+        <Shield className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="text-lg font-semibold text-white">Extraction Quality</h3>
         {qualityMetrics?.enhanced_extraction && (
           <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
@@ -116,16 +116,19 @@ export function QualityIndicator({
           {/* Confidence Score */}
           <div className="bg-white/5 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Confidence</span>
+              <span className="text-sm text-slate-300">Confidence</span>
               <div className={getConfidenceColor(qualityMetrics.confidence_score)}>
                 {getConfidenceIcon(qualityMetrics.confidence_score)}
               </div>
             </div>
             <div className="text-2xl font-bold text-white">
               {(qualityMetrics.confidence_score * 100).toFixed(0)}%
+              <span className="sr-only">
+                {qualityMetrics.confidence_score >= 0.8 ? ' (High Quality)' : qualityMetrics.confidence_score >= 0.6 ? ' (Medium Quality)' : ' (Low Quality)'}
+              </span>
             </div>
             <div className="w-full bg-white/10 rounded-full h-2 mt-2">
-              <div 
+              <div
                 className={`h-2 rounded-full ${qualityMetrics.confidence_score >= 0.8 ? 'bg-green-500' : qualityMetrics.confidence_score >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'}`}
                 style={{ width: `${qualityMetrics.confidence_score * 100}%` }}
               />
@@ -136,14 +139,14 @@ export function QualityIndicator({
           {showCompleteness ? (
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-white/70">Completeness</span>
-                <CheckCircle className="w-4 h-4 text-blue-400" />
+                <span className="text-sm text-slate-300">Completeness</span>
+                <CheckCircle className="w-4 h-4 text-blue-400" aria-hidden="true" />
               </div>
               <div className="text-2xl font-bold text-white">
                 {(qualityMetrics.extraction_completeness * 100).toFixed(0)}%
               </div>
               <div className="w-full bg-white/10 rounded-full h-2 mt-2">
-                <div 
+                <div
                   className="bg-blue-500 h-2 rounded-full"
                   style={{ width: `${qualityMetrics.extraction_completeness * 100}%` }}
                 />
@@ -152,8 +155,8 @@ export function QualityIndicator({
           ) : (
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-white/70">Completeness</span>
-                <Info className="w-4 h-4 text-white/40" />
+                <span className="text-sm text-slate-300">Completeness</span>
+                <Info className="w-4 h-4 text-white/40" aria-hidden="true" />
               </div>
               <div className="text-lg font-semibold text-white">Not reported</div>
               <div className="text-xs text-white/40 mt-1">Depends on file metadata</div>
@@ -164,7 +167,7 @@ export function QualityIndicator({
           {qualityMetrics.format_support_level && (
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-white/70">Support Level</span>
+                <span className="text-sm text-slate-300">Support Level</span>
                 <span className={`px-2 py-1 text-xs rounded-full ${getFormatSupportBadge(qualityMetrics.format_support_level)}`}>
                   {qualityMetrics.format_support_level}
                 </span>
@@ -188,7 +191,7 @@ export function QualityIndicator({
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                <span className="text-sm text-white/70">Processing Time</span>
+                <span className="text-sm text-slate-300">Processing Time</span>
               </div>
               <div className="text-lg font-semibold text-white">
                 {formatTime(processingInsights.processing_time_ms)}
@@ -204,12 +207,12 @@ export function QualityIndicator({
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                <span className="text-sm text-white/70">Fields Extracted</span>
+                <span className="text-sm text-slate-300">Fields Extracted</span>
               </div>
               <div className="text-lg font-semibold text-white">
                 {processingInsights.total_fields_extracted.toLocaleString()}
               </div>
-              <div className="text-xs text-white/50 mt-1">Comprehensive metadata</div>
+              <div className="text-xs text-slate-400 mt-1">Comprehensive metadata</div>
             </div>
           )}
 
@@ -218,7 +221,7 @@ export function QualityIndicator({
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="w-2 h-2 bg-orange-400 rounded-full" />
-                <span className="text-sm text-white/70">Memory Used</span>
+                <span className="text-sm text-slate-300">Memory Used</span>
               </div>
               <div className="text-lg font-semibold text-white">
                 {formatMemory(processingInsights.memory_usage_mb)}
@@ -235,10 +238,10 @@ export function QualityIndicator({
       {qualityMetrics?.recommended_actions && qualityMetrics.recommended_actions.length > 0 && (
         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
           <div className="flex items-center space-x-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-yellow-400" />
+            <AlertTriangle className="w-4 h-4 text-yellow-400" aria-hidden="true" />
             <span className="text-sm font-medium text-yellow-400">Recommendations</span>
           </div>
-          <ul className="text-sm text-white/80 space-y-1">
+          <ul className="text-sm text-slate-200 space-y-1">
             {qualityMetrics.recommended_actions.map((action, index) => (
               <li key={index} className="flex items-start space-x-2">
                 <div className="w-1 h-1 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
@@ -253,10 +256,10 @@ export function QualityIndicator({
       {processingInsights?.fallback_extraction && (
         <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
           <div className="flex items-center space-x-2">
-            <AlertTriangle className="w-4 h-4 text-orange-400" />
+            <AlertTriangle className="w-4 h-4 text-orange-400" aria-hidden="true" />
             <span className="text-sm font-medium text-orange-400">Fallback Mode</span>
           </div>
-          <p className="text-sm text-white/80 mt-2">
+          <p className="text-sm text-slate-200 mt-2">
             Used basic extraction due to compatibility issues. Enhanced features may be limited.
           </p>
         </div>

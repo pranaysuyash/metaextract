@@ -25,9 +25,9 @@ interface DatabaseInstance {
 // ============================================================================
 
 const DEFAULT_POOL_CONFIG = {
-  max: 10, // Maximum connections
+  max: 25, // Increased connections for better concurrency under load
   idleTimeoutMillis: 30000, // 30 seconds
-  connectionTimeoutMillis: 2000, // 2 seconds
+  connectionTimeoutMillis: 5000, // 5 seconds
 };
 
 /**
@@ -48,10 +48,19 @@ function loadEnvironment(): void {
 function validateDatabaseUrl(): string {
   const dbUrl = process.env.DATABASE_URL;
 
+  const requireDatabase =
+    process.env.STORAGE_REQUIRE_DATABASE?.toLowerCase() === 'true' ||
+    process.env.NODE_ENV === 'production';
+
   if (!dbUrl) {
-    throw new Error(
-      'DATABASE_URL environment variable is not set. Please configure it in .env file.'
-    );
+    if (requireDatabase) {
+      throw new Error(
+        'DATABASE_URL environment variable is not set. STORAGE_REQUIRE_DATABASE is true; please configure it in .env file.'
+      );
+    }
+
+    // DB not required, return empty string to allow in-memory fallback
+    return '';
   }
 
   // Check for placeholder pattern
@@ -75,8 +84,13 @@ function validateDatabaseUrl(): string {
  * Initialize database connection with validation
  * @throws Error if connection fails
  */
-function initializeDatabase(): DatabaseInstance {
+function initializeDatabase(): DatabaseInstance | null {
   const dbUrl = validateDatabaseUrl();
+
+  // If dbUrl is empty and DB is not required, return null to indicate no DB configured
+  if (!dbUrl) {
+    return null;
+  }
 
   const pool = new Pool({
     connectionString: dbUrl,
@@ -94,7 +108,7 @@ function initializeDatabase(): DatabaseInstance {
   return {
     client,
     pool,
-    isConnected: true,
+    isConnected: false,
   };
 }
 
@@ -106,6 +120,7 @@ async function testDatabaseConnection(db: DatabaseInstance): Promise<void> {
   try {
     // Simple test query to verify connection
     await db.pool.query('SELECT 1');
+    db.isConnected = true;
   } catch (error) {
     throw new Error(
       `Failed to connect to database: ${error instanceof Error ? error.message : String(error)}`
@@ -123,12 +138,42 @@ let initError: Error | null = null;
 try {
   loadEnvironment();
   dbInstance = initializeDatabase();
-  // Test connection asynchronously
-  testDatabaseConnection(dbInstance).catch(error => {
-    initError = error as Error;
-    console.error(initError.message);
-  });
-  console.log('✅ Database connection initialized successfully');
+
+  if (!dbInstance) {
+    console.log(
+      '⚠️  Database not configured. STORAGE_REQUIRE_DATABASE is not set or DATABASE_URL missing; using in-memory storage if available.'
+    );
+  } else {
+    // Optimistically mark connected so downstream modules (e.g., storage index) don't throw
+    dbInstance.isConnected = true;
+
+    const requireDb =
+      process.env.STORAGE_REQUIRE_DATABASE?.toLowerCase() === 'true' ||
+      process.env.NODE_ENV === 'production';
+
+    // Verify connection asynchronously; if verification fails and DB is required, exit fast
+    testDatabaseConnection(dbInstance)
+      .then(() => {
+        console.log('✅ Database connection verified');
+      })
+      .catch(error => {
+        initError = error as Error;
+        console.error(
+          `❌ Failed to verify database connection: ${initError.message}`
+        );
+        if (requireDb) {
+          console.error(
+            '❌ STORAGE_REQUIRE_DATABASE=true and database verification failed. Exiting.'
+          );
+          process.exit(1);
+        } else {
+          // Mark disconnected but allow the app to continue using in-memory storage
+          dbInstance!.isConnected = false;
+        }
+      });
+  }
+
+  console.log('✅ Database initialization complete');
 } catch (error) {
   initError = error as Error;
   console.error(`❌ Failed to initialize database: ${initError.message}`);

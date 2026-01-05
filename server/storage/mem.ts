@@ -11,11 +11,19 @@ import {
   type InsertOnboardingSession,
   type TrialUsage,
   type InsertTrialUsage,
-  type MetadataResult,
-  type InsertMetadataResult,
 } from '@shared/schema';
-import { randomUUID } from 'crypto';
-import { IStorage, AnalyticsSummary } from './types';
+import { randomUUID, createHash } from 'crypto';
+import {
+  IStorage,
+  AnalyticsSummary,
+  SaveMetadataInput,
+  StoredMetadata,
+  MetadataObjectRef,
+} from './types';
+import {
+  buildMetadataSummary,
+  generateRecordId,
+} from './metadataPartitioning';
 
 // ============================================================================
 // Types
@@ -70,7 +78,7 @@ export class MemStorage implements IStorage {
   private trialUsagesMap: Map<string, TrialUsage>;
 
   // Metadata
-  private metadataMap: Map<string, MetadataResult>;
+  private metadataMap: Map<string, StoredMetadata & { metadata: any }>;
 
   constructor() {
     this.users = new Map();
@@ -472,21 +480,46 @@ export class MemStorage implements IStorage {
     return this.trialUsagesMap.get(normalizedEmail);
   }
 
-  async saveMetadata(data: InsertMetadataResult): Promise<MetadataResult> {
-    const id = randomUUID();
-    const result: MetadataResult = {
-      ...data,
-      id,
-      createdAt: new Date(),
-      userId: data.userId || null, // Normalize undefined to null
-      mimeType: data.mimeType || null, // Normalize undefined to null
-      fileSize: data.fileSize || null, // Normalize undefined to null
+  async saveMetadata(data: SaveMetadataInput): Promise<StoredMetadata> {
+    const id = generateRecordId();
+    const { summary } = buildMetadataSummary(data.metadata);
+    const raw = Buffer.from(JSON.stringify(data.metadata), 'utf8');
+    const metadataRef: MetadataObjectRef = {
+      provider: 'memory',
+      bucket: 'in-memory',
+      key: id,
+      sizeBytes: raw.byteLength,
+      sha256: createHash('sha256').update(raw).digest('hex'),
+      contentType: 'application/json',
+      encoding: 'identity',
+      createdAt: new Date().toISOString(),
     };
-    this.metadataMap.set(id, result);
-    return result;
+
+    const record: StoredMetadata & { metadata: any } = {
+      id,
+      userId: data.userId || null,
+      fileName: data.fileName,
+      fileSize: data.fileSize || null,
+      mimeType: data.mimeType || null,
+      metadataSummary: summary,
+      metadataRef,
+      metadataSha256: metadataRef.sha256,
+      metadataSizeBytes: metadataRef.sizeBytes,
+      metadataContentType: metadataRef.contentType,
+      createdAt: new Date(),
+      metadata: data.metadata,
+    };
+
+    this.metadataMap.set(id, record);
+    return {
+      ...record,
+      metadata: undefined,
+    };
   }
 
-  async getMetadata(id: string): Promise<MetadataResult | undefined> {
+  async getMetadata(
+    id: string
+  ): Promise<(StoredMetadata & { metadata: any }) | undefined> {
     return this.metadataMap.get(id);
   }
 }

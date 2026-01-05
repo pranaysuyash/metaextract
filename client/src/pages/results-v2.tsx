@@ -121,9 +121,9 @@ export default function ResultsV2() {
     // Extract location data
     const locationData: LocationData | undefined = metadata.gps?.latitude && metadata.gps?.longitude
       ? {
-          latitude: metadata.gps.latitude,
-          longitude: metadata.gps.longitude,
-        }
+        latitude: metadata.gps.latitude,
+        longitude: metadata.gps.longitude,
+      }
       : undefined;
 
     // Extract advanced metadata
@@ -209,14 +209,17 @@ export default function ResultsV2() {
           <div className="absolute inset-0 bg-background/90 z-10"></div>
           <img
             src={generatedBackground}
-            alt="Background"
+            alt=""
+            aria-hidden="true"
             className="w-full h-full object-cover opacity-10 mix-blend-screen scale-110"
           />
         </div>
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-white font-mono">Loading your results...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" role="status">
+              <span className="sr-only">Loading results...</span>
+            </div>
+            <p className="text-white font-mono" aria-live="polite">Loading your results...</p>
           </div>
         </div>
       </div>
@@ -230,7 +233,8 @@ export default function ResultsV2() {
           <div className="absolute inset-0 bg-background/90 z-10"></div>
           <img
             src={generatedBackground}
-            alt="Background"
+            alt=""
+            aria-hidden="true"
             className="w-full h-full object-cover opacity-10 mix-blend-screen scale-110"
           />
         </div>
@@ -272,7 +276,7 @@ export default function ResultsV2() {
             <Button
               variant="ghost"
               onClick={() => navigate('/')}
-              className="gap-2 text-white hover:text-white hover:bg-white/10"
+              className="gap-2 text-white hover:text-white hover:bg-white/10 min-h-[44px]"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
@@ -280,24 +284,24 @@ export default function ResultsV2() {
 
             <div className="flex gap-3">
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono">
-                <Cpu className="w-4 h-4" />
+                <Cpu className="w-4 h-4" aria-hidden="true" />
                 V2 RESULTS
               </div>
 
               <Button
                 variant="outline"
                 onClick={handleDownload}
-                className="gap-2 font-mono text-xs border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10"
+                className="gap-2 font-mono text-xs border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10 min-h-[44px]"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4" aria-hidden="true" />
                 JSON
               </Button>
               <Button
                 variant="outline"
                 onClick={() => toast({ title: 'PDF export coming soon to V2' })}
-                className="gap-2 font-mono text-xs border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10"
+                className="gap-2 font-mono text-xs border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10 min-h-[44px]"
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4" aria-hidden="true" />
                 PDF
               </Button>
             </div>
@@ -312,7 +316,7 @@ export default function ResultsV2() {
           <div className="flex items-center justify-between pb-6 border-b border-white/10">
             <div className="flex items-center gap-4 flex-1">
               <div className="w-12 h-12 bg-white/5 rounded border border-white/10 flex items-center justify-center flex-shrink-0">
-                <Cpu className="w-6 h-6 text-primary" />
+                <Cpu className="w-6 h-6 text-primary" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-white font-mono tracking-tight truncate">
@@ -334,7 +338,7 @@ export default function ResultsV2() {
             </div>
             {isMobile && (
               <div className="ml-2 flex-shrink-0">
-                <Smartphone className="w-5 h-5 text-blue-400" />
+                <Smartphone className="w-5 h-5 text-blue-400" aria-hidden="true" />
               </div>
             )}
           </div>

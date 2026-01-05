@@ -230,6 +230,14 @@ export default function ImagesMvpResults() {
         }
     }, [metadata, trackEvent]);
 
+    useEffect(() => {
+        if (fileName) {
+            document.title = `Results: ${fileName} | MetaExtract`;
+        } else {
+            document.title = "MetaExtract | Analysis Results";
+        }
+    }, [fileName]);
+
     if (loadState === "loading") {
         return (
             <Layout showHeader={true} showFooter={true}>
@@ -257,7 +265,7 @@ export default function ImagesMvpResults() {
                                     <FileImage className="w-5 h-5 text-primary" />
                                     No results yet
                                 </CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardDescription className="text-slate-300">
                                     Upload an image to extract metadata and view the analysis here.
                                 </CardDescription>
                             </CardHeader>
@@ -394,8 +402,8 @@ export default function ImagesMvpResults() {
     const gpsMapUrl = gpsCoords
         ? ((metadata.gps as Record<string, unknown> | null)?.google_maps_url as string | undefined) || `https://maps.google.com/?q=${gpsCoords.latitude},${gpsCoords.longitude}`
         : overlayGps
-        ? (overlayGps.google_maps_url || `https://maps.google.com/?q=${overlayGps.latitude},${overlayGps.longitude}`)
-        : '';
+            ? (overlayGps.google_maps_url || `https://maps.google.com/?q=${overlayGps.latitude},${overlayGps.longitude}`)
+            : '';
     const parseWhatsappFilenameDate = (name?: string) => {
         if (!name) return null;
         const match = name.match(/WhatsApp Image (\d{4})-(\d{2})-(\d{2}) at (\d{2})\.(\d{2})\.(\d{2})/i);
@@ -422,13 +430,13 @@ export default function ImagesMvpResults() {
     const captureDateLabel = captureDateFromExif
         ? "CAPTURE DATE"
         : filenameDate
-        ? "FILENAME DATE"
-        : "CAPTURE DATE";
+            ? "FILENAME DATE"
+            : "CAPTURE DATE";
     const captureDateValue = captureDateFromExif
         ? captureDateFromExif.toISOString()
         : filenameDate
-        ? filenameDate.toISOString()
-        : null;
+            ? filenameDate.toISOString()
+            : null;
     const localModifiedValue = metadata.client_last_modified_iso || null;
 
     const embeddedGpsState = hasGps ? "embedded" : overlayGps ? "overlay" : "none";
@@ -637,21 +645,21 @@ export default function ImagesMvpResults() {
     const preferredIntent = purpose === "authenticity"
         ? "Authenticity"
         : purpose === "photography"
-          ? "Photography"
-          : "Privacy";
+            ? "Photography"
+            : "Privacy";
 
     // Order highlights by preferred intent (moved outside of useMemo to fix hook order issues)
     const orderedHighlights = (() => {
         // Create a copy of highlights to avoid mutating the original array
         const highlightsCopy = [...highlights];
-        
+
         // Sort by preferred intent
         highlightsCopy.sort((a, b) => {
             const aScore = a.intent === preferredIntent ? 1 : 0;
             const bScore = b.intent === preferredIntent ? 1 : 0;
             return bScore - aScore;
         });
-        
+
         return highlightsCopy;
     })();
 
@@ -754,8 +762,8 @@ export default function ImagesMvpResults() {
         Number.isFinite(colorSpaceNumeric) && colorSpaceNumeric === 1
             ? "sRGB"
             : hasValue(metadata.exif?.ColorSpace)
-              ? String(metadata.exif?.ColorSpace)
-              : null;
+                ? String(metadata.exif?.ColorSpace)
+                : null;
 
     const collectPaths = (obj: unknown, prefix = "", depth = 0, out: DetailEntry[] = []): DetailEntry[] => {
         if (out.length >= 500) return out;
@@ -808,15 +816,15 @@ export default function ImagesMvpResults() {
     const q = rawSearch.trim().toLowerCase();
     const rawMatches = q
         ? allRawPaths
-              .filter(
-                  (e) =>
-                      e.path.toLowerCase().includes(q) ||
-                      e.valuePreview.toLowerCase().includes(q)
-              )
-              .slice(0, 80)
-              : allRawPaths.slice(0, 40);
-              
-              return (
+            .filter(
+                (e) =>
+                    e.path.toLowerCase().includes(q) ||
+                    e.valuePreview.toLowerCase().includes(q)
+            )
+            .slice(0, 80)
+        : allRawPaths.slice(0, 40);
+
+    return (
         <Layout showHeader={true} showFooter={true}>
             <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
                 <div className="container mx-auto px-4 max-w-4xl">
@@ -828,33 +836,33 @@ export default function ImagesMvpResults() {
                     <Dialog open={showPurposeModal} onOpenChange={setShowPurposeModal}>
                         <DialogContent className="sm:max-w-[520px] bg-[#0A0A0A] border border-white/10 text-white">
                             <DialogTitle className="text-lg font-semibold">What brings you here?</DialogTitle>
-                            <DialogDescription className="text-sm text-slate-400">
+                            <DialogDescription className="text-sm text-slate-300">
                                 Pick a focus so we can highlight what matters most. You can change this later.
                             </DialogDescription>
                             <div className="mt-5 grid grid-cols-1 gap-3">
                                 <button
                                     type="button"
                                     onClick={() => handlePurposeSelect("privacy")}
-                                    className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors"
+                                    className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black"
                                 >
                                     <div className="text-sm font-semibold text-white">Privacy check</div>
-                                    <div className="text-xs text-slate-400">Find location data, device details, and personal identifiers.</div>
+                                    <div className="text-xs text-slate-300">Find location data, device details, and personal identifiers.</div>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handlePurposeSelect("authenticity")}
-                                    className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors"
+                                    className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black"
                                 >
                                     <div className="text-sm font-semibold text-white">Verify authenticity</div>
-                                    <div className="text-xs text-slate-400">Check edit history, hashes, and integrity signals.</div>
+                                    <div className="text-xs text-slate-300">Check edit history, hashes, and integrity signals.</div>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handlePurposeSelect("photography")}
-                                    className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors"
+                                    className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black"
                                 >
                                     <div className="text-sm font-semibold text-white">Photography details</div>
-                                    <div className="text-xs text-slate-400">Review camera settings, lens info, and capture details.</div>
+                                    <div className="text-xs text-slate-300">Review camera settings, lens info, and capture details.</div>
                                 </button>
                             </div>
                             <div className="mt-5 flex items-center justify-between">
@@ -867,7 +875,7 @@ export default function ImagesMvpResults() {
                                 </Button>
                                 <Button
                                     variant="ghost"
-                                    className="text-slate-400 hover:text-white"
+                                    className="text-slate-300 hover:text-white"
                                     onClick={() => {
                                         trackEvent("purpose_skipped", { location: "results" });
                                         setShowPurposeModal(false);
@@ -886,7 +894,7 @@ export default function ImagesMvpResults() {
                                 <FileImage className="w-6 h-6 text-primary shrink-0" />
                                 <span title={metadata.filename}>{metadata.filename}</span>
                             </h1>
-                            <p className="text-slate-400 text-sm font-mono mt-1 truncate">
+                            <p className="text-slate-300 text-sm font-mono mt-1 truncate">
                                 {metadata.filesize} • {metadata.mime_type}
                             </p>
                         </div>
@@ -906,16 +914,16 @@ export default function ImagesMvpResults() {
                                     >
                                         <Clipboard className="w-4 h-4" />
                                         Summary actions
-                                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                                        <ChevronDown className="w-4 h-4 text-slate-300" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="border-[#1b1b24] bg-[#050608] text-white">
                                     <DropdownMenuItem onSelect={handleCopySummary}>
-                                        <Clipboard className="w-4 h-4 text-slate-400" />
+                                        <Clipboard className="w-4 h-4 text-slate-300" />
                                         Copy summary
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onSelect={handleDownloadSummary}>
-                                        <FileText className="w-4 h-4 text-slate-400" />
+                                        <FileText className="w-4 h-4 text-slate-300" />
                                         Download summary
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -928,7 +936,7 @@ export default function ImagesMvpResults() {
                                     >
                                         <Download className="w-4 h-4" />
                                         Export data
-                                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                                        <ChevronDown className="w-4 h-4 text-slate-300" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="border-[#1b1b24] bg-[#050608] text-white">
@@ -936,14 +944,14 @@ export default function ImagesMvpResults() {
                                         onSelect={handleDownloadJson}
                                         disabled={!canExport}
                                     >
-                                        <FileJson className="w-4 h-4 text-slate-400" />
+                                        <FileJson className="w-4 h-4 text-slate-300" />
                                         Download JSON
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onSelect={handleDownloadFullTxt}
                                         disabled={!canExport}
                                     >
-                                        <FileText className="w-4 h-4 text-slate-400" />
+                                        <FileText className="w-4 h-4 text-slate-300" />
                                         Download full report (txt)
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -988,7 +996,7 @@ export default function ImagesMvpResults() {
                     {!canExport && lockedTotal > 0 && (
                         <Card className="mb-6 bg-[#121217] border-white/10">
                             <CardHeader>
-                                <CardTitle className="text-sm font-mono text-slate-400">UNLOCK FULL REPORT</CardTitle>
+                                <CardTitle className="text-sm font-mono text-slate-300">UNLOCK FULL REPORT</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 text-sm">
                                 <div className="text-slate-200">
@@ -997,7 +1005,7 @@ export default function ImagesMvpResults() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                                     {lockedGroups.slice(0, 6).map((group) => (
                                         <div key={group.key} className="flex items-center justify-between border border-white/5 rounded px-3 py-2 bg-white/5">
-                                            <span className="text-slate-400">{group.label}</span>
+                                            <span className="text-slate-300">{group.label}</span>
                                             <span className="text-slate-200 font-mono">{group.count}</span>
                                         </div>
                                     ))}
@@ -1026,7 +1034,7 @@ export default function ImagesMvpResults() {
 
                     <Card className="bg-[#121217] border-white/5 mb-6">
                         <CardHeader>
-                            <CardTitle className="text-sm font-mono text-slate-400">HIGHLIGHTS</CardTitle>
+                            <CardTitle className="text-sm font-mono text-slate-300">HIGHLIGHTS</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {orderedHighlights.slice(0, 6).map((h, idx) => (
@@ -1038,7 +1046,7 @@ export default function ImagesMvpResults() {
                                             ? scrollTo(h.target.tab, h.target.anchorId)
                                             : undefined
                                     }
-                                    className={`w-full text-left flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${h.accentClass} ${h.target ? "hover:bg-white/5" : ""}`}
+                                    className={`w-full text-left flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black ${h.accentClass} ${h.target ? "hover:bg-white/5" : ""}`}
                                 >
                                     <div className="mt-0.5 opacity-90">{h.icon}</div>
                                     <div className="flex-1">
@@ -1064,15 +1072,15 @@ export default function ImagesMvpResults() {
                                     {processingMs ? `${Math.round(processingMs)} ms` : null}
                                 </div>
                             )}
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
 
                     <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
                             <span>Focus: {purposeLabel}</span>
                             <Button
                                 variant="ghost"
-                                className="text-slate-400 hover:text-white h-7 px-2"
+                                className="text-slate-300 hover:text-white h-7 px-2"
                                 onClick={() => {
                                     trackEvent("purpose_prompt_opened", { location: "results" });
                                     setShowPurposeModal(true);
@@ -1103,14 +1111,14 @@ export default function ImagesMvpResults() {
                     </div>
 
                     <Tabs value={activeTab} onValueChange={(v) => (isTabValue(v) ? setActiveTab(v) : undefined)} className="w-full">
-                        <TabsList className="bg-[#121217] border border-white/5">
+                        <TabsList className="bg-[#121217] border border-white/5" aria-label="Metadata categories">
                             <TabsTrigger value="privacy">Privacy</TabsTrigger>
                             <TabsTrigger value="authenticity">Authenticity</TabsTrigger>
                             <TabsTrigger value="photography">Photography</TabsTrigger>
                             {isAdvanced && (
                                 <TabsTrigger value="raw">
                                     <span className="inline-flex items-center gap-2">
-                                        {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" />}
+                                        {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" aria-hidden="true" />}
                                         Raw
                                     </span>
                                 </TabsTrigger>
@@ -1122,8 +1130,8 @@ export default function ImagesMvpResults() {
                                 {/* Location Card */}
                                 <Card className="bg-[#121217] border-white/5" id="section-location">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                            <MapPin className="w-4 h-4" /> LOCATION DATA
+                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-300">
+                                            <MapPin className="w-4 h-4" aria-hidden="true" /> LOCATION DATA
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -1181,7 +1189,7 @@ export default function ImagesMvpResults() {
                                                     </a>
                                                 )}
                                                 {(burnedTimestamp || metadata.burned_metadata?.parsed_data?.plus_code) && (
-                                                    <div className="text-xs text-slate-400 space-y-1">
+                                                    <div className="text-xs text-slate-300 space-y-1">
                                                         {burnedTimestamp && (
                                                             <div>
                                                                 <span className="text-slate-500">Overlay time:</span> {burnedTimestamp}
@@ -1224,8 +1232,8 @@ export default function ImagesMvpResults() {
                                 {/* Device Info */}
                                 <Card className="bg-[#121217] border-white/5" id="section-device">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                            <Camera className="w-4 h-4" /> DEVICE INFORMATION
+                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-300">
+                                            <Camera className="w-4 h-4" aria-hidden="true" /> DEVICE INFORMATION
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
@@ -1261,8 +1269,8 @@ export default function ImagesMvpResults() {
                                 {/* Timestamps */}
                                 <Card className="bg-[#121217] border-white/5" id="section-timestamps">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                            <Calendar className="w-4 h-4" /> TIMESTAMPS
+                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-300">
+                                            <Calendar className="w-4 h-4" aria-hidden="true" /> TIMESTAMPS
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
@@ -1292,8 +1300,8 @@ export default function ImagesMvpResults() {
                                 {/* Hidden Data Summary */}
                                 <Card className="bg-[#121217] border-white/5">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                            <Lock className="w-4 h-4" /> HIDDEN DATA
+                                        <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-300">
+                                            <Lock className="w-4 h-4" aria-hidden="true" /> HIDDEN DATA
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -1317,19 +1325,19 @@ export default function ImagesMvpResults() {
                                                 <ul className="space-y-3">
                                                     {hasMakerNotes && (
                                                         <li className="flex justify-between text-sm">
-                                                            <span className="text-slate-400">MakerNotes</span>
+                                                            <span className="text-slate-300">MakerNotes</span>
                                                             <span className="text-red-400">Detected</span>
                                                         </li>
                                                     )}
                                                     {hasValue(serial) && (
                                                         <li className="flex justify-between text-sm">
-                                                            <span className="text-slate-400">Serial Numbers</span>
+                                                            <span className="text-slate-300">Serial Numbers</span>
                                                             <span className="text-slate-200 truncate max-w-[55%]">{serial}</span>
                                                         </li>
                                                     )}
                                                     {hasValue(colorProfile) && (
                                                         <li className="flex justify-between text-sm">
-                                                            <span className="text-slate-400">Color Profile</span>
+                                                            <span className="text-slate-300">Color Profile</span>
                                                             <span className="text-slate-200">{colorProfile}</span>
                                                         </li>
                                                     )}
@@ -1343,20 +1351,20 @@ export default function ImagesMvpResults() {
                                 {(hasValue(hashSha256) || hasValue(hashMd5)) && (
                                     <Card className="bg-[#121217] border-white/5" id="section-integrity">
                                         <CardHeader>
-                                            <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
-                                                <Hash className="w-4 h-4" /> INTEGRITY
+                                            <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-300">
+                                                <Hash className="w-4 h-4" aria-hidden="true" /> INTEGRITY
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-3 text-sm font-mono">
                                             {hasValue(hashSha256) && (
                                                 <div className="flex justify-between gap-3">
-                                                    <span className="text-slate-400">SHA256</span>
+                                                    <span className="text-slate-300">SHA256</span>
                                                     <span className="text-slate-200 truncate max-w-[60%]">{String(hashSha256)}</span>
                                                 </div>
                                             )}
                                             {hasValue(hashMd5) && (
                                                 <div className="flex justify-between gap-3">
-                                                    <span className="text-slate-400">MD5</span>
+                                                    <span className="text-slate-300">MD5</span>
                                                     <span className="text-slate-200 truncate max-w-[60%]">{String(hashMd5)}</span>
                                                 </div>
                                             )}
@@ -1367,7 +1375,7 @@ export default function ImagesMvpResults() {
                                 {isAdvanced && (
                                     <Card className="bg-[#121217] border-white/5 md:col-span-2">
                                         <CardHeader>
-                                            <CardTitle className="text-sm font-mono text-slate-400">ADVANCED DETAILS</CardTitle>
+                                            <CardTitle className="text-sm font-mono text-slate-300">ADVANCED DETAILS</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <Accordion type="single" collapsible className="border-white/10">
@@ -1430,7 +1438,7 @@ export default function ImagesMvpResults() {
                                                                             <button
                                                                                 key={d.path}
                                                                                 type="button"
-                                                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
                                                                                 onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [d.path]: d.value }, null, 2))}
                                                                             >
                                                                                 <div className="text-xs font-mono text-slate-300 truncate">{d.path}</div>
@@ -1549,7 +1557,7 @@ export default function ImagesMvpResults() {
                                                                             <button
                                                                                 key={d.path}
                                                                                 type="button"
-                                                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
                                                                                 onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [d.path]: d.value }, null, 2))}
                                                                             >
                                                                                 <div className="text-xs font-mono text-slate-300 truncate">{d.path}</div>
@@ -1743,7 +1751,7 @@ export default function ImagesMvpResults() {
                                                                             <button
                                                                                 key={d.path}
                                                                                 type="button"
-                                                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                                                className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
                                                                                 onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [d.path]: d.value }, null, 2))}
                                                                             >
                                                                                 <div className="text-xs font-mono text-slate-300 truncate">{d.path}</div>
@@ -1791,7 +1799,7 @@ export default function ImagesMvpResults() {
                                                 <button
                                                     key={m.path}
                                                     type="button"
-                                                    className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
+                                                    className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
                                                     onClick={() => navigator.clipboard?.writeText(JSON.stringify({ [m.path]: m.value }, null, 2))}
                                                 >
                                                     <div className="text-xs font-mono text-slate-300 truncate">{m.path}</div>
@@ -1854,10 +1862,10 @@ export default function ImagesMvpResults() {
                                             </div>
                                         ) : null}
                                         {!metadata.quality_metrics?.confidence_score &&
-                                        !metadata.quality_metrics?.extraction_completeness &&
-                                        !metadata.processing_insights?.total_fields_extracted &&
-                                        !metadata.processing_insights?.processing_time_ms &&
-                                        !metadata.quality_metrics?.format_support_level ? (
+                                            !metadata.quality_metrics?.extraction_completeness &&
+                                            !metadata.processing_insights?.total_fields_extracted &&
+                                            !metadata.processing_insights?.processing_time_ms &&
+                                            !metadata.quality_metrics?.format_support_level ? (
                                             <div>Quality data not reported for this file.</div>
                                         ) : null}
                                     </div>

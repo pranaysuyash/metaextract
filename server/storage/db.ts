@@ -19,18 +19,33 @@ import {
   trialUsages,
   metadataResults,
   type MetadataResult,
-  type InsertMetadataResult,
 } from '@shared/schema';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { IStorage, AnalyticsSummary } from './types';
+import {
+  IStorage,
+  AnalyticsSummary,
+  SaveMetadataInput,
+  StoredMetadata,
+  MetadataObjectRef,
+} from './types';
+import { IObjectStorage } from './objectStorage';
+import {
+  buildMetadataSummary,
+  buildObjectKey,
+  decompressMetadata,
+  generateRecordId,
+  prepareMetadataObject,
+} from './metadataPartitioning';
 
 export class DatabaseStorage implements IStorage {
   private db: any;
+  private objectStorage: IObjectStorage;
 
-  constructor() {
+  constructor(objectStorage: IObjectStorage) {
     // Use the imported db connection
     this.db = db;
+    this.objectStorage = objectStorage;
   }
 
   async getUser(_id: string): Promise<User | undefined> {
@@ -450,21 +465,74 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Metadata Persistence
-  async saveMetadata(data: InsertMetadataResult): Promise<MetadataResult> {
+  async saveMetadata(data: SaveMetadataInput): Promise<StoredMetadata> {
     if (!this.db) throw new Error('Database not available');
+
+    const recordId = generateRecordId();
+    const bucket =
+      process.env.OBJECT_STORAGE_BUCKET || 'metadata-results';
+
+    const { summary } = buildMetadataSummary(data.metadata);
+    const objectKey = buildObjectKey(recordId, data.fileName);
+    const prepared = await prepareMetadataObject(data.metadata);
+
+    let metadataRef: MetadataObjectRef | null = null;
+
+    try {
+      metadataRef = await this.objectStorage.putObject({
+        bucket,
+        key: objectKey,
+        body: prepared.body,
+        contentType: prepared.contentType,
+        encoding: prepared.encoding,
+      });
+    } catch (error) {
+      console.error('[MetadataStorage] Failed to upload metadata blob:', error);
+      throw error;
+    }
+
     try {
       const [result] = await this.db
         .insert(metadataResults)
-        .values(data)
+        .values({
+          id: recordId,
+          userId: data.userId,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          mimeType: data.mimeType,
+          metadataSummary: summary,
+          metadataRef,
+          metadataSha256: metadataRef?.sha256 ?? prepared.sha256,
+          metadataSizeBytes: metadataRef?.sizeBytes ?? prepared.sizeBytes,
+          metadataContentType:
+            metadataRef?.contentType ?? prepared.contentType,
+        })
         .returning();
-      return result;
+
+      return {
+        ...result,
+        metadataSummary: summary,
+        metadataRef,
+      };
     } catch (error) {
       console.error('Failed to save metadata:', error);
+      if (metadataRef) {
+        this.objectStorage
+          .deleteObject(metadataRef)
+          .catch((cleanupError) =>
+            console.error(
+              '[MetadataStorage] Failed to cleanup uploaded metadata blob after DB error:',
+              cleanupError
+            )
+          );
+      }
       throw error;
     }
   }
 
-  async getMetadata(id: string): Promise<MetadataResult | undefined> {
+  async getMetadata(
+    id: string
+  ): Promise<(StoredMetadata & { metadata: any }) | undefined> {
     if (!this.db) return undefined;
     try {
       const [result] = await this.db
@@ -472,7 +540,35 @@ export class DatabaseStorage implements IStorage {
         .from(metadataResults)
         .where(eq(metadataResults.id, id))
         .limit(1);
-      return result;
+
+      if (!result) return undefined;
+
+      const metadataRef = (result.metadataRef as MetadataObjectRef | null) ?? null;
+      let metadataPayload: any = result.metadataSummary ?? {};
+
+      if (metadataRef) {
+        try {
+          const object = await this.objectStorage.getObject(metadataRef);
+          if (object?.body) {
+            metadataPayload = await decompressMetadata(
+              object.body,
+              object.encoding || metadataRef.encoding
+            );
+          }
+        } catch (error) {
+          console.error(
+            '[MetadataStorage] Failed to fetch metadata blob, falling back to summary:',
+            error
+          );
+        }
+      }
+
+      return {
+        ...result,
+        metadataSummary: result.metadataSummary ?? {},
+        metadataRef,
+        metadata: metadataPayload,
+      };
     } catch (error) {
       console.error('Failed to get metadata:', error);
       return undefined;

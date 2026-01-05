@@ -38,7 +38,7 @@ export function TrialAccessModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} modal={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className='sm:max-w-[420px] p-0 overflow-hidden bg-[#0A0A0A] border border-white/10 shadow-2xl text-white'>
         <VisuallyHidden.Root>
           <DialogTitle>Unlock Your Free Report</DialogTitle>
@@ -49,7 +49,7 @@ export function TrialAccessModal({
 
         <div className='bg-[#111] p-4 border-b border-white/5'>
           <div className='text-sm font-semibold'>Unlock your free full report</div>
-          <div className='text-xs text-slate-400'>
+          <div className='text-xs text-slate-300'>
             One file, all fields. No other free reports.
           </div>
         </div>
@@ -60,12 +60,13 @@ export function TrialAccessModal({
               Email
             </Label>
             <div className='relative'>
-              <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500' />
+              <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500' aria-hidden="true" />
               <Input
                 id='trial-email'
                 type='email'
                 placeholder='you@example.com'
                 value={email}
+                autoComplete="email"
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (error) setError(null);

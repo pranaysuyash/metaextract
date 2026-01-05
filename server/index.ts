@@ -14,6 +14,12 @@ import { serveStatic } from './static';
 import { createServer } from 'http';
 import { db } from './db';
 import expressWs from 'express-ws';
+import crypto from 'crypto';
+import {
+  applySecurityHeaders,
+  getClientIP,
+  sanitizeErrorMessage,
+} from './security-utils';
 
 const app = express();
 const httpServer = createServer(app);
@@ -25,6 +31,7 @@ const wsApp = expressWsInstance.app;
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown;
+    requestId?: string;
   }
 }
 
@@ -33,13 +40,44 @@ app.use(cookieParser());
 
 app.use(
   express.json({
+    limit: '10kb', // Limit body size to prevent DoS
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   })
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: '10kb' }));
+
+// Debug middleware to track request flow
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`[DEBUG] ${req.method} ${req.path} - Request received`);
+  next();
+});
+
+// Apply security headers to all responses
+app.use((req: Request, res: Response, next: NextFunction) => {
+  try {
+    applySecurityHeaders(res);
+    next();
+  } catch (error) {
+    console.error('Security headers middleware error:', error);
+    next(error);
+  }
+});
+
+// Generate request ID for audit trail
+app.use((req: Request, res: Response, next: NextFunction) => {
+  try {
+    req.requestId =
+      (req.headers['x-request-id'] as string) || crypto.randomUUID();
+    res.setHeader('X-Request-ID', req.requestId);
+    next();
+  } catch (error) {
+    console.error('Request ID middleware error:', error);
+    next(error);
+  }
+});
 
 // Auth middleware - attaches user to request if authenticated
 // Use mock auth if database is not available
@@ -76,7 +114,7 @@ export function log(message: string, source = 'express') {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
@@ -90,15 +128,7 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     const duration = Date.now() - start;
     if (path.startsWith('/api')) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        const truncated = JSON.stringify(capturedJsonResponse).substring(
-          0,
-          200
-        );
-        logLine += ` :: ${truncated}${truncated.length >= 200 ? '...' : ''}`;
-      }
-
+      const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       log(logLine);
     }
   });
@@ -126,24 +156,40 @@ app.use((req, res, next) => {
     res.status(404).json({
       error: 'API endpoint not found',
       message: `The endpoint ${req.originalUrl} does not exist`,
-      availableEndpoints: [
-        'GET /api/auth/me',
-        'POST /api/auth/register', 
-        'POST /api/auth/login',
-        'POST /api/auth/logout',
-        'GET /api/extract/health',
-        'POST /api/extract',
-        'POST /api/extract/batch'
-      ]
+      requestId: req.requestId,
     });
   });
 
+  // Enhanced error handler with sanitization
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || 'Internal Server Error';
+    const context =
+      process.env.NODE_ENV === 'production' ? 'production' : 'development';
+    
+    try {
+      const message = sanitizeErrorMessage(err.message, context);
+      const requestId = (_req as any).requestId || 'unknown';
 
-    res.status(status).json({ message });
-    throw err;
+      // Log full error with request ID for debugging (without sensitive data)
+      console.error(`[${requestId}] Error:`, {
+        status,
+        message: sanitizeErrorMessage(err.message, context),
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      });
+
+      res.status(status).json({
+        error: status >= 500 ? 'Internal Server Error' : message,
+        requestId: requestId,
+      });
+    } catch (handlerError) {
+      // If the error handler itself fails, log and return a safe response
+      console.error('Error handler failed:', handlerError);
+      console.error('Original error:', err);
+      res.status(500).json({
+        error: 'Internal Server Error',
+        requestId: 'unknown',
+      });
+    }
   });
 
   // importantly only setup vite in development and after

@@ -119,6 +119,7 @@ export function PricingModal({
   return (
     <Dialog
       open={isOpen}
+      modal={true}
       onOpenChange={open => {
         if (!open) onClose();
       }}
@@ -138,7 +139,8 @@ export function PricingModal({
             </div>
             <div>
               <div className="font-semibold">Buy Image Credits</div>
-              <div className="text-xs text-slate-400">
+              <div className="font-semibold">Buy Image Credits</div>
+              <div className="text-xs text-slate-300">
                 1 credit = 1 standard image (JPG, PNG, HEIC, WebP)
               </div>
             </div>
@@ -146,57 +148,59 @@ export function PricingModal({
         </div>
 
         <div className="p-6 space-y-5">
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-slate-300">
-              Email (optional)
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              className="w-full px-3 py-2 bg-[#1A1A1A] border border-white/10 rounded-md text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-600"
-            />
-          </div>
-
-          {loadingPacks ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {sortedPacks.map(pack => (
-                <div
-                  key={pack.id}
-                  className="border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-white">
-                      {pack.name}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {pack.description}
-                    </div>
-                    <div className="text-xs text-primary mt-1">
-                      {pack.credits} credits
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handlePurchase(pack.id)}
-                    disabled={!!purchaseLoading}
-                    className="bg-primary text-black hover:bg-primary/90 font-semibold"
-                  >
-                    {purchaseLoading === pack.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      pack.priceDisplay
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="space-y-2">
+          <label htmlFor="pricing-email" className="text-xs font-medium text-slate-300">
+            Email (optional)
+          </label>
+          <input
+            id="pricing-email"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="name@example.com"
+            autoComplete="email"
+            className="w-full px-3 py-2 bg-[#1A1A1A] border border-white/10 rounded-md text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+          />
         </div>
+
+        {loadingPacks ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {sortedPacks.map(pack => (
+              <div
+                key={pack.id}
+                className="border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-white">
+                    {pack.name}
+                  </div>
+                  <div className="text-xs text-slate-300">
+                    {pack.description}
+                  </div>
+                  <div className="text-xs text-primary mt-1">
+                    {pack.credits} credits
+                  </div>
+                </div>
+                <Button
+                  onClick={() => handlePurchase(pack.id)}
+                  disabled={!!purchaseLoading}
+                  className="bg-primary text-black hover:bg-primary/90 font-semibold"
+                >
+                  {purchaseLoading === pack.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    pack.priceDisplay
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       </DialogContent>
     </Dialog>
   );

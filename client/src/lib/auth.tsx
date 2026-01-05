@@ -228,7 +228,7 @@ export function useEffectiveTier(): string {
     return user.tier;
   }
 
-  return 'enterprise';
+  return 'free';
 }
 
 /**

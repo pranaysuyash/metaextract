@@ -57,7 +57,7 @@ export function ProgressiveDisclosure({
         {/* Overview Tab - Quick Details */}
         <TabsContent value="overview" className="space-y-4">
           <div className="space-y-2">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Essential metadata at a glance
             </p>
             <QuickDetails data={data.quickDetails} />
@@ -67,13 +67,13 @@ export function ProgressiveDisclosure({
         {/* Location Tab */}
         <TabsContent value="location" className="space-y-4">
           <div className="space-y-2">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               GPS location information
             </p>
             {data.location ? (
               <LocationSection location={data.location} />
             ) : (
-              <div className="p-4 text-center text-gray-500 dark:text-gray-400 rounded-lg bg-gray-50 dark:bg-gray-900">
+              <div className="p-4 text-center text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
                 No location data available
               </div>
             )}
@@ -83,7 +83,7 @@ export function ProgressiveDisclosure({
         {/* Advanced Tab - Collapsible Sections */}
         <TabsContent value="advanced" className="space-y-4">
           <div className="space-y-2">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Detailed metadata organized by category
             </p>
             <AdvancedMetadataView data={data.advancedMetadata} />
@@ -103,7 +103,7 @@ function AdvancedMetadataView({
 }: AdvancedMetadataViewProps): React.ReactElement {
   if (!data || Object.keys(data).length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500 dark:text-gray-400 rounded-lg bg-gray-50 dark:bg-gray-900">
+      <div className="p-4 text-center text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
         No advanced metadata available
       </div>
     );
@@ -156,7 +156,7 @@ function MetadataDetails({ value }: MetadataDetailsProps): React.ReactElement {
       <div className="space-y-2">
         {Object.entries(value).map(([k, v]) => (
           <div key={k} className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">{formatCategoryName(k)}</span>
+            <span className="text-gray-700 dark:text-gray-300">{formatCategoryName(k)}</span>
             <span className="text-gray-900 dark:text-white font-medium">
               {typeof v === 'object' ? JSON.stringify(v) : String(v)}
             </span>

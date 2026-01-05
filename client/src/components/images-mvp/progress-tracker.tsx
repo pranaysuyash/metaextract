@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Zap, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +19,7 @@ interface ProgressTrackerProps {
 }
 
 export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) {
+  const shouldReduceMotion = useReducedMotion();
   const [progress, setProgress] = useState<ProgressData>({
     percentage: 0,
     stage: 'Initializing extraction...'
@@ -28,13 +29,13 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
 
   useEffect(() => {
     // WebSocket connection for real-time progress updates
-    const ws = new WebSocket(`ws://${window.location.host}/api/images_mvp/progress/${sessionId}`);
-    
+    const ws = new WebSocket(`ws://localhost:3000/api/images_mvp/progress/${sessionId}`);
+
     ws.onopen = () => {
       console.log('Progress tracker connected');
       setWsConnected(true);
     };
-    
+
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -45,7 +46,7 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
             eta: data.estimated_time_remaining,
             quality_metrics: data.quality_metrics
           });
-          
+
           // Check if extraction is complete
           if (data.percentage >= 100) {
             setIsComplete(true);
@@ -58,17 +59,17 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
         console.error('Error parsing progress update:', error);
       }
     };
-    
+
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
       setWsConnected(false);
     };
-    
+
     ws.onclose = () => {
       console.log('Progress tracker disconnected');
       setWsConnected(false);
     };
-    
+
     return () => {
       ws.close();
     };
@@ -87,21 +88,26 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
   };
 
   return (
-    <div className={cn("w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10", className)}>
+    <div
+      className={cn("w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10", className)}
+      role="status"
+      aria-live="polite"
+    >
       {/* Progress Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <motion.div
-            animate={{ rotate: isComplete ? 0 : 360 }}
-            transition={{ duration: 2, repeat: isComplete ? 0 : Infinity, ease: "linear" }}
+            animate={{ rotate: isComplete ? 0 : shouldReduceMotion ? 0 : 360 }}
+            transition={{ duration: 2, repeat: isComplete ? 0 : Infinity, ease: "linear", repeatType: "loop" }}
+            style={{ originX: 0.5, originY: 0.5 }}
           >
             {getStageIcon(progress.stage)}
           </motion.div>
-          <span className="text-sm font-medium text-white/80">
+          <span className="text-sm font-medium text-slate-200">
             {isComplete ? 'Extraction Complete!' : 'Extracting Metadata...'}
           </span>
         </div>
-        <span className="text-sm font-mono text-white/60">
+        <span className="text-sm font-mono text-slate-300">
           {progress.percentage.toFixed(0)}%
         </span>
       </div>
@@ -125,9 +131,9 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
 
       {/* Current Stage */}
       <div className="text-center">
-        <p className="text-sm text-white/70 mb-1">{progress.stage}</p>
+        <p className="text-sm text-slate-300 mb-1">{progress.stage}</p>
         {progress.eta && progress.eta > 0 && (
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-slate-400">
             Estimated time remaining: {Math.ceil(progress.eta / 1000)}s
           </p>
         )}
@@ -137,13 +143,13 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
       {progress.quality_metrics && (
         <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
           <div className="text-center">
-            <div className="text-xs text-white/50 mb-1">Confidence</div>
+            <div className="text-xs text-slate-300 mb-1">Confidence</div>
             <div className="text-lg font-bold text-green-400">
               {(progress.quality_metrics.confidence_score * 100).toFixed(0)}%
             </div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-white/50 mb-1">Completeness</div>
+            <div className="text-xs text-slate-300 mb-1">Completeness</div>
             <div className="text-lg font-bold text-blue-400">
               {(progress.quality_metrics.extraction_completeness * 100).toFixed(0)}%
             </div>

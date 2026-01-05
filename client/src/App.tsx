@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { OnboardingProvider } from "@/lib/onboarding";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { AccessibilityProvider } from "@/lib/accessibility-context";
 import { TutorialOverlay, useTutorialOverlay } from "@/components/tutorial-overlay";
 import { ContextAdapterProvider } from "@/context/ContextAdapter";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -120,18 +121,20 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultMode="dark" injectCssVars={true}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <OnboardingProvider>
-              <ContextAdapterProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <AppRouter />
-                </TooltipProvider>
-              </ContextAdapterProvider>
-            </OnboardingProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <AccessibilityProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <OnboardingProvider>
+                <ContextAdapterProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <AppRouter />
+                  </TooltipProvider>
+                </ContextAdapterProvider>
+              </OnboardingProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </AccessibilityProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

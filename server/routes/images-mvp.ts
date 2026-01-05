@@ -4,6 +4,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileTypeFromBuffer } from 'file-type';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
 import { getDatabase, isDatabaseConnected } from '../db';
@@ -21,8 +22,18 @@ import {
   sendInvalidRequestError,
   sendInternalServerError,
 } from '../utils/error-response';
-import { generateClientToken, verifyClientToken, getClientUsage, incrementUsage, handleQuotaExceeded } from '../utils/free-quota-enforcement';
+import {
+  generateClientToken,
+  verifyClientToken,
+  getClientUsage,
+  incrementUsage,
+  handleQuotaExceeded,
+} from '../utils/free-quota-enforcement';
 import { IMAGES_MVP_CREDIT_PACKS, DODO_IMAGES_MVP_PRODUCTS } from '../payments';
+import { getClientIP, sanitizeFilename } from '../security-utils';
+import { rateLimitExtraction } from '../rateLimitMiddleware';
+// Utility available for future "Safe Export" feature (stripping metadata for privacy)
+import { processImageBuffer } from '../utils/exif-stripper';
 
 // WebSocket progress tracking
 interface ProgressConnection {
@@ -48,7 +59,12 @@ const dodoClient = DODO_API_KEY
   : null;
 
 // WebSocket Progress Tracking Functions
-function broadcastProgress(sessionId: string, progress: number, message: string, stage?: string) {
+function broadcastProgress(
+  sessionId: string,
+  progress: number,
+  message: string,
+  stage?: string
+) {
   const connections = activeConnections.get(sessionId);
   if (!connections || connections.length === 0) return;
 
@@ -58,13 +74,14 @@ function broadcastProgress(sessionId: string, progress: number, message: string,
     progress: Math.min(100, Math.max(0, progress)),
     message,
     stage: stage || 'processing',
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 
   const messageStr = JSON.stringify(progressData);
-  
+
   connections.forEach(conn => {
-    if (conn.ws.readyState === 1) { // WebSocket.OPEN
+    if (conn.ws.readyState === 1) {
+      // WebSocket.OPEN
       conn.ws.send(messageStr);
     }
   });
@@ -78,13 +95,14 @@ function broadcastError(sessionId: string, error: string) {
     type: 'error',
     sessionId,
     error,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 
   const messageStr = JSON.stringify(errorData);
-  
+
   connections.forEach(conn => {
-    if (conn.ws.readyState === 1) { // WebSocket.OPEN
+    if (conn.ws.readyState === 1) {
+      // WebSocket.OPEN
       conn.ws.send(messageStr);
     }
   });
@@ -100,15 +118,16 @@ function broadcastComplete(sessionId: string, metadata: any) {
     metadata: {
       fields_extracted: metadata.fields_extracted || 0,
       processing_time_ms: metadata.processing_time_ms || 0,
-      file_size: metadata.file_size || 0
+      file_size: metadata.file_size || 0,
     },
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 
   const messageStr = JSON.stringify(completeData);
-  
+
   connections.forEach(conn => {
-    if (conn.ws.readyState === 1) { // WebSocket.OPEN
+    if (conn.ws.readyState === 1) {
+      // WebSocket.OPEN
       conn.ws.send(messageStr);
     }
   });
@@ -140,7 +159,7 @@ const SUPPORTED_IMAGE_MIMES = new Set([
   'image/webp',
   'image/heic',
   'image/heif',
-  
+
   // Enhanced formats
   'image/tiff',
   'image/bmp',
@@ -157,7 +176,7 @@ const SUPPORTED_IMAGE_MIMES = new Set([
   'image/x-pentax-pef',
   'image/x-sigma-x3f',
   'image/x-samsung-srw',
-  'image/x-panasonic-rw2'
+  'image/x-panasonic-rw2',
 ]);
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([
@@ -168,7 +187,7 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.webp',
   '.heic',
   '.heif',
-  
+
   // Enhanced formats from our comprehensive system
   '.tiff',
   '.tif',
@@ -186,7 +205,7 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.pef',
   '.x3f',
   '.srw',
-  '.rw2'
+  '.rw2',
 ]);
 
 function getBaseUrl(): string {
@@ -258,9 +277,29 @@ export function registerImagesMvpRoutes(app: Express) {
       '/api/images_mvp/progress/:sessionId',
       (ws: WebSocket, req: Request) => {
         const sessionId = req.params.sessionId;
+
         if (!sessionId) {
           ws.close(1002, 'Session ID required');
           return;
+        }
+
+        // Validate session ID format
+        const sanitizedSessionId = sanitizeFilename(sessionId);
+        if (sanitizedSessionId !== sessionId) {
+          ws.close(1008, 'Invalid session ID format');
+          return;
+        }
+
+        // Optional: Validate client token for WebSocket connection
+        const clientToken = req.cookies?.metaextract_client;
+        const clientId = req.query?.clientId as string;
+
+        if (clientId && clientToken) {
+          const decoded = verifyClientToken(clientToken);
+          if (!decoded || decoded.clientId !== clientId) {
+            ws.close(1008, 'Client token validation failed');
+            return;
+          }
         }
 
         // Add connection to active connections
@@ -347,26 +386,50 @@ export function registerImagesMvpRoutes(app: Express) {
     async (req: Request, res: Response) => {
       try {
         const event = typeof req.body?.event === 'string' ? req.body.event : '';
-        const properties =
+        let properties =
           req.body?.properties && typeof req.body.properties === 'object'
             ? req.body.properties
             : {};
         const sessionId =
           typeof req.body?.sessionId === 'string' ? req.body.sessionId : null;
 
+        // Validate event name
         if (!event) {
           return sendInvalidRequestError(res, 'Event name is required');
         }
 
-        await storage.logUiEvent({
-          product: 'images_mvp',
-          eventName: event,
-          sessionId,
-          userId: null,
-          properties,
-          ipAddress: req.ip || req.socket.remoteAddress || null,
-          userAgent: req.headers['user-agent'] || null,
-        });
+        // Limit properties size to 10KB
+        const propertiesString = JSON.stringify(properties);
+        if (propertiesString.length > 10 * 1024) {
+          // Truncate properties if too large
+          properties = {
+            _truncated: true,
+            _originalSize: propertiesString.length,
+          };
+        }
+
+        // Sanitize event name
+        const sanitizedEvent = event
+          .replace(/[^a-zA-Z0-9_-]/g, '')
+          .substring(0, 100);
+
+        try {
+          await storage.logUiEvent({
+            product: 'images_mvp',
+            eventName: event,
+            sessionId,
+            userId: null,
+            properties,
+            ipAddress: req.ip || req.socket.remoteAddress || null,
+            userAgent: req.headers['user-agent'] || null,
+          });
+        } catch (error) {
+          // Analytics is non-critical; fail open for unsigned users
+          console.warn(
+            '[ImagesMVP] Analytics log failed (non-blocking):',
+            (error as Error).message || error
+          );
+        }
 
         return res.status(204).send();
       } catch (error) {
@@ -620,7 +683,9 @@ export function registerImagesMvpRoutes(app: Express) {
             failed: analysisFailed,
             average_processing_ms:
               analysisProcessingCount > 0
-                ? Math.round(analysisProcessingMsTotal / analysisProcessingCount)
+                ? Math.round(
+                    analysisProcessingMsTotal / analysisProcessingCount
+                  )
                 : null,
           },
           paywall: {
@@ -767,9 +832,14 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/extract',
+    rateLimitExtraction(), // Rate limit: per-IP/user throttling
     upload.single('file'),
     async (req: Request, res: Response) => {
       const startTime = Date.now();
+      // Correlation ID for observability (traces request through pipeline)
+      const requestId = `req_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+      res.setHeader('X-Request-Id', requestId);
+
       let tempPath: string | null = null;
       let sessionId: string | null = null;
       let creditBalanceId: string | null = null;
@@ -784,7 +854,7 @@ export function registerImagesMvpRoutes(app: Express) {
           return sendInvalidRequestError(res, 'No file uploaded');
         }
 
-        // Enforce file type
+        // Enforce file type (MIME + extension check)
         const mimeType = req.file.mimetype;
         const fileExt = path.extname(req.file.originalname).toLowerCase();
         const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
@@ -799,6 +869,19 @@ export function registerImagesMvpRoutes(app: Express) {
               'We support popular photo formats: JPG, PNG, HEIC (iPhone), WebP, and more. Please upload a standard photo.',
             code: 'INVALID_FILE_TYPE',
             supported: ['JPG', 'JPEG', 'PNG', 'HEIC', 'HEIF', 'WebP'],
+          });
+        }
+
+        // Magic-byte validation: verify actual file content matches claimed type
+        const detectedType = await fileTypeFromBuffer(req.file.buffer);
+        if (detectedType && !SUPPORTED_IMAGE_MIMES.has(detectedType.mime)) {
+          // File content doesn't match a supported image type
+          return res.status(400).json({
+            error: 'Invalid file content',
+            message:
+              'The uploaded file does not appear to be a valid image. Please upload a standard photo file.',
+            code: 'INVALID_MAGIC_BYTES',
+            detected: detectedType.mime,
           });
         }
 
@@ -825,11 +908,9 @@ export function registerImagesMvpRoutes(app: Express) {
         const hasTrialAvailable = !!trialEmail && trialUses < 2;
 
         // Determine Access
-        // In development, skip all restrictions for easier testing
-        if (process.env.NODE_ENV === 'development') {
-          useTrial = false;
-          chargeCredits = false;
-        } else if (hasTrialAvailable) {
+        // Security is enforced in all environments
+        // For testing, use accounts with sufficient credits
+        if (hasTrialAvailable) {
           useTrial = true;
         } else {
           if (trialEmail) {
@@ -854,82 +935,93 @@ export function registerImagesMvpRoutes(app: Express) {
             }
             chargeCredits = true;
           } else {
-          // No trial available: allow up to 2 free extractions per device, then require credits.
-          const ip = req.ip || req.socket.remoteAddress || 'unknown';
+            // No trial available: allow up to 2 free extractions per device, then require credits.
+            const ip = req.ip || req.socket.remoteAddress || 'unknown';
 
-          let clientToken = req.cookies?.metaextract_client;
-          let decoded = verifyClientToken(clientToken ?? '');
+            let clientToken = req.cookies?.metaextract_client;
+            let decoded = verifyClientToken(clientToken ?? '');
 
-          if (!decoded) {
-            clientToken = generateClientToken();
-            res.cookie('metaextract_client', clientToken, {
-              maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-              path: '/',
-              httpOnly: true,
-              sameSite: 'strict',
-            });
-            decoded = verifyClientToken(clientToken);
-          }
-
-          if (!decoded) {
-            return res.status(429).json({
-              error: 'Invalid session',
-              message: 'Please refresh the page to continue.',
-              requires_refresh: true,
-            });
-          }
-
-          const usage = await getClientUsage(decoded.clientId);
-          const freeUsed = usage?.free_used || 0;
-          const freeLimit = 2;
-
-          if (freeUsed < freeLimit) {
-            await incrementUsage(decoded.clientId, ip);
-            useTrial = false;
-            chargeCredits = false;
-          } else {
-            // Free quota exhausted: require credits.
-            if (!sessionId) {
-              await handleQuotaExceeded(req, res, decoded.clientId, ip);
-              return;
+            if (!decoded) {
+              clientToken = generateClientToken();
+              res.cookie('metaextract_client', clientToken, {
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+                path: '/',
+                httpOnly: true,
+                sameSite: 'strict',
+              });
+              decoded = verifyClientToken(clientToken);
             }
 
-            const namespacedSessionId = getImagesMvpBalanceId(sessionId);
-            const balance =
-              await storage.getOrCreateCreditBalance(namespacedSessionId);
-            creditBalanceId = balance?.id ?? null;
-
-            if (!balance || balance.credits < creditCost) {
-              await handleQuotaExceeded(req, res, decoded.clientId, ip);
-              return;
+            if (!decoded) {
+              return res.status(429).json({
+                error: 'Invalid session',
+                message: 'Please refresh the page to continue.',
+                requires_refresh: true,
+              });
             }
-            chargeCredits = true;
-          }
+
+            const usage = await getClientUsage(decoded.clientId);
+            const freeUsed = usage?.free_used || 0;
+            const freeLimit = 2;
+
+            if (freeUsed < freeLimit) {
+              await incrementUsage(decoded.clientId, ip);
+              useTrial = false;
+              chargeCredits = false;
+            } else {
+              // Free quota exhausted: require credits.
+              if (!sessionId) {
+                await handleQuotaExceeded(req, res, decoded.clientId, ip);
+                return;
+              }
+
+              const namespacedSessionId = getImagesMvpBalanceId(sessionId);
+              const balance =
+                await storage.getOrCreateCreditBalance(namespacedSessionId);
+              creditBalanceId = balance?.id ?? null;
+
+              if (!balance || balance.credits < creditCost) {
+                await handleQuotaExceeded(req, res, decoded.clientId, ip);
+                return;
+              }
+              chargeCredits = true;
+            }
           }
         }
 
         // Proceed with Extraction
         const tempDir = '/tmp/metaextract';
         await fs.mkdir(tempDir, { recursive: true });
+        const sanitizedFilename = sanitizeFilename(req.file.originalname);
         tempPath = path.join(
           tempDir,
-          `${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`
+          `${crypto.randomUUID()}-${sanitizedFilename}`
         );
         await fs.writeFile(tempPath, req.file.buffer);
 
         // Send initial progress update
         if (sessionId) {
-          broadcastProgress(sessionId, 10, 'File uploaded successfully', 'upload_complete');
+          broadcastProgress(
+            sessionId,
+            10,
+            'File uploaded successfully',
+            'upload_complete'
+          );
         }
 
         // Extract with enhanced features
         const pythonTier = 'super';
-        
+
         // Send progress update before extraction
         if (sessionId) {
-          broadcastProgress(sessionId, 20, 'Starting metadata extraction', 'extraction_start');
+          broadcastProgress(
+            sessionId,
+            20,
+            'Starting metadata extraction',
+            'extraction_start'
+          );
         }
-        
+
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
           pythonTier,
@@ -937,10 +1029,15 @@ export function registerImagesMvpRoutes(app: Express) {
           true, // advanced (needed for authenticity signals)
           req.query.store === 'true'
         );
-        
+
         // Send progress update after extraction
         if (sessionId) {
-          broadcastProgress(sessionId, 90, 'Metadata extraction complete', 'extraction_complete');
+          broadcastProgress(
+            sessionId,
+            90,
+            'Metadata extraction complete',
+            'extraction_complete'
+          );
         }
 
         const processingMs = Date.now() - startTime;
@@ -950,56 +1047,65 @@ export function registerImagesMvpRoutes(app: Express) {
         rawMetadata.extraction_info = {
           ...rawMetadata.extraction_info,
           enhanced_extraction: true,
-          total_fields_extracted: rawMetadata.extraction_info?.fields_extracted || 0,
+          total_fields_extracted:
+            rawMetadata.extraction_info?.fields_extracted || 0,
           streaming_enabled: false, // Will be enabled when we add streaming support
-          fallback_extraction: false
+          fallback_extraction: false,
         } as any; // Type assertion to allow additional properties
 
-      const metadata = transformMetadataForFrontend(
-          rawMetadata, 
-          req.file.originalname, 
+        const metadata = transformMetadataForFrontend(
+          rawMetadata,
+          req.file.originalname,
           useTrial ? 'free' : 'professional'
-      );
+        );
 
-      const clientLastModifiedRaw = req.body?.client_last_modified;
-      const clientLastModifiedMs = clientLastModifiedRaw ? Number(clientLastModifiedRaw) : null;
-      if (clientLastModifiedMs && Number.isFinite(clientLastModifiedMs)) {
-          metadata.client_last_modified_iso = new Date(clientLastModifiedMs).toISOString();
-      }
+        const clientLastModifiedRaw = req.body?.client_last_modified;
+        const clientLastModifiedMs = clientLastModifiedRaw
+          ? Number(clientLastModifiedRaw)
+          : null;
+        if (clientLastModifiedMs && Number.isFinite(clientLastModifiedMs)) {
+          metadata.client_last_modified_iso = new Date(
+            clientLastModifiedMs
+          ).toISOString();
+        }
 
-      // Send final progress update
-      if (sessionId) {
-        broadcastProgress(sessionId, 100, 'Processing complete', 'complete');
-        broadcastComplete(sessionId, {
-          fields_extracted: rawMetadata.extraction_info.fields_extracted || 0,
+        // Send final progress update
+        if (sessionId) {
+          broadcastProgress(sessionId, 100, 'Processing complete', 'complete');
+          broadcastComplete(sessionId, {
+            fields_extracted: rawMetadata.extraction_info.fields_extracted || 0,
+            processing_time_ms: processingMs,
+            file_size: req.file.size,
+          });
+        }
+
+        // Add quality metrics and processing insights for enhanced user experience
+        // Use the extraction_info data structure from the Python backend
+        metadata.quality_metrics = {
+          confidence_score: 0.85, // High confidence for successful extraction
+          extraction_completeness: Math.min(
+            1.0,
+            (rawMetadata.extraction_info.fields_extracted || 0) / 100
+          ), // Completeness based on field count
+          processing_efficiency: 0.88, // Good efficiency for successful extraction
+          format_support_level: 'comprehensive', // We support comprehensive formats
+          recommended_actions: [], // No specific recommendations for successful extraction
+          enhanced_extraction: true,
+          streaming_enabled: false,
+        };
+
+        metadata.processing_insights = {
+          total_fields_extracted:
+            rawMetadata.extraction_info.fields_extracted || 0,
           processing_time_ms: processingMs,
-          file_size: req.file.size
-        });
-      }
+          memory_usage_mb: 0, // Memory usage not tracked yet
+          streaming_enabled: false,
+          fallback_extraction: false,
+          progress_updates: [],
+        };
 
-      // Add quality metrics and processing insights for enhanced user experience
-      // Use the extraction_info data structure from the Python backend
-      metadata.quality_metrics = {
-        confidence_score: 0.85, // High confidence for successful extraction
-        extraction_completeness: Math.min(1.0, (rawMetadata.extraction_info.fields_extracted || 0) / 100), // Completeness based on field count
-        processing_efficiency: 0.88, // Good efficiency for successful extraction
-        format_support_level: 'comprehensive', // We support comprehensive formats
-        recommended_actions: [], // No specific recommendations for successful extraction
-        enhanced_extraction: true,
-        streaming_enabled: false
-      };
-
-      metadata.processing_insights = {
-        total_fields_extracted: rawMetadata.extraction_info.fields_extracted || 0,
-        processing_time_ms: processingMs,
-        memory_usage_mb: 0, // Memory usage not tracked yet
-        streaming_enabled: false,
-        fallback_extraction: false,
-        progress_updates: []
-      };
-
-      // Filter for Trial
-      if (useTrial) {
+        // Filter for Trial
+        if (useTrial) {
           // Remove Raw/Advanced data for trial to encourage upgrade
           metadata.iptc = null;
           metadata.xmp = null;
@@ -1076,20 +1182,118 @@ export function registerImagesMvpRoutes(app: Express) {
         res.json(metadata);
       } catch (error) {
         console.error('Images MVP extraction error:', error);
-        
+
         // Send error notification via WebSocket
         if (sessionId) {
-          broadcastError(sessionId, error instanceof Error ? error.message : 'Extraction failed');
+          broadcastError(
+            sessionId,
+            error instanceof Error ? error.message : 'Extraction failed'
+          );
         }
-        
+
         sendInternalServerError(res, 'Failed to extract metadata');
       } finally {
         await cleanupTempFile(tempPath);
-        
+
         // Clean up WebSocket connections for this session
         if (sessionId) {
           setTimeout(() => cleanupConnections(sessionId!), 5000); // Delay cleanup to allow final messages
         }
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // Job Status Endpoint (Async Processing Support)
+  // ---------------------------------------------------------------------------
+  app.get(
+    '/api/images_mvp/jobs/:jobId/status',
+    async (req: Request, res: Response) => {
+      try {
+        const { jobId } = req.params;
+
+        if (!jobId) {
+          return res.status(400).json({ error: 'Job ID is required' });
+        }
+
+        // For now, check metadata_results as the "completed" indicator
+        // Full async queue implementation is in short-term roadmap
+        const metadata = await storage.getMetadata(jobId);
+
+        if (metadata) {
+          return res.json({
+            jobId,
+            status: 'complete',
+            progress: 100,
+            message: 'Extraction complete',
+            result: {
+              id: metadata.id,
+              fileName: metadata.fileName,
+              createdAt: metadata.createdAt,
+            },
+          });
+        }
+
+        // Job not found - could be pending or invalid
+        return res.status(404).json({
+          jobId,
+          status: 'not_found',
+          message:
+            'Job not found. It may still be processing or the ID is invalid.',
+        });
+      } catch (error) {
+        console.error('Error fetching job status:', error);
+        return res.status(500).json({
+          error: 'Failed to fetch job status',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // Thumbnail Endpoint with Format Negotiation (CDN Optimization)
+  // ---------------------------------------------------------------------------
+  app.get(
+    '/api/images_mvp/thumbnail/:resultId',
+    async (req: Request, res: Response) => {
+      try {
+        const { resultId } = req.params;
+        const acceptHeader = req.headers.accept || '';
+
+        // Format negotiation based on client capabilities
+        let preferredFormat: 'avif' | 'webp' | 'jpeg' = 'jpeg';
+        if (acceptHeader.includes('image/avif')) {
+          preferredFormat = 'avif';
+        } else if (acceptHeader.includes('image/webp')) {
+          preferredFormat = 'webp';
+        }
+
+        // Get metadata result to find original image
+        const metadata = await storage.getMetadata(resultId);
+        if (!metadata) {
+          return res.status(404).json({ error: 'Result not found' });
+        }
+
+        // For now, return format info - actual thumbnail generation
+        // requires object storage integration (short-term roadmap)
+        return res.json({
+          resultId,
+          preferredFormat,
+          message: 'Thumbnail endpoint ready. CDN integration pending.',
+          thumbnailUrl: `/api/images_mvp/thumbnail/${resultId}/image.${preferredFormat}`,
+          formats: {
+            avif: acceptHeader.includes('image/avif'),
+            webp: acceptHeader.includes('image/webp'),
+            jpeg: true,
+          },
+        });
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
+        return res.status(500).json({
+          error: 'Failed to generate thumbnail',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     }
   );

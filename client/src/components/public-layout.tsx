@@ -270,7 +270,7 @@ export function PublicLayout({
                     Meta<span className="text-primary">Extract</span>
                   </span>
                 </Link>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-300">
                   The world's most comprehensive metadata extraction system.
                 </p>
               </div>
@@ -278,7 +278,7 @@ export function PublicLayout({
               {/* Product */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Product</h4>
-                <ul className="space-y-2 text-sm text-slate-400">
+                <ul className="space-y-2 text-sm text-slate-300">
                   <li>
                     <Link
                       to="/#features"
@@ -317,7 +317,7 @@ export function PublicLayout({
               {/* Company */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Company</h4>
-                <ul className="space-y-2 text-sm text-slate-400">
+                <ul className="space-y-2 text-sm text-slate-300">
                   <li>
                     <Link
                       to="/about"
@@ -348,7 +348,7 @@ export function PublicLayout({
               {/* Legal */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Legal</h4>
-                <ul className="space-y-2 text-sm text-slate-400">
+                <ul className="space-y-2 text-sm text-slate-300">
                   <li>
                     <Link
                       to="/privacy"

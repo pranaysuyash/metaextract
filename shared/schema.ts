@@ -183,7 +183,13 @@ export const metadataResults = pgTable('metadata_results', {
   fileName: text('file_name').notNull(),
   fileSize: text('file_size'),
   mimeType: text('mime_type'),
-  metadata: jsonb('metadata').notNull(), // Stores the full extraction result
+  metadataSummary: jsonb('metadata_summary')
+    .notNull()
+    .default(sql`'{}'::jsonb`), // Capped summary for search/indexing
+  metadataRef: jsonb('metadata_ref'), // Pointer to full blob in object storage
+  metadataSha256: text('metadata_sha256'),
+  metadataSizeBytes: bigint('metadata_size_bytes', { mode: 'number' }),
+  metadataContentType: text('metadata_content_type'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -196,6 +202,48 @@ export const insertMetadataResultSchema = createInsertSchema(
 
 export type InsertMetadataResult = z.infer<typeof insertMetadataResultSchema>;
 export type MetadataResult = typeof metadataResults.$inferSelect;
+export type MetadataRef = {
+  provider: string;
+  bucket: string;
+  key: string;
+  sizeBytes: number;
+  sha256: string;
+  contentType?: string | null;
+  encoding?: string | null;
+  createdAt?: string | null;
+};
+
+// ============================================================================
+// Extraction Jobs Schema (Async Processing)
+// ============================================================================
+
+export const extractionJobs = pgTable('extraction_jobs', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  sessionId: varchar('session_id'),
+  userId: varchar('user_id').references(() => users.id),
+  fileName: text('file_name').notNull(),
+  fileSize: bigint('file_size', { mode: 'number' }),
+  mimeType: text('mime_type'),
+  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, processing, complete, failed
+  progress: integer('progress').notNull().default(0), // 0-100
+  progressMessage: text('progress_message'),
+  resultId: varchar('result_id').references(() => metadataResults.id), // Link to result when complete
+  error: text('error'), // Error message if failed
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+});
+
+export const insertExtractionJobSchema = createInsertSchema(extractionJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExtractionJob = z.infer<typeof insertExtractionJobSchema>;
+export type ExtractionJob = typeof extractionJobs.$inferSelect;
 
 // ============================================================================
 // Onboarding System Schema
@@ -332,3 +380,108 @@ export const insertClientUsageSchema = createInsertSchema(clientUsage).omit({
 
 export type InsertClientUsage = z.infer<typeof insertClientUsageSchema>;
 export type ClientUsage = typeof clientUsage.$inferSelect;
+
+// ============================================================================
+// Client Activity Tracking (Abuse Detection - Tier 2 & 3)
+// Best Practice: Serial ID for high-throughput append-only tables
+// ============================================================================
+
+export const clientActivity = pgTable('client_activity', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id', { length: 36 }).notNull(),
+  ip: text('ip'),
+  userAgent: text('user_agent'),
+  fingerprintHash: varchar('fingerprint_hash', { length: 64 }),
+  action: varchar('action', { length: 50 }).notNull(), // 'request', 'quota_hit', 'new_token', etc.
+  abuseScore: text('abuse_score').default('0.00'),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const insertClientActivitySchema = createInsertSchema(clientActivity).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertClientActivity = z.infer<typeof insertClientActivitySchema>;
+export type ClientActivity = typeof clientActivity.$inferSelect;
+
+// ============================================================================
+// IP Rate Limiting (Tier 2)
+// ============================================================================
+
+export const ipRateLimits = pgTable('ip_rate_limits', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  ip: text('ip').notNull().unique(),
+  dailyCount: integer('daily_count').notNull().default(0),
+  minuteCount: integer('minute_count').notNull().default(0),
+  lastReset: timestamp('last_reset').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const insertIpRateLimitSchema = createInsertSchema(ipRateLimits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIpRateLimit = z.infer<typeof insertIpRateLimitSchema>;
+export type IpRateLimit = typeof ipRateLimits.$inferSelect;
+
+// ============================================================================
+// Abuse Pattern Tracking (Tier 3 - Advanced Detection)
+// ============================================================================
+
+export const abusePatterns = pgTable('abuse_patterns', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  patternType: varchar('pattern_type', { length: 50 }).notNull(), // 'multiple_clients_same_ip', 'high_velocity', etc.
+  targetType: varchar('target_type', { length: 50 }).notNull(), // 'ip', 'fingerprint', 'client_id'
+  targetValue: text('target_value').notNull(),
+  abuseScore: text('abuse_score').notNull(),
+  evidence: jsonb('evidence'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at').default(sql`NOW() + INTERVAL '24 hours'`),
+});
+
+export const insertAbusePatternSchema = createInsertSchema(abusePatterns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAbusePattern = z.infer<typeof insertAbusePatternSchema>;
+export type AbusePattern = typeof abusePatterns.$inferSelect;
+
+// ============================================================================
+// Quota Analytics Summary (Monitoring & Reporting)
+// ============================================================================
+
+export const quotaAnalytics = pgTable('quota_analytics', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  date: timestamp('date').notNull().default(sql`CURRENT_DATE`),
+  totalRequests: integer('total_requests').notNull().default(0),
+  freeRequests: integer('free_requests').notNull().default(0),
+  paidRequests: integer('paid_requests').notNull().default(0),
+  quotaHits: integer('quota_hits').notNull().default(0),
+  uniqueClients: integer('unique_clients').notNull().default(0),
+  uniqueIps: integer('unique_ips').notNull().default(0),
+  abuseScoreAvg: text('abuse_score_avg').default('0.00'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const insertQuotaAnalyticsSchema = createInsertSchema(quotaAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertQuotaAnalytics = z.infer<typeof insertQuotaAnalyticsSchema>;
+export type QuotaAnalytics = typeof quotaAnalytics.$inferSelect;

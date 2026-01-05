@@ -92,21 +92,54 @@ function formatDateTimeOriginal(metadata: any): string | null {
 /**
  * Parse EXIF date format: "2025:01:03 15:45:32"
  */
+/**
+ * Parse EXIF date format with fallbacks
+ * Supports:
+ * - "2025:01:03 15:45:32" (Standard EXIF)
+ * - "2025-01-03T15:45:32" (ISO)
+ * - "2025/01/03 15:45:32" (Common variation)
+ */
 function parseExifDate(exifDateString: string): Date {
   if (!exifDateString) throw new Error('Invalid EXIF date');
 
-  const parts = exifDateString.match(/(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2}):(\d{2})/);
-  if (!parts) throw new Error('Invalid EXIF date format');
+  try {
+    // 1. Try standard EXIF format (YYYY:MM:DD HH:MM:SS)
+    const exifMatch = exifDateString.match(/(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2}):(\d{2})/);
+    if (exifMatch) {
+      const [, year, month, day, hour, minute, second] = exifMatch;
+      return new Date(
+        parseInt(year), 
+        parseInt(month) - 1, 
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second)
+      );
+    }
 
-  const [, year, month, day, hour, minute, second] = parts;
-  return new Date(
-    parseInt(year), 
-    parseInt(month) - 1, 
-    parseInt(day),
-    parseInt(hour),
-    parseInt(minute),
-    parseInt(second)
-  );
+    // 2. Try ISO format or standard Date string
+    const isoDate = new Date(exifDateString);
+    if (!isNaN(isoDate.getTime())) {
+      return isoDate;
+    }
+
+    // 3. Try handling variations like dashes or slashes
+    const cleanString = exifDateString
+      .replace(/(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3') // Convert colons to dashes for date part
+      .replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3');
+    
+    const fallbackDate = new Date(cleanString);
+    if (!isNaN(fallbackDate.getTime())) {
+      return fallbackDate;
+    }
+
+    throw new Error(`Unknown date format: ${exifDateString}`);
+  } catch (error) {
+    console.warn(`Failed to parse EXIF date: ${exifDateString}`, error);
+    // Return current date as last resort to prevent crash, or rethrow if strict
+    // For UI display, returning Invalid Date is better than crashing
+    return new Date(NaN); 
+  }
 }
 
 /**

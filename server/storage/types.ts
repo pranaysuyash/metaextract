@@ -12,8 +12,8 @@ import {
   type TrialUsage,
   type InsertTrialUsage,
   type MetadataResult,
-  type InsertMetadataResult,
 } from '@shared/schema';
+import { ObjectInfo } from './objectStorage';
 
 export interface AnalyticsSummary {
   totalExtractions: number;
@@ -89,6 +89,23 @@ export interface IStorage {
   getTrialUsageByEmail(email: string): Promise<TrialUsage | undefined>;
 
   // Metadata Persistence
-  saveMetadata(data: InsertMetadataResult): Promise<MetadataResult>;
-  getMetadata(id: string): Promise<MetadataResult | undefined>;
+  saveMetadata(data: SaveMetadataInput): Promise<StoredMetadata>;
+  getMetadata(
+    id: string
+  ): Promise<(StoredMetadata & { metadata: any }) | undefined>;
+}
+
+export interface MetadataObjectRef extends ObjectInfo {}
+
+export interface SaveMetadataInput {
+  userId?: string;
+  fileName: string;
+  fileSize?: string;
+  mimeType?: string;
+  metadata: any; // Full blob to persist
+}
+
+export interface StoredMetadata extends MetadataResult {
+  metadataSummary: Record<string, unknown>;
+  metadataRef: MetadataObjectRef | null;
 }
