@@ -1630,18 +1630,24 @@ export default function Results() {
                                 title="Camera Settings"
                                 color="text-purple-400"
                               />
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                                {filterFields(metadata.exif || {}).map(
-                                  ([key, val], i) => (
-                                    <FieldRow
-                                      key={key}
-                                      label={key}
-                                      value={val}
-                                      index={i}
-                                    />
-                                  )
-                                )}
-                              </div>
+                              {filterFields(metadata.exif || {}).length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                  {filterFields(metadata.exif || {}).map(
+                                    ([key, val], i) => (
+                                      <FieldRow
+                                        key={key}
+                                        label={key}
+                                        value={val}
+                                        index={i}
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-gray-500 text-sm italic">
+                                  No camera settings found in this image
+                                </div>
+                              )}
                             </section>
 
                             {Object.keys(metadata.interoperability || {})
