@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from 'express';
+import type { WebSocket } from 'ws';
 import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
@@ -24,6 +25,15 @@ import { freeQuotaMiddleware } from '../middleware/free-quota';
 import { generateClientToken, verifyClientToken, getClientUsage, incrementUsage, handleQuotaExceeded } from '../utils/free-quota-enforcement';
 import { IMAGES_MVP_CREDIT_PACKS, DODO_IMAGES_MVP_PRODUCTS } from '../payments';
 
+// WebSocket progress tracking
+interface ProgressConnection {
+  ws: WebSocket;
+  sessionId: string;
+  startTime: number;
+}
+
+const activeConnections = new Map<string, ProgressConnection[]>();
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -37,6 +47,85 @@ const dodoClient = DODO_API_KEY
       environment: IS_TEST_MODE ? 'test_mode' : 'live_mode',
     })
   : null;
+
+// WebSocket Progress Tracking Functions
+function broadcastProgress(sessionId: string, progress: number, message: string, stage?: string) {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
+  const progressData = {
+    type: 'progress',
+    sessionId,
+    progress: Math.min(100, Math.max(0, progress)),
+    message,
+    stage: stage || 'processing',
+    timestamp: Date.now()
+  };
+
+  const messageStr = JSON.stringify(progressData);
+  
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) { // WebSocket.OPEN
+      conn.ws.send(messageStr);
+    }
+  });
+}
+
+function broadcastError(sessionId: string, error: string) {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
+  const errorData = {
+    type: 'error',
+    sessionId,
+    error,
+    timestamp: Date.now()
+  };
+
+  const messageStr = JSON.stringify(errorData);
+  
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) { // WebSocket.OPEN
+      conn.ws.send(messageStr);
+    }
+  });
+}
+
+function broadcastComplete(sessionId: string, metadata: any) {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
+  const completeData = {
+    type: 'complete',
+    sessionId,
+    metadata: {
+      fields_extracted: metadata.fields_extracted || 0,
+      processing_time_ms: metadata.processing_time_ms || 0,
+      file_size: metadata.file_size || 0
+    },
+    timestamp: Date.now()
+  };
+
+  const messageStr = JSON.stringify(completeData);
+  
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) { // WebSocket.OPEN
+      conn.ws.send(messageStr);
+    }
+  });
+}
+
+function cleanupConnections(sessionId: string) {
+  const connections = activeConnections.get(sessionId);
+  if (connections) {
+    connections.forEach(conn => {
+      if (conn.ws.readyState === 1) {
+        conn.ws.close();
+      }
+    });
+    activeConnections.delete(sessionId);
+  }
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -163,6 +252,85 @@ function parseLimitParam(value?: string): number {
 
 export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
+  // WebSocket: Real-time Progress Tracking
+  // ---------------------------------------------------------------------------
+  (app as any).ws('/api/images_mvp/progress/:sessionId', (ws: WebSocket, req: Request) => {
+    const sessionId = req.params.sessionId;
+    if (!sessionId) {
+      ws.close(1002, 'Session ID required');
+      return;
+    }
+
+    // Add connection to active connections
+    const connection: ProgressConnection = {
+      ws,
+      sessionId,
+      startTime: Date.now()
+    };
+
+    if (!activeConnections.has(sessionId)) {
+      activeConnections.set(sessionId, []);
+    }
+    activeConnections.get(sessionId)!.push(connection);
+
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({
+      type: 'connected',
+      sessionId,
+      timestamp: Date.now()
+    }));
+
+    // Handle incoming messages (if needed for client acknowledgments)
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+        }
+      } catch (error) {
+        console.error('WebSocket message parsing error:', error);
+      }
+    });
+
+    // Handle connection close
+    ws.on('close', () => {
+      const connections = activeConnections.get(sessionId);
+      if (connections) {
+        const index = connections.indexOf(connection);
+        if (index > -1) {
+          connections.splice(index, 1);
+        }
+        if (connections.length === 0) {
+          activeConnections.delete(sessionId);
+        }
+      }
+    });
+
+    // Handle connection errors
+    ws.on('error', (error) => {
+      console.error('WebSocket error for session', sessionId, ':', error);
+      cleanupConnections(sessionId);
+    });
+
+    // Send periodic progress updates (every 2 seconds)
+    const progressInterval = setInterval(() => {
+      if (ws.readyState === 1) { // WebSocket.OPEN
+        ws.send(JSON.stringify({
+          type: 'heartbeat',
+          sessionId,
+          timestamp: Date.now()
+        }));
+      } else {
+        clearInterval(progressInterval);
+      }
+    }, 2000);
+
+    ws.on('close', () => {
+      clearInterval(progressInterval);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Analytics: Track UI Events (Images MVP)
   // ---------------------------------------------------------------------------
   app.post(
@@ -243,6 +411,7 @@ export function registerImagesMvpRoutes(app: Express) {
         let summaryCopied = 0;
         let summaryDownloaded = 0;
         let jsonDownloaded = 0;
+        let fullTxtDownloaded = 0;
         let purposePromptShown = 0;
         let purposePromptOpened = 0;
         let purposeSkipped = 0;
@@ -378,6 +547,9 @@ export function registerImagesMvpRoutes(app: Express) {
             case 'export_json_downloaded':
               jsonDownloaded += 1;
               break;
+            case 'export_full_txt_downloaded':
+              fullTxtDownloaded += 1;
+              break;
             default:
               break;
           }
@@ -412,6 +584,7 @@ export function registerImagesMvpRoutes(app: Express) {
             purchase_completed: purchaseCompleted,
             export_summary_downloaded: summaryDownloaded,
             export_json_downloaded: jsonDownloaded,
+            export_full_txt_downloaded: fullTxtDownloaded,
           },
           events: eventCounts,
           purposes: {
@@ -429,6 +602,7 @@ export function registerImagesMvpRoutes(app: Express) {
           exports: {
             json: jsonDownloaded,
             summary: summaryDownloaded,
+            full_txt: fullTxtDownloaded,
             summary_copied: summaryCopied,
           },
           analysis: {
@@ -673,8 +847,19 @@ export function registerImagesMvpRoutes(app: Express) {
         );
         await fs.writeFile(tempPath, req.file.buffer);
 
+        // Send initial progress update
+        if (sessionId) {
+          broadcastProgress(sessionId, 10, 'File uploaded successfully', 'upload_complete');
+        }
+
         // Extract with enhanced features
         const pythonTier = 'super';
+        
+        // Send progress update before extraction
+        if (sessionId) {
+          broadcastProgress(sessionId, 20, 'Starting metadata extraction', 'extraction_start');
+        }
+        
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
           pythonTier,
@@ -682,6 +867,11 @@ export function registerImagesMvpRoutes(app: Express) {
           true, // advanced (needed for authenticity signals)
           req.query.store === 'true'
         );
+        
+        // Send progress update after extraction
+        if (sessionId) {
+          broadcastProgress(sessionId, 90, 'Metadata extraction complete', 'extraction_complete');
+        }
 
         const processingMs = Date.now() - startTime;
         rawMetadata.extraction_info.processing_ms = processingMs;
@@ -707,25 +897,35 @@ export function registerImagesMvpRoutes(app: Express) {
           metadata.client_last_modified_iso = new Date(clientLastModifiedMs).toISOString();
       }
 
+      // Send final progress update
+      if (sessionId) {
+        broadcastProgress(sessionId, 100, 'Processing complete', 'complete');
+        broadcastComplete(sessionId, {
+          fields_extracted: rawMetadata.extraction_info.fields_extracted || 0,
+          processing_time_ms: processingMs,
+          file_size: req.file.size
+        });
+      }
+
       // Add quality metrics and processing insights for enhanced user experience
       // Use the extraction_info data structure from the Python backend
       metadata.quality_metrics = {
         confidence_score: 0.85, // High confidence for successful extraction
-        extraction_completeness: Math.min(1.0, (rawMetadata.fields_extracted || 0) / 100), // Completeness based on field count
+        extraction_completeness: Math.min(1.0, (rawMetadata.extraction_info.fields_extracted || 0) / 100), // Completeness based on field count
         processing_efficiency: 0.88, // Good efficiency for successful extraction
         format_support_level: 'comprehensive', // We support comprehensive formats
         recommended_actions: [], // No specific recommendations for successful extraction
-        enhanced_extraction: rawMetadata.extraction_info?.enhanced_extraction || true,
-        streaming_enabled: rawMetadata.extraction_info?.streaming_enabled || false
+        enhanced_extraction: true,
+        streaming_enabled: false
       };
 
       metadata.processing_insights = {
-        total_fields_extracted: rawMetadata.fields_extracted || 0,
+        total_fields_extracted: rawMetadata.extraction_info.fields_extracted || 0,
         processing_time_ms: processingMs,
         memory_usage_mb: 0, // Memory usage not tracked yet
-        streaming_enabled: rawMetadata.extraction_info?.streaming_enabled || false,
-        fallback_extraction: rawMetadata.extraction_info?.fallback_extraction || false,
-        progress_updates: rawMetadata.extraction_info?.progress_updates || []
+        streaming_enabled: false,
+        fallback_extraction: false,
+        progress_updates: []
       };
 
       // Filter for Trial
@@ -750,7 +950,7 @@ export function registerImagesMvpRoutes(app: Express) {
         // Record Usage
         const fileExtension = fileExt?.slice(1) || 'unknown';
 
-        // 1. Log extraction analytics (generic)
+        // 1. Log extraction analytics (generic) - fire-and-forget is OK for analytics
         storage
           .logExtractionUsage({
             tier: useTrial ? 'free' : 'professional',
@@ -769,16 +969,23 @@ export function registerImagesMvpRoutes(app: Express) {
           })
           .catch(console.error);
 
-        // 2. Charge credits
+        // 2. ✅ Charge credits - MUST await before responding (critical for billing)
         if (chargeCredits && creditBalanceId) {
-          storage
-            .useCredits(
+          try {
+            await storage.useCredits(
               creditBalanceId,
               creditCost,
               `Extraction: ${fileExtension} (Images MVP)`,
               mimeType
-            )
-            .catch(console.error);
+            );
+          } catch (error) {
+            console.error('Failed to charge credits:', error);
+            return res.status(402).json({
+              error: 'Payment failed',
+              message: 'Could not charge credits for this extraction',
+              requiresRefresh: true,
+            });
+          }
         }
 
         // 3. Record Trial Usage
@@ -830,7 +1037,7 @@ export function registerImagesMvpRoutes(app: Express) {
           
           // Check quota
           const usage = await getClientUsage(decoded.clientId);
-          const currentCount = usage?.freeUsed || 0;
+          const currentCount = usage?.free_used || 0;
           
           if (currentCount >= 2) { // CONFIG.FREE_LIMIT
             // Quota exceeded - show appropriate response
@@ -853,9 +1060,20 @@ export function registerImagesMvpRoutes(app: Express) {
         res.json(metadata);
       } catch (error) {
         console.error('Images MVP extraction error:', error);
+        
+        // Send error notification via WebSocket
+        if (sessionId) {
+          broadcastError(sessionId, error instanceof Error ? error.message : 'Extraction failed');
+        }
+        
         sendInternalServerError(res, 'Failed to extract metadata');
       } finally {
         await cleanupTempFile(tempPath);
+        
+        // Clean up WebSocket connections for this session
+        if (sessionId) {
+          setTimeout(() => cleanupConnections(sessionId!), 5000); // Delay cleanup to allow final messages
+        }
       }
     }
   );

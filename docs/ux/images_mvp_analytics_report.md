@@ -63,6 +63,8 @@ All events are recorded under `product: "images_mvp"` via `POST /api/images_mvp/
   - properties: `purpose`
 - `export_json_downloaded` — JSON export downloaded (paid users only).
   - properties: `filetype`, `mime_type`, `purpose`
+- `export_full_txt_downloaded` — full metadata text export downloaded (paid users only).
+  - properties: `filetype`, `mime_type`, `purpose`
 
 ## Report endpoint
 
@@ -84,7 +86,7 @@ Response summary fields:
 - `tabs`: counts by tab
 - `density`: counts by mode
 - `formats`: counts by `mime_type` for hints and results views
-- `exports`: counts for JSON, summary download, summary copied
+- `exports`: counts for JSON, full text, summary download, summary copied
 - `analysis`: success/failure counts and average processing time
 - `paywall`: previewed and CTA clicked counts
 
@@ -119,7 +121,8 @@ Response summary fields:
     "paywall_clicked": 5,
     "purchase_completed": 4,
     "export_summary_downloaded": 11,
-    "export_json_downloaded": 4
+    "export_json_downloaded": 4,
+    "export_full_txt_downloaded": 3
   },
   "events": {
     "results_viewed": 30,
@@ -140,6 +143,7 @@ Response summary fields:
   "exports": {
     "json": 4,
     "summary": 11,
+    "full_txt": 3,
     "summary_copied": 9
   },
   "analysis": {

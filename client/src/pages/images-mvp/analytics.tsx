@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Download,
+  FileJson,
   FileText,
   RefreshCw,
   Target,
@@ -50,6 +51,7 @@ interface AnalyticsReport {
     purchase_completed: number;
     export_summary_downloaded: number;
     export_json_downloaded: number;
+    export_full_txt_downloaded: number;
   };
   events: CountMap;
   purposes: {
@@ -67,6 +69,7 @@ interface AnalyticsReport {
   exports: {
     json: number;
     summary: number;
+    full_txt: number;
     summary_copied: number;
   };
   analysis: {
@@ -472,6 +475,12 @@ export default function ImagesMvpAnalytics() {
                           {formatNumber(report.funnel.export_json_downloaded)}
                         </span>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Full report exports</span>
+                        <span className="text-white font-mono text-xs">
+                          {formatNumber(report.funnel.export_full_txt_downloaded)}
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -575,11 +584,20 @@ export default function ImagesMvpAnalytics() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-300 flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-slate-500" />
+                          <FileJson className="h-4 w-4 text-slate-500" />
                           JSON downloads
                         </span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.exports.json)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-300 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-slate-500" />
+                          Full report downloads
+                        </span>
+                        <span className="text-white font-mono text-xs">
+                          {formatNumber(report.exports.full_txt)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

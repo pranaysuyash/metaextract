@@ -13,9 +13,14 @@ import {
 import { serveStatic } from './static';
 import { createServer } from 'http';
 import { db } from './db';
+import expressWs from 'express-ws';
 
 const app = express();
 const httpServer = createServer(app);
+
+// Add WebSocket support to Express
+const expressWsInstance = expressWs(app, httpServer);
+const wsApp = expressWsInstance.app;
 
 declare module 'http' {
   interface IncomingMessage {
