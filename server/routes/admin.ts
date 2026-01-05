@@ -11,6 +11,7 @@
 import type { Express, Response } from 'express';
 import path from 'path';
 import { spawn } from 'child_process';
+import { pythonExecutable } from '../utils/extraction-helpers';
 
 // Get the routes directory - compatible with both ESM and CommonJS
 const projectRoot = process.cwd();
@@ -86,7 +87,7 @@ export function registerAdminRoutes(app: Express): void {
         'cache.py'
       );
       const cacheStats = await new Promise<any>(resolve => {
-        const python = spawn('python3', [
+        const python = spawn(pythonExecutable, [
           '-c',
           `
 import sys
@@ -161,7 +162,7 @@ print(json.dumps(get_cache_stats()))
         'cache.py'
       );
       const result = await new Promise<number>(resolve => {
-        const python = spawn('python3', [
+        const python = spawn(pythonExecutable, [
           '-c',
           `
 import sys
@@ -235,7 +236,7 @@ print(clear_cache_pattern('${pattern}'))
         'monitoring.py'
       );
       const result = await new Promise<any>((resolve, reject) => {
-        const python = spawn('python3', [
+        const python = spawn(pythonExecutable, [
           '-c',
           `
 import sys
@@ -303,7 +304,7 @@ print(json.dumps(get_monitoring_data()))
         'monitoring.py'
       );
       const result = await new Promise<any>((resolve, reject) => {
-        const python = spawn('python3', [
+        const python = spawn(pythonExecutable, [
           '-c',
           `
 import sys
@@ -371,7 +372,7 @@ print(json.dumps(get_performance_summary()))
         'monitoring.py'
       );
       const result = await new Promise<any>((resolve, reject) => {
-        const python = spawn('python3', [
+        const python = spawn(pythonExecutable, [
           '-c',
           `
 import sys
