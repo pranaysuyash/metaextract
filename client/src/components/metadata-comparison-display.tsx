@@ -33,6 +33,12 @@ interface MetadataComparisonDisplayProps {
       | 'stripped_exif'
       | 'no_overlay'
       | 'no_metadata';
+      sources?: {
+        exif: 'embedded' | 'burned' | 'both' | 'none';
+        gps: 'embedded' | 'burned' | 'both' | 'none';
+        location: 'embedded' | 'burned' | 'both' | 'none';
+        timestamp: 'embedded' | 'burned' | 'both' | 'none';
+      };
     };
   } | null;
 }
@@ -189,6 +195,77 @@ export function MetadataComparisonDisplay({
           )}
         </div>
       </div>
+
+      {/* Metadata Sources Section */}
+      {summary.sources && (
+        <div className='bg-slate-800/50 border border-slate-600/30 rounded-lg p-3 mb-3'>
+          <h6 className='text-xs font-bold text-slate-300 mb-2'>
+            📊 Data Sources
+          </h6>
+          <div className='grid grid-cols-2 gap-2 text-[11px]'>
+            {summary.sources.exif !== 'none' && (
+              <div className='flex items-center gap-2'>
+                <span className='text-slate-400'>EXIF:</span>
+                <span className={`font-mono px-1.5 py-0.5 rounded ${
+                  summary.sources.exif === 'embedded' 
+                    ? 'bg-blue-500/20 text-blue-300'
+                    : 'bg-slate-500/20 text-slate-300'
+                }`}>
+                  {summary.sources.exif === 'embedded' ? '📝 Embedded' : summary.sources.exif}
+                </span>
+              </div>
+            )}
+            {summary.sources.gps !== 'none' && (
+              <div className='flex items-center gap-2'>
+                <span className='text-slate-400'>GPS:</span>
+                <span className={`font-mono px-1.5 py-0.5 rounded ${
+                  summary.sources.gps === 'both' 
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : summary.sources.gps === 'embedded'
+                    ? 'bg-blue-500/20 text-blue-300'
+                    : 'bg-amber-500/20 text-amber-300'
+                }`}>
+                  {summary.sources.gps === 'both' ? '📝🔥 Both' 
+                    : summary.sources.gps === 'embedded' ? '📝 Embedded' 
+                    : '🔥 Burned'}
+                </span>
+              </div>
+            )}
+            {summary.sources.location !== 'none' && (
+              <div className='flex items-center gap-2'>
+                <span className='text-slate-400'>Location:</span>
+                <span className={`font-mono px-1.5 py-0.5 rounded ${
+                  summary.sources.location === 'both' 
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : summary.sources.location === 'embedded'
+                    ? 'bg-blue-500/20 text-blue-300'
+                    : 'bg-amber-500/20 text-amber-300'
+                }`}>
+                  {summary.sources.location === 'both' ? '📝🔥 Both' 
+                    : summary.sources.location === 'embedded' ? '📝 Embedded' 
+                    : '🔥 Burned'}
+                </span>
+              </div>
+            )}
+            {summary.sources.timestamp !== 'none' && (
+              <div className='flex items-center gap-2'>
+                <span className='text-slate-400'>Timestamp:</span>
+                <span className={`font-mono px-1.5 py-0.5 rounded ${
+                  summary.sources.timestamp === 'both' 
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : summary.sources.timestamp === 'embedded'
+                    ? 'bg-blue-500/20 text-blue-300'
+                    : 'bg-amber-500/20 text-amber-300'
+                }`}>
+                  {summary.sources.timestamp === 'both' ? '📝🔥 Both' 
+                    : summary.sources.timestamp === 'embedded' ? '📝 Embedded' 
+                    : '🔥 Burned'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Matches Section */}
       {matches.length > 0 && (

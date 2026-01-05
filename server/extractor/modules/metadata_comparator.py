@@ -102,13 +102,20 @@ class MetadataComparator:
                 "EXIF data may have been stripped"
             )
         
-        # Summary
+        # Summary with source information
         result["summary"] = {
-            "embedded_metadata_present": has_embedded_gps or has_embedded_location or has_embedded_time,
-            "burned_metadata_present": has_burned_gps or has_burned_location or has_burned_time,
+            "embedded_metadata_present": has_any_embedded,
+            "burned_metadata_present": has_any_burned,
             "gps_comparison": self._gps_comparison_status(has_embedded_gps, has_burned_gps, result),
             "timestamp_comparison": self._time_comparison_status(has_embedded_time, has_burned_time, result),
-            "overall_status": self._determine_overall_status(result)
+            "overall_status": self._determine_overall_status(result),
+            # Source tracking for each metadata type
+            "sources": {
+                "exif": self._get_source_status(has_embedded_exif, False),
+                "gps": self._get_source_status(has_embedded_gps, has_burned_gps),
+                "location": self._get_source_status(has_embedded_location, has_burned_location),
+                "timestamp": self._get_source_status(has_embedded_time, has_burned_time),
+            }
         }
         
         return result
@@ -317,6 +324,17 @@ class MetadataComparator:
             return "stripped_exif"
         else:
             return "no_metadata"
+    
+    def _get_source_status(self, has_embedded: bool, has_burned: bool) -> str:
+        """Determine the source of metadata (embedded/burned/both/none)."""
+        if has_embedded and has_burned:
+            return "both"
+        elif has_embedded:
+            return "embedded"
+        elif has_burned:
+            return "burned"
+        else:
+            return "none"
 
 
 def compare_metadata(embedded: Dict[str, Any], burned: Dict[str, Any]) -> Dict[str, Any]:
