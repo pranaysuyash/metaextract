@@ -28,11 +28,11 @@ interface MetadataComparisonDisplayProps {
       gps_comparison: string;
       timestamp_comparison: string;
       overall_status:
-      | 'verified'
-      | 'suspicious'
-      | 'stripped_exif'
-      | 'no_overlay'
-      | 'no_metadata';
+        | 'verified'
+        | 'suspicious'
+        | 'stripped_exif'
+        | 'no_overlay'
+        | 'no_metadata';
       sources?: {
         exif: 'embedded' | 'burned' | 'both' | 'none';
         gps: 'embedded' | 'burned' | 'both' | 'none';
@@ -117,79 +117,80 @@ export function MetadataComparisonDisplay({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <h4 className='flex items-center gap-2 text-xs font-bold mb-4 uppercase tracking-widest text-slate-300 border-b border-white/5 pb-2'>
-        <Eye className='w-3 h-3' /> Metadata Comparison
+      <h4 className="flex items-center gap-2 text-xs font-bold mb-4 uppercase tracking-widest text-slate-300 border-b border-white/5 pb-2">
+        <Eye className="w-3 h-3" /> Metadata Comparison
       </h4>
 
       {/* Main Status Alert */}
       <div className={`rounded-lg border p-4 mb-4 ${config.bg}`}>
-        <div className='flex items-start gap-3'>
+        <div className="flex items-start gap-3">
           <Icon className={`w-5 h-5 ${config.textColor} shrink-0 mt-0.5`} />
-          <div className='flex-1 min-w-0'>
+          <div className="flex-1 min-w-0">
             <h5 className={`text-sm font-bold ${config.textColor}`}>
               {config.title}
             </h5>
-            <p className='text-xs text-slate-400 mt-1'>{config.description}</p>
+            <p className="text-xs text-slate-400 mt-1">{config.description}</p>
           </div>
         </div>
       </div>
 
       {/* Detailed Comparisons */}
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-3 mb-4'>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         {/* GPS Comparison */}
-        <div className='bg-black/40 border border-white/10 rounded-lg p-3'>
-          <h6 className='text-xs font-bold text-rose-400 mb-2'>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3">
+          <h6 className="text-xs font-bold text-rose-400 mb-2">
             📍 GPS Comparison
           </h6>
           <div
-            className={`text-xs px-2 py-1 rounded font-mono ${summary.gps_comparison === 'match'
-              ? 'bg-emerald-500/20 text-emerald-300'
-              : summary.gps_comparison === 'mismatch'
-                ? 'bg-rose-500/20 text-rose-300'
-                : 'bg-slate-500/20 text-slate-300'
-              }`}
+            className={`text-xs px-2 py-1 rounded font-mono ${
+              summary.gps_comparison === 'match'
+                ? 'bg-emerald-500/20 text-emerald-300'
+                : summary.gps_comparison === 'mismatch'
+                  ? 'bg-rose-500/20 text-rose-300'
+                  : 'bg-slate-500/20 text-slate-300'
+            }`}
           >
             {summary.gps_comparison.toUpperCase()}
           </div>
 
           {/* Show GPS distance if mismatch */}
-          {matches.find((m) => m.field === 'gps' && m.matches === true)
+          {matches.find(m => m.field === 'gps' && m.matches === true)
             ?.difference && (
-              <div className='text-[10px] text-emerald-400 mt-2 font-mono'>
-                ✓ Match (±
-                {matches
-                  .find((m) => m.field === 'gps')
-                  ?.difference?.approx_meters?.toFixed(1)}
-                m)
-              </div>
-            )}
+            <div className="text-[10px] text-emerald-400 mt-2 font-mono">
+              ✓ Match (±
+              {matches
+                .find(m => m.field === 'gps')
+                ?.difference?.approx_meters?.toFixed(1)}
+              m)
+            </div>
+          )}
 
-          {discrepancies.find((d) => d.field === 'gps') && (
-            <div className='text-[10px] text-rose-400 mt-2'>
-              ⚠️{' '}
-              {discrepancies.find((d) => d.field === 'gps')?.warning}
+          {discrepancies.find(d => d.field === 'gps') && (
+            <div className="text-[10px] text-rose-400 mt-2">
+              ⚠️ {discrepancies.find(d => d.field === 'gps')?.warning}
             </div>
           )}
         </div>
 
         {/* Timestamp Comparison */}
-        <div className='bg-black/40 border border-white/10 rounded-lg p-3'>
-          <h6 className='text-xs font-bold text-purple-400 mb-2'>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3">
+          <h6 className="text-xs font-bold text-purple-400 mb-2">
             🕐 Timestamp Comparison
           </h6>
           <div
-            className={`text-xs px-2 py-1 rounded font-mono ${summary.timestamp_comparison === 'match'
-              ? 'bg-emerald-500/20 text-emerald-300'
-              : summary.timestamp_comparison === 'mismatch'
-                ? 'bg-rose-500/20 text-rose-300'
-                : 'bg-slate-500/20 text-slate-300'
-              }`}
+            className={`text-xs px-2 py-1 rounded font-mono ${
+              summary.timestamp_comparison === 'match'
+                ? 'bg-emerald-500/20 text-emerald-300'
+                : summary.timestamp_comparison === 'mismatch'
+                  ? 'bg-rose-500/20 text-rose-300'
+                  : 'bg-slate-500/20 text-slate-300'
+            }`}
           >
             {summary.timestamp_comparison.toUpperCase()}
           </div>
 
-          {discrepancies.find((d) => d.field === 'timestamp') && (
-            <div className='text-[10px] text-rose-400 mt-2'>
+          {discrepancies.find(d => d.field === 'timestamp') && (
+            <div className="text-[10px] text-rose-400 mt-2">
               ⚠️ Timestamps don't match
             </div>
           )}
@@ -198,68 +199,84 @@ export function MetadataComparisonDisplay({
 
       {/* Metadata Sources Section */}
       {summary.sources && (
-        <div className='bg-slate-800/50 border border-slate-600/30 rounded-lg p-3 mb-3'>
-          <h6 className='text-xs font-bold text-slate-300 mb-2'>
+        <div className="bg-slate-800/50 border border-slate-600/30 rounded-lg p-3 mb-3">
+          <h6 className="text-xs font-bold text-slate-300 mb-2">
             📊 Data Sources
           </h6>
-          <div className='grid grid-cols-2 gap-2 text-[11px]'>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
             {summary.sources.exif !== 'none' && (
-              <div className='flex items-center gap-2'>
-                <span className='text-slate-400'>EXIF:</span>
-                <span className={`font-mono px-1.5 py-0.5 rounded ${
-                  summary.sources.exif === 'embedded' 
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-slate-500/20 text-slate-300'
-                }`}>
-                  {summary.sources.exif === 'embedded' ? '📝 Embedded' : summary.sources.exif}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">EXIF:</span>
+                <span
+                  className={`font-mono px-1.5 py-0.5 rounded ${
+                    summary.sources.exif === 'embedded'
+                      ? 'bg-blue-500/20 text-blue-300'
+                      : 'bg-slate-500/20 text-slate-300'
+                  }`}
+                >
+                  {summary.sources.exif === 'embedded'
+                    ? '📝 Embedded'
+                    : summary.sources.exif}
                 </span>
               </div>
             )}
             {summary.sources.gps !== 'none' && (
-              <div className='flex items-center gap-2'>
-                <span className='text-slate-400'>GPS:</span>
-                <span className={`font-mono px-1.5 py-0.5 rounded ${
-                  summary.sources.gps === 'both' 
-                    ? 'bg-emerald-500/20 text-emerald-300'
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">GPS:</span>
+                <span
+                  className={`font-mono px-1.5 py-0.5 rounded ${
+                    summary.sources.gps === 'both'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : summary.sources.gps === 'embedded'
+                        ? 'bg-blue-500/20 text-blue-300'
+                        : 'bg-amber-500/20 text-amber-300'
+                  }`}
+                >
+                  {summary.sources.gps === 'both'
+                    ? '📝🔥 Both'
                     : summary.sources.gps === 'embedded'
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  {summary.sources.gps === 'both' ? '📝🔥 Both' 
-                    : summary.sources.gps === 'embedded' ? '📝 Embedded' 
-                    : '🔥 Burned'}
+                      ? '📝 Embedded'
+                      : '🔥 Burned'}
                 </span>
               </div>
             )}
             {summary.sources.location !== 'none' && (
-              <div className='flex items-center gap-2'>
-                <span className='text-slate-400'>Location:</span>
-                <span className={`font-mono px-1.5 py-0.5 rounded ${
-                  summary.sources.location === 'both' 
-                    ? 'bg-emerald-500/20 text-emerald-300'
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Location:</span>
+                <span
+                  className={`font-mono px-1.5 py-0.5 rounded ${
+                    summary.sources.location === 'both'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : summary.sources.location === 'embedded'
+                        ? 'bg-blue-500/20 text-blue-300'
+                        : 'bg-amber-500/20 text-amber-300'
+                  }`}
+                >
+                  {summary.sources.location === 'both'
+                    ? '📝🔥 Both'
                     : summary.sources.location === 'embedded'
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  {summary.sources.location === 'both' ? '📝🔥 Both' 
-                    : summary.sources.location === 'embedded' ? '📝 Embedded' 
-                    : '🔥 Burned'}
+                      ? '📝 Embedded'
+                      : '🔥 Burned'}
                 </span>
               </div>
             )}
             {summary.sources.timestamp !== 'none' && (
-              <div className='flex items-center gap-2'>
-                <span className='text-slate-400'>Timestamp:</span>
-                <span className={`font-mono px-1.5 py-0.5 rounded ${
-                  summary.sources.timestamp === 'both' 
-                    ? 'bg-emerald-500/20 text-emerald-300'
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Timestamp:</span>
+                <span
+                  className={`font-mono px-1.5 py-0.5 rounded ${
+                    summary.sources.timestamp === 'both'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : summary.sources.timestamp === 'embedded'
+                        ? 'bg-blue-500/20 text-blue-300'
+                        : 'bg-amber-500/20 text-amber-300'
+                  }`}
+                >
+                  {summary.sources.timestamp === 'both'
+                    ? '📝🔥 Both'
                     : summary.sources.timestamp === 'embedded'
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  {summary.sources.timestamp === 'both' ? '📝🔥 Both' 
-                    : summary.sources.timestamp === 'embedded' ? '📝 Embedded' 
-                    : '🔥 Burned'}
+                      ? '📝 Embedded'
+                      : '🔥 Burned'}
                 </span>
               </div>
             )}
@@ -269,20 +286,20 @@ export function MetadataComparisonDisplay({
 
       {/* Matches Section */}
       {matches.length > 0 && (
-        <div className='bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 mb-3'>
-          <h6 className='text-xs font-bold text-emerald-400 mb-2 flex items-center gap-2'>
-            <CheckCircle2 className='w-3 h-3' /> Verified Fields (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 mb-3">
+          <h6 className="text-xs font-bold text-emerald-400 mb-2 flex items-center gap-2">
+            <CheckCircle2 className="w-3 h-3" /> Verified Fields (
             {matches.length})
           </h6>
-          <div className='space-y-1'>
+          <div className="space-y-1">
             {matches.map((match, i) => (
               <div
                 key={i}
-                className='text-xs text-emerald-300 font-mono flex items-center gap-2'
+                className="text-xs text-emerald-300 font-mono flex items-center gap-2"
               >
-                <span className='text-emerald-500'>✓</span>
-                <span className='capitalize'>{match.field}:</span>
-                <span className='text-slate-400'>Both sources match</span>
+                <span className="text-emerald-500">✓</span>
+                <span className="capitalize">{match.field}:</span>
+                <span className="text-slate-400">Both sources match</span>
               </div>
             ))}
           </div>
@@ -291,15 +308,15 @@ export function MetadataComparisonDisplay({
 
       {/* Discrepancies Section */}
       {discrepancies.length > 0 && (
-        <div className='bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 mb-3'>
-          <h6 className='text-xs font-bold text-rose-400 mb-2 flex items-center gap-2'>
-            <AlertTriangle className='w-3 h-3' /> Discrepancies (
+        <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 mb-3">
+          <h6 className="text-xs font-bold text-rose-400 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-3 h-3" /> Discrepancies (
             {discrepancies.length})
           </h6>
-          <div className='space-y-1'>
+          <div className="space-y-1">
             {discrepancies.map((disc, i) => (
-              <div key={i} className='text-xs text-rose-300 font-mono'>
-                <span className='text-rose-500'>⚠️</span>{' '}
+              <div key={i} className="text-xs text-rose-300 font-mono">
+                <span className="text-rose-500">⚠️</span>{' '}
                 {disc.warning || `${disc.field} mismatch detected`}
               </div>
             ))}
@@ -309,13 +326,13 @@ export function MetadataComparisonDisplay({
 
       {/* Warnings Section */}
       {warnings.length > 0 && (
-        <div className='bg-amber-500/10 border border-amber-500/30 rounded-lg p-3'>
-          <h6 className='text-xs font-bold text-amber-400 mb-2 flex items-center gap-2'>
-            <AlertCircle className='w-3 h-3' /> Warnings
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+          <h6 className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-2">
+            <AlertCircle className="w-3 h-3" /> Warnings
           </h6>
-          <div className='space-y-1'>
+          <div className="space-y-1">
             {warnings.map((warning, i) => (
-              <div key={i} className='text-xs text-amber-300'>
+              <div key={i} className="text-xs text-amber-300">
                 • {warning}
               </div>
             ))}
@@ -325,13 +342,13 @@ export function MetadataComparisonDisplay({
 
       {/* Interpretation Guide */}
       {isSuspicious && (
-        <div className='bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400'>
-          <p className='font-semibold text-rose-400 mb-1'>What this means:</p>
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400">
+          <p className="font-semibold text-rose-400 mb-1">What this means:</p>
           <p>
             The GPS or timestamp data in your image's EXIF tags differs from
             what's visible in the overlay. This could indicate:
           </p>
-          <ul className='list-disc list-inside space-y-0.5 mt-1 text-slate-500'>
+          <ul className="list-disc list-inside space-y-0.5 mt-1 text-slate-500">
             <li>The image was edited after the overlay was added</li>
             <li>Location/time was spoofed</li>
             <li>Different devices/cameras contributed metadata</li>
@@ -340,19 +357,20 @@ export function MetadataComparisonDisplay({
       )}
 
       {isStripped && (
-        <div className='bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400'>
-          <p className='font-semibold text-amber-400 mb-1'>What this means:</p>
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400">
+          <p className="font-semibold text-amber-400 mb-1">What this means:</p>
           <p>
             This image has no EXIF metadata (it may have been removed by social
-            media, messaging apps, or image editors). However, location/timestamp
-            info is still visible in the overlay text burned into the image.
+            media, messaging apps, or image editors). However,
+            location/timestamp info is still visible in the overlay text burned
+            into the image.
           </p>
         </div>
       )}
 
       {isVerified && (
-        <div className='bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400'>
-          <p className='font-semibold text-emerald-400 mb-1'>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400">
+          <p className="font-semibold text-emerald-400 mb-1">
             What this means:
           </p>
           <p>

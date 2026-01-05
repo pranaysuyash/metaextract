@@ -8,7 +8,9 @@ describe('formatDateTimeOriginal', () => {
   });
 
   it('returns original string when parse fails', () => {
-    const meta = { exif: { DateTimeOriginal: 'Some odd human text date 25th' } };
+    const meta = {
+      exif: { DateTimeOriginal: 'Some odd human text date 25th' },
+    };
     const out = formatDateTimeOriginal(meta);
     expect(out).toBe('Some odd human text date 25th');
   });

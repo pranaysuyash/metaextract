@@ -4,7 +4,11 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import express, { type Request, type Response, type NextFunction } from 'express';
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from 'express';
 
 // ============================================================================
 // Test App Setup
@@ -59,11 +63,13 @@ function createTestApp() {
           filesize: filesize ? `${filesize} bytes` : 'Unknown',
           filetype: filetype || 'application/octet-stream',
         },
-        image: (filetype as string)?.startsWith('image/') ? {
-          width: 1920,
-          height: 1080,
-          color_depth: 24,
-        } : null,
+        image: (filetype as string)?.startsWith('image/')
+          ? {
+              width: 1920,
+              height: 1080,
+              color_depth: 24,
+            }
+          : null,
         exif: null,
         gps: null,
         filesystem: {},
@@ -140,9 +146,9 @@ describe('API Integration Tests', () => {
       const req = createMockRequest({ method: 'GET', path: '/api/health' });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/health')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/health'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -155,12 +161,15 @@ describe('API Integration Tests', () => {
 
   describe('Capabilities Endpoint', () => {
     it('should return capabilities for all tiers', async () => {
-      const req = createMockRequest({ method: 'GET', path: '/api/capabilities' });
+      const req = createMockRequest({
+        method: 'GET',
+        path: '/api/capabilities',
+      });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/capabilities')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/capabilities'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -173,12 +182,15 @@ describe('API Integration Tests', () => {
     });
 
     it('should correctly identify tier features', async () => {
-      const req = createMockRequest({ method: 'GET', path: '/api/capabilities' });
+      const req = createMockRequest({
+        method: 'GET',
+        path: '/api/capabilities',
+      });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/capabilities')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/capabilities'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -206,9 +218,9 @@ describe('API Integration Tests', () => {
       });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/file/info')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/file/info'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -231,9 +243,9 @@ describe('API Integration Tests', () => {
       });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/file/info')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/file/info'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -256,9 +268,9 @@ describe('API Integration Tests', () => {
       });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/file/info')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/file/info'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -274,9 +286,9 @@ describe('API Integration Tests', () => {
       });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/file/info')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/file/info'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -293,9 +305,9 @@ describe('API Integration Tests', () => {
       });
       const res = createMockResponse();
 
-      const handler = app._router.stack
-        .find((layer: any) => layer.route?.path === '/api/file/info')
-        ?.route?.stack[0].handle;
+      const handler = app._router.stack.find(
+        (layer: any) => layer.route?.path === '/api/file/info'
+      )?.route?.stack[0].handle;
 
       if (handler) {
         handler(req, res);
@@ -396,8 +408,10 @@ describe('Tier Configuration', () => {
     const tiers = ['free', 'professional', 'forensic', 'enterprise'];
     let prevSize = 0;
 
-    tiers.forEach((tier) => {
-      expect(tierConfigs[tier as keyof typeof tierConfigs].maxFileSizeMB).toBeGreaterThan(prevSize);
+    tiers.forEach(tier => {
+      expect(
+        tierConfigs[tier as keyof typeof tierConfigs].maxFileSizeMB
+      ).toBeGreaterThan(prevSize);
       prevSize = tierConfigs[tier as keyof typeof tierConfigs].maxFileSizeMB;
     });
   });
@@ -406,8 +420,10 @@ describe('Tier Configuration', () => {
     const tiers = ['free', 'professional', 'forensic', 'enterprise'];
     let prevFields = 0;
 
-    tiers.forEach((tier) => {
-      expect(tierConfigs[tier as keyof typeof tierConfigs].fieldsPerFile).toBeGreaterThan(prevFields);
+    tiers.forEach(tier => {
+      expect(
+        tierConfigs[tier as keyof typeof tierConfigs].fieldsPerFile
+      ).toBeGreaterThan(prevFields);
       prevFields = tierConfigs[tier as keyof typeof tierConfigs].fieldsPerFile;
     });
   });

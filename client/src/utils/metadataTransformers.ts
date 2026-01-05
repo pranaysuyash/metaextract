@@ -13,11 +13,11 @@
  * Key findings extracted from metadata
  */
 export interface KeyFindings {
-  when: string | null;        // "January 3, 2025 at 3:45 PM"
-  where: string | null;       // "San Francisco, California"
-  device: string | null;      // "iPhone 15 Pro"
-  edited: boolean;            // false
-  authenticity: string;       // "Appears authentic"
+  when: string | null; // "January 3, 2025 at 3:45 PM"
+  where: string | null; // "San Francisco, California"
+  device: string | null; // "iPhone 15 Pro"
+  edited: boolean; // false
+  authenticity: string; // "Appears authentic"
   confidence: 'high' | 'medium' | 'low';
 }
 
@@ -25,9 +25,9 @@ export interface KeyFindings {
  * Enhanced location information
  */
 export interface EnhancedLocation {
-  formatted: string;          // "San Francisco, CA, USA"
-  coordinates: string;        // "37.7749° N, 122.4194° W"
-  mapUrl: string;             // Google Maps URL
+  formatted: string; // "San Francisco, CA, USA"
+  coordinates: string; // "37.7749° N, 122.4194° W"
+  mapUrl: string; // Google Maps URL
   confidence: 'high' | 'medium' | 'low';
   country?: string;
   region?: string;
@@ -38,11 +38,11 @@ export interface EnhancedLocation {
  * Quick details for summary display
  */
 export interface QuickDetails {
-  resolution: string;         // "12.2 megapixels"
-  fileSize: string;           // "3.2 MB"
-  cameraSettings: string;     // "f/1.6, 1/120s, ISO 64"
-  colorSpace: string;         // "sRGB"
-  dimensions: string;         // "4032 x 3024"
+  resolution: string; // "12.2 megapixels"
+  fileSize: string; // "3.2 MB"
+  cameraSettings: string; // "f/1.6, 1/120s, ISO 64"
+  colorSpace: string; // "sRGB"
+  dimensions: string; // "4032 x 3024"
 }
 
 /**
@@ -55,7 +55,7 @@ export function extractKeyFindings(metadata: any): KeyFindings {
     device: formatDeviceName(metadata),
     edited: detectEditing(metadata),
     authenticity: assessAuthenticity(metadata),
-    confidence: calculateConfidence(metadata)
+    confidence: calculateConfidence(metadata),
   };
 
   return findings;
@@ -68,8 +68,9 @@ export function extractKeyFindings(metadata: any): KeyFindings {
 export function formatDateTimeOriginal(metadata: any): string | null {
   try {
     // Try EXIF DateTimeOriginal first (most accurate)
-    const dateTimeOriginal = metadata?.exif?.DateTimeOriginal ||
-                            metadata?.metadata?.exif?.DateTimeOriginal;
+    const dateTimeOriginal =
+      metadata?.exif?.DateTimeOriginal ||
+      metadata?.metadata?.exif?.DateTimeOriginal;
     if (dateTimeOriginal) {
       const date = parseExifDate(dateTimeOriginal);
       // If we could parse into a valid Date, present a standardized human-friendly format
@@ -82,7 +83,8 @@ export function formatDateTimeOriginal(metadata: any): string | null {
     }
 
     // Fall back to file modification time
-    const fileModified = metadata?.file?.modified || metadata?.metadata?.file?.modified;
+    const fileModified =
+      metadata?.file?.modified || metadata?.metadata?.file?.modified;
     if (fileModified) {
       const date = new Date(fileModified);
       return formatDateWithTime(date);
@@ -110,12 +112,14 @@ export function parseExifDate(exifDateString: string): Date {
 
   try {
     // 1. Try standard EXIF format (YYYY:MM:DD HH:MM:SS)
-    const exifMatch = exifDateString.match(/(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2}):(\d{2})/);
+    const exifMatch = exifDateString.match(
+      /(\d{4}):(\d{2}):(\d{2})\s(\d{2}):(\d{2}):(\d{2})/
+    );
     if (exifMatch) {
       const [, year, month, day, hour, minute, second] = exifMatch;
       return new Date(
-        parseInt(year), 
-        parseInt(month) - 1, 
+        parseInt(year),
+        parseInt(month) - 1,
         parseInt(day),
         parseInt(hour),
         parseInt(minute),
@@ -124,9 +128,12 @@ export function parseExifDate(exifDateString: string): Date {
     }
 
     // 1b. Try human-friendly format like "December 25, 2025 at 4:48 PM"
-    const humanMatch = exifDateString.match(/([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    const humanMatch = exifDateString.match(
+      /([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i
+    );
     if (humanMatch) {
-      const [, monthName, dayStr, yearStr, hourStr, minuteStr, ampm] = humanMatch;
+      const [, monthName, dayStr, yearStr, hourStr, minuteStr, ampm] =
+        humanMatch;
       const month = new Date(`${monthName} 1, ${yearStr}`).getMonth();
       let hour = parseInt(hourStr, 10);
       const minute = parseInt(minuteStr, 10);
@@ -146,7 +153,7 @@ export function parseExifDate(exifDateString: string): Date {
     const cleanString = exifDateString
       .replace(/(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3') // Convert colons to dashes for date part
       .replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3');
-    
+
     const fallbackDate = new Date(cleanString);
     if (!isNaN(fallbackDate.getTime())) {
       return fallbackDate;
@@ -172,18 +179,18 @@ function formatDateWithTime(date: Date): string | null {
   const dateOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   };
-  
+
   const timeOptions: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
   };
 
   const dateStr = date.toLocaleDateString('en-US', dateOptions);
   const timeStr = date.toLocaleTimeString('en-US', timeOptions);
-  
+
   return `${dateStr} at ${timeStr}`;
 }
 
@@ -202,7 +209,7 @@ function extractLocation(metadata: any): string | null {
     // This will be enhanced with reverse geocoding in Phase 1.2
     const lat = gps.latitude || gps.Latitude;
     const lng = gps.longitude || gps.Longitude;
-    
+
     if (!lat || !lng) return null;
 
     // Format coordinates
@@ -278,10 +285,12 @@ function cleanDeviceName(name: string): string {
   // Keep "iPhone" as-is, only clean other words
   if (cleaned.toLowerCase().includes('iphone')) {
     const parts = cleaned.split(' ');
-    return parts.map((word, idx) => {
-      if (word.toLowerCase() === 'iphone') return 'iPhone';
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    }).join(' ');
+    return parts
+      .map((word, idx) => {
+        if (word.toLowerCase() === 'iphone') return 'iPhone';
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ');
   }
 
   // Standard cleaning for other brands
@@ -308,18 +317,18 @@ function detectEditing(metadata: any): boolean {
       'Snapseed',
       'Pixlr',
       'Affinity',
-      'Procreate'
+      'Procreate',
     ];
 
     const software = exif.Software || exif.software || '';
-    const hasEditingSoftware = editingSoftware.some(s => 
+    const hasEditingSoftware = editingSoftware.some(s =>
       software.toLowerCase().includes(s.toLowerCase())
     );
 
     // Check for processing software
     const processingMarkers = [
       exif.ProcessingSoftware,
-      exif.processing软件
+      exif.processing软件,
     ].filter(Boolean);
 
     return hasEditingSoftware || processingMarkers.length > 0;
@@ -379,7 +388,7 @@ function calculateAuthenticityScore(metadata: any): number {
     if (gps) {
       const lat = gps.latitude || gps.Latitude;
       const lng = gps.longitude || gps.Longitude;
-      
+
       // Impossible coordinates indicate tampering
       if (lat && (lat > 90 || lat < -90)) {
         score -= 25;
@@ -395,12 +404,12 @@ function calculateAuthenticityScore(metadata: any): number {
     if (creationDate) {
       const date = parseExifDate(creationDate);
       const now = new Date();
-      
+
       // Future dates indicate tampering
       if (date > now) {
         score -= 20;
       }
-      
+
       // Very old dates (before digital cameras) are suspicious
       if (date.getFullYear() < 2000) {
         score -= 15;
@@ -480,7 +489,7 @@ export function extractQuickDetails(metadata: any): QuickDetails {
     fileSize: formatFileSize(file?.size || metadata?.size),
     cameraSettings: formatCameraSettings(exif),
     colorSpace: exif?.ColorSpace || exif?.colorSpace || 'Unknown',
-    dimensions: formatDimensions(exif?.PixelXDimension, exif?.PixelYDimension)
+    dimensions: formatDimensions(exif?.PixelXDimension, exif?.PixelYDimension),
   };
 }
 
@@ -489,7 +498,7 @@ export function extractQuickDetails(metadata: any): QuickDetails {
  */
 function formatResolution(width?: number, height?: number): string {
   if (!width || !height) return 'Unknown';
-  
+
   const megapixels = (width * height) / 1_000_000;
   return `${megapixels.toFixed(1)} megapixels`;
 }
@@ -499,10 +508,11 @@ function formatResolution(width?: number, height?: number): string {
  */
 export function formatFileSize(bytes?: number): string {
   if (bytes === undefined || bytes === null) return 'Unknown';
-  
+
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 

@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { KeyFindings, KeyFindingsCompact } from '@/components/v2-results/KeyFindings';
-import { ProgressiveDisclosure, ProgressiveDisclosureMobile, type ProgressiveDisclosureData } from '@/components/v2-results/ProgressiveDisclosure';
-import { ActionsToolbar, ActionsToolbarCompact } from '@/components/v2-results/ActionsToolbar';
+import {
+  KeyFindings,
+  KeyFindingsCompact,
+} from '@/components/v2-results/KeyFindings';
+import {
+  ProgressiveDisclosure,
+  ProgressiveDisclosureMobile,
+  type ProgressiveDisclosureData,
+} from '@/components/v2-results/ProgressiveDisclosure';
+import {
+  ActionsToolbar,
+  ActionsToolbarCompact,
+} from '@/components/v2-results/ActionsToolbar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, FileText, Cpu, Smartphone } from 'lucide-react';
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
@@ -95,48 +105,53 @@ export default function ResultsV2() {
   }, [location.state, toast]);
 
   // Transform metadata for ProgressiveDisclosure
-  const progressiveDisclosureData = useMemo<ProgressiveDisclosureData | null>(() => {
-    if (!metadata) return null;
+  const progressiveDisclosureData =
+    useMemo<ProgressiveDisclosureData | null>(() => {
+      if (!metadata) return null;
 
-    // Extract key findings
-    const keyFindings = extractKeyFindings(metadata);
+      // Extract key findings
+      const keyFindings = extractKeyFindings(metadata);
 
-    // Extract quick details
-    const quickDetails = {
-      resolution: metadata.resolution || metadata.exif?.image_width && metadata.exif?.image_height
-        ? `${metadata.exif.image_width}x${metadata.exif.image_height}`
-        : undefined,
-      fileSize: metadata.filesize,
-      dimensions: metadata.exif?.image_width && metadata.exif?.image_height
-        ? `${metadata.exif.image_width} x ${metadata.exif.image_height} pixels`
-        : undefined,
-      colorSpace: metadata.exif?.color_space,
-      iso: metadata.exif?.iso_speed,
-      focalLength: metadata.exif?.focal_length,
-      exposure: metadata.exif?.exposure_time,
-      aperture: metadata.exif?.f_number,
-    };
+      // Extract quick details
+      const quickDetails = {
+        resolution:
+          metadata.resolution ||
+          (metadata.exif?.image_width && metadata.exif?.image_height)
+            ? `${metadata.exif.image_width}x${metadata.exif.image_height}`
+            : undefined,
+        fileSize: metadata.filesize,
+        dimensions:
+          metadata.exif?.image_width && metadata.exif?.image_height
+            ? `${metadata.exif.image_width} x ${metadata.exif.image_height} pixels`
+            : undefined,
+        colorSpace: metadata.exif?.color_space,
+        iso: metadata.exif?.iso_speed,
+        focalLength: metadata.exif?.focal_length,
+        exposure: metadata.exif?.exposure_time,
+        aperture: metadata.exif?.f_number,
+      };
 
-    // Extract location data
-    const locationData: LocationData | undefined = metadata.gps?.latitude && metadata.gps?.longitude
-      ? {
-        latitude: metadata.gps.latitude,
-        longitude: metadata.gps.longitude,
-      }
-      : undefined;
+      // Extract location data
+      const locationData: LocationData | undefined =
+        metadata.gps?.latitude && metadata.gps?.longitude
+          ? {
+              latitude: metadata.gps.latitude,
+              longitude: metadata.gps.longitude,
+            }
+          : undefined;
 
-    // Extract advanced metadata (keep all original fields so advanced view is consistent)
-    const advancedMetadata = {
-      ...metadata
-    };
+      // Extract advanced metadata (keep all original fields so advanced view is consistent)
+      const advancedMetadata = {
+        ...metadata,
+      };
 
-    return {
-      keyFindings,
-      quickDetails,
-      location: locationData,
-      advancedMetadata,
-    };
-  }, [metadata]);
+      return {
+        keyFindings,
+        quickDetails,
+        location: locationData,
+        advancedMetadata,
+      };
+    }, [metadata]);
 
   // Priority 3: Fetch from DB if ID param exists and no data loaded yet
   useEffect(() => {
@@ -212,10 +227,15 @@ export default function ResultsV2() {
         </div>
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" role="status">
+            <div
+              className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"
+              role="status"
+            >
               <span className="sr-only">Loading results...</span>
             </div>
-            <p className="text-white font-mono" aria-live="polite">Loading your results...</p>
+            <p className="text-white font-mono" aria-live="polite">
+              Loading your results...
+            </p>
           </div>
         </div>
       </div>
@@ -318,12 +338,16 @@ export default function ResultsV2() {
                 <h1 className="text-xl font-bold text-white font-mono tracking-tight truncate">
                   {metadata.filename}
                 </h1>
-                <div className={cn(
-                  'text-xs text-slate-500 font-mono mt-1',
-                  isMobile ? 'flex flex-col gap-1' : 'flex gap-4'
-                )}>
+                <div
+                  className={cn(
+                    'text-xs text-slate-500 font-mono mt-1',
+                    isMobile ? 'flex flex-col gap-1' : 'flex gap-4'
+                  )}
+                >
                   <span>SIZE: {metadata.filesize}</span>
-                  <span className="hidden sm:inline">TYPE: {metadata.filetype}</span>
+                  <span className="hidden sm:inline">
+                    TYPE: {metadata.filetype}
+                  </span>
                   <span className="text-primary hidden md:inline">
                     SHA256:{' '}
                     {metadata.file_integrity?.sha256?.substring(0, 12) || 'N/A'}
@@ -334,17 +358,22 @@ export default function ResultsV2() {
             </div>
             {isMobile && (
               <div className="ml-2 flex-shrink-0">
-                <Smartphone className="w-5 h-5 text-blue-400" aria-hidden="true" />
+                <Smartphone
+                  className="w-5 h-5 text-blue-400"
+                  aria-hidden="true"
+                />
               </div>
             )}
           </div>
 
           {/* Progressive Disclosure Section */}
           {progressiveDisclosureData && (
-            <div className={cn(
-              'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg',
-              isMobile ? 'p-4' : 'p-6'
-            )}>
+            <div
+              className={cn(
+                'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg',
+                isMobile ? 'p-4' : 'p-6'
+              )}
+            >
               {isMobile ? (
                 <ProgressiveDisclosureMobile data={progressiveDisclosureData} />
               ) : (
@@ -354,9 +383,11 @@ export default function ResultsV2() {
           )}
 
           {/* Actions Toolbar */}
-          <div className={cn(
-            'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
-          )}>
+          <div
+            className={cn(
+              'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
+            )}
+          >
             {isMobile ? (
               <ActionsToolbarCompact
                 filename={metadata.filename}

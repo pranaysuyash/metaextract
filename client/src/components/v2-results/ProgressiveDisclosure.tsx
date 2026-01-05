@@ -32,7 +32,7 @@ interface ProgressiveDisclosureProps {
 
 export function ProgressiveDisclosure({
   data,
-  className
+  className,
 }: ProgressiveDisclosureProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -99,7 +99,7 @@ interface AdvancedMetadataViewProps {
 }
 
 function AdvancedMetadataView({
-  data
+  data,
 }: AdvancedMetadataViewProps): React.ReactElement {
   if (!data) {
     return (
@@ -110,7 +110,9 @@ function AdvancedMetadataView({
   }
 
   // Filter out undefined/null entries to avoid showing 'N/A' for intentionally omitted fields
-  const entries = Object.entries(data).filter(([_, v]) => v !== undefined && v !== null);
+  const entries = Object.entries(data).filter(
+    ([_, v]) => v !== undefined && v !== null
+  );
   if (entries.length === 0) {
     return (
       <div className="p-4 text-center text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
@@ -122,7 +124,7 @@ function AdvancedMetadataView({
   // Group metadata by category (if available)
   const sections = entries.map(([key, value]) => ({
     title: formatCategoryName(key),
-    content: <MetadataDetails value={value} />
+    content: <MetadataDetails value={value} />,
   }));
 
   return <ExpandableSectionList sections={sections} />;
@@ -143,7 +145,13 @@ function MetadataDetails({ value }: MetadataDetailsProps): React.ReactElement {
 
   if (typeof value === 'boolean') {
     return (
-      <span className={value ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+      <span
+        className={
+          value
+            ? 'text-green-600 dark:text-green-400'
+            : 'text-red-600 dark:text-red-400'
+        }
+      >
         {value ? 'Yes' : 'No'}
       </span>
     );
@@ -166,7 +174,9 @@ function MetadataDetails({ value }: MetadataDetailsProps): React.ReactElement {
       <div className="space-y-2">
         {Object.entries(value).map(([k, v]) => (
           <div key={k} className="flex justify-between text-sm">
-            <span className="text-gray-700 dark:text-gray-300">{formatCategoryName(k)}</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {formatCategoryName(k)}
+            </span>
             <span className="text-gray-900 dark:text-white font-medium">
               {typeof v === 'object' ? JSON.stringify(v) : String(v)}
             </span>
@@ -191,7 +201,7 @@ function formatCategoryName(name: string): string {
  */
 export function ProgressiveDisclosureMobile({
   data,
-  className
+  className,
 }: ProgressiveDisclosureProps): React.ReactElement {
   return (
     <div className={cn('space-y-4', className)}>
@@ -208,24 +218,27 @@ export function ProgressiveDisclosureMobile({
         sections={[
           {
             title: 'Details',
-            content: <QuickDetails data={data.quickDetails} />
+            content: <QuickDetails data={data.quickDetails} />,
           },
           ...(data.location
             ? [
-              {
-                title: 'Location',
-                content: <LocationSection location={data.location} />
-              }
-            ]
+                {
+                  title: 'Location',
+                  content: <LocationSection location={data.location} />,
+                },
+              ]
             : []),
-          ...(data.advancedMetadata && Object.keys(data.advancedMetadata).length > 0
+          ...(data.advancedMetadata &&
+          Object.keys(data.advancedMetadata).length > 0
             ? [
-              {
-                title: 'Advanced',
-                content: <AdvancedMetadataView data={data.advancedMetadata} />
-              }
-            ]
-            : [])
+                {
+                  title: 'Advanced',
+                  content: (
+                    <AdvancedMetadataView data={data.advancedMetadata} />
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
     </div>

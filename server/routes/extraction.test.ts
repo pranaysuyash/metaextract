@@ -172,7 +172,10 @@ describe('API Endpoint Tests', () => {
 
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).toHaveProperty('context');
-      expect(response.body.error.context).toHaveProperty('current_tier', 'free');
+      expect(response.body.error.context).toHaveProperty(
+        'current_tier',
+        'free'
+      );
       expect(response.body.error).toHaveProperty('details');
       expect(response.body.error.details).toHaveProperty('required_tier');
       expect(response.body.error.message).toContain('File type not allowed');
@@ -281,7 +284,9 @@ describe('API Endpoint Tests', () => {
         .expect(500);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error.message).toContain('Failed to extract metadata');
+      expect(response.body.error.message).toContain(
+        'Failed to extract metadata'
+      );
     });
 
     it('should validate required file upload', async () => {
@@ -395,8 +400,14 @@ describe('API Endpoint Tests', () => {
 
       expect(response.body).toHaveProperty('error');
       expect(response.body.error.message).toContain('requires forensic tier');
-      expect(response.body.error.details).toHaveProperty('current_tier', 'free');
-      expect(response.body.error.details).toHaveProperty('required_tier', 'forensic');
+      expect(response.body.error.details).toHaveProperty(
+        'current_tier',
+        'free'
+      );
+      expect(response.body.error.details).toHaveProperty(
+        'required_tier',
+        'forensic'
+      );
     });
 
     it('should validate all file types in batch', async () => {
@@ -443,7 +454,10 @@ describe('API Endpoint Tests', () => {
         .post('/api/extract/batch?tier=forensic')
         .expect(400);
 
-      expect(response.body.error).toHaveProperty('message', 'No files uploaded');
+      expect(response.body.error).toHaveProperty(
+        'message',
+        'No files uploaded'
+      );
     });
   });
 

@@ -36,7 +36,9 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/client/src/$1',
-    '^@shared/(.*)$': '<rootDir>/shared/$1',    '^file-type$': '<rootDir>/tests/mocks/file-type.cjs',    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '^@shared/(.*)$': '<rootDir>/shared/$1',
+    '^file-type$': '<rootDir>/tests/mocks/file-type.cjs',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '@testing-library/jest-dom'],
   collectCoverageFrom: [

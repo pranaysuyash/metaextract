@@ -5,7 +5,7 @@ import express, { type Express } from 'express';
 import { registerImagesMvpRoutes } from './images-mvp';
 import { storage } from '../storage/index';
 import { getDatabase } from '../db';
-import { extractMetadataWithPython, transformMetadataForFrontend } from '../utils/extraction-helpers';
+import { extractMetadataWithPython, transformMetadataForFrontend, pythonExecutable, PYTHON_SCRIPT_PATH } from '../utils/extraction-helpers';
 
 // Mock dependencies
 jest.mock('../storage/index', () => ({
@@ -70,8 +70,8 @@ jest.mock('../utils/extraction-helpers', () => ({
   normalizeEmail: jest.fn((email) => (email ? email.trim().toLowerCase() : null)),
   getSessionId: jest.fn((req) => req.query.session_id || req.body.session_id || req.headers['x-session-id']),
   cleanupTempFile: jest.fn(),
-  pythonExecutable: 'python3',
-  PYTHON_SCRIPT_PATH: '/path/to/script.py',
+  pythonExecutable,
+  PYTHON_SCRIPT_PATH,
 }));
 
 // Mock DodoPayments
