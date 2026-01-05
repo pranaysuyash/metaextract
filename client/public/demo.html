@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MetaExtract - Interactive Timeline Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #e2e8f0;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      /* Header */
+      .header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      .header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .header p {
+        color: #94a3b8;
+        font-size: 14px;
+      }
+
+      /* Controls */
+      .controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .btn.active {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+      }
+
+      /* Main Timeline Card */
+      .timeline-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 24px;
+      }
+      .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .timeline-title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .timeline-date-range {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      /* Scrubber Track */
+      .scrubber-container {
+        position: relative;
+        padding: 40px 0;
+        margin-bottom: 24px;
+      }
+      .scrubber-track {
+        position: relative;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .scrubber-progress {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+        border-radius: 3px;
+        transition: width 0.1s;
+      }
+      .scrubber-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: white;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        pointer-events: none;
+      }
+
+      /* Event Nodes */
+      .event-node {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        transition: all 0.2s;
+        z-index: 10;
+      }
+      .event-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid rgba(30, 41, 59, 1);
+        transition: all 0.2s;
+        position: relative;
+      }
+      .event-dot:hover {
+        transform: scale(1.3);
+      }
+      .event-dot.active {
+        transform: scale(1.4);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+      }
+
+      /* Event Type Colors */
+      .event-taken .event-dot {
+        background: #a855f7;
+        border-color: #a855f7;
+      }
+      .event-created .event-dot {
+        background: #22c55e;
+        border-color: #22c55e;
+      }
+      .event-modified .event-dot {
+        background: #3b82f6;
+        border-color: #3b82f6;
+      }
+      .event-accessed .event-dot {
+        background: #f59e0b;
+        border-color: #f59e0b;
+      }
+
+      .event-label {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        white-space: nowrap;
+        color: #94a3b8;
+      }
+      .event-node:hover .event-label {
+        color: #e2e8f0;
+      }
+
+      /* Floating Preview Card */
+      .preview-card {
+        position: absolute;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        min-width: 220px;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.2s;
+        z-index: 100;
+      }
+      .preview-card.visible {
+        opacity: 1;
+        bottom: 36px;
+      }
+      .preview-card::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 12px;
+        height: 12px;
+        background: rgba(15, 23, 42, 0.95);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .preview-type {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+      .preview-date {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .preview-time {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .preview-source {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      /* Axis Labels */
+      .axis-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 12px;
+      }
+
+      /* Playback Controls */
+      .playback-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+      .play-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+      .play-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      }
+      .speed-select {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #e2e8f0;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      /* Detail Cards Grid */
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .detail-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s;
+      }
+      .detail-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-2px);
+      }
+      .detail-card.active {
+        border-color: #6366f1;
+        background: rgba(99, 102, 241, 0.1);
+      }
+      .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .detail-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+      .detail-icon.taken {
+        background: rgba(168, 85, 247, 0.2);
+      }
+      .detail-icon.created {
+        background: rgba(34, 197, 94, 0.2);
+      }
+      .detail-icon.modified {
+        background: rgba(59, 130, 246, 0.2);
+      }
+      .detail-icon.accessed {
+        background: rgba(245, 158, 11, 0.2);
+      }
+      .detail-type {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #94a3b8;
+        margin-bottom: 2px;
+      }
+      .detail-date {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .detail-time {
+        font-size: 13px;
+        color: #94a3b8;
+      }
+      .detail-meta {
+        display: flex;
+        gap: 16px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      /* Legend */
+      .legend {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      /* Stats Bar */
+      .stats-bar {
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+      }
+      .stat-item {
+        text-align: center;
+        padding: 16px 24px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+
+      /* Keyboard Shortcuts */
+      .shortcuts {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 24px;
+      }
+      .shortcuts-title {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .shortcuts-list {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 11px;
+        color: #94a3b8;
+      }
+      .shortcut {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .shortcut kbd {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+
+      /* Export Menu */
+      .export-menu {
+        position: relative;
+        display: inline-block;
+      }
+      .export-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 8px 0;
+        min-width: 160px;
+        z-index: 50;
+        margin-top: 8px;
+      }
+      .export-option {
+        display: block;
+        width: 100%;
+        padding: 10px 16px;
+        text-align: left;
+        background: none;
+        border: none;
+        color: #e2e8f0;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .export-option:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Mini timeline */
+      .minimap {
+        height: 40px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 6px;
+        margin-bottom: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+      .minimap-dot {
+        position: absolute;
+        width: 3px;
+        height: 100%;
+        border-radius: 1px;
+      }
+
+      /* Progress indicator */
+      .progress-info {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 12px;
+      }
+
+      /* Comparison mode */
+      .comparison-panel {
+        display: none;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 24px;
+      }
+      .comparison-panel.visible {
+        display: block;
+      }
+      .comparison-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .comparison-files {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      .comparison-file {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .comparison-file h4 {
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+
+      @media (max-width: 768px) {
+        .details-grid {
+          grid-template-columns: 1fr;
+        }
+        .stats-bar {
+          gap: 12px;
+        }
+        .stat-item {
+          padding: 12px 16px;
+        }
+        .stat-value {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📊 Interactive Metadata Timeline</h1>
+        <p>
+          Explore file lifecycle with playback controls, filters, and export
+          options
+        </p>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-value" id="statFiles">1</div>
+          <div class="stat-label">Files</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statEvents">4</div>
+          <div class="stat-label">Events</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statDays">5</div>
+          <div class="stat-label">Days Span</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statRange">Jul 15 - Dec 25</div>
+          <div class="stat-label">Date Range</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button
+          class="btn btn-secondary"
+          onclick="setFileMode('single')"
+          id="btnSingle"
+        >
+          📄 Single File
+        </button>
+        <button
+          class="btn btn-secondary"
+          onclick="setFileMode('all')"
+          id="btnAll"
+        >
+          📁 All Files
+        </button>
+        <button class="btn btn-primary" onclick="togglePlay()" id="btnPlay">
+          ▶ Play
+        </button>
+        <button class="btn btn-secondary" onclick="resetTimeline()">
+          ↺ Reset
+        </button>
+        <select
+          class="speed-select"
+          id="speedSelect"
+          onchange="setSpeed(this.value)"
+        >
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+          <option value="4">4x</option>
+        </select>
+        <div class="export-menu">
+          <button class="btn btn-secondary" onclick="toggleExport()">
+            ⬇ Export
+          </button>
+          <div
+            class="export-dropdown"
+            id="exportDropdown"
+            style="display: none"
+          >
+            <button class="export-option" onclick="exportData('json')">
+              📄 Export as JSON
+            </button>
+            <button class="export-option" onclick="exportData('csv')">
+              📊 Export as CSV
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="toggleComparison()">
+          ⚖️ Compare
+        </button>
+      </div>
+
+      <!-- Main Timeline -->
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <div class="timeline-title" id="timelineTitle">
+            summer_vacation_2024.jpg
+          </div>
+          <div class="timeline-date-range" id="dateRange">
+            Jul 15, 2024 → Dec 25, 2024
+          </div>
+        </div>
+
+        <!-- Minimap -->
+        <div class="minimap" id="minimap"></div>
+
+        <!-- Scrubber -->
+        <div class="scrubber-container" id="scrubberContainer">
+          <div
+            class="scrubber-track"
+            id="scrubberTrack"
+            onclick="handleScrubberClick(event)"
+          >
+            <div class="scrubber-progress" id="scrubberProgress"></div>
+            <div class="scrubber-fill" id="scrubberFill"></div>
+          </div>
+          <div id="eventNodes"></div>
+          <div class="preview-card" id="previewCard">
+            <span class="preview-type" id="previewType">CREATED</span>
+            <div class="preview-date" id="previewDate">Jul 15, 2024</div>
+            <div class="preview-time" id="previewTime">2:30 PM</div>
+            <div class="preview-source" id="previewSource">
+              Source: EXIF • Confidence: High
+            </div>
+          </div>
+        </div>
+        <div class="axis-labels" id="axisLabels">
+          <span>Jul 15</span>
+          <span>Aug 15</span>
+          <span>Sep 15</span>
+          <span>Oct 15</span>
+          <span>Nov 15</span>
+          <span>Dec 15</span>
+        </div>
+
+        <!-- Progress Info -->
+        <div class="progress-info">
+          <span
+            >Event <span id="currentIndex">4</span> of
+            <span id="totalEvents">4</span></span
+          >
+          <span>•</span>
+          <span id="timeFromStart">0 days from start</span>
+        </div>
+      </div>
+
+      <!-- Comparison Panel -->
+      <div class="comparison-panel" id="comparisonPanel">
+        <div class="comparison-header">
+          <h3>⚖️ File Comparison</h3>
+          <button class="btn btn-secondary" onclick="toggleComparison()">
+            ✕ Close
+          </button>
+        </div>
+        <div class="comparison-files">
+          <div class="comparison-file">
+            <h4>📄 summer_vacation_2024.jpg</h4>
+            <div style="font-size: 12px; color: #94a3b8">
+              <div>📷 Date Taken: Jul 15, 2024</div>
+              <div>📄 Created: Jul 15, 2024</div>
+              <div>✏️ Modified: Aug 22, 2024</div>
+              <div>👁️ Accessed: Jan 03, 2025</div>
+            </div>
+          </div>
+          <div class="comparison-file">
+            <h4>📄 project_report.pdf</h4>
+            <div style="font-size: 12px; color: #94a3b8">
+              <div>📄 Created: Sep 10, 2024</div>
+              <div>✏️ Modified: Dec 15, 2024</div>
+              <div>👁️ Accessed: Jan 04, 2025</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Cards -->
+      <div class="details-grid" id="detailsGrid"></div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background: #a855f7"></div>
+          Date Taken
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: #22c55e"></div>
+          Created
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: #3b82f6"></div>
+          Modified
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background: #f59e0b"></div>
+          Accessed
+        </div>
+      </div>
+
+      <!-- Keyboard Shortcuts -->
+      <div class="shortcuts">
+        <div class="shortcuts-title">Keyboard Shortcuts</div>
+        <div class="shortcuts-list">
+          <div class="shortcut"><kbd>Space</kbd> Play/Pause</div>
+          <div class="shortcut"><kbd>←/→</kbd> Navigate</div>
+          <div class="shortcut"><kbd>+</kbd>/<kbd>-</kbd> Zoom</div>
+          <div class="shortcut"><kbd>0</kbd> Reset</div>
+          <div class="shortcut"><kbd>E</kbd> Export</div>
+          <div class="shortcut"><kbd>C</kbd> Compare</div>
+          <div class="shortcut"><kbd>Esc</kbd> Close</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // State
+      let state = {
+        fileMode: 'single',
+        selectedFile: 0,
+        currentIndex: 3,
+        isPlaying: false,
+        playbackSpeed: 1,
+        showExport: false,
+        showComparison: false,
+      };
+
+      // Sample data
+      const filesData = [
+        {
+          filename: 'summer_vacation_2024.jpg',
+          type: 'image',
+          size: '4.2 MB',
+          events: [
+            {
+              type: 'taken',
+              date: new Date('2024-07-15T14:28:30'),
+              label: 'Date Taken',
+              source: 'EXIF',
+              confidence: 0.95,
+            },
+            {
+              type: 'created',
+              date: new Date('2024-07-15T14:30:00'),
+              label: 'Created',
+              source: 'Filesystem',
+              confidence: 0.9,
+            },
+            {
+              type: 'modified',
+              date: new Date('2024-08-22T09:15:00'),
+              label: 'Modified',
+              source: 'XMP',
+              confidence: 0.85,
+            },
+            {
+              type: 'accessed',
+              date: new Date('2025-01-03T16:45:00'),
+              label: 'Accessed',
+              source: 'Filesystem',
+              confidence: 0.7,
+            },
+          ],
+        },
+        {
+          filename: 'project_report.pdf',
+          type: 'document',
+          size: '1.8 MB',
+          events: [
+            {
+              type: 'created',
+              date: new Date('2024-09-10T10:00:00'),
+              label: 'Created',
+              source: 'Filesystem',
+              confidence: 0.9,
+            },
+            {
+              type: 'modified',
+              date: new Date('2024-12-15T14:30:00'),
+              label: 'Modified',
+              source: 'XMP',
+              confidence: 0.95,
+            },
+            {
+              type: 'accessed',
+              date: new Date('2025-01-04T11:20:00'),
+              label: 'Accessed',
+              source: 'Filesystem',
+              confidence: 0.8,
+            },
+          ],
+        },
+        {
+          filename: 'meeting_notes.txt',
+          type: 'text',
+          size: '12 KB',
+          events: [
+            {
+              type: 'created',
+              date: new Date('2024-11-20T09:00:00'),
+              label: 'Created',
+              source: 'Filesystem',
+              confidence: 0.9,
+            },
+            {
+              type: 'modified',
+              date: new Date('2024-11-20T17:45:00'),
+              label: 'Modified',
+              source: 'Filesystem',
+              confidence: 0.85,
+            },
+            {
+              type: 'accessed',
+              date: new Date('2025-01-02T08:30:00'),
+              label: 'Accessed',
+              source: 'Filesystem',
+              confidence: 0.75,
+            },
+          ],
+        },
+      ];
+
+      // Get current file data
+      function getCurrentData() {
+        if (state.fileMode === 'single') {
+          return [filesData[state.selectedFile]];
+        }
+        return filesData;
+      }
+
+      // Get all events flattened
+      function getAllEvents() {
+        return getCurrentData()
+          .flatMap(file =>
+            file.events.map(e => ({
+              ...e,
+              file: file.filename,
+              size: file.size,
+            }))
+          )
+          .sort((a, b) => a.date - b.date);
+      }
+
+      // Calculate timeline bounds
+      function getTimelineBounds() {
+        const events = getAllEvents();
+        if (events.length === 0)
+          return { min: new Date(), max: new Date(), range: 1 };
+        const min = new Date(Math.min(...events.map(e => e.date)));
+        const max = new Date(Math.max(...events.map(e => e.date)));
+        const range = max - min || 1;
+        return { min, max, range };
+      }
+
+      // Get position percentage
+      function getPosition(date, bounds) {
+        return ((date - bounds.min) / bounds.range) * 100;
+      }
+
+      // Format date
+      function formatDate(date) {
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+      function formatTime(date) {
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+
+      // Render timeline
+      function renderTimeline() {
+        const bounds = getTimelineBounds();
+        const events = getAllEvents();
+        const currentEvent = events[state.currentIndex];
+        const progress =
+          events.length > 1
+            ? (state.currentIndex / (events.length - 1)) * 100
+            : 0;
+
+        // Update progress
+        document.getElementById('scrubberProgress').style.width =
+          `${progress}%`;
+        document.getElementById('scrubberFill').style.left = `${progress}%`;
+        document.getElementById('currentIndex').textContent =
+          state.currentIndex + 1;
+        document.getElementById('totalEvents').textContent = events.length;
+
+        // Update time from start
+        if (currentEvent) {
+          const daysFromStart = Math.floor(
+            (currentEvent.date - bounds.min) / (1000 * 60 * 60 * 24)
+          );
+          document.getElementById('timeFromStart').textContent =
+            `${daysFromStart} days from start`;
+        }
+
+        // Render event nodes
+        const nodesContainer = document.getElementById('eventNodes');
+        nodesContainer.innerHTML = events
+          .map((event, idx) => {
+            const pos = getPosition(event.date, bounds);
+            const isActive = idx === state.currentIndex;
+            const typeColors = {
+              taken: {
+                bg: '#a855f7',
+                light: 'rgba(168, 85, 247, 0.2)',
+                text: 'Date Taken',
+              },
+              created: {
+                bg: '#22c55e',
+                light: 'rgba(34, 197, 94, 0.2)',
+                text: 'Created',
+              },
+              modified: {
+                bg: '#3b82f6',
+                light: 'rgba(59, 130, 246, 0.2)',
+                text: 'Modified',
+              },
+              accessed: {
+                bg: '#f59e0b',
+                light: 'rgba(245, 158, 11, 0.2)',
+                text: 'Accessed',
+              },
+            };
+            const colors = typeColors[event.type];
+
+            return `
+            <div class="event-node event-${event.type}" style="left: ${pos}%;" 
+                 onclick="goToEvent(${idx})"
+                 onmouseenter="showPreview(event, ${idx})"
+                 onmouseleave="hidePreview()">
+              <div class="event-dot ${isActive ? 'active' : ''}" style="background: ${colors.bg}; border-color: ${colors.bg};"></div>
+              <div class="event-label">${formatDate(event.date)}</div>
+            </div>
+          `;
+          })
+          .join('');
+
+        // Update preview card if visible
+        if (currentEvent) {
+          const colors = {
+            taken: { bg: '#a855f7', text: 'DATE TAKEN' },
+            created: { bg: '#22c55e', text: 'CREATED' },
+            modified: { bg: '#3b82f6', text: 'MODIFIED' },
+            accessed: { bg: '#f59e0b', text: 'ACCESSED' },
+          };
+          const c = colors[currentEvent.type];
+          const card = document.getElementById('previewCard');
+          document.getElementById('previewType').textContent = c.text;
+          document.getElementById('previewType').style.background = c.bg;
+          document.getElementById('previewDate').textContent = formatDate(
+            currentEvent.date
+          );
+          document.getElementById('previewTime').textContent = formatTime(
+            currentEvent.date
+          );
+          document.getElementById('previewSource').textContent =
+            `Source: ${currentEvent.source} • Confidence: ${currentEvent.confidence >= 0.9 ? 'High' : currentEvent.confidence >= 0.7 ? 'Medium' : 'Low'}`;
+        }
+
+        // Render minimap
+        const minimap = document.getElementById('minimap');
+        minimap.innerHTML = events
+          .map(e => {
+            const pos = getPosition(e.date, bounds);
+            const colors = {
+              taken: '#a855f7',
+              created: '#22c55e',
+              modified: '#3b82f6',
+              accessed: '#f59e0b',
+            };
+            return `<div class="minimap-dot" style="left: ${pos}%; background: ${colors[e.type]}; opacity: 0.6;"></div>`;
+          })
+          .join('');
+
+        // Render detail cards
+        const grid = document.getElementById('detailsGrid');
+        grid.innerHTML = events
+          .map((event, idx) => {
+            const isActive = idx === state.currentIndex;
+            const colors = {
+              taken: {
+                bg: 'rgba(168, 85, 247, 0.2)',
+                text: '#a855f7',
+                icon: '📷',
+                label: 'Date Taken',
+              },
+              created: {
+                bg: 'rgba(34, 197, 94, 0.2)',
+                text: '#22c55e',
+                icon: '📄',
+                label: 'Created',
+              },
+              modified: {
+                bg: 'rgba(59, 130, 246, 0.2)',
+                text: '#3b82f6',
+                icon: '✏️',
+                label: 'Modified',
+              },
+              accessed: {
+                bg: 'rgba(245, 158, 11, 0.2)',
+                text: '#f59e0b',
+                icon: '👁️',
+                label: 'Accessed',
+              },
+            };
+            const c = colors[event.type];
+
+            return `
+            <div class="detail-card ${isActive ? 'active' : ''}" onclick="goToEvent(${idx})" style="cursor: pointer;">
+              <div class="detail-header">
+                <div class="detail-icon ${event.type}">${c.icon}</div>
+                <div>
+                  <div class="detail-type" style="color: ${c.text};">${c.label}</div>
+                  <div class="detail-date" style="color: ${c.text};">${formatDate(event.date)}</div>
+                  <div class="detail-time">${formatTime(event.date)}</div>
+                </div>
+              </div>
+              <div class="detail-meta">
+                <span>📁 ${event.file}</span>
+                <span>${event.size}</span>
+                <span>${event.confidence >= 0.9 ? '✅ High' : event.confidence >= 0.7 ? '⚡ Medium' : '⚠️ Low'} confidence</span>
+              </div>
+            </div>
+          `;
+          })
+          .join('');
+
+        // Update stats
+        const daysSpan = Math.ceil(bounds.range / (1000 * 60 * 60 * 24));
+        document.getElementById('statFiles').textContent =
+          getCurrentData().length;
+        document.getElementById('statEvents').textContent = events.length;
+        document.getElementById('statDays').textContent = daysSpan;
+        document.getElementById('statRange').textContent =
+          `${formatDate(bounds.min).split(',')[0]} - ${formatDate(bounds.max).split(',')[0]}`;
+
+        // Update header
+        document.getElementById('timelineTitle').textContent =
+          state.fileMode === 'single'
+            ? getCurrentData()[0].filename
+            : 'All Files Timeline';
+        document.getElementById('dateRange').textContent =
+          `${formatDate(bounds.min)} → ${formatDate(bounds.max)}`;
+      }
+
+      // Event handlers
+      function goToEvent(idx) {
+        state.currentIndex = idx;
+        renderTimeline();
+      }
+
+      function handleScrubberClick(e) {
+        const bounds = getTimelineBounds();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const pct = x / rect.width;
+        const events = getAllEvents();
+        const targetIdx = Math.round(pct * (events.length - 1));
+        goToEvent(Math.max(0, Math.min(events.length - 1, targetIdx)));
+      }
+
+      function showPreview(e, idx) {
+        const events = getAllEvents();
+        const event = events[idx];
+        const card = document.getElementById('previewCard');
+        const node = e.currentTarget;
+        const rect = node.getBoundingClientRect();
+        const containerRect = document
+          .getElementById('scrubberContainer')
+          .getBoundingClientRect();
+
+        card.style.left = `${rect.left - containerRect.left + rect.width / 2}px`;
+        card.classList.add('visible');
+      }
+
+      function hidePreview() {
+        document.getElementById('previewCard').classList.remove('visible');
+      }
+
+      function togglePlay() {
+        state.isPlaying = !state.isPlaying;
+        document.getElementById('btnPlay').textContent = state.isPlaying
+          ? '⏸ Pause'
+          : '▶ Play';
+        if (state.isPlaying) {
+          playInterval = setInterval(() => {
+            state.currentIndex++;
+            if (state.currentIndex >= getAllEvents().length) {
+              state.currentIndex = 0;
+            }
+            renderTimeline();
+          }, 1000 / state.playbackSpeed);
+        } else {
+          clearInterval(playInterval);
+        }
+      }
+
+      function setSpeed(val) {
+        state.playbackSpeed = parseFloat(val);
+        if (state.isPlaying) {
+          clearInterval(playInterval);
+          playInterval = setInterval(() => {
+            state.currentIndex++;
+            if (state.currentIndex >= getAllEvents().length) {
+              state.currentIndex = 0;
+            }
+            renderTimeline();
+          }, 1000 / state.playbackSpeed);
+        }
+      }
+
+      function resetTimeline() {
+        state.currentIndex = 0;
+        state.isPlaying = false;
+        clearInterval(playInterval);
+        document.getElementById('btnPlay').textContent = '▶ Play';
+        renderTimeline();
+      }
+
+      function setFileMode(mode) {
+        state.fileMode = mode;
+        state.currentIndex = 0;
+        document.getElementById('btnSingle').className =
+          `btn ${mode === 'single' ? 'btn-primary' : 'btn-secondary'}`;
+        document.getElementById('btnAll').className =
+          `btn ${mode === 'all' ? 'btn-primary' : 'btn-secondary'}`;
+        renderTimeline();
+      }
+
+      function toggleExport() {
+        state.showExport = !state.showExport;
+        document.getElementById('exportDropdown').style.display =
+          state.showExport ? 'block' : 'none';
+      }
+
+      function exportData(format) {
+        const events = getAllEvents();
+        if (format === 'json') {
+          const data = events.map(e => ({
+            file: e.file,
+            type: e.type,
+            label: e.label,
+            date: e.date.toISOString(),
+            source: e.source,
+            confidence: e.confidence,
+          }));
+          download(data, 'timeline-export.json', 'application/json');
+        } else {
+          const csv = ['File,Type,Label,Date,Time,Source,Confidence']
+            .concat(
+              events.map(
+                e =>
+                  `"${e.file}",${e.type},"${e.label}","${formatDate(e.date)}","${formatTime(e.date)}","${e.source}",${e.confidence}`
+              )
+            )
+            .join('\n');
+          download(csv, 'timeline-export.csv', 'text/csv');
+        }
+        toggleExport();
+      }
+
+      function download(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function toggleComparison() {
+        state.showComparison = !state.showComparison;
+        document
+          .getElementById('comparisonPanel')
+          .classList.toggle('visible', state.showComparison);
+      }
+
+      // Keyboard navigation
+      document.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')
+          return;
+
+        const events = getAllEvents();
+        switch (e.key) {
+          case ' ':
+            e.preventDefault();
+            togglePlay();
+            break;
+          case 'ArrowLeft':
+            state.currentIndex = Math.max(0, state.currentIndex - 1);
+            renderTimeline();
+            break;
+          case 'ArrowRight':
+            state.currentIndex = Math.min(
+              events.length - 1,
+              state.currentIndex + 1
+            );
+            renderTimeline();
+            break;
+          case '+':
+          case '=':
+            document.getElementById('speedSelect').value = Math.min(
+              4,
+              parseFloat(document.getElementById('speedSelect').value) + 0.5
+            );
+            setSpeed(document.getElementById('speedSelect').value);
+            break;
+          case '-':
+            document.getElementById('speedSelect').value = Math.max(
+              0.5,
+              parseFloat(document.getElementById('speedSelect').value) - 0.5
+            );
+            setSpeed(document.getElementById('speedSelect').value);
+            break;
+          case '0':
+            resetTimeline();
+            break;
+          case 'e':
+          case 'E':
+            toggleExport();
+            break;
+          case 'c':
+          case 'C':
+            toggleComparison();
+            break;
+          case 'Escape':
+            if (state.showExport) toggleExport();
+            if (state.showComparison) toggleComparison();
+            break;
+        }
+      });
+
+      // Close dropdowns when clicking outside
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.export-menu')) {
+          state.showExport = false;
+          document.getElementById('exportDropdown').style.display = 'none';
+        }
+      });
+
+      let playInterval;
+
+      // Initial render
+      renderTimeline();
+    </script>
+  </body>
+</html>

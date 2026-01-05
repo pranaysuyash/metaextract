@@ -1,0 +1,29 @@
+# Railway Nixpacks configuration for Images MVP (lean deploy)
+#
+# Use this config for an Images MVP-only Railway service by setting:
+# `NIXPACKS_CONFIG_FILE=apps/images-mvp/nixpacks.toml`
+#
+# This keeps Python deps small via `requirements.images_mvp.txt` and runs the API
+# in Images MVP-only mode (no non-images routes).
+
+providers = ["python", "node"]
+
+[phases.setup]
+aptPkgs = [
+    "ffmpeg",
+    "libmagic1",
+    "libimage-exiftool-perl",
+    "perl"
+]
+
+[phases.install]
+cmds = [
+    "npm ci",
+    "pip install -r requirements.images_mvp.txt"
+]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "IMAGES_MVP_ONLY=true RATE_LIMIT_ENABLED=false REDIS_CACHE_ENABLED=false npm start"
