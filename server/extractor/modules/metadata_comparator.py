@@ -49,6 +49,7 @@ class MetadataComparator:
         }
         
         # Check what's available
+        has_embedded_exif = self._has_exif(embedded)
         has_embedded_gps = self._has_gps(embedded)
         has_burned_gps = burned.get("parsed_data", {}).get("gps") is not None
         
@@ -61,13 +62,16 @@ class MetadataComparator:
         has_embedded_time = self._has_datetime(embedded)
         has_burned_time = "timestamp" in burned.get("parsed_data", {})
         
-        # Determine metadata presence
-        if (has_embedded_gps or has_embedded_location or has_embedded_time) and \
-           (has_burned_gps or has_burned_location or has_burned_time):
+        # Determine metadata presence - ANY embedded metadata counts
+        has_any_embedded = (has_embedded_exif or has_embedded_gps or 
+                           has_embedded_location or has_embedded_time)
+        has_any_burned = (has_burned_gps or has_burned_location or has_burned_time)
+        
+        if has_any_embedded and has_any_burned:
             result["has_both"] = True
-        elif has_embedded_gps or has_embedded_location or has_embedded_time:
+        elif has_any_embedded:
             result["has_embedded_only"] = True
-        elif has_burned_gps or has_burned_location or has_burned_time:
+        elif has_any_burned:
             result["has_burned_only"] = True
         
         # Compare GPS coordinates
@@ -108,6 +112,14 @@ class MetadataComparator:
         }
         
         return result
+    
+    def _has_exif(self, embedded: Dict[str, Any]) -> bool:
+        """Check if embedded metadata contains any EXIF data."""
+        exif = embedded.get("exif", {})
+        if not exif:
+            return False
+        # Check for non-internal fields (exclude fields starting with _)
+        return any(not key.startswith('_') for key in exif.keys())
     
     def _has_gps(self, embedded: Dict[str, Any]) -> bool:
         """Check if embedded metadata contains GPS."""
