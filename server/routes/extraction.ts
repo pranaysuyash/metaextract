@@ -203,11 +203,15 @@ export function registerExtractionRoutes(app: Express): void {
         await fs.writeFile(tempPath, req.file.buffer);
 
         // Extract metadata
+        // Automatically enable advanced analysis for forensic and enterprise tiers (Phase 3.1)
+        const shouldEnableAdvancedAnalysis = ['forensic', 'enterprise'].includes(normalizedTier) || 
+                                           req.query.advanced === 'true';
+        
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
           pythonTier,
           true,
-          true,
+          shouldEnableAdvancedAnalysis,
           req.query.store === 'true'
         );
 

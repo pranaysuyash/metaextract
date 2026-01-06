@@ -760,6 +760,21 @@ export function registerImagesMvpRoutes(app: Express) {
   );
 
   // ---------------------------------------------------------------------------
+  // Credits: Transactions
+  // ---------------------------------------------------------------------------
+  app.get('/api/images_mvp/credits/transactions', async (req: Request, res: Response) => {
+    try {
+      const balanceId = typeof req.query.balanceId === 'string' ? req.query.balanceId : null;
+      if (!balanceId) return res.json({ transactions: [] });
+      const transactions = await storage.getCreditTransactions(balanceId);
+      return res.json({ transactions });
+    } catch (error) {
+      console.error('Get images_mvp credit transactions error:', error);
+      return res.status(500).json({ error: 'Failed to get credit transactions' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // Credits: Claim (convert session credits -> account credits)
   // ---------------------------------------------------------------------------
   app.post('/api/images_mvp/credits/claim', async (req: Request, res: Response) => {
@@ -1078,7 +1093,7 @@ export function registerImagesMvpRoutes(app: Express) {
             }
 
             const usage = await getClientUsage(decoded.clientId);
-            const freeUsed = usage?.free_used || 0;
+            const freeUsed = usage?.freeUsed || 0;
             const freeLimit = 2;
 
             if (freeUsed < freeLimit) {

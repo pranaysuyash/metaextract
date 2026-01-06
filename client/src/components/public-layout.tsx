@@ -10,7 +10,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
-import { LogIn, UserPlus, Upload, LogOut, Menu, X, Settings } from 'lucide-react';
+import { LogIn, UserPlus, Upload, LogOut, Menu, X, Settings, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { AuthModal } from './auth-modal';
 
@@ -106,6 +106,15 @@ export function PublicLayout({
                     >
                       <Settings className="w-4 h-4 mr-2" />
                       Dashboard
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/credits')}
+                      className="text-slate-200 hover:text-white hover:bg-white/10"
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Credits
                     </Button>
                     <Button
                       variant="ghost"
@@ -213,6 +222,17 @@ export function PublicLayout({
                       >
                         <Settings className="w-4 h-4 mr-2" />
                         Dashboard
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          navigate('/credits');
+                          setMobileMenuOpen(false);
+                        }}
+                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Credits
                       </Button>
                       <Button
                         variant="ghost"

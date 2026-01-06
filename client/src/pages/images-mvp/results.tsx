@@ -39,7 +39,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -1272,7 +1272,7 @@ export default function ImagesMvpResults() {
           <div className="mb-4 flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 font-mono">
-                <span className="whitespace-nowrap">Focus: {purposeLabel}</span>
+                <span className="whitespace-nowrap">Focus: {typeof purposeLabel === 'string' ? purposeLabel : ''}</span>
                 <Button
                   variant="ghost"
                   size="sm"

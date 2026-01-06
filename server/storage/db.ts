@@ -372,48 +372,44 @@ export class DatabaseStorage implements IStorage {
 
       // Only proceed with grants if table exists
       if (hasCreditGrantsTable) {
-        try {
-          const remainingGrants = await client
-            .select({ remaining: creditGrants.remaining })
-            .from(creditGrants)
-            .where(
-              and(
-                eq(creditGrants.balanceId, fromBalanceId),
-                gt(creditGrants.remaining, 0)
-              )
-            );
-          const remainingTotal = remainingGrants.reduce(
-            (sum: number, g: any) => sum + Number(g.remaining || 0),
-            0
+        const remainingGrants = await client
+          .select({ remaining: creditGrants.remaining })
+          .from(creditGrants)
+          .where(
+            and(
+              eq(creditGrants.balanceId, fromBalanceId),
+              gt(creditGrants.remaining, 0)
+            )
           );
-          if (remainingTotal !== amount) {
-            const missing = amount - remainingTotal;
-            if (missing > 0) {
-              lastOp = `insert legacy credit_grant (from ${fromBalanceId} amount ${missing})`;
-              await client.insert(creditGrants).values({
-                balanceId: fromBalanceId,
-                amount: missing,
-                remaining: missing,
-                description: 'Legacy credits (unattributed)',
-                createdAt: new Date(0),
-              });
-            }
+        const remainingTotal = remainingGrants.reduce(
+          (sum: number, g: any) => sum + Number(g.remaining || 0),
+          0
+        );
+        if (remainingTotal !== amount) {
+          const missing = amount - remainingTotal;
+          if (missing > 0) {
+            lastOp = `insert legacy credit_grant (from ${fromBalanceId} amount ${missing})`;
+            await client.insert(creditGrants).values({
+              balanceId: fromBalanceId,
+              amount: missing,
+              remaining: missing,
+              description: 'Legacy credits (unattributed)',
+              createdAt: new Date(0),
+            });
           }
-
-          // Move grants that still have remaining credits so refund eligibility is preserved.
-          lastOp = `update credit_grants set balanceId = ${toBalanceId} from ${fromBalanceId}`;
-          await client
-            .update(creditGrants)
-            .set({ balanceId: toBalanceId })
-            .where(
-              and(
-                eq(creditGrants.balanceId, fromBalanceId),
-                gt(creditGrants.remaining, 0)
-              )
-            );
-        } catch (error) {
-          console.warn('[Credits] Transfer grants failed (likely table missing):', error);
         }
+
+        // Move grants that still have remaining credits so refund eligibility is preserved.
+        lastOp = `update credit_grants set balanceId = ${toBalanceId} from ${fromBalanceId}`;
+        await client
+          .update(creditGrants)
+          .set({ balanceId: toBalanceId })
+          .where(
+            and(
+              eq(creditGrants.balanceId, fromBalanceId),
+              gt(creditGrants.remaining, 0)
+            )
+          );
       }
 
       lastOp = `update creditBalances subtract from ${fromBalanceId}`;
@@ -465,7 +461,152 @@ export class DatabaseStorage implements IStorage {
       if (pgError?.code === '25P02') {
         if (process.env.NODE_ENV === 'test') {
           try {
+            (this as any).__lastAbort = {
+              op: lastOp ?? '<unknown>',
+              error: pgError,
+            };
+          } catch (e) {
+            /* ignore */
+          }
+        } else {
+          console.warn(
+            'Transaction aborted (25P02) during transferCredits; last operation: ' +
+              (lastOp ?? '<unknown>'),
+            pgError
+          );
+        }
+      } else {
+        console.error('Failed to transfer credits:', error);
+      }
+      throw error;
+    }
+  }
+
+
+    let lastOp: string | null = null;
+    let hasCreditGrantsTable = true;
+
+    // Check table existence once before transaction to avoid aborting it
+    try {
+      await this.db.execute(sql`SELECT 1 FROM credit_grants LIMIT 1`);
+    } catch (e: any) {
+      if (e?.code === '42P01') {
+        hasCreditGrantsTable = false;
+      }
+    }
+
+    const run = async (client: any) => {
+      lastOp = `select from creditBalances (from ${fromBalanceId})`;
+      const [from] = await client
+        .select()
+        .from(creditBalances)
+        .where(eq(creditBalances.id, fromBalanceId))
+        .limit(1);
+
+      lastOp = `select from creditBalances (to ${toBalanceId})`;
+      const [to] = await client
+        .select()
+        .from(creditBalances)
+        .where(eq(creditBalances.id, toBalanceId))
+        .limit(1);
+
+      if (!from) throw new Error('Source balance not found');
+      if (!to) throw new Error('Destination balance not found');
+      if ((from.credits ?? 0) < amount) throw new Error('Insufficient credits');
+
+        // Only proceed with grants if table exists
+        if (hasCreditGrantsTable) {
+          const remainingGrants = await client
+            .select({ remaining: creditGrants.remaining })
+            .from(creditGrants)
+            .where(
+              and(
+                eq(creditGrants.balanceId, fromBalanceId),
+                gt(creditGrants.remaining, 0)
+              )
+            );
+          const remainingTotal = remainingGrants.reduce(
+            (sum: number, g: any) => sum + Number(g.remaining || 0),
+            0
+          );
+          if (remainingTotal !== amount) {
+            const missing = amount - remainingTotal;
+            if (missing > 0) {
+              lastOp = `insert legacy credit_grant (from ${fromBalanceId} amount ${missing})`;
+              await client.insert(creditGrants).values({
+                balanceId: fromBalanceId,
+                amount: missing,
+                remaining: missing,
+                description: 'Legacy credits (unattributed)',
+                createdAt: new Date(0),
+              });
+            }
+          }
+
+          // Move grants that still have remaining credits so refund eligibility is preserved.
+          lastOp = `update credit_grants set balanceId = ${toBalanceId} from ${fromBalanceId}`;
+          await client
+            .update(creditGrants)
+            .set({ balanceId: toBalanceId })
+            .where(
+              and(
+                eq(creditGrants.balanceId, fromBalanceId),
+                gt(creditGrants.remaining, 0)
+              )
+            );
+      lastOp = `update creditBalances subtract from ${fromBalanceId}`;
+      const fromUpdate = await client
+        .update(creditBalances)
+        .set({
+          credits: sql`${creditBalances.credits} - ${amount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(creditBalances.id, fromBalanceId))
+        .returning();
+      if (fromUpdate.length === 0) throw new Error('Transfer failed');
+
+      lastOp = `update creditBalances add to ${toBalanceId}`;
+      await client
+        .update(creditBalances)
+        .set({
+          credits: sql`${creditBalances.credits} + ${amount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(creditBalances.id, toBalanceId));
+
+      lastOp = `insert transfer credit_transactions from ${fromBalanceId} to ${toBalanceId} amount ${amount}`;
+      await client.insert(creditTransactions).values([
+        {
+          balanceId: fromBalanceId,
+          type: 'transfer',
+          amount: -amount,
+          description,
+        },
+        {
+          balanceId: toBalanceId,
+          type: 'transfer',
+          amount,
+          description,
+        },
+      ]);
+    };
+
+    try {
+      const tx = (this.db as any).transaction;
+      if (typeof tx === 'function') {
+        await tx.call(this.db, async (client: any) => run(client));
+        return;
+      }
+      await run(this.db);
+    } catch (error) {
+      const pgError = error as any;
+      if (pgError?.code === '25P02') {
+        if (process.env.NODE_ENV === 'test') {
+          try {
             (this as any).__lastAbort = { op: lastOp ?? '<unknown>', error: pgError };
+            // Capture an easy-to-inspect fallback message for tests so they can
+            // assert fallback behavior without relying on console output.
+            (this as any).__creditGrantsFallback = String(pgError?.message ?? pgError);
           } catch (e) {
             /* ignore */
           }
@@ -720,26 +861,21 @@ export class DatabaseStorage implements IStorage {
       // FIFO consume from grants (oldest first). If legacy credits exist without grants,
       // synthesize a non-refundable grant so the ledger stays consistent.
       let availableGrants: CreditGrant[];
-      try {
-        lastOp = 'select available credit_grants';
-        availableGrants = await client
-          .select()
-          .from(creditGrants)
-          .where(
-            and(
-              eq(creditGrants.balanceId, balanceId),
-              gt(creditGrants.remaining, 0),
-              or(
-                isNull(creditGrants.expiresAt),
-                gt(creditGrants.expiresAt, new Date())
-              )
+      lastOp = 'select available credit_grants';
+      availableGrants = await client
+        .select()
+        .from(creditGrants)
+        .where(
+          and(
+            eq(creditGrants.balanceId, balanceId),
+            gt(creditGrants.remaining, 0),
+            or(
+              isNull(creditGrants.expiresAt),
+              gt(creditGrants.expiresAt, new Date())
             )
           )
-          .orderBy(asc(creditGrants.createdAt), asc(creditGrants.id));
-      } catch {
-        // This should not happen if hasCreditGrantsTable was true, but handle anyway
-        return legacyUse(client);
-      }
+        )
+        .orderBy(asc(creditGrants.createdAt), asc(creditGrants.id));
 
       const grantsTotal = availableGrants.reduce(
         (sum, grant) => sum + Number(grant.remaining || 0),

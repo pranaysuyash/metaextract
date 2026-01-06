@@ -98,10 +98,10 @@ export function EnhancedUploadZoneV2({
     // Process accepted files
     const newFiles = acceptedFiles.slice(0, maxFiles - files.length).map(file => {
       const id = `${Date.now()}-${Math.random()}`;
-      const analysis = analyzeFile(file, tier);
-      const estimate = estimateProcessingTime(file, tier);
+      const analysis = analyzeFile(file);
+      const estimate = estimateProcessingTime(file);
       
-      return {
+      const newFile: FileState = {
         file,
         id,
         status: 'pending' as const,
@@ -109,10 +109,11 @@ export function EnhancedUploadZoneV2({
         analysis,
         estimate,
       };
+      return newFile;
     });
 
     if (newFiles.length > 0) {
-      setFiles(prev => [...prev, ...newFiles]);
+      setFiles(prev => [...prev, ...newFiles] as FileState[]);
     }
 
     if (files.length + newFiles.length >= maxFiles) {
@@ -239,11 +240,12 @@ export function EnhancedUploadZoneV2({
   const getProcessingEstimate = (estimate?: ProcessingEstimate) => {
     if (!estimate) return 'Calculating...';
     
-    if (estimate.estimatedTime < 60) {
-      return `${Math.round(estimate.estimatedTime)}s`;
+    const estimatedTime = estimate.estimated_time || estimate.estimatedTime || 0;
+    if (estimatedTime < 60) {
+      return `${Math.round(estimatedTime)}s`;
     } else {
-      const minutes = Math.floor(estimate.estimatedTime / 60);
-      const seconds = Math.round(estimate.estimatedTime % 60);
+      const minutes = Math.floor(estimatedTime / 60);
+      const seconds = Math.round(estimatedTime % 60);
       return `${minutes}m ${seconds}s`;
     }
   };
@@ -358,7 +360,7 @@ export function EnhancedUploadZoneV2({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{fileState.file.name}</p>
-                          {fileState.analysis?.warnings.length > 0 && (
+                          {fileState.analysis && fileState.analysis.warnings && fileState.analysis.warnings.length > 0 && (
                             <Tooltip>
                               <TooltipTrigger>
                                 <AlertCircle className="w-4 h-4 text-yellow-500" />
@@ -420,7 +422,7 @@ export function EnhancedUploadZoneV2({
                     </div>
                   )}
                   
-                  {fileState.analysis?.suggestions.length > 0 && (
+                  {fileState.analysis && fileState.analysis.suggestions && fileState.analysis.suggestions.length > 0 && (
                     <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
                       <p>Suggestions: {fileState.analysis.suggestions.join(', ')}</p>
                     </div>

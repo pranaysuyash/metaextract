@@ -105,6 +105,14 @@ export const dashboardNavSections: NavSection[] = [
         shortcut: 'g e',
       },
       {
+        id: 'credits',
+        name: 'Credits',
+        href: '/credits',
+        icon: CreditCard,
+        requiresAuth: true,
+        description: 'Balances and recent transactions',
+      },
+      {
         id: 'results',
         name: 'Results',
         href: '/images_mvp/results',

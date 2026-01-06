@@ -23,6 +23,7 @@ import ImagesMvpAnalytics from "@/pages/images-mvp/analytics";
 import DashboardImproved from "@/pages/dashboard-improved";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CreditsSuccess from "@/pages/credits-success";
+import CreditsPage from "@/pages/credits";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
 import GDPRCompliance from "@/pages/gdpr-compliance";
@@ -74,6 +75,14 @@ function AppRouter() {
             element={
               <ProtectedRoute>
                 <DashboardImproved />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/credits"
+            element={
+              <ProtectedRoute>
+                <CreditsPage />
               </ProtectedRoute>
             }
           />

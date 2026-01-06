@@ -52,6 +52,8 @@ class TestPluginManagement:
         
         # Create a simple test plugin
         test_plugin_content = '''
+from typing import Dict, Any
+
 def extract_test_metadata(filepath: str) -> Dict[str, Any]:
     """Extract test metadata from a file."""
     return {"test_plugin": True, "file": filepath}
@@ -127,6 +129,8 @@ PLUGIN_DESCRIPTION = "Test plugin for management testing"
         
         # Create a modified version of the plugin
         modified_plugin_content = '''
+from typing import Dict, Any
+
 def extract_test_metadata(filepath: str) -> Dict[str, Any]:
     """Extract test metadata from a file - MODIFIED."""
     return {"test_plugin": True, "file": filepath, "modified": True}
@@ -170,6 +174,8 @@ PLUGIN_DESCRIPTION = "Test plugin for management testing - MODIFIED"
         new_plugin_dir.mkdir()
         
         new_plugin_content = '''
+from typing import Dict, Any
+
 def extract_test_metadata(filepath: str) -> Dict[str, Any]:
     """Extract test metadata from a file - UPDATED."""
     return {"test_plugin": True, "file": filepath, "updated": True}
@@ -261,19 +267,19 @@ PLUGIN_DESCRIPTION = "Test plugin for management testing - UPDATED"
         
         # Test global plugin operations
         try:
-            result = module_registry.enable_plugin_global('test_plugin')
+            result = module_registry.enable_plugin('test_plugin')
             if result:
                 print("✅ Global plugin enable works")
             else:
                 print("⚠️  WARNING: Global plugin enable returned False (plugin may not exist)")
                 
-            result = module_registry.disable_plugin_global('test_plugin')
+            result = module_registry.disable_plugin('test_plugin')
             if result:
                 print("✅ Global plugin disable works")
             else:
                 print("⚠️  WARNING: Global plugin disable returned False (plugin may not exist)")
                 
-            result = module_registry.reload_plugin_global('test_plugin')
+            result = module_registry.reload_plugin('test_plugin')
             if result:
                 print("✅ Global plugin reload works")
             else:
