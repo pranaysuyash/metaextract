@@ -11,9 +11,12 @@ import { normalizeTier } from '@shared/tierConfig';
 // DodoPayments Configuration
 // ============================================================================
 
-const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY;
-const DODO_WEBHOOK_SECRET = process.env.DODO_WEBHOOK_SECRET;
-const IS_TEST_MODE = process.env.DODO_ENV !== 'live';
+// Allow legacy DOOD_API_KEY/DOOD_WEBHOOK_SECRET env vars to avoid misconfig 503s
+const DODO_API_KEY =
+  process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
+const DODO_WEBHOOK_SECRET =
+  process.env.DODO_WEBHOOK_SECRET || process.env.DOOD_WEBHOOK_SECRET;
+const IS_TEST_MODE = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live';
 
 const dodoClient = DODO_API_KEY
   ? new DodoPayments({

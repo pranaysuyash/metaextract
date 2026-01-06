@@ -48,8 +48,10 @@ const activeConnections = new Map<string, ProgressConnection[]>();
 // Configuration
 // ============================================================================
 
-const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY;
-const IS_TEST_MODE = process.env.DODO_ENV !== 'live';
+// Support legacy DOOD_API_KEY/DOOD_ENV naming to prevent misconfig 503s
+const DODO_API_KEY =
+  process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
+const IS_TEST_MODE = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live';
 
 const dodoClient = DODO_API_KEY
   ? new DodoPayments({

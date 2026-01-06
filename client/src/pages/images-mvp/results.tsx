@@ -231,12 +231,12 @@ export default function ImagesMvpResults() {
     }, [metadata, trackEvent]);
 
     useEffect(() => {
-        if (fileName) {
-            document.title = `Results: ${fileName} | MetaExtract`;
+        if (metadata?.filename) {
+            document.title = `Results: ${metadata.filename} | MetaExtract`;
         } else {
             document.title = "MetaExtract | Analysis Results";
         }
-    }, [fileName]);
+    }, [metadata?.filename]);
 
     if (loadState === "loading") {
         return (

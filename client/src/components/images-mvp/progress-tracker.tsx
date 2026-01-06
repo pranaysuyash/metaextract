@@ -41,14 +41,14 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
         const data = JSON.parse(event.data);
         if (data.type === 'progress') {
           setProgress({
-            percentage: data.percentage,
+            percentage: data.percentage ?? 0,
             stage: data.stage,
             eta: data.estimated_time_remaining,
             quality_metrics: data.quality_metrics
           });
 
           // Check if extraction is complete
-          if (data.percentage >= 100) {
+          if ((data.percentage ?? 0) >= 100) {
             setIsComplete(true);
             setTimeout(() => {
               ws.close();
@@ -108,7 +108,7 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
           </span>
         </div>
         <span className="text-sm font-mono text-slate-300">
-          {progress.percentage.toFixed(0)}%
+          {(progress.percentage ?? 0).toFixed(0)}%
         </span>
       </div>
 

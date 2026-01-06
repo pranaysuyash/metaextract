@@ -75,126 +75,136 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
-  // Performance stats
-  app.get('/api/performance/stats', async (req, res) => {
-    try {
-      // Get cache statistics if Redis is available
-      const pythonScript = path.join(
-        currentDirPath,
-        '..',
-        'extractor',
-        'utils',
-        'cache.py'
-      );
-      const cacheStats = await new Promise<any>(resolve => {
-        const python = spawn(pythonExecutable, [
-          '-c',
-          `
+  // Performance stats (admin only)
+  app.get(
+    '/api/performance/stats',
+    adminAuthMiddleware,
+    adminRateLimitMiddleware,
+    async (req, res) => {
+      try {
+        // Get cache statistics if Redis is available
+        const pythonScript = path.join(
+          currentDirPath,
+          '..',
+          'extractor',
+          'utils',
+          'cache.py'
+        );
+        const cacheStats = await new Promise<any>(resolve => {
+          const python = spawn(pythonExecutable, [
+            '-c',
+            `
 import sys
 sys.path.append('${path.dirname(pythonScript)}')
 from cache import get_cache_stats
 import json
 print(json.dumps(get_cache_stats()))
           `,
-        ]);
+          ]);
 
-        let stdout = '';
-        python.stdout.on('data', data => (stdout += data.toString()));
-        python.on('close', () => {
-          try {
-            resolve(JSON.parse(stdout));
-          } catch {
-            resolve({ available: false });
-          }
+          let stdout = '';
+          python.stdout.on('data', data => (stdout += data.toString()));
+          python.on('close', () => {
+            try {
+              resolve(JSON.parse(stdout));
+            } catch {
+              resolve({ available: false });
+            }
+          });
+
+          setTimeout(() => {
+            python.kill();
+            resolve({ available: false, error: 'timeout' });
+          }, 5000);
         });
 
-        setTimeout(() => {
-          python.kill();
-          resolve({ available: false, error: 'timeout' });
-        }, 5000);
-      });
-
-      res.json({
-        cache: cacheStats,
-        server: {
-          uptime_seconds: process.uptime(),
-          memory_usage: process.memoryUsage(),
-          node_version: process.version,
-          platform: process.platform,
-        },
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get performance stats' });
+        res.json({
+          cache: cacheStats,
+          server: {
+            uptime_seconds: process.uptime(),
+            memory_usage: process.memoryUsage(),
+            node_version: process.version,
+            platform: process.platform,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get performance stats' });
+      }
     }
-  });
+  );
 
   // Cache management (admin only)
-  app.post('/api/performance/cache/clear', async (req, res) => {
-    try {
-      let pattern = req.body.pattern || 'metadata:*';
+  app.post(
+    '/api/performance/cache/clear',
+    adminAuthMiddleware,
+    adminRateLimitMiddleware,
+    async (req, res) => {
+      try {
+        let pattern = req.body.pattern || 'metadata:*';
 
-      // Validate pattern against whitelist
-      const isValidPattern = ALLOWED_CACHE_PATTERNS.some(regex =>
-        regex.test(pattern)
-      );
-      if (!isValidPattern) {
-        return res.status(400).json({
-          error: 'Invalid pattern',
-          message: 'Pattern must match one of the allowed patterns',
-          allowed_patterns: [
-            'metadata:*',
-            'metadata:<id>',
-            'quota:<id>',
-            'activity:<id>',
-          ],
-        });
-      }
+        // Validate pattern against whitelist
+        const isValidPattern = ALLOWED_CACHE_PATTERNS.some(regex =>
+          regex.test(pattern)
+        );
+        if (!isValidPattern) {
+          return res.status(400).json({
+            error: 'Invalid pattern',
+            message: 'Pattern must match one of the allowed patterns',
+            allowed_patterns: [
+              'metadata:*',
+              'metadata:<id>',
+              'quota:<id>',
+              'activity:<id>',
+            ],
+          });
+        }
 
-      // Sanitize the pattern
-      pattern = sanitizeFilename(pattern);
+        // Sanitize the pattern
+        pattern = sanitizeFilename(pattern);
 
-      const pythonScript = path.join(
-        currentDirPath,
-        '..',
-        'extractor',
-        'utils',
-        'cache.py'
-      );
-      const result = await new Promise<number>(resolve => {
-        const python = spawn(pythonExecutable, [
-          '-c',
-          `
+        const pythonScript = path.join(
+          currentDirPath,
+          '..',
+          'extractor',
+          'utils',
+          'cache.py'
+        );
+        const result = await new Promise<number>(resolve => {
+          const python = spawn(pythonExecutable, [
+            '-c',
+            `
 import sys
 sys.path.append('${path.dirname(pythonScript)}')
 from cache import clear_cache_pattern
 print(clear_cache_pattern('${pattern}'))
           `,
-        ]);
+          ]);
 
-        let stdout = '';
-        python.stdout.on('data', data => {
-          stdout += data.toString();
+          let stdout = '';
+          python.stdout.on('data', data => {
+            stdout += data.toString();
+          });
+          python.on('close', () => {
+            resolve(parseInt(stdout.trim()) || 0);
+          });
+
+          setTimeout(() => {
+            python.kill();
+            resolve(0);
+          }, 10000);
         });
-        python.on('close', () => {
-          resolve(parseInt(stdout.trim()) || 0);
+
+        res.json({
+          success: true,
+          cleared_entries: result,
+          pattern,
         });
-
-        setTimeout(() => {
-          python.kill();
-          resolve(0);
-        }, 10000);
-      });
-
-      res.json({
-        success: true,
-        cleared_entries: result,
-        pattern,
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to clear cache' });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to clear cache' });
+      }
     }
-  });
+  );
 
   // Rate limiting for admin endpoints
   app.get('/api/admin/rate-limit/metrics', async (req, res) => {
