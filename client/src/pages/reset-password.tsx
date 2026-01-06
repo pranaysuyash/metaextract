@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PublicLayout as Layout } from '@/components/public-layout';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/auth';
 
 type RequestResponse = {
   message?: string;
@@ -8,6 +9,7 @@ type RequestResponse = {
 };
 
 export default function ResetPasswordPage() {
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [requested, setRequested] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -15,6 +17,12 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!email && user?.email) {
+      setEmail(user.email);
+    }
+  }, [email, user?.email]);
 
   const requestReset = async () => {
     setLoading(true);
@@ -148,4 +156,3 @@ export default function ResetPasswordPage() {
     </Layout>
   );
 }
-

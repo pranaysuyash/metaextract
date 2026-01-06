@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Upload, Zap } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,10 @@ export function SimpleUploadZone() {
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const openedFromQueryRef = useRef(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
 
@@ -101,6 +104,27 @@ export function SimpleUploadZone() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (openedFromQueryRef.current) return;
+    const pricingFlag = searchParams.get('pricing') || searchParams.get('credits');
+    if (!pricingFlag) return;
+    openedFromQueryRef.current = true;
+    setShowPricingModal(true);
+    setPricingDismissed(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete('pricing');
+    next.delete('credits');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!showPricingModal) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (active && typeof active.blur === 'function') {
+      active.blur();
+    }
+  }, [showPricingModal]);
+
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragActive(true);
@@ -121,7 +145,7 @@ export function SimpleUploadZone() {
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      document.getElementById('mvp-upload')?.click();
+      inputRef.current?.click();
     }
   }, []);
 
@@ -375,7 +399,10 @@ export function SimpleUploadZone() {
       {/* Real-time Progress Tracker */}
       {showProgressTracker && currentSessionId && (
         <div className="mb-4 sm:mb-6">
-          <ProgressTracker sessionId={currentSessionId} />
+          <ProgressTracker
+            sessionId={currentSessionId}
+            uploadComplete={uploadProgress >= 100}
+          />
         </div>
       )}
 
@@ -429,10 +456,8 @@ export function SimpleUploadZone() {
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        onClick={() =>
-          !isUploading && document.getElementById('mvp-upload')?.click()
-        }
         onKeyDown={onKeyDown}
+        htmlFor="mvp-upload"
         role="button"
         tabIndex={0}
         aria-label={
@@ -441,7 +466,7 @@ export function SimpleUploadZone() {
             : 'Upload image drop zone. Drag and drop a file here or click to browse.'
         }
         className={cn(
-          'relative border-2 border-dashed rounded-lg sm:rounded-xl p-4 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[160px] sm:min-h-auto',
+          'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-4 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[160px] sm:min-h-auto touch-manipulation select-none',
           isUploading
             ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
             : isDragActive
@@ -451,6 +476,7 @@ export function SimpleUploadZone() {
       >
         <input
           id="mvp-upload"
+          ref={inputRef}
           type="file"
           className="hidden"
           accept={SUPPORTED_EXTENSIONS.join(',')}

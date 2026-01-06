@@ -8,6 +8,7 @@ import os from 'os';
 import { fileTypeFromBuffer } from 'file-type';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
+import { createClient, type RedisClientType } from 'redis';
 import { getDatabase, isDatabaseConnected } from '../db';
 import { trialUsages } from '@shared/schema';
 import { storage } from '../storage/index';
@@ -47,6 +48,114 @@ interface ProgressConnection {
 
 const activeConnections = new Map<string, ProgressConnection[]>();
 
+type ProgressBusMessage = {
+  instanceId: string;
+  sessionId: string;
+  payload: Record<string, unknown>;
+};
+
+const PROGRESS_CHANNEL = 'images_mvp:progress';
+const PROGRESS_INSTANCE_ID = crypto.randomUUID();
+let progressPublisher: RedisClientType | null = null;
+let progressSubscriber: RedisClientType | null = null;
+let progressBusReady = false;
+let progressBusInit: Promise<void> | null = null;
+
+async function initProgressBus(): Promise<void> {
+  if (progressBusReady || progressBusInit) {
+    return progressBusInit ?? Promise.resolve();
+  }
+
+  if (process.env.IMAGES_MVP_PROGRESS_BUS !== 'redis') {
+    return;
+  }
+
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    return;
+  }
+
+  progressBusInit = (async () => {
+    try {
+      const publisher = createClient({ url: redisUrl });
+      const subscriber = publisher.duplicate();
+
+      publisher.on('error', err => {
+        console.error('Progress bus Redis publisher error:', err);
+        progressBusReady = false;
+      });
+      subscriber.on('error', err => {
+        console.error('Progress bus Redis subscriber error:', err);
+        progressBusReady = false;
+      });
+
+      await publisher.connect();
+      await subscriber.connect();
+
+      await subscriber.subscribe(PROGRESS_CHANNEL, message => {
+        try {
+          const parsed = JSON.parse(message) as ProgressBusMessage;
+          if (!parsed || parsed.instanceId === PROGRESS_INSTANCE_ID) {
+            return;
+          }
+          if (!parsed.sessionId || !parsed.payload) {
+            return;
+          }
+          sendToConnections(parsed.sessionId, parsed.payload);
+        } catch (error) {
+          console.error('Progress bus message parse error:', error);
+        }
+      });
+
+      progressPublisher = publisher;
+      progressSubscriber = subscriber;
+      progressBusReady = true;
+    } catch (error) {
+      console.error('Failed to initialize progress bus:', error);
+      progressPublisher = null;
+      progressSubscriber = null;
+      progressBusReady = false;
+      progressBusInit = null;
+    }
+  })();
+
+  return progressBusInit;
+}
+
+function sendToConnections(
+  sessionId: string,
+  payload: Record<string, unknown>
+): void {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
+  const messageStr = JSON.stringify(payload);
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) {
+      conn.ws.send(messageStr);
+    }
+  });
+}
+
+function publishProgressPayload(
+  sessionId: string,
+  payload: Record<string, unknown>
+): void {
+  if (!progressPublisher || !progressBusReady) return;
+
+  const message: ProgressBusMessage = {
+    instanceId: PROGRESS_INSTANCE_ID,
+    sessionId,
+    payload,
+  };
+
+  progressPublisher
+    .publish(PROGRESS_CHANNEL, JSON.stringify(message))
+    .catch(error => {
+      console.error('Failed to publish progress event:', error);
+    });
+}
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -79,9 +188,6 @@ function broadcastProgress(
   message: string,
   stage?: string
 ) {
-  const connections = activeConnections.get(sessionId);
-  if (!connections || connections.length === 0) return;
-
   const progressData = {
     type: 'progress',
     sessionId,
@@ -90,42 +196,22 @@ function broadcastProgress(
     stage: stage || 'processing',
     timestamp: Date.now(),
   };
-
-  const messageStr = JSON.stringify(progressData);
-
-  connections.forEach(conn => {
-    if (conn.ws.readyState === 1) {
-      // WebSocket.OPEN
-      conn.ws.send(messageStr);
-    }
-  });
+  sendToConnections(sessionId, progressData);
+  publishProgressPayload(sessionId, progressData);
 }
 
 function broadcastError(sessionId: string, error: string) {
-  const connections = activeConnections.get(sessionId);
-  if (!connections || connections.length === 0) return;
-
   const errorData = {
     type: 'error',
     sessionId,
     error,
     timestamp: Date.now(),
   };
-
-  const messageStr = JSON.stringify(errorData);
-
-  connections.forEach(conn => {
-    if (conn.ws.readyState === 1) {
-      // WebSocket.OPEN
-      conn.ws.send(messageStr);
-    }
-  });
+  sendToConnections(sessionId, errorData);
+  publishProgressPayload(sessionId, errorData);
 }
 
 function broadcastComplete(sessionId: string, metadata: any) {
-  const connections = activeConnections.get(sessionId);
-  if (!connections || connections.length === 0) return;
-
   const completeData = {
     type: 'complete',
     sessionId,
@@ -136,15 +222,8 @@ function broadcastComplete(sessionId: string, metadata: any) {
     },
     timestamp: Date.now(),
   };
-
-  const messageStr = JSON.stringify(completeData);
-
-  connections.forEach(conn => {
-    if (conn.ws.readyState === 1) {
-      // WebSocket.OPEN
-      conn.ws.send(messageStr);
-    }
-  });
+  sendToConnections(sessionId, completeData);
+  publishProgressPayload(sessionId, completeData);
 }
 
 function cleanupConnections(sessionId: string) {
@@ -303,6 +382,7 @@ function parseLimitParam(value?: string): number {
 // ============================================================================
 
 export function registerImagesMvpRoutes(app: Express) {
+  void initProgressBus();
   // ---------------------------------------------------------------------------
   // WebSocket: Real-time Progress Tracking
   // ---------------------------------------------------------------------------

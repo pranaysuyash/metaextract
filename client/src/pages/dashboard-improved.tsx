@@ -188,7 +188,7 @@ export default function DashboardImproved() {
                 <Button
                   variant="outline"
                   className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
-                  onClick={() => handleNavigate('/#pricing')}
+                  onClick={() => handleNavigate('/credits')}
                 >
                   View Pricing & Credits
                 </Button>
@@ -218,8 +218,8 @@ export default function DashboardImproved() {
               </div>
               <Button
                 variant="outline"
-                className="w-full border-white/20 text-slate-300"
-                disabled
+                className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
+                onClick={() => handleNavigate('/reset-password')}
               >
                 Change Password
               </Button>

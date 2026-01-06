@@ -563,13 +563,14 @@ export function transformMetadataForFrontend(
     gaming_entertainment: raw.gaming_entertainment ?? null,
 
     // Email and Communication metadata
-    email: raw.email?._locked ? { _locked: true } : raw.email ?? null,
+    email: raw.email?._locked ? { _locked: true } : (raw.email ?? null),
 
     // Persona interpretation (if available from Python backend)
     persona_interpretation: (raw as any).persona_interpretation ?? undefined,
-    
+
     // Forensic Analysis Integration (NEW: Phase 3.1)
-    forensic_analysis_integration: raw.forensic_analysis_integration ?? undefined,
+    forensic_analysis_integration:
+      raw.forensic_analysis_integration ?? undefined,
   };
 }
 

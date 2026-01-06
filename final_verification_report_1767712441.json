@@ -1,0 +1,185 @@
+{
+  "timestamp": "2026-01-06 20:44:00",
+  "tests": [
+    {
+      "name": "Health Check: Main Health",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:00",
+      "details": {
+        "endpoint": "/api/health",
+        "response": {
+          "status": "ok",
+          "service": "MetaExtract API",
+          "version": "2.0.0",
+          "timestamp": "2026-01-06T15:14:00.773Z"
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "Health Check: Extract Health",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:00",
+      "details": {
+        "endpoint": "/api/extract/health",
+        "response": {
+          "status": "healthy",
+          "python_engine": "available",
+          "timestamp": "2026-01-06T15:14:00.850Z",
+          "message": "Python extraction engine is responding but output format may be unexpected",
+          "warning": "Could not parse Python output as JSON"
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "Health Check: Image Extract Health",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:00",
+      "details": {
+        "endpoint": "/api/extract/health/image",
+        "status_code": 503
+      },
+      "error": null
+    },
+    {
+      "name": "Single File Extraction",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:00",
+      "details": {
+        "status_code": 402
+      },
+      "error": null
+    },
+    {
+      "name": "Batch Extraction",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 500
+      },
+      "error": null
+    },
+    {
+      "name": "Advanced Extraction",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 500
+      },
+      "error": null
+    },
+    {
+      "name": "Timeline Reconstruction",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 500
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Format Support",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "supported_formats": [
+          "JPG",
+          "JPEG",
+          "PNG",
+          "HEIC",
+          "HEIF"
+        ]
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Extraction",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 500
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Credit Packs",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "packs_count": 2
+      },
+      "error": null
+    },
+    {
+      "name": "WebSocket Connection",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "session_id": "test_session_1767712440",
+        "response_type": "connected"
+      },
+      "error": null
+    },
+    {
+      "name": "Public Endpoint Access",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {},
+      "error": null
+    },
+    {
+      "name": "Tier-Based Access",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 402
+      },
+      "error": null
+    },
+    {
+      "name": "Invalid File Type Error",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "expected": 403,
+        "got": 402
+      },
+      "error": null
+    },
+    {
+      "name": "Missing File Error",
+      "status": "passed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 400
+      },
+      "error": null
+    },
+    {
+      "name": "Metadata Storage",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 402
+      },
+      "error": null
+    },
+    {
+      "name": "End-to-End Pipeline",
+      "status": "failed",
+      "timestamp": "2026-01-06 20:44:01",
+      "details": {
+        "status_code": 402
+      },
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 7,
+    "failed": 10,
+    "errors": 0
+  },
+  "regressions": []
+}

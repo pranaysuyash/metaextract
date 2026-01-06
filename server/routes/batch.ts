@@ -78,7 +78,7 @@ async function getBatchJobs(req: AuthRequest, res: Response) {
 
     // Get batch jobs from storage
     const batchJobs = await storage.getBatchJobs(userId);
-    
+
     res.json({
       success: true,
       jobs: batchJobs,
@@ -114,7 +114,7 @@ async function getBatchResults(req: AuthRequest, res: Response) {
 
     // Get results for this batch job
     const results = await storage.getBatchResults(jobId);
-    
+
     res.json({
       success: true,
       job: batchJob,
@@ -155,8 +155,8 @@ async function reprocessFiles(req: AuthRequest, res: Response) {
 
     // Get the files to reprocess
     const filesToReprocess = await storage.getBatchResults(batchId);
-    const validFiles = filesToReprocess.filter(result => 
-      fileIds.includes(result.id) && result.status === 'error'
+    const validFiles = filesToReprocess.filter(
+      result => fileIds.includes(result.id) && result.status === 'error'
     );
 
     if (validFiles.length === 0) {
@@ -268,7 +268,10 @@ async function exportBatchResults(req: AuthRequest, res: Response) {
 
     // Add statistics if requested
     if (options?.includeStatistics) {
-      const totalFields = results.reduce((sum, r) => sum + r.fieldsExtracted, 0);
+      const totalFields = results.reduce(
+        (sum, r) => sum + r.fieldsExtracted,
+        0
+      );
       const totalSize = results.reduce((sum, r) => sum + r.fileSize, 0);
       const processingTimes = results.flatMap(result =>
         typeof result.processingTime === 'number' ? [result.processingTime] : []
@@ -290,7 +293,10 @@ async function exportBatchResults(req: AuthRequest, res: Response) {
         totalSize,
         avgSize: totalSize / results.length,
         avgProcessingTime,
-        successRate: (results.filter(r => r.status === 'success').length / results.length) * 100,
+        successRate:
+          (results.filter(r => r.status === 'success').length /
+            results.length) *
+          100,
         fileTypeDistribution: getFileTypeDistribution(results),
         statusDistribution: getStatusDistribution(results),
       };
@@ -300,7 +306,10 @@ async function exportBatchResults(req: AuthRequest, res: Response) {
     if (options?.includeTimeline) {
       exportData.timeline = {
         startTime: results.length > 0 ? results[0].extractionDate : null,
-        endTime: results.length > 0 ? results[results.length - 1].extractionDate : null,
+        endTime:
+          results.length > 0
+            ? results[results.length - 1].extractionDate
+            : null,
         events: results.map(result => ({
           timestamp: result.extractionDate,
           filename: result.filename,
@@ -323,7 +332,9 @@ async function exportBatchResults(req: AuthRequest, res: Response) {
 }
 
 // Helper functions for statistics
-function getFileTypeDistribution(results: BatchResult[]): Record<string, number> {
+function getFileTypeDistribution(
+  results: BatchResult[]
+): Record<string, number> {
   const distribution: Record<string, number> = {};
   results.forEach(result => {
     const mainType = result.fileType.split('/')[0];
@@ -353,7 +364,7 @@ export function registerBatchRoutes(app: Express) {
   // Batch job management
   app.get('/api/batch/jobs', getBatchJobs);
   app.get('/api/batch/jobs/:jobId/results', getBatchResults);
-  
+
   // Batch operations
   app.post('/api/batch/reprocess', reprocessFiles);
   app.post('/api/batch/export', exportBatchResults);

@@ -66,9 +66,16 @@ BEGIN
     CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier_success_time
       ON public.extraction_analytics (tier, success, requested_at DESC);
     
-    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_user_time
-      ON public.extraction_analytics (user_id, requested_at DESC)
-      WHERE user_id IS NOT NULL;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public'
+        AND table_name='extraction_analytics'
+        AND column_name='user_id'
+    ) THEN
+      CREATE INDEX IF NOT EXISTS idx_extraction_analytics_user_time
+        ON public.extraction_analytics (user_id, requested_at DESC)
+        WHERE user_id IS NOT NULL;
+    END IF;
   END IF;
 END
 $$;

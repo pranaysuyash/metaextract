@@ -73,3 +73,11 @@ For MVP, refunds remain manual (support-driven). Automated per-pack refunding re
 - Grant credits (dev-only):
   - Core: `POST /api/dev/credits/grant`
   - Images MVP: `POST /api/dev/images_mvp/credits/grant`
+
+## Password reset + email delivery notes
+
+- Passwords are **hashed**; they are never retrievable. Reset is the only supported path.
+- Logged-in users can trigger resets from **Settings → Change Password** (routes to `/reset-password`).
+- Reset flow (dev): `/api/auth/password-reset/request` returns a token in the JSON response when `NODE_ENV=development`.
+- Reset flow (prod): must send the token via email; the API intentionally returns a generic message to avoid email enumeration.
+- Email delivery still needs an SMTP provider (Gmail SMTP, SES, etc.). Python can send, but it cannot deliver on the public internet without SMTP credentials.

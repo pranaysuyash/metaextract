@@ -16,8 +16,14 @@ BEGIN
     WHERE c.relname = 'users' AND n.nspname = 'public'
   ) THEN
     BEGIN
-      ALTER TABLE public.trial_usages
-        ADD CONSTRAINT IF NOT EXISTS trial_usages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'trial_usages_user_id_fkey'
+          AND conrelid = 'public.trial_usages'::regclass
+      ) THEN
+        ALTER TABLE public.trial_usages
+          ADD CONSTRAINT trial_usages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+      END IF;
     EXCEPTION WHEN OTHERS THEN
       -- Ignore if constraint cannot be added (e.g., missing users table)
       NULL;

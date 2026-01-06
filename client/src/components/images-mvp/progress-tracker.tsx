@@ -17,11 +17,13 @@ interface ProgressData {
 interface ProgressTrackerProps {
   sessionId: string;
   className?: string;
+  uploadComplete?: boolean;
 }
 
 export function ProgressTracker({
   sessionId,
   className,
+  uploadComplete = false,
 }: ProgressTrackerProps) {
   const shouldReduceMotion = useReducedMotion();
   const [progress, setProgress] = useState<ProgressData>({
@@ -30,6 +32,7 @@ export function ProgressTracker({
   });
   const [isComplete, setIsComplete] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [hasProgressUpdate, setHasProgressUpdate] = useState(false);
 
   useEffect(() => {
     // WebSocket connection for real-time progress updates
@@ -48,6 +51,7 @@ export function ProgressTracker({
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'progress') {
+          setHasProgressUpdate(true);
           setProgress({
             percentage: data.percentage ?? 0,
             stage: data.stage,
@@ -62,6 +66,20 @@ export function ProgressTracker({
               ws.close();
             }, 1000);
           }
+        } else if (data.type === 'complete') {
+          setHasProgressUpdate(true);
+          setIsComplete(true);
+          setProgress(prev => ({
+            ...prev,
+            percentage: 100,
+            stage: 'Processing complete',
+          }));
+        } else if (data.type === 'error') {
+          setHasProgressUpdate(true);
+          setProgress(prev => ({
+            ...prev,
+            stage: data.error || 'Extraction failed',
+          }));
         }
       } catch (error) {
         console.error('Error parsing progress update:', error);
@@ -96,6 +114,9 @@ export function ProgressTracker({
       return <Zap className="w-4 h-4" />;
     return <Clock className="w-4 h-4" />;
   };
+
+  const showFinalizing = uploadComplete && !hasProgressUpdate && !isComplete;
+  const showConnecting = !wsConnected && !isComplete && !showFinalizing;
 
   return (
     <div
@@ -165,7 +186,14 @@ export function ProgressTracker({
       )}
 
       {/* Connection Status */}
-      {!wsConnected && !isComplete && (
+      {showFinalizing && (
+        <div className="flex items-center justify-center space-x-2 text-blue-300 text-xs">
+          <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse" />
+          <span>Finalizing upload...</span>
+        </div>
+      )}
+
+      {showConnecting && (
         <div className="flex items-center justify-center space-x-2 text-yellow-400 text-xs">
           <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
           <span>Connecting to progress tracker...</span>

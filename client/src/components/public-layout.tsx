@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { LogIn, UserPlus, Upload, LogOut, Menu, X, Settings, CreditCard } from 'lucide-react';
@@ -32,11 +32,14 @@ export function PublicLayout({
 }: PublicLayoutProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>(
     'login'
   );
+  const isImagesMvp = location.pathname.startsWith('/images_mvp');
+  const pricingLink = isImagesMvp ? '/images_mvp?pricing=1' : '/#pricing';
 
   const openLogin = () => {
     setAuthModalMode('login');
@@ -80,7 +83,7 @@ export function PublicLayout({
                     Features
                   </Link>
                   <Link
-                    to="/#pricing"
+                    to={pricingLink}
                     className="text-sm text-slate-200 hover:text-white transition-colors"
                   >
                     Pricing
@@ -192,7 +195,7 @@ export function PublicLayout({
                     </Link>
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                     <Link
-                      to="/#pricing"
+                      to={pricingLink}
                       className="text-sm text-slate-200 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -329,7 +332,7 @@ export function PublicLayout({
                   </li>
                   <li>
                     <Link
-                      to="/#pricing"
+                      to={pricingLink}
                       className="hover:text-white transition-colors"
                     >
                       Pricing

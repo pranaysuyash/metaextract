@@ -344,7 +344,7 @@ export default function ImagesMvpResults() {
                 <Button
                   variant="outline"
                   className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
-                  onClick={() => navigate('/#pricing')}
+                  onClick={() => navigate('/images_mvp?pricing=1')}
                 >
                   Learn about plans
                 </Button>
