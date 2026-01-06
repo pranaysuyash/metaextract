@@ -37,7 +37,7 @@ export async function getFreeQuotaRemaining(req: Request): Promise<number> {
   
   // Get usage from storage
   const usage = await getClientUsage(decoded.clientId);
-  const used = usage?.free_used || 0;
+  const used = usage?.freeUsed || 0;
   
   return Math.max(0, 2 - used);
 }

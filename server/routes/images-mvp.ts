@@ -37,8 +37,6 @@ import { rateLimitExtraction } from '../rateLimitMiddleware';
 import { processImageBuffer } from '../utils/exif-stripper';
 import { type AuthRequest as ServerAuthRequest } from '../auth';
 import { getOrSetSessionId } from '../utils/session-id';
-import { getTrustedAppOrigin } from '../utils/trusted-app-origin';
-import { adminProtectionMiddleware } from '../middleware/admin-auth';
 
 // WebSocket progress tracking
 interface ProgressConnection {
@@ -57,9 +55,10 @@ type AuthRequest = ServerAuthRequest;
 
 function getDodoClient() {
   const apiKey = process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
-  const env = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
-    ? 'test_mode'
-    : 'live_mode';
+  const env =
+    (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
+      ? 'test_mode'
+      : 'live_mode';
   if (!apiKey) return null;
 
   const cacheKey = `${apiKey}:${env}`;
@@ -162,14 +161,19 @@ function cleanupConnections(sessionId: string) {
 
 // Use disk storage to prevent DoS via memory exhaustion
 const uploadDir = path.join(os.tmpdir(), 'metaextract-uploads');
-fs.mkdir(uploadDir, { recursive: true }).catch(e => console.warn('Failed to create upload dir:', e));
+fs.mkdir(uploadDir, { recursive: true }).catch(e =>
+  console.warn('Failed to create upload dir:', e)
+);
 
 const upload = multer({
   storage: multer.diskStorage({
     destination: uploadDir,
     filename: (req, file, cb) => {
       const hash = crypto.randomBytes(8).toString('hex');
-      const sanitized = sanitizeFilename(file.originalname).replace(/[^a-z0-9._-]/gi, '_');
+      const sanitized = sanitizeFilename(file.originalname).replace(
+        /[^a-z0-9._-]/gi,
+        '_'
+      );
       cb(null, `${hash}-${Date.now()}-${sanitized}`);
     },
   }),
@@ -448,10 +452,10 @@ export function registerImagesMvpRoutes(app: Express) {
             product: 'images_mvp',
             eventName: event,
             sessionId,
-            userId: undefined,
+            userId: null,
             properties,
-            ipAddress: req.ip || req.socket.remoteAddress,
-            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.socket.remoteAddress || null,
+            userAgent: req.headers['user-agent'] || null,
           });
         } catch (error) {
           // Analytics is non-critical; fail open for unsigned users
@@ -474,10 +478,6 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.get(
     '/api/images_mvp/analytics/report',
-    (req, res, next) => {
-      if (process.env.NODE_ENV !== 'production') return next();
-      return adminProtectionMiddleware(req, res, next);
-    },
     async (req: Request, res: Response) => {
       try {
         const periodQuery =
@@ -757,9 +757,7 @@ export function registerImagesMvpRoutes(app: Express) {
 
         const balanceKey = authReq.user?.id
           ? getImagesMvpBalanceKeyForUser(authReq.user.id)
-          : getImagesMvpBalanceKeyForSession(
-              getOrSetSessionId(req, res)
-            );
+          : getImagesMvpBalanceKeyForSession(getOrSetSessionId(req, res));
 
         const balance = await storage.getOrCreateCreditBalance(
           balanceKey,
@@ -780,104 +778,118 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   // Credits: Transactions
   // ---------------------------------------------------------------------------
-  app.get('/api/images_mvp/credits/transactions', async (req: Request, res: Response) => {
-    try {
-      const balanceId = typeof req.query.balanceId === 'string' ? req.query.balanceId : null;
-      if (!balanceId) return res.json({ transactions: [] });
-      const transactions = await storage.getCreditTransactions(balanceId);
-      return res.json({ transactions });
-    } catch (error) {
-      console.error('Get images_mvp credit transactions error:', error);
-      return res.status(500).json({ error: 'Failed to get credit transactions' });
+  app.get(
+    '/api/images_mvp/credits/transactions',
+    async (req: Request, res: Response) => {
+      try {
+        const balanceId =
+          typeof req.query.balanceId === 'string' ? req.query.balanceId : null;
+        if (!balanceId) return res.json({ transactions: [] });
+        const transactions = await storage.getCreditTransactions(balanceId);
+        return res.json({ transactions });
+      } catch (error) {
+        console.error('Get images_mvp credit transactions error:', error);
+        return res
+          .status(500)
+          .json({ error: 'Failed to get credit transactions' });
+      }
     }
-  });
+  );
 
   // ---------------------------------------------------------------------------
   // Credits: Claim (convert session credits -> account credits)
   // ---------------------------------------------------------------------------
-  app.post('/api/images_mvp/credits/claim', async (req: Request, res: Response) => {
-    try {
-      const authReq = req as AuthRequest;
-      if (!authReq.user?.id) {
-        return res.status(401).json({ error: 'Authentication required' });
+  app.post(
+    '/api/images_mvp/credits/claim',
+    async (req: Request, res: Response) => {
+      try {
+        const authReq = req as AuthRequest;
+        if (!authReq.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const rawSessionId = getOrSetSessionId(req, res);
+
+        const fromKey = getImagesMvpBalanceKeyForSession(rawSessionId);
+        const toKey = getImagesMvpBalanceKeyForUser(authReq.user.id);
+
+        const fromBalance = await storage.getCreditBalanceBySessionId(fromKey);
+        if (!fromBalance || (fromBalance.credits ?? 0) <= 0) {
+          return res.json({ transferred: 0 });
+        }
+
+        const toBalance = await storage.getOrCreateCreditBalance(
+          toKey,
+          authReq.user.id
+        );
+
+        const amount = fromBalance.credits;
+        await storage.transferCredits(
+          fromBalance.id,
+          toBalance.id,
+          amount,
+          'Claimed Images MVP credits to account'
+        );
+
+        return res.json({ transferred: amount });
+      } catch (error) {
+        console.error('Images MVP claim credits error:', error);
+        return res.status(500).json({ error: 'Failed to claim credits' });
       }
-
-      const rawSessionId = getOrSetSessionId(req, res);
-
-      const fromKey = getImagesMvpBalanceKeyForSession(rawSessionId);
-      const toKey = getImagesMvpBalanceKeyForUser(authReq.user.id);
-
-      const fromBalance = await storage.getCreditBalanceBySessionId(fromKey);
-      if (!fromBalance || (fromBalance.credits ?? 0) <= 0) {
-        return res.json({ transferred: 0 });
-      }
-
-      const toBalance = await storage.getOrCreateCreditBalance(
-        toKey,
-        authReq.user.id
-      );
-
-      const amount = fromBalance.credits;
-      await storage.transferCredits(
-        fromBalance.id,
-        toBalance.id,
-        amount,
-        'Claimed Images MVP credits to account'
-      );
-
-      return res.json({ transferred: amount });
-    } catch (error) {
-      console.error('Images MVP claim credits error:', error);
-      return res.status(500).json({ error: 'Failed to claim credits' });
     }
-  });
+  );
 
   // ---------------------------------------------------------------------------
   // Credits: Dev grant (testing helper)
   // ---------------------------------------------------------------------------
-  app.post('/api/dev/images_mvp/credits/grant', async (req: Request, res: Response) => {
-    try {
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(404).json({ error: 'Not found' });
+  app.post(
+    '/api/dev/images_mvp/credits/grant',
+    async (req: Request, res: Response) => {
+      try {
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(404).json({ error: 'Not found' });
+        }
+
+        const authReq = req as AuthRequest;
+        const amount =
+          typeof req.body?.credits === 'number'
+            ? req.body.credits
+            : typeof req.body?.credits === 'string'
+              ? Number(req.body.credits)
+              : 100;
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return res
+            .status(400)
+            .json({ error: 'credits must be a positive number' });
+        }
+
+        const balanceKey = authReq.user?.id
+          ? getImagesMvpBalanceKeyForUser(authReq.user.id)
+          : getImagesMvpBalanceKeyForSession(getOrSetSessionId(req, res));
+
+        const balance = await storage.getOrCreateCreditBalance(
+          balanceKey,
+          authReq.user?.id
+        );
+
+        await storage.addCredits(
+          balance.id,
+          amount,
+          `Dev grant (${amount} credits)`
+        );
+
+        const updated = await storage.getCreditBalance(balance.id);
+        return res.json({
+          ok: true,
+          balanceId: balance.id,
+          credits: updated?.credits ?? balance.credits,
+        });
+      } catch (error) {
+        console.error('Images MVP dev grant credits error:', error);
+        return res.status(500).json({ error: 'Failed to grant credits' });
       }
-
-      const authReq = req as AuthRequest;
-      const amount =
-        typeof req.body?.credits === 'number'
-          ? req.body.credits
-          : typeof req.body?.credits === 'string'
-            ? Number(req.body.credits)
-            : 100;
-      if (!Number.isFinite(amount) || amount <= 0) {
-        return res.status(400).json({ error: 'credits must be a positive number' });
-      }
-
-      const balanceKey = authReq.user?.id
-        ? getImagesMvpBalanceKeyForUser(authReq.user.id)
-        : getImagesMvpBalanceKeyForSession(getOrSetSessionId(req, res));
-
-      const balance = await storage.getOrCreateCreditBalance(
-        balanceKey,
-        authReq.user?.id
-      );
-
-      await storage.addCredits(
-        balance.id,
-        amount,
-        `Dev grant (${amount} credits)`
-      );
-
-      const updated = await storage.getCreditBalance(balance.id);
-      return res.json({
-        ok: true,
-        balanceId: balance.id,
-        credits: updated?.credits ?? balance.credits,
-      });
-    } catch (error) {
-      console.error('Images MVP dev grant credits error:', error);
-      return res.status(500).json({ error: 'Failed to grant credits' });
     }
-  });
+  );
 
   // ---------------------------------------------------------------------------
   // Credits: Purchase
@@ -894,8 +906,8 @@ export function registerImagesMvpRoutes(app: Express) {
           });
         }
 
-      const authReq = req as AuthRequest;
-      const { pack, email } = req.body;
+        const authReq = req as AuthRequest;
+        const { pack, email } = req.body;
 
         if (!pack || !['starter', 'pro'].includes(pack)) {
           return res.status(400).json({ error: 'Invalid credit pack' });
@@ -904,7 +916,8 @@ export function registerImagesMvpRoutes(app: Express) {
         if (!authReq.user?.id) {
           return res.status(401).json({
             error: 'Authentication required',
-            message: 'Please sign in to purchase credits so they are available across devices.',
+            message:
+              'Please sign in to purchase credits so they are available across devices.',
           });
         }
 
@@ -917,7 +930,7 @@ export function registerImagesMvpRoutes(app: Express) {
         const packInfo =
           IMAGES_MVP_CREDIT_PACKS[pack as keyof typeof IMAGES_MVP_CREDIT_PACKS];
 
-        const baseUrl = getTrustedAppOrigin(req) ?? getBaseUrl();
+        const baseUrl = getBaseUrl();
 
         // Ensure product is valid
         if (!packInfo || !packInfo.productId) {
@@ -1021,7 +1034,8 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Magic-byte validation: verify actual file content matches claimed type
-        const fileBuffer = req.file.buffer || (await fs.readFile(req.file.path));
+        const fileBuffer =
+          req.file.buffer || (await fs.readFile(req.file.path));
         const detectedType = await fileTypeFromBuffer(fileBuffer);
         if (detectedType && !SUPPORTED_IMAGE_MIMES.has(detectedType.mime)) {
           // File content doesn't match a supported image type
@@ -1037,7 +1051,9 @@ export function registerImagesMvpRoutes(app: Express) {
         const trialEmail = normalizeEmail(req.body?.trial_email);
         // WebSocket progress uses `session_id` (client-provided). Credits use the stable cookie session.
         sessionId = getSessionId(req); // progress session id
-        const cookieSessionId = authReq.user?.id ? null : getOrSetSessionId(req, res);
+        const cookieSessionId = authReq.user?.id
+          ? null
+          : getOrSetSessionId(req, res);
 
         // Check Trial Status
         let trialUses = 0;
@@ -1064,7 +1080,7 @@ export function registerImagesMvpRoutes(app: Express) {
         if (hasTrialAvailable) {
           useTrial = true;
         } else {
-            if (trialEmail) {
+          if (trialEmail) {
             // Trial email provided but trial is exhausted: require credits (do not stack free quota).
 
             const balanceKey = authReq.user?.id
@@ -1112,7 +1128,7 @@ export function registerImagesMvpRoutes(app: Express) {
             }
 
             const usage = await getClientUsage(decoded.clientId);
-            const freeUsed = usage?.free_used || 0;
+            const freeUsed = usage?.freeUsed || 0;
             const freeLimit = 2;
 
             if (freeUsed < freeLimit) {
@@ -1296,8 +1312,8 @@ export function registerImagesMvpRoutes(app: Express) {
             fieldsExtracted: metadata.fields_extracted || 0,
             processingMs,
             success: true,
-            ipAddress: req.ip || req.socket.remoteAddress,
-            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.socket.remoteAddress || null,
+            userAgent: req.headers['user-agent'] || null,
           })
           .catch(console.error);
 

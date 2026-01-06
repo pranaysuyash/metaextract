@@ -504,3 +504,66 @@ export const insertQuotaAnalyticsSchema = createInsertSchema(quotaAnalytics).omi
 
 export type InsertQuotaAnalytics = z.infer<typeof insertQuotaAnalyticsSchema>;
 export type QuotaAnalytics = typeof quotaAnalytics.$inferSelect;
+
+// ============================================================================
+// Batch Processing Schema (Phase 3.2)
+// ============================================================================
+
+export const batchJobs = pgTable('batch_jobs', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar('user_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name').notNull(),
+  status: text('status')
+    .notNull()
+    .default('pending')
+    .$type<'pending' | 'processing' | 'completed' | 'failed'>(),
+  totalFiles: integer('total_files').notNull().default(0),
+  processedFiles: integer('processed_files').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+  errorMessage: text('error_message'),
+});
+
+export const batchResults = pgTable('batch_results', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  batchId: varchar('batch_id')
+    .notNull()
+    .references(() => batchJobs.id),
+  filename: text('filename').notNull(),
+  status: text('status')
+    .notNull()
+    .default('pending')
+    .$type<'success' | 'error' | 'processing' | 'pending'>(),
+  extractionDate: timestamp('extraction_date').notNull().defaultNow(),
+  fieldsExtracted: integer('fields_extracted').notNull().default(0),
+  fileSize: bigint('file_size', { mode: 'number' }).notNull(),
+  fileType: text('file_type').notNull(),
+  authenticityScore: integer('authenticity_score'),
+  metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+  processingTime: integer('processing_time'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const insertBatchJobSchema = createInsertSchema(batchJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBatchResultSchema = createInsertSchema(batchResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBatchJob = z.infer<typeof insertBatchJobSchema>;
+export type BatchJob = typeof batchJobs.$inferSelect;
+export type InsertBatchResult = z.infer<typeof insertBatchResultSchema>;
+export type BatchResult = typeof batchResults.$inferSelect;

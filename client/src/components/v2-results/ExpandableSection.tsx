@@ -76,6 +76,7 @@ interface ExpandableSectionListProps {
     description?: string;
     icon?: React.ReactNode;
     content: React.ReactNode;
+    priority?: 'high' | 'normal' | 'low';
   }>;
   className?: string;
 }

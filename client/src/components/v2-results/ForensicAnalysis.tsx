@@ -4,13 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  Eye, 
-  FileText, 
-  Camera, 
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  Eye,
+  FileText,
+  Camera,
   Hash,
   Download,
   RotateCcw,
@@ -25,12 +25,12 @@ import {
   Target,
   AlertOctagon,
   Verified,
-  XCircle
+  XCircle,
 } from 'lucide-react';
 import { AuthenticityBadge } from './AuthenticityBadge';
 import { cn } from '@/lib/utils';
 
-interface SteganographyAnalysis {
+export interface SteganographyAnalysis {
   detected: boolean;
   confidence: number;
   methodsChecked: string[];
@@ -38,7 +38,7 @@ interface SteganographyAnalysis {
   details?: string;
 }
 
-interface ManipulationAnalysis {
+export interface ManipulationAnalysis {
   detected: boolean;
   confidence: number;
   indicators: Array<{
@@ -50,14 +50,14 @@ interface ManipulationAnalysis {
   originalityScore?: number;
 }
 
-interface AIDetection {
+export interface AIDetection {
   aiGenerated: boolean;
   confidence: number;
   modelHints: string[];
   detectionMethods: string[];
 }
 
-interface ForensicAnalysisProps {
+export interface ForensicAnalysisProps {
   steganography?: SteganographyAnalysis;
   manipulation?: ManipulationAnalysis;
   aiDetection?: AIDetection;
@@ -66,16 +66,26 @@ interface ForensicAnalysisProps {
   className?: string;
 }
 
+export interface ForensicFindingCardProps {
+  title: string;
+  description: string;
+  confidence: number;
+  severity: 'low' | 'medium' | 'high';
+  icon?: React.ReactNode;
+  details?: string;
+  recommendations?: string[];
+}
+
 interface ForensicScoreGaugeProps {
   score: number;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
 }
 
-const ForensicScoreGauge: React.FC<ForensicScoreGaugeProps> = ({ 
-  score, 
-  size = 'md', 
-  showLabel = true 
+const ForensicScoreGauge: React.FC<ForensicScoreGaugeProps> = ({
+  score,
+  size = 'md',
+  showLabel = true,
 }) => {
   const radius = size === 'sm' ? 30 : size === 'md' ? 45 : 60;
   const strokeWidth = size === 'sm' ? 4 : 6;
@@ -99,12 +109,14 @@ const ForensicScoreGauge: React.FC<ForensicScoreGaugeProps> = ({
   };
 
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center",
-      size === 'sm' && 'gap-1',
-      size === 'md' && 'gap-2',
-      size === 'lg' && 'gap-3'
-    )}>
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center',
+        size === 'sm' && 'gap-1',
+        size === 'md' && 'gap-2',
+        size === 'lg' && 'gap-3'
+      )}
+    >
       <div className="relative">
         <svg
           height={radius * 2}
@@ -133,40 +145,48 @@ const ForensicScoreGauge: React.FC<ForensicScoreGaugeProps> = ({
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={cn(
-            "font-bold",
-            getScoreColor(score),
-            size === 'sm' && 'text-sm',
-            size === 'md' && 'text-lg',
-            size === 'lg' && 'text-2xl'
-          )}>
+          <span
+            className={cn(
+              'font-bold',
+              getScoreColor(score),
+              size === 'sm' && 'text-sm',
+              size === 'md' && 'text-lg',
+              size === 'lg' && 'text-2xl'
+            )}
+          >
             {score}
           </span>
-          <span className={cn(
-            "text-gray-400",
-            size === 'sm' && 'text-xs',
-            size === 'md' && 'text-sm',
-            size === 'lg' && 'text-base'
-          )}>
+          <span
+            className={cn(
+              'text-gray-400',
+              size === 'sm' && 'text-xs',
+              size === 'md' && 'text-sm',
+              size === 'lg' && 'text-base'
+            )}
+          >
             %
           </span>
         </div>
       </div>
       {showLabel && (
-        <div className={cn(
-          "text-center",
-          size === 'sm' && 'text-xs',
-          size === 'md' && 'text-sm',
-          size === 'lg' && 'text-base'
-        )}>
-          <p className={cn("font-medium", getScoreColor(score))}>
-            {score >= 80 ? 'Authentic' : 
-             score >= 60 ? 'Likely Authentic' :
-             score >= 40 ? 'Questionable' : 'Suspicious'}
+        <div
+          className={cn(
+            'text-center',
+            size === 'sm' && 'text-xs',
+            size === 'md' && 'text-sm',
+            size === 'lg' && 'text-base'
+          )}
+        >
+          <p className={cn('font-medium', getScoreColor(score))}>
+            {score >= 80
+              ? 'Authentic'
+              : score >= 60
+                ? 'Likely Authentic'
+                : score >= 40
+                  ? 'Questionable'
+                  : 'Suspicious'}
           </p>
-          <p className="text-gray-400 text-xs mt-1">
-            Forensic Score
-          </p>
+          <p className="text-gray-400 text-xs mt-1">Forensic Score</p>
         </div>
       )}
     </div>
@@ -180,17 +200,17 @@ interface AnalysisConfidenceBarProps {
   icon?: React.ReactNode;
 }
 
-const AnalysisConfidenceBar: React.FC<AnalysisConfidenceBarProps> = ({ 
-  label, 
-  confidence, 
+const AnalysisConfidenceBar: React.FC<AnalysisConfidenceBarProps> = ({
+  label,
+  confidence,
   color = 'blue',
-  icon
+  icon,
 }) => {
   const colorClasses = {
     blue: 'bg-blue-500',
     green: 'bg-emerald-500',
     red: 'bg-red-500',
-    yellow: 'bg-yellow-500'
+    yellow: 'bg-yellow-500',
   };
 
   return (
@@ -207,40 +227,32 @@ const AnalysisConfidenceBar: React.FC<AnalysisConfidenceBarProps> = ({
   );
 };
 
-interface ForensicFindingCardProps {
-  title: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high';
-  confidence: number;
-  icon?: React.ReactNode;
-}
-
 const ForensicFindingCard: React.FC<ForensicFindingCardProps> = ({
   title,
   description,
   severity,
   confidence,
-  icon
+  icon,
 }) => {
   const severityConfig = {
     low: {
       border: 'border-slate-500/30',
       bg: 'bg-slate-500/10',
       text: 'text-slate-300',
-      badge: 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+      badge: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
     },
     medium: {
       border: 'border-yellow-500/30',
       bg: 'bg-yellow-500/10',
       text: 'text-yellow-400',
-      badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+      badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     },
     high: {
       border: 'border-red-500/30',
       bg: 'bg-red-500/10',
       text: 'text-red-400',
-      badge: 'bg-red-500/20 text-red-400 border-red-500/30'
-    }
+      badge: 'bg-red-500/20 text-red-400 border-red-500/30',
+    },
   };
 
   const config = severityConfig[severity];
@@ -267,13 +279,13 @@ const ForensicFindingCard: React.FC<ForensicFindingCardProps> = ({
   );
 };
 
-export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({ 
-  steganography, 
-  manipulation, 
-  aiDetection, 
+export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
+  steganography,
+  manipulation,
+  aiDetection,
   authenticityScore = 0,
   onReanalyze,
-  className
+  className,
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -281,23 +293,26 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
   const hasAnalysisData = !!(steganography || manipulation || aiDetection);
 
   // Calculate overall forensic metrics
-  const totalAnalyses = [steganography, manipulation, aiDetection].filter(Boolean).length;
+  const totalAnalyses = [steganography, manipulation, aiDetection].filter(
+    Boolean
+  ).length;
   const suspiciousFindings = [
     steganography?.detected ? 1 : 0,
     manipulation?.detected ? 1 : 0,
-    aiDetection?.aiGenerated ? 1 : 0
+    aiDetection?.aiGenerated ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const getAuthenticityIcon = (score: number) => {
     if (score >= 80) return <Verified className="w-5 h-5 text-emerald-500" />;
     if (score >= 60) return <Shield className="w-5 h-5 text-yellow-500" />;
-    if (score >= 40) return <AlertTriangle className="w-5 h-5 text-orange-500" />;
+    if (score >= 40)
+      return <AlertTriangle className="w-5 h-5 text-orange-500" />;
     return <XCircle className="w-5 h-5 text-red-500" />;
   };
 
   if (!hasAnalysisData) {
     return (
-      <Card className={cn("bg-card border-white/10", className)}>
+      <Card className={cn('bg-card border-white/10', className)}>
         <CardContent className="py-8 text-center">
           <Fingerprint className="w-12 h-12 mx-auto mb-4 text-slate-500" />
           <p className="text-slate-300">No forensic analysis data available</p>
@@ -310,7 +325,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
   }
 
   return (
-    <Card className={cn("bg-card border-white/10", className)}>
+    <Card className={cn('bg-card border-white/10', className)}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
@@ -325,10 +340,10 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
           <div className="flex items-center gap-2">
             <ForensicScoreGauge score={authenticityScore} size="sm" />
             {onReanalyze && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onReanalyze} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReanalyze}
                 className="gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -338,7 +353,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-muted/50">
@@ -373,9 +388,13 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                         <div className="flex items-center justify-center gap-2 mb-2">
                           {getAuthenticityIcon(authenticityScore)}
                           <span className="text-sm font-medium text-white">
-                            {authenticityScore >= 80 ? 'Authentic' : 
-                             authenticityScore >= 60 ? 'Likely Authentic' :
-                             authenticityScore >= 40 ? 'Questionable' : 'Suspicious'}
+                            {authenticityScore >= 80
+                              ? 'Authentic'
+                              : authenticityScore >= 60
+                                ? 'Likely Authentic'
+                                : authenticityScore >= 40
+                                  ? 'Questionable'
+                                  : 'Suspicious'}
                           </span>
                         </div>
                         <p className="text-xs text-gray-400">
@@ -386,15 +405,21 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                   </CardContent>
                 </Card>
               </div>
-              
+
               <div className="lg:col-span-2 space-y-4">
                 <AnalysisConfidenceBar
                   label="Overall Authenticity"
                   confidence={authenticityScore}
-                  color={authenticityScore >= 80 ? 'green' : authenticityScore >= 60 ? 'yellow' : 'red'}
+                  color={
+                    authenticityScore >= 80
+                      ? 'green'
+                      : authenticityScore >= 60
+                        ? 'yellow'
+                        : 'red'
+                  }
                   icon={<Shield className="w-4 h-4 text-primary" />}
                 />
-                
+
                 {steganography && (
                   <AnalysisConfidenceBar
                     label="Steganography Analysis"
@@ -403,7 +428,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     icon={<Search className="w-4 h-4 text-blue-500" />}
                   />
                 )}
-                
+
                 {manipulation && (
                   <AnalysisConfidenceBar
                     label="Manipulation Detection"
@@ -412,7 +437,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     icon={<Activity className="w-4 h-4 text-orange-500" />}
                   />
                 )}
-                
+
                 {aiDetection && (
                   <AnalysisConfidenceBar
                     label="AI Generation Detection"
@@ -438,30 +463,44 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </div>
                     <p className="text-xs text-slate-400">Total Analyses</p>
                   </div>
-                  
-                  <div className={cn(
-                    "text-center p-4 rounded-lg border",
-                    suspiciousFindings > 0 
-                      ? "bg-red-500/10 border-red-500/30" 
-                      : "bg-emerald-500/10 border-emerald-500/30"
-                  )}>
-                    <div className={cn(
-                      "text-2xl font-bold mb-1",
-                      suspiciousFindings > 0 ? "text-red-400" : "text-emerald-400"
-                    )}>
+
+                  <div
+                    className={cn(
+                      'text-center p-4 rounded-lg border',
+                      suspiciousFindings > 0
+                        ? 'bg-red-500/10 border-red-500/30'
+                        : 'bg-emerald-500/10 border-emerald-500/30'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'text-2xl font-bold mb-1',
+                        suspiciousFindings > 0
+                          ? 'text-red-400'
+                          : 'text-emerald-400'
+                      )}
+                    >
                       {suspiciousFindings}
                     </div>
-                    <p className={cn(
-                      "text-xs",
-                      suspiciousFindings > 0 ? "text-red-300" : "text-emerald-300"
-                    )}>
+                    <p
+                      className={cn(
+                        'text-xs',
+                        suspiciousFindings > 0
+                          ? 'text-red-300'
+                          : 'text-emerald-300'
+                      )}
+                    >
                       Suspicious Findings
                     </p>
                   </div>
-                  
+
                   <div className="text-center p-4 bg-primary/10 rounded-lg border border-primary/30">
                     <div className="text-2xl font-bold text-primary mb-1">
-                      {Math.round((1 - suspiciousFindings / Math.max(1, totalAnalyses)) * 100)}%
+                      {Math.round(
+                        (1 - suspiciousFindings / Math.max(1, totalAnalyses)) *
+                          100
+                      )}
+                      %
                     </div>
                     <p className="text-xs text-primary/70">Trust Score</p>
                   </div>
@@ -486,7 +525,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     Hide Details
                   </Button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {steganography?.findings.map((finding, i) => (
                     <ForensicFindingCard
@@ -498,7 +537,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                       icon={<Search className="w-4 h-4 text-blue-500" />}
                     />
                   ))}
-                  
+
                   {manipulation?.indicators.map((indicator, i) => (
                     <ForensicFindingCard
                       key={`manip-${i}`}
@@ -512,7 +551,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                 </div>
               </div>
             )}
-            
+
             {!isExpanded && (
               <Button
                 variant="outline"
@@ -532,9 +571,17 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <AuthenticityBadge 
-                      score={steganography.detected ? Math.max(10, 100 - steganography.confidence) : steganography.confidence} 
-                      label={steganography.detected ? "Hidden Data Found" : "No Hidden Data"} 
+                    <AuthenticityBadge
+                      score={
+                        steganography.detected
+                          ? Math.max(10, 100 - steganography.confidence)
+                          : steganography.confidence
+                      }
+                      label={
+                        steganography.detected
+                          ? 'Hidden Data Found'
+                          : 'No Hidden Data'
+                      }
                     />
                     <span className="text-sm text-slate-300">
                       {steganography.confidence}% confidence
@@ -547,7 +594,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </span>
                   </div>
                 </div>
-                
+
                 {steganography.methodsChecked.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -556,14 +603,18 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {steganography.methodsChecked.map((method, i) => (
-                        <Badge key={i} variant="outline" className="text-xs border-white/20 justify-center">
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className="text-xs border-white/20 justify-center"
+                        >
                           {method}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 )}
-                
+
                 {steganography.findings.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -584,7 +635,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </div>
                   </div>
                 )}
-                
+
                 {steganography.details && (
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -592,7 +643,9 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                       Analysis Details
                     </h4>
                     <div className="p-4 bg-muted/30 rounded-lg border border-white/10">
-                      <p className="text-sm text-slate-200 leading-relaxed">{steganography.details}</p>
+                      <p className="text-sm text-slate-200 leading-relaxed">
+                        {steganography.details}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -600,7 +653,9 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
             ) : (
               <div className="text-center py-8">
                 <Search className="w-12 h-12 mx-auto mb-4 text-slate-500" />
-                <p className="text-slate-400">Steganography analysis not available</p>
+                <p className="text-slate-400">
+                  Steganography analysis not available
+                </p>
               </div>
             )}
           </TabsContent>
@@ -611,9 +666,17 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <AuthenticityBadge 
-                      score={manipulation.detected ? Math.max(10, 100 - manipulation.confidence) : manipulation.confidence} 
-                      label={manipulation.detected ? "Manipulation Detected" : "No Manipulation"} 
+                    <AuthenticityBadge
+                      score={
+                        manipulation.detected
+                          ? Math.max(10, 100 - manipulation.confidence)
+                          : manipulation.confidence
+                      }
+                      label={
+                        manipulation.detected
+                          ? 'Manipulation Detected'
+                          : 'No Manipulation'
+                      }
                     />
                     <span className="text-sm text-slate-300">
                       {manipulation.confidence}% confidence
@@ -628,22 +691,29 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </div>
                   )}
                 </div>
-                
+
                 {manipulation.originalityScore !== undefined && (
                   <div className="p-4 bg-muted/30 rounded-lg border border-white/10">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-green-500" />
-                        <span className="text-slate-300">Originality Score:</span>
+                        <span className="text-slate-300">
+                          Originality Score:
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Progress value={manipulation.originalityScore} className="w-32 h-2" />
-                        <span className="font-bold text-white">{manipulation.originalityScore}%</span>
+                        <Progress
+                          value={manipulation.originalityScore}
+                          className="w-32 h-2"
+                        />
+                        <span className="font-bold text-white">
+                          {manipulation.originalityScore}%
+                        </span>
                       </div>
                     </div>
                   </div>
                 )}
-                
+
                 {manipulation.indicators.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -658,7 +728,9 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                           description={indicator.description}
                           severity={indicator.severity}
                           confidence={indicator.confidence}
-                          icon={<Activity className="w-4 h-4 text-orange-500" />}
+                          icon={
+                            <Activity className="w-4 h-4 text-orange-500" />
+                          }
                         />
                       ))}
                     </div>
@@ -668,7 +740,9 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
             ) : (
               <div className="text-center py-8">
                 <Activity className="w-12 h-12 mx-auto mb-4 text-slate-500" />
-                <p className="text-slate-400">Manipulation detection not available</p>
+                <p className="text-slate-400">
+                  Manipulation detection not available
+                </p>
               </div>
             )}
           </TabsContent>
@@ -679,9 +753,17 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <AuthenticityBadge 
-                      score={aiDetection.aiGenerated ? Math.max(10, 100 - aiDetection.confidence) : aiDetection.confidence} 
-                      label={aiDetection.aiGenerated ? "AI Generated" : "Likely Original"} 
+                    <AuthenticityBadge
+                      score={
+                        aiDetection.aiGenerated
+                          ? Math.max(10, 100 - aiDetection.confidence)
+                          : aiDetection.confidence
+                      }
+                      label={
+                        aiDetection.aiGenerated
+                          ? 'AI Generated'
+                          : 'Likely Original'
+                      }
                     />
                     <span className="text-sm text-slate-300">
                       {aiDetection.confidence}% confidence
@@ -694,7 +776,7 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </span>
                   </div>
                 </div>
-                
+
                 {aiDetection.detectionMethods.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -703,14 +785,18 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {aiDetection.detectionMethods.map((method, i) => (
-                        <Badge key={i} variant="outline" className="text-xs border-white/20 justify-center">
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className="text-xs border-white/20 justify-center"
+                        >
                           {method}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 )}
-                
+
                 {aiDetection.modelHints.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -719,14 +805,18 @@ export const ForensicAnalysis: React.FC<ForensicAnalysisProps> = ({
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {aiDetection.modelHints.map((hint, i) => (
-                        <Badge key={i} variant="outline" className="text-xs border-purple-500/30 bg-purple-500/10 text-purple-400">
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className="text-xs border-purple-500/30 bg-purple-500/10 text-purple-400"
+                        >
                           {hint}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 )}
-                
+
                 <div className="flex gap-2 pt-4">
                   <Button variant="outline" className="gap-2">
                     <Download className="w-4 h-4" />

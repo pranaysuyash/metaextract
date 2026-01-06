@@ -25,6 +25,7 @@ export default function ImagesMvpCreditsSuccess() {
   const purchaseLogged = useRef(false);
   const paymentConfirmed = useRef(false);
   const [confirming, setConfirming] = useState(false);
+  const [redirectIn, setRedirectIn] = useState<number>(3);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -154,6 +155,20 @@ export default function ImagesMvpCreditsSuccess() {
     void confirmPaymentIfNeeded();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setRedirectIn((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          navigate('/images_mvp');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [navigate]);
+
   return (
     <Layout showHeader={true} showFooter={true}>
       <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center px-4">
@@ -200,6 +215,9 @@ export default function ImagesMvpCreditsSuccess() {
             <p className="text-xs text-slate-500 mt-2">
               Refunds are available within 7 days for unused credit packs only. If any credits are used, the purchase is non-refundable.
             </p>
+            <p className="text-xs text-slate-500 mt-2">
+              If you started checkout in another tab, go back there to continue automatically.
+            </p>
           </div>
 
           {!isAuthenticated && (
@@ -244,6 +262,9 @@ export default function ImagesMvpCreditsSuccess() {
           >
             Analyze More Photos <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
+          <div className="mt-3 text-xs text-slate-500">
+            Redirecting in {redirectIn}s…
+          </div>
         </div>
       </div>
     </Layout>

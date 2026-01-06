@@ -81,7 +81,7 @@ export function EnhancedUploadZoneV2({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file drop
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: any[]) => {
     setDragActive(false);
     
     // Show toast for rejected files
@@ -96,21 +96,30 @@ export function EnhancedUploadZoneV2({
     }
 
     // Process accepted files
-    const newFiles = acceptedFiles.slice(0, maxFiles - files.length).map(file => {
-      const id = `${Date.now()}-${Math.random()}`;
-      const analysis = analyzeFile(file);
-      const estimate = estimateProcessingTime(file);
-      
-      const newFile: FileState = {
-        file,
-        id,
-        status: 'pending' as const,
-        progress: 0,
-        analysis,
-        estimate,
-      };
-      return newFile;
-    });
+    const validTiers = ['free', 'professional', 'forensic', 'enterprise'] as const;
+    const tierKey = validTiers.includes(tier as (typeof validTiers)[number])
+      ? (tier as (typeof validTiers)[number])
+      : 'free';
+
+    const newFiles = await Promise.all(
+      acceptedFiles
+        .slice(0, maxFiles - files.length)
+        .map(async (file) => {
+          const id = `${Date.now()}-${Math.random()}`;
+          const analysis = await analyzeFile(file);
+          const estimate = estimateProcessingTime(file, tierKey);
+
+          const newFile: FileState = {
+            file,
+            id,
+            status: 'pending' as const,
+            progress: 0,
+            analysis,
+            estimate,
+          };
+          return newFile;
+        })
+    );
 
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles] as FileState[]);
@@ -239,15 +248,15 @@ export function EnhancedUploadZoneV2({
   // Get processing time estimate
   const getProcessingEstimate = (estimate?: ProcessingEstimate) => {
     if (!estimate) return 'Calculating...';
-    
-    const estimatedTime = estimate.estimated_time || estimate.estimatedTime || 0;
+    if (estimate.displayText) return estimate.displayText;
+
+    const estimatedTime = estimate.estimatedSeconds || 0;
     if (estimatedTime < 60) {
       return `${Math.round(estimatedTime)}s`;
-    } else {
-      const minutes = Math.floor(estimatedTime / 60);
-      const seconds = Math.round(estimatedTime % 60);
-      return `${minutes}m ${seconds}s`;
     }
+    const minutes = Math.floor(estimatedTime / 60);
+    const seconds = Math.round(estimatedTime % 60);
+    return `${minutes}m ${seconds}s`;
   };
 
   return (

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  Image, 
+  Image as ImageIcon, 
   Database, 
   MapPin, 
   Calendar, 
@@ -60,7 +60,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({
       setIsLoading(true);
       setError(null);
       
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         setIsLoading(false);
         onImageLoad?.();
@@ -118,7 +118,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({
           <Card className="bg-card border-white/10 h-full">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Image className="w-5 h-5 text-primary" />
+                <ImageIcon className="w-5 h-5 text-primary" />
                 DICOM Image Preview
               </CardTitle>
             </CardHeader>

@@ -31,6 +31,11 @@ export default function CreditsPage() {
   const [coreTx, setCoreTx] = useState<Tx[]>([]);
   const [imagesTx, setImagesTx] = useState<Tx[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const isLocalDev =
+    typeof window !== 'undefined' &&
+    import.meta.env.DEV &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1');
 
   const loadAll = async () => {
     setLoading(true);
@@ -73,6 +78,28 @@ export default function CreditsPage() {
   useEffect(() => {
     void loadAll();
   }, []);
+
+  const grantDevCredits = async (scope: 'core' | 'images') => {
+    try {
+      const endpoint =
+        scope === 'core'
+          ? '/api/dev/credits/grant'
+          : '/api/dev/images_mvp/credits/grant';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ credits: 100 }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Failed to grant credits');
+      }
+      await loadAll();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to grant credits.');
+    }
+  };
 
   return (
     <Layout>
@@ -169,6 +196,35 @@ export default function CreditsPage() {
             </div>
           </div>
 
+          {isLocalDev && (
+            <div className="mt-6 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+              <div className="text-sm font-semibold text-amber-200">
+                Dev tools
+              </div>
+              <div className="mt-1 text-xs text-amber-200/90">
+                Grants +100 credits for quick testing (dev-only endpoints).
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="border-amber-400/30 text-amber-100 hover:text-amber-50 hover:bg-amber-500/10"
+                  onClick={() => void grantDevCredits('images')}
+                  disabled={loading}
+                >
+                  +100 Images MVP credits
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-amber-400/30 text-amber-100 hover:text-amber-50 hover:bg-amber-500/10"
+                  onClick={() => void grantDevCredits('core')}
+                  disabled={loading}
+                >
+                  +100 Core credits
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 text-xs text-slate-500">
             Refunds are available within 7 days for unused credit packs only. Credits do not expire.
           </div>
@@ -177,4 +233,3 @@ export default function CreditsPage() {
     </Layout>
   );
 }
-

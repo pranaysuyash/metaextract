@@ -231,6 +231,10 @@ export class MetadataCacheManager {
       const metadataSize = JSON.stringify(metadata).length;
       const shouldCompress = this.compressionEnabled &&
                             metadataSize > this.config.compressionThreshold;
+      const fileSize =
+        typeof metadata.filesystem?.file_size === 'number'
+          ? metadata.filesystem.file_size
+          : undefined;
 
       const entry: MetadataCacheEntry = {
         key,
@@ -241,7 +245,7 @@ export class MetadataCacheManager {
         hitCount: 0,
         metadata: {
           tier,
-          fileSize: metadata.file?.size,
+          fileSize,
           mimeType: metadata.file?.mime_type,
           compressed: shouldCompress,
         },

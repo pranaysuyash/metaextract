@@ -112,8 +112,9 @@ export function adminProtectionMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  adminAuthMiddleware(req, res, (err?: Error) => {
+  adminAuthMiddleware(req, res, (err?: unknown) => {
     if (err) {
+      next(err as Error);
       return;
     }
     adminRateLimitMiddleware(req, res, next);

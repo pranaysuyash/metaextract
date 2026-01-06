@@ -16,7 +16,7 @@ import { storage } from '../storage/index';
 // import { trackImagesMvpEvent } from '../lib/images-mvp-analytics';
 
 // Token secret validation - fail fast if not set
-const TOKEN_SECRET: string = process.env.TOKEN_SECRET || '';
+const TOKEN_SECRET = process.env.TOKEN_SECRET ?? '';
 if (!TOKEN_SECRET) {
   throw new Error(
     'CRITICAL: TOKEN_SECRET environment variable is required for security. ' +
@@ -261,7 +261,7 @@ async function handleExtractionRequest(
 
     // Get current usage for this client
     const usage = await getClientUsage(clientId);
-    const currentCount = usage?.free_used || 0;
+    const currentCount = usage?.freeUsed || 0;
 
     // Check quota
     if (currentCount >= CONFIG.FREE_LIMIT) {
@@ -357,7 +357,7 @@ export async function handleQuotaExceeded(
 
 export async function getClientUsage(
   clientId: string
-): Promise<{ free_used: number } | null> {
+): Promise<{ freeUsed: number } | null> {
   try {
     // Try to get from database first
     if (isDatabaseConnected()) {
@@ -380,8 +380,24 @@ export async function getClientUsage(
 
     // Fallback to Redis/storage
     const key = `quota:${clientId}`;
-    const data = storage.get ? await storage.get(key) : null;
-    return data ? JSON.parse(data) : null;
+    const data = await storage.get(key);
+    if (!data) return null;
+    try {
+      const parsed = JSON.parse(data);
+      if (typeof parsed === 'number') {
+        return { freeUsed: parsed };
+      }
+      if (parsed && typeof parsed === 'object' && 'freeUsed' in parsed) {
+        const value = Number((parsed as { freeUsed: number }).freeUsed);
+        return { freeUsed: Number.isNaN(value) ? 0 : value };
+      }
+    } catch {
+      const numeric = Number(data);
+      if (!Number.isNaN(numeric)) {
+        return { freeUsed: numeric };
+      }
+    }
+    return null;
   } catch (error) {
     console.error('Error getting client usage:', error);
     return null;
@@ -425,9 +441,24 @@ export async function incrementUsage(
     const key = `quota:${clientId}`;
     if (typeof (storage as any).get === 'function') {
       const current = await (storage as any).get(key);
-      const count = current ? parseInt(current, 10) : 0;
-      await (storage as any).set(key, (count + 1).toString());
-      console.log(`[QuotaDebug] Incremented usage in fallback storage for ${clientId}: ${count + 1}`);
+      let count = 0;
+      if (current) {
+        try {
+          const parsed = JSON.parse(current);
+          if (typeof parsed === 'number') {
+            count = parsed;
+          } else if (parsed && typeof parsed === 'object' && 'freeUsed' in parsed) {
+            count = Number((parsed as { freeUsed: number }).freeUsed) || 0;
+          } else {
+            count = Number(current) || 0;
+          }
+        } catch {
+          count = Number(current) || 0;
+        }
+      }
+      const next = count + 1;
+      await (storage as any).set(key, JSON.stringify({ freeUsed: next }));
+      console.log(`[QuotaDebug] Incremented usage in fallback storage for ${clientId}: ${next}`);
     } else {
       console.warn('[QuotaDebug] Fallback storage does not support get/set');
     }
@@ -461,9 +492,9 @@ async function trackRequest(
       action: 'request',
     };
 
-    if (storage.lpush) await storage.lpush(key, JSON.stringify(activity));
-    if (storage.ltrim) await storage.ltrim(key, 0, 999); // Keep last 1000
-    if (storage.expire) await storage.expire(key, 3600); // Expire after 1 hour
+    await storage.lpush(key, JSON.stringify(activity));
+    await storage.ltrim(key, 0, 999); // Keep last 1000
+    await storage.expire(key, 3600); // Expire after 1 hour
   } catch (error) {
     console.error('Error tracking request:', error);
   }
@@ -476,7 +507,7 @@ async function getRecentActivity(
 ): Promise<any[]> {
   try {
     const key = `activity:${clientId}`;
-    const activities = storage.lrange ? await storage.lrange(key, 0, -1) : [];
+    const activities = await storage.lrange(key, 0, -1);
     const cutoff = Date.now() - minutes * 60 * 1000;
 
     return activities.map(a => JSON.parse(a)).filter(a => a.timestamp > cutoff);

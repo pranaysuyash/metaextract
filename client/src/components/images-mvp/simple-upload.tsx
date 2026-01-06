@@ -199,7 +199,7 @@ export function SimpleUploadZone() {
     setCurrentSessionId(sessionId);
     setShowProgressTracker(true);
     const formData = new FormData();
-    
+
     // Append metadata fields BEFORE file to ensure streaming parsers see them first
     formData.append('session_id', sessionId);
     if (file.lastModified) {
@@ -309,8 +309,12 @@ export function SimpleUploadZone() {
         status === 402 ||
         (status === 429 &&
           (body?.credits_required ||
-            String(body?.error || '').toLowerCase().includes('quota') ||
-            String(body?.message || '').toLowerCase().includes('purchase credits')));
+            String(body?.error || '')
+              .toLowerCase()
+              .includes('quota') ||
+            String(body?.message || '')
+              .toLowerCase()
+              .includes('purchase credits')));
 
       if (isPaywall) {
         // Trigger Credit Purchase Flow
@@ -378,7 +382,8 @@ export function SimpleUploadZone() {
       {resumeRequested && pendingFile && (
         <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-left">
           <div className="text-xs text-slate-200">
-            Ready to resume: <span className="text-white font-semibold">{pendingFile.name}</span>
+            Ready to resume:{' '}
+            <span className="text-white font-semibold">{pendingFile.name}</span>
           </div>
           <div className="mt-2 flex gap-2">
             <Button
@@ -413,7 +418,8 @@ export function SimpleUploadZone() {
           </div>
           {paywallShownAt && (
             <div className="mt-2 text-[10px] text-slate-500">
-              If you completed checkout in another tab, come back here and we’ll continue automatically.
+              If you completed checkout in another tab, come back here and we’ll
+              continue automatically.
             </div>
           )}
         </div>
@@ -429,7 +435,11 @@ export function SimpleUploadZone() {
         onKeyDown={onKeyDown}
         role="button"
         tabIndex={0}
-        aria-label={isMobile ? "Tap to select image" : "Upload image drop zone. Drag and drop a file here or click to browse."}
+        aria-label={
+          isMobile
+            ? 'Tap to select image'
+            : 'Upload image drop zone. Drag and drop a file here or click to browse.'
+        }
         className={cn(
           'relative border-2 border-dashed rounded-lg sm:rounded-xl p-4 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[160px] sm:min-h-auto',
           isUploading
@@ -497,16 +507,17 @@ export function SimpleUploadZone() {
                 <>
                   JPG, PNG, HEIC, WebP
                   <span className="text-primary text-xs font-mono mt-1 block">
-                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 free
-                    checks (no signup)
+                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
+                    free checks (no signup)
                   </span>
                 </>
               ) : (
                 <>
-                  Supports JPG, PNG, HEIC, WebP <br className="hidden sm:block" />
+                  Supports JPG, PNG, HEIC, WebP{' '}
+                  <br className="hidden sm:block" />
                   <span className="text-primary text-xs font-mono mt-1 block">
-                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 free
-                    checks (no signup)
+                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
+                    free checks (no signup)
                   </span>
                 </>
               )}

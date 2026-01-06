@@ -13,13 +13,15 @@ import {
   Settings,
   Image,
   FileImage,
-  Database
+  Database,
+  AlertTriangle
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface BatchResult {
   id: string;
   filename: string;
-  status: 'success' | 'error' | 'processing';
+  status: 'success' | 'error' | 'processing' | 'pending';
   extractionDate: string;
   fieldsExtracted: number;
   fileSize: number;
@@ -77,7 +79,9 @@ export const FileComparison: React.FC<FileComparisonProps> = ({ results }) => {
     if (keys.length === 0) {
       return (
         <div className="text-center py-8 text-slate-500">
-          No common metadata fields to compare
+          <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+          <p>No common metadata fields to compare</p>
+          <p className="text-sm mt-1">The selected files don't share metadata in this category</p>
         </div>
       );
     }
@@ -92,25 +96,50 @@ export const FileComparison: React.FC<FileComparisonProps> = ({ results }) => {
                 <th key={idx} className="text-left py-3 px-4 text-slate-300 font-medium">
                   <div className="flex items-center gap-2">
                     <FileImage className="w-4 h-4 text-primary" />
-                    <span className="truncate max-w-[120px]">{result.filename}</span>
+                    <div className="min-w-0">
+                      <div className="truncate max-w-[120px] text-white">{result.filename}</div>
+                      <div className="text-xs text-slate-400">
+                        {result.fieldsExtracted} fields
+                      </div>
+                    </div>
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {keys.map((key, idx) => (
-              <tr key={key} className={`border-b border-white/5 ${idx % 2 === 0 ? 'bg-muted/10' : ''}`}>
-                <td className="py-3 px-4 text-white font-medium capitalize">
-                  {key.replace(/_/g, ' ')}
-                </td>
-                {results.map((result, idx) => (
-                  <td key={idx} className="py-3 px-4 text-slate-200">
-                    {formatValue(result.metadata[key])}
+            {keys.map((key, idx) => {
+              const values = results.map(r => r.metadata[key]);
+              const uniqueValues = new Set(values.map(v => JSON.stringify(v)));
+              const hasDifferences = uniqueValues.size > 1;
+              
+              return (
+                <tr key={key} className={`border-b border-white/5 ${idx % 2 === 0 ? 'bg-muted/10' : ''}`}>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-medium capitalize">
+                        {key.replace(/_/g, ' ')}
+                      </span>
+                      {hasDifferences && (
+                        <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 text-xs">
+                          Different
+                        </Badge>
+                      )}
+                    </div>
                   </td>
-                ))}
-              </tr>
-            ))}
+                  {results.map((result, idx) => (
+                    <td key={idx} className="py-3 px-4">
+                      <div className={cn(
+                        "text-slate-200",
+                        hasDifferences && "bg-yellow-500/10 p-1 rounded border border-yellow-500/20"
+                      )}>
+                        {formatValue(result.metadata[key])}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

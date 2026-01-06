@@ -6,7 +6,13 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText, FileJson, FileCsv, FilePdf } from 'lucide-react';
+import {
+  Download,
+  FileText,
+  FileJson,
+  FileSpreadsheet,
+  File,
+} from 'lucide-react';
 
 export interface MetadataExportProps {
   metadata: any;
@@ -14,17 +20,19 @@ export interface MetadataExportProps {
   className?: string;
 }
 
-export const MetadataExport: React.FC<MetadataExportProps> = ({ 
-  metadata, 
+export const MetadataExport: React.FC<MetadataExportProps> = ({
+  metadata,
   fileName,
-  className = ''
+  className = '',
 }) => {
   const [isExporting, setIsExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'json' | 'csv' | 'pdf' | 'excel'>('json');
+  const [exportFormat, setExportFormat] = useState<
+    'json' | 'csv' | 'pdf' | 'excel'
+  >('json');
 
   const exportToJson = () => {
-    const blob = new Blob([JSON.stringify(metadata, null, 2)], { 
-      type: 'application/json' 
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], {
+      type: 'application/json',
     });
     downloadBlob(blob, `${fileName}.json`);
   };
@@ -69,7 +77,11 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
         if (obj.hasOwnProperty(key)) {
           const newKey = prefix ? `${prefix}.${key}` : key;
 
-          if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+          if (
+            typeof obj[key] === 'object' &&
+            obj[key] !== null &&
+            !Array.isArray(obj[key])
+          ) {
             Object.assign(flattened, flattenObj(obj[key], newKey));
           } else {
             flattened[newKey] = obj[key];
@@ -86,7 +98,7 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
 
     return [
       headers.join(','),
-      values.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+      values.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','),
     ].join('\n');
   };
 
@@ -98,7 +110,11 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
         const value = obj[key];
         const spaces = ' '.repeat(indent);
 
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value)
+        ) {
           text += `${spaces}${key}:\n`;
           text += convertToText(value, indent + 2);
         } else {
@@ -112,7 +128,7 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
 
   const handleExport = async () => {
     setIsExporting(true);
-    
+
     try {
       switch (exportFormat) {
         case 'json':
@@ -151,42 +167,42 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
             <FileJson className="w-4 h-4" />
             JSON
           </Button>
-          
+
           <Button
             variant={exportFormat === 'csv' ? 'default' : 'outline'}
             onClick={() => setExportFormat('csv')}
             className="gap-2"
           >
-            <FileCsv className="w-4 h-4" />
+            <FileSpreadsheet className="w-4 h-4" />
             CSV
           </Button>
-          
+
           <Button
             variant={exportFormat === 'pdf' ? 'default' : 'outline'}
             onClick={() => setExportFormat('pdf')}
             className="gap-2"
           >
-            <FilePdf className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             PDF
           </Button>
-          
+
           <Button
             variant={exportFormat === 'excel' ? 'default' : 'outline'}
             onClick={() => setExportFormat('excel')}
             className="gap-2"
           >
-            <FileText className="w-4 h-4" />
+            <File className="w-4 h-4" />
             Excel
           </Button>
         </div>
-        
+
         <div className="mt-4 flex justify-between items-center">
           <Badge variant="outline" className="text-xs">
             Format: {exportFormat.toUpperCase()}
           </Badge>
-          
-          <Button 
-            onClick={handleExport} 
+
+          <Button
+            onClick={handleExport}
             disabled={isExporting}
             className="gap-2"
           >

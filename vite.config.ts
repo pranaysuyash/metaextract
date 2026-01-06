@@ -1,9 +1,9 @@
-import { defineConfig, type UserConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { metaImagesPlugin } from "./vite-plugin-meta-images";
+import { defineConfig, type UserConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import path from 'path';
+import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+import { metaImagesPlugin } from './vite-plugin-meta-images';
 
 function buildDevCsp(): string {
   // Dev CSP must allow Vite HMR + React refresh + Google Fonts.
@@ -19,7 +19,7 @@ function buildDevCsp(): string {
     "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
-  ].join("; ");
+  ].join('; ');
 }
 
 export default defineConfig(async ({ mode }): Promise<UserConfig> => {
@@ -31,11 +31,14 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   ];
 
   // Conditionally add development plugins
-  if (process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined) {
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.REPL_ID !== undefined
+  ) {
     try {
       const [cartographerModule, devBannerModule] = await Promise.all([
-        import("@replit/vite-plugin-cartographer"),
-        import("@replit/vite-plugin-dev-banner")
+        import('@replit/vite-plugin-cartographer'),
+        import('@replit/vite-plugin-dev-banner'),
       ]);
 
       plugins.push(
@@ -43,7 +46,8 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
         devBannerModule.devBanner()
       );
     } catch (error) {
-      console.warn('Development plugins not available:', error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('Development plugins not available:', message);
     }
   }
 
@@ -51,9 +55,9 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     plugins,
     resolve: {
       alias: {
-        "@": path.resolve(import.meta.dirname, "client", "src"),
-        "@shared": path.resolve(import.meta.dirname, "shared"),
-        "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+        '@': path.resolve(import.meta.dirname, 'client', 'src'),
+        '@shared': path.resolve(import.meta.dirname, 'shared'),
+        '@assets': path.resolve(import.meta.dirname, 'attached_assets'),
       },
     },
     css: {
@@ -61,26 +65,26 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
         plugins: [],
       },
     },
-    root: path.resolve(import.meta.dirname, "client"),
+    root: path.resolve(import.meta.dirname, 'client'),
     build: {
-      outDir: path.resolve(import.meta.dirname, "dist/public"),
+      outDir: path.resolve(import.meta.dirname, 'dist/public'),
       emptyOutDir: true,
     },
     // Cache busting for development
     cacheDir: 'node_modules/.vite-cache-v2-update',
     server: {
-      host: "0.0.0.0",
-      open: true,  // Automatically open the browser when starting the dev server
+      host: '0.0.0.0',
+      open: true, // Automatically open the browser when starting the dev server
       allowedHosts: true,
       headers:
-        mode !== "production"
+        mode !== 'production'
           ? {
-              "Content-Security-Policy": buildDevCsp(),
+              'Content-Security-Policy': buildDevCsp(),
             }
           : undefined,
       proxy: {
-        "/api": {
-          target: "http://localhost:3000",
+        '/api': {
+          target: 'http://localhost:3000',
           changeOrigin: true,
           secure: false,
           ws: true,
@@ -88,7 +92,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
       },
       fs: {
         strict: true,
-        deny: ["**/.*"],
+        deny: ['**/.*'],
       },
     },
   };

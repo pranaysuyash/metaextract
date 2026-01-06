@@ -97,10 +97,6 @@ interface MvpMetadata {
   calculated?: Record<string, unknown> | null;
   processing_ms?: number;
   fields_extracted?: number;
-  access: { trial_granted: boolean; trial_email_present: boolean };
-  _trial_limited?: boolean;
-  client_last_modified_iso?: string;
-  registry_summary?: Record<string, unknown>;
   quality_metrics?: {
     confidence_score?: number;
     extraction_completeness?: number;
@@ -110,6 +106,11 @@ interface MvpMetadata {
     total_fields_extracted?: number;
     processing_time_ms?: number;
   };
+  access: { trial_granted: boolean; trial_email_present: boolean };
+  _trial_limited?: boolean;
+  client_last_modified_iso?: string;
+  registry_summary?: Record<string, unknown>;
+  locked_fields?: string[];
   [key: string]: unknown;
 }
 
@@ -895,6 +896,12 @@ export default function ImagesMvpResults() {
     },
   ].filter(group => group.count > 0);
   const lockedTotal = lockedGroups.reduce((sum, group) => sum + group.count, 0);
+  const lockedFields = Array.isArray(metadata.locked_fields)
+    ? metadata.locked_fields
+        .filter((field): field is string => typeof field === 'string')
+        .map(field => field.trim())
+        .filter(field => field.length > 0)
+    : [];
 
   const imageWidth = metadata.exif?.ImageWidth;
   const imageHeight = metadata.exif?.ImageHeight ?? metadata.exif?.ImageLength;
@@ -1167,6 +1174,37 @@ export default function ImagesMvpResults() {
               {/* TODO: Add Upgrade Button if this was a paid feature MVP */}
             </motion.div>
           )}
+          {isTrialLimited && lockedFields.length > 0 && (
+            <Card className="mb-6 bg-[#121217] border-white/10">
+              <CardHeader>
+                <CardTitle className="text-sm font-mono text-slate-200">
+                  LOCKED FIELDS PREVIEW
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-400">
+                  Field names are visible, values are hidden. {lockedFields.length} total locked
+                  fields.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {lockedFields.slice(0, 12).map(field => (
+                    <div
+                      key={field}
+                      className="flex items-center justify-between border border-white/5 rounded px-3 py-2 bg-white/5"
+                    >
+                      <span className="text-slate-200 truncate pr-2">{field}</span>
+                      <span className="text-slate-500">•••</span>
+                    </div>
+                  ))}
+                </div>
+                {lockedFields.length > 12 && (
+                  <div className="text-xs text-slate-500">
+                    +{lockedFields.length - 12} more locked fields hidden
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           {formatHint && (
             <Card className={`mb-6 border ${formatToneClass}`}>
               <CardContent className="pt-6 flex items-start gap-3 text-sm">
@@ -1269,7 +1307,7 @@ export default function ImagesMvpResults() {
               {(fieldsExtracted || processingMs) && (
                 <div className="pt-2 text-xs text-slate-500 font-mono">
                   {fieldsExtracted
-                    ? (`${fieldsExtracted} fields extracted` as React.ReactNode)
+                    ? `${fieldsExtracted} fields extracted`
                     : null}
                   {fieldsExtracted && processingMs ? ' • ' : null}
                   {processingMs ? `${Math.round(processingMs)} ms` : null}

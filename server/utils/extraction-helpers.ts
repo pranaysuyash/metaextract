@@ -129,10 +129,9 @@ export interface PythonMetadataResponse {
   environmental_sustainability?: Record<string, any> | null;
   social_media_digital?: Record<string, any> | null;
   gaming_entertainment?: Record<string, any> | null;
+  forensic_analysis_integration?: Record<string, any> | null;
   // Email and Communication metadata
   email?: EmailMetadata | null;
-  // Phase 3.1 Integration
-  forensic_analysis_integration?: Record<string, any> | null;
   error?: string;
 }
 
@@ -315,37 +314,7 @@ export interface FrontendMetadataResponse {
     forensic_score: number;
     authenticity_assessment: string;
   };
-  forensic_analysis_integration?: {
-    enabled: boolean;
-    processing_time_ms: number;
-    modules_analyzed: string[];
-    confidence_scores: Record<string, number>;
-    forensic_score: number;
-    authenticity_assessment: string;
-    risk_indicators: Array<{
-      module: string;
-      risk_level: string;
-      confidence: number;
-      description: string;
-    }>;
-    visualization_data: {
-      forensic_score_gauge: {
-        score: number;
-        color: string;
-        label: string;
-      };
-      module_breakdown: Record<string, {
-        confidence: number;
-        color: string;
-        label: string;
-      }>;
-      risk_chart: {
-        labels: string[];
-        data: number[];
-        colors: string[];
-      };
-    };
-  };
+  forensic_analysis_integration?: Record<string, any> | null;
   persona_interpretation?: PersonaInterpretation;
   // Email and Communication metadata
   email: EmailMetadata | null;
@@ -594,7 +563,7 @@ export function transformMetadataForFrontend(
     gaming_entertainment: raw.gaming_entertainment ?? null,
 
     // Email and Communication metadata
-    email: raw.email ?? null,
+    email: raw.email?._locked ? { _locked: true } : raw.email ?? null,
 
     // Persona interpretation (if available from Python backend)
     persona_interpretation: (raw as any).persona_interpretation ?? undefined,

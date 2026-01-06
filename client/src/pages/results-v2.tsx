@@ -140,6 +140,37 @@ export default function ResultsV2() {
             }
           : undefined;
 
+      // Extract forensic analysis data if available
+      const forensicAnalysis = metadata.steganography_analysis || metadata.manipulation_detection || metadata.ai_detection
+        ? {
+            steganography: metadata.steganography_analysis ? {
+              detected: metadata.steganography_analysis.suspicious_score > 0.3,
+              confidence: Math.round((metadata.steganography_analysis.suspicious_score || 0) * 100),
+              methodsChecked: metadata.steganography_analysis.methods_checked || ['LSB Analysis', 'FFT Analysis'],
+              findings: metadata.steganography_analysis.findings || [],
+              details: metadata.steganography_analysis.analysis_details,
+            } : undefined,
+            manipulation: metadata.manipulation_detection ? {
+              detected: metadata.manipulation_detection.manipulation_probability > 0.5,
+              confidence: Math.round((metadata.manipulation_detection.manipulation_probability || 0) * 100),
+              indicators: metadata.manipulation_detection.indicators?.map((indicator: any) => ({
+                type: indicator.type || 'Manipulation',
+                severity: indicator.severity || (indicator.confidence > 0.7 ? 'high' : indicator.confidence > 0.4 ? 'medium' : 'low'),
+                description: indicator.description || 'Manipulation detected',
+                confidence: Math.round((indicator.confidence || 0) * 100),
+              })) || [],
+              originalityScore: metadata.manipulation_detection.originality_score ? Math.round(metadata.manipulation_detection.originality_score * 100) : undefined,
+            } : undefined,
+            aiDetection: metadata.ai_detection ? {
+              aiGenerated: metadata.ai_detection.ai_probability > 0.7,
+              confidence: Math.round((metadata.ai_detection.ai_probability || 0) * 100),
+              modelHints: metadata.ai_detection.model_hints || [],
+              detectionMethods: metadata.ai_detection.detection_methods || ['Neural Network Analysis'],
+            } : undefined,
+            authenticityScore: metadata.advanced_analysis?.forensic_score || metadata.forensic_score || 100,
+          }
+        : undefined;
+
       // Extract advanced metadata (keep all original fields so advanced view is consistent)
       const advancedMetadata = {
         ...metadata,
@@ -150,6 +181,7 @@ export default function ResultsV2() {
         quickDetails,
         location: locationData,
         advancedMetadata,
+        forensicAnalysis,
       };
     }, [metadata]);
 
@@ -375,9 +407,15 @@ export default function ResultsV2() {
               )}
             >
               {isMobile ? (
-                <ProgressiveDisclosureMobile data={progressiveDisclosureData} />
+                <ProgressiveDisclosureMobile 
+                  data={progressiveDisclosureData} 
+                  showForensicAnalysis={metadata?.tier === 'forensic' || metadata?.tier === 'enterprise' || metadata?.tier === 'professional' || import.meta.env.DEV}
+                />
               ) : (
-                <ProgressiveDisclosure data={progressiveDisclosureData} />
+                <ProgressiveDisclosure 
+                  data={progressiveDisclosureData} 
+                  showForensicAnalysis={metadata?.tier === 'forensic' || metadata?.tier === 'enterprise' || metadata?.tier === 'professional' || import.meta.env.DEV}
+                />
               )}
             </div>
           )}

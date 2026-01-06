@@ -21,12 +21,24 @@ const DODO_WEBHOOK_SECRET =
   process.env.DODO_WEBHOOK_SECRET || process.env.DOOD_WEBHOOK_SECRET;
 const IS_TEST_MODE = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live';
 
-const dodoClient = DODO_API_KEY
-  ? new DodoPayments({
-      bearerToken: DODO_API_KEY,
-      environment: IS_TEST_MODE ? 'test_mode' : 'live_mode',
-    })
-  : null;
+function getDodoClient() {
+  const apiKey =
+    process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
+  const env = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
+    ? 'test_mode'
+    : 'live_mode';
+  if (!apiKey) return null;
+
+  const cacheKey = `${apiKey}:${env}`;
+  const cached = (getDodoClient as any)._cached as
+    | { cacheKey: string; client: any }
+    | undefined;
+  if (cached?.cacheKey === cacheKey) return cached.client;
+
+  const client = new DodoPayments({ bearerToken: apiKey, environment: env });
+  (getDodoClient as any)._cached = { cacheKey, client };
+  return client;
+}
 
 // ============================================================================
 // Product IDs from Dodo Dashboard
@@ -178,6 +190,7 @@ export function registerPaymentRoutes(app: Express) {
     '/api/checkout/create-session',
     async (req: Request, res: Response) => {
       try {
+        const dodoClient = getDodoClient();
         if (!dodoClient) {
           return res.status(503).json({
             error: 'Payment system not configured',
@@ -255,6 +268,7 @@ export function registerPaymentRoutes(app: Express) {
 
   app.post('/api/credits/purchase', async (req: Request, res: Response) => {
     try {
+      const dodoClient = getDodoClient();
       if (!dodoClient) {
         return res.status(503).json({
           error: 'Payment system not configured',
@@ -561,6 +575,7 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(404).json({ error: 'Not found' });
       }
 
+      const dodoClient = getDodoClient();
       if (!dodoClient) {
         return res.status(503).json({
           error: 'Payment system not configured',
@@ -642,6 +657,7 @@ export function registerPaymentRoutes(app: Express) {
 
   app.post('/api/subscription/cancel', async (req: Request, res: Response) => {
     try {
+      const dodoClient = getDodoClient();
       if (!dodoClient) {
         return res.status(503).json({ error: 'Payment system not configured' });
       }

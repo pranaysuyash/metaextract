@@ -9,15 +9,18 @@ import {
   FileSpreadsheet, 
   Database,
   Hash,
-  Eye
+  Eye,
+  Clock
 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { cn } from '@/lib/utils';
 
 interface BatchResult {
   id: string;
   filename: string;
-  status: 'success' | 'error' | 'processing';
+  status: 'success' | 'error' | 'processing' | 'pending';
   extractionDate: string;
   fieldsExtracted: number;
   fileSize: number;
@@ -26,11 +29,22 @@ interface BatchResult {
   metadata: Record<string, any>;
 }
 
-interface BatchStatsProps {
+interface BatchJob {
+  id: string;
+  name: string;
+  createdAt: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  totalFiles: number;
+  processedFiles: number;
   results: BatchResult[];
 }
 
-export const BatchStats: React.FC<BatchStatsProps> = ({ results }) => {
+interface BatchStatsProps {
+  results: BatchResult[];
+  batchJob?: BatchJob;
+}
+
+export const BatchStats: React.FC<BatchStatsProps> = ({ results, batchJob }) => {
   // Calculate statistics
   const totalFiles = results.length;
   const successfulFiles = results.filter(r => r.status === 'success').length;
@@ -81,6 +95,59 @@ export const BatchStats: React.FC<BatchStatsProps> = ({ results }) => {
 
   return (
     <div className="space-y-6">
+      {/* Batch Job Information */}
+      {batchJob && (
+        <Card className="bg-card border-white/10">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Batch Job Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-slate-300">Job ID</p>
+                <p className="text-sm font-mono text-white">{batchJob.id.slice(0, 8)}...</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-slate-300">Created</p>
+                <p className="text-sm text-white">
+                  {new Date(batchJob.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-slate-300">Status</p>
+                <Badge 
+                  variant="secondary" 
+                  className={cn(
+                    "capitalize",
+                    batchJob.status === 'completed' && "bg-emerald-500/20 text-emerald-400",
+                    batchJob.status === 'failed' && "bg-red-500/20 text-red-400",
+                    batchJob.status === 'processing' && "bg-yellow-500/20 text-yellow-400 animate-pulse",
+                    batchJob.status === 'pending' && "bg-blue-500/20 text-blue-400"
+                  )}
+                >
+                  {batchJob.status}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-slate-300">Progress</p>
+                <div className="flex items-center gap-2">
+                  <Progress 
+                    value={(batchJob.processedFiles / batchJob.totalFiles) * 100} 
+                    className="h-2 flex-1"
+                  />
+                  <span className="text-sm text-white">
+                    {batchJob.processedFiles}/{batchJob.totalFiles}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-card border-white/10">

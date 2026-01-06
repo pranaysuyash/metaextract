@@ -1,45 +1,8 @@
 import { IStorage } from './types';
 import { MemStorage } from './mem';
+import { DatabaseStorage } from './db';
 import { createObjectStorage, IObjectStorage } from './objectStorage';
 import { isDatabaseConnected } from '../db';
-
-// DatabaseStorage is disabled - use MemStorage instead
-class DatabaseStorage implements IStorage {
-  constructor(objectStorage: IObjectStorage) {
-    throw new Error('DatabaseStorage is disabled');
-  }
-  async getUser(id: string) { return undefined; }
-  async getUserByUsername(username: string) { return undefined; }
-  async createUser(user: any) { return null as any; }
-  async logExtractionUsage(data: any) {}
-  async getAnalyticsSummary() { return {} as any; }
-  async getRecentExtractions(limit?: number) { return []; }
-  async logUiEvent(data: any) {}
-  async getUiEvents(params?: any) { return []; }
-  async getOrCreateCreditBalance(sessionId: string, userId?: string) { return {} as any; }
-  async getCreditBalanceBySessionId(sessionId: string) { return undefined; }
-  async getCreditBalance(balanceId: string) { return undefined; }
-  async getCreditGrantByPaymentId(paymentId: string) { return undefined; }
-  async addCredits(balanceId: string, amount: number, description: string, paymentId?: string) { return {} as any; }
-  async transferCredits(fromBalanceId: string, toBalanceId: string, amount: number, description: string) {}
-  async useCredits(balanceId: string, amount: number, description: string, fileType?: string) { return null; }
-  async getCreditTransactions(balanceId: string, limit?: number) { return []; }
-  async getOnboardingSession(userId: string) { return undefined; }
-  async createOnboardingSession(data: any) { return null as any; }
-  async updateOnboardingSession(sessionId: string, updates: any) {}
-  async hasTrialUsage(email: string) { return false; }
-  async recordTrialUsage(data: any) { return {} as any; }
-  async getTrialUsageByEmail(email: string) { return undefined; }
-  async saveMetadata(data: any) { return {} as any; }
-  async getMetadata(id: string) { return undefined; }
-  async get(key: string) { return undefined; }
-  async set(key: string, value: any) {}
-  async incr(key: string) { return 0; }
-  async expire(key: string, seconds: number) {}
-  async lpush(key: string, ...values: any[]) { return 0; }
-  async ltrim(key: string, start: number, stop: number) {}
-  async lrange(key: string, start: number, stop: number) { return []; }
-}
 
 // Use MemStorage for development when DATABASE_URL is placeholder or missing
 const isDatabaseConfigured =

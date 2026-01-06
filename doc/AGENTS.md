@@ -3,11 +3,13 @@
 ## Build, Test & Lint Commands
 
 **Install dependencies:**
+
 ```bash
 npm install && pip install -r requirements.txt
 ```
 
 **Run single test:**
+
 ```bash
 # JavaScript tests
 npm test -- --testNamePattern="test name"
@@ -22,11 +24,13 @@ pytest tests/ -k "test_name" -v
 ## Architecture
 
 **Full-stack monorepo:**
+
 - **Server** (TypeScript/Express): `server/` — REST API, auth, file uploads, OCR pipeline
 - **Client** (React/Vite): `client/src/` — Web UI with real-time metadata display
 - **Extractor** (Python): `server/extractor/` — 10 extraction engines for 7,000+ metadata fields
 
 **Key subsystems:**
+
 - `comprehensive_metadata_engine.py` — Multi-domain metadata extraction (Medical DICOM, Astronomical FITS, Geospatial GeoTIFF, Scientific HDF5/NetCDF, Video, Audio, AI detection)
 - `module_discovery.py` — Dynamic plugin loading from `server/extractor/modules/`
 - `server/routes/` — REST endpoints for file extraction (`/extract`, `/batch`)
@@ -56,6 +60,7 @@ pytest tests/ -k "test_name" -v
 **Issue Resolution:** Prioritize fixing/implementing over deletion. Understand root cause before modifying code.
 
 **Git Hygiene (multi-agent safety):**
+
 - **ALWAYS use `git add -A` before committing** (standard practice to avoid leaving untracked/modified files behind). This ensures all changes—staged and unstaged—are included in the commit, preventing workflow fragmentation across agent sessions.
 - Alternative: Explicitly run `git stash push -u` if you need to preserve work without committing (keeps working tree clean).
 - Never run destructive git/cleanup commands (e.g. `git clean`, `git reset --hard`, deleting files/folders) unless the user explicitly asks for it.

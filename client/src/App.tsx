@@ -120,7 +120,14 @@ function AppRouter() {
           <Route path="/images_mvp" element={<ImagesMvpLanding />} />
           <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
           <Route path="/images_mvp/credits/success" element={<ImagesMvpCreditsSuccess />} />
-          <Route path="/images_mvp/analytics" element={<ImagesMvpAnalytics />} />
+          <Route
+            path="/images_mvp/analytics"
+            element={
+              <ProtectedRoute>
+                <ImagesMvpAnalytics />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/images-mvp" element={<Navigate to="/images_mvp" replace />} />
           <Route path="/images-mvp/results" element={<Navigate to="/images_mvp/results" replace />} />
           <Route path="/images-mvp/credits/success" element={<Navigate to="/images_mvp/credits/success" replace />} />

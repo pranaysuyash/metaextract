@@ -2,6 +2,23 @@
  * Onboarding Types - Interfaces for the intelligent onboarding system
  */
 
+import type {
+  User as SchemaUser,
+  InsertUser as SchemaInsertUser,
+  InsertExtractionAnalytics as SchemaInsertExtractionAnalytics,
+  ExtractionAnalytics as SchemaExtractionAnalytics,
+  CreditBalance as SchemaCreditBalance,
+  CreditGrant as SchemaCreditGrant,
+  CreditTransaction as SchemaCreditTransaction,
+  InsertUiEvent as SchemaInsertUiEvent,
+  UiEvent as SchemaUiEvent,
+  OnboardingSession as SchemaOnboardingSession,
+  InsertOnboardingSession as SchemaInsertOnboardingSession,
+  TrialUsage as SchemaTrialUsage,
+  InsertTrialUsage as SchemaInsertTrialUsage,
+  MetadataResult as SchemaMetadataResult,
+} from '@shared/schema';
+
 export interface OnboardingStep {
   id: string;
   title: string;
@@ -56,6 +73,35 @@ export type OnboardingEvent =
   | { type: 'help:viewed'; helpId: string }
   | { type: 'progress:updated'; progress: OnboardingProgress };
 
+export interface BatchJob {
+  id: string;
+  userId: string;
+  name: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  totalFiles: number;
+  processedFiles: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+
+export interface BatchResult {
+  id: string;
+  batchId: string;
+  filename: string;
+  status: 'success' | 'error' | 'processing' | 'pending';
+  extractionDate: string;
+  fieldsExtracted: number;
+  fileSize: number;
+  fileType: string;
+  authenticityScore?: number;
+  metadata: Record<string, any>;
+  processingTime?: number;
+  errorMessage?: string;
+  createdAt: string;
+}
+
 export interface IStorage {
   // User system
   getUser(id: string): Promise<User | undefined>;
@@ -66,7 +112,7 @@ export interface IStorage {
   getUserById?(id: string): Promise<User | undefined>;
   getUserByEmail?(email: string): Promise<User | undefined>;
   updateUserPassword?(userId: string, newPassword: string): Promise<void>;
-  updateUserProfile?(userId: string, profile: Partial<User>): Promise<void>;
+  updateUserProfile?(userId: string, profile: Partial<User>): Promise<User>;
   setPasswordResetToken?(userId: string, token: string, expiresAt: Date): Promise<void>;
   getUserByResetToken?(token: string): Promise<User | undefined>;
   resetFailedLoginAttempts?(userId: string): Promise<void>;
@@ -153,13 +199,13 @@ export interface IStorage {
   updatePassword?(userId: string, hashedPassword: string): Promise<void>;
 
   // Storage-specific methods for caching
-  get?(key: string): Promise<any>;
-  set?(key: string, value: any): Promise<void>;
-  incr?(key: string): Promise<number>;
-  expire?(key: string, seconds: number): Promise<void>;
-  lpush?(key: string, ...values: any[]): Promise<number>;
-  ltrim?(key: string, start: number, stop: number): Promise<void>;
-  lrange?(key: string, start: number, stop: number): Promise<any[]>;
+  get(key: string): Promise<any>;
+  set(key: string, value: any): Promise<void>;
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<void>;
+  lpush(key: string, ...values: any[]): Promise<number>;
+  ltrim(key: string, start: number, stop: number): Promise<void>;
+  lrange(key: string, start: number, stop: number): Promise<any[]>;
 
   // Additional storage methods that may be referenced
   getUserById?(id: string): Promise<User | undefined>;
@@ -217,6 +263,18 @@ export interface IStorage {
   getExtractionHistoryByRequestedAtAndFile?(date: Date, fileId: string): Promise<any[]>;
   getExtractionHistoryByCreatedAtAndFile?(date: Date, fileId: string): Promise<any[]>;
   getExtractionHistoryByUpdatedAtAndFile?(date: Date, fileId: string): Promise<any[]>;
+
+  // Batch processing system
+  getBatchJobs(userId: string): Promise<BatchJob[]>;
+  getBatchJob(jobId: string): Promise<BatchJob | undefined>;
+  createBatchJob(job: Omit<BatchJob, 'id' | 'createdAt' | 'updatedAt'>): Promise<BatchJob>;
+  updateBatchJob(jobId: string, updates: Partial<BatchJob>): Promise<void>;
+  getBatchResults(batchId: string): Promise<BatchResult[]>;
+  getBatchResult(resultId: string): Promise<BatchResult | undefined>;
+  createBatchResult(result: Omit<BatchResult, 'id' | 'createdAt'>): Promise<BatchResult>;
+  updateBatchResult(resultId: string, updates: Partial<BatchResult>): Promise<void>;
+  deleteBatchJob(jobId: string): Promise<void>;
+  deleteBatchResults(batchId: string): Promise<void>;
 }
 
 export interface MetadataObjectRef extends ObjectInfo {}
@@ -234,38 +292,21 @@ export interface StoredMetadata extends MetadataResult {
   metadataRef: MetadataObjectRef | null;
 }
 
-// Missing types that were referenced
-export interface User {
-  id: string;
-  email: string;
-  password: string;
-  username: string;
-  tier: string;
-  subscriptionId: string | null;
-  subscriptionStatus: string | null;
-  customerId: string | null;
-  createdAt: Date;
-  updatedAt?: Date;
-  firstName?: string;
-  lastName?: string;
-  emailVerified?: boolean;
-  twoFactorEnabled?: boolean;
-  failedLoginAttempts?: number;
-  lastFailedLoginAttempt?: Date;
-  twoFactorSecret?: string;
-}
-
-export interface InsertUser {
-  email: string;
-  password: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  tier?: string;
-  subscriptionId?: string | null;
-  subscriptionStatus?: string | null;
-  customerId?: string | null;
-}
+// Re-export shared schema types to avoid drift
+export type User = SchemaUser;
+export type InsertUser = SchemaInsertUser;
+export type InsertExtractionAnalytics = SchemaInsertExtractionAnalytics;
+export type ExtractionAnalytics = SchemaExtractionAnalytics;
+export type CreditBalance = SchemaCreditBalance;
+export type CreditGrant = SchemaCreditGrant;
+export type CreditTransaction = SchemaCreditTransaction;
+export type InsertUiEvent = SchemaInsertUiEvent;
+export type UiEvent = SchemaUiEvent;
+export type OnboardingSession = SchemaOnboardingSession;
+export type InsertOnboardingSession = SchemaInsertOnboardingSession;
+export type TrialUsage = SchemaTrialUsage;
+export type InsertTrialUsage = SchemaInsertTrialUsage;
+export type MetadataResult = SchemaMetadataResult;
 
 export interface AnalyticsSummary {
   totalExtractions: number;
@@ -285,154 +326,6 @@ export interface AnalyticsSummary {
   successRate: number;
 }
 
-export interface InsertExtractionAnalytics {
-  tier: string;
-  fileExtension: string;
-  mimeType: string;
-  fileSizeBytes: number;
-  isVideo: boolean;
-  isImage: boolean;
-  isPdf: boolean;
-  isAudio: boolean;
-  fieldsExtracted: number;
-  processingMs: number;
-  success: boolean;
-  failureReason?: string;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
-export interface ExtractionAnalytics {
-  id: string;
-  tier: string;
-  fileExtension: string;
-  mimeType: string;
-  fileSizeBytes: number;
-  isVideo: boolean;
-  isImage: boolean;
-  isPdf: boolean;
-  isAudio: boolean;
-  fieldsExtracted: number;
-  processingMs: number;
-  success: boolean;
-  failureReason?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  requestedAt: Date;
-}
-
-export interface CreditBalance {
-  id: string;
-  userId: string | null;
-  sessionId: string;
-  credits: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreditGrant {
-  id: string;
-  balanceId: string;
-  amount: number;
-  remaining: number;
-  description?: string;
-  pack?: string;
-  dodoPaymentId?: string;
-  createdAt: Date;
-  expiresAt?: Date;
-}
-
-export interface CreditTransaction {
-  id: string;
-  balanceId: string;
-  grantId?: string;
-  type: string; // 'purchase', 'usage', 'refund'
-  amount: number;
-  description?: string;
-  fileType?: string;
-  dodoPaymentId?: string;
-  createdAt: Date;
-}
-
-export interface InsertUiEvent {
-  product: string;
-  eventName: string;
-  sessionId?: string;
-  userId?: string;
-  properties: any;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
-export interface UiEvent {
-  id: string;
-  product: string;
-  eventName: string;
-  sessionId?: string;
-  userId?: string;
-  properties: any;
-  ipAddress?: string;
-  userAgent?: string;
-  createdAt: Date;
-}
-
-export interface OnboardingSession {
-  id: string;
-  userId: string;
-  startedAt: Date;
-  completedAt?: Date;
-  currentStep: number;
-  pathId: string;
-  userProfile: string; // JSON string
-  progress: string; // JSON string
-  interactions: string; // JSON array
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface InsertOnboardingSession {
-  userId?: string;
-  startedAt?: Date;
-  completedAt?: Date;
-  currentStep?: number;
-  pathId: string;
-  userProfile: string; // JSON string
-  progress: string; // JSON string
-  interactions?: string; // JSON array
-  isActive?: boolean;
-}
-
-export interface TrialUsage {
-  id: string;
-  email: string;
-  uses: number;
-  usedAt: Date;
-  ipAddress?: string;
-  userAgent?: string;
-  sessionId?: string;
-}
-
-export interface InsertTrialUsage {
-  email: string;
-  ipAddress?: string;
-  userAgent?: string;
-  sessionId?: string;
-}
-
-export interface MetadataResult {
-  id: string;
-  userId: string | null;
-  fileName: string;
-  fileSize?: string;
-  mimeType?: string;
-  metadataSummary: Record<string, unknown>;
-  metadataRef: any | null;
-  metadataSha256?: string;
-  metadataSizeBytes?: number;
-  metadataContentType?: string;
-  createdAt: Date;
-}
 
 export interface SaveMetadataInput {
   userId?: string;
