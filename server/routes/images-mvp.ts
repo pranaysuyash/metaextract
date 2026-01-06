@@ -4,6 +4,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import { fileTypeFromBuffer } from 'file-type';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
@@ -36,6 +37,8 @@ import { rateLimitExtraction } from '../rateLimitMiddleware';
 import { processImageBuffer } from '../utils/exif-stripper';
 import { type AuthRequest as ServerAuthRequest } from '../auth';
 import { getOrSetSessionId } from '../utils/session-id';
+import { getTrustedAppOrigin } from '../utils/trusted-app-origin';
+import { adminProtectionMiddleware } from '../middleware/admin-auth';
 
 // WebSocket progress tracking
 interface ProgressConnection {
@@ -157,8 +160,19 @@ function cleanupConnections(sessionId: string) {
   }
 }
 
+// Use disk storage to prevent DoS via memory exhaustion
+const uploadDir = path.join(os.tmpdir(), 'metaextract-uploads');
+fs.mkdir(uploadDir, { recursive: true }).catch(e => console.warn('Failed to create upload dir:', e));
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, cb) => {
+      const hash = crypto.randomBytes(8).toString('hex');
+      const sanitized = sanitizeFilename(file.originalname).replace(/[^a-z0-9._-]/gi, '_');
+      cb(null, `${hash}-${Date.now()}-${sanitized}`);
+    },
+  }),
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB Limit for images
   },
@@ -434,10 +448,10 @@ export function registerImagesMvpRoutes(app: Express) {
             product: 'images_mvp',
             eventName: event,
             sessionId,
-            userId: null,
+            userId: undefined,
             properties,
-            ipAddress: req.ip || req.socket.remoteAddress || null,
-            userAgent: req.headers['user-agent'] || null,
+            ipAddress: req.ip || req.socket.remoteAddress,
+            userAgent: req.headers['user-agent'],
           });
         } catch (error) {
           // Analytics is non-critical; fail open for unsigned users
@@ -460,6 +474,10 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.get(
     '/api/images_mvp/analytics/report',
+    (req, res, next) => {
+      if (process.env.NODE_ENV !== 'production') return next();
+      return adminProtectionMiddleware(req, res, next);
+    },
     async (req: Request, res: Response) => {
       try {
         const periodQuery =
@@ -899,7 +917,7 @@ export function registerImagesMvpRoutes(app: Express) {
         const packInfo =
           IMAGES_MVP_CREDIT_PACKS[pack as keyof typeof IMAGES_MVP_CREDIT_PACKS];
 
-        const baseUrl = getBaseUrl();
+        const baseUrl = getTrustedAppOrigin(req) ?? getBaseUrl();
 
         // Ensure product is valid
         if (!packInfo || !packInfo.productId) {
@@ -1003,7 +1021,8 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Magic-byte validation: verify actual file content matches claimed type
-        const detectedType = await fileTypeFromBuffer(req.file.buffer);
+        const fileBuffer = req.file.buffer || (await fs.readFile(req.file.path));
+        const detectedType = await fileTypeFromBuffer(fileBuffer);
         if (detectedType && !SUPPORTED_IMAGE_MIMES.has(detectedType.mime)) {
           // File content doesn't match a supported image type
           return res.status(400).json({
@@ -1093,7 +1112,7 @@ export function registerImagesMvpRoutes(app: Express) {
             }
 
             const usage = await getClientUsage(decoded.clientId);
-            const freeUsed = usage?.freeUsed || 0;
+            const freeUsed = usage?.free_used || 0;
             const freeLimit = 2;
 
             if (freeUsed < freeLimit) {
@@ -1129,7 +1148,12 @@ export function registerImagesMvpRoutes(app: Express) {
           tempDir,
           `${crypto.randomUUID()}-${sanitizedFilename}`
         );
-        await fs.writeFile(tempPath, req.file.buffer);
+        // If file is already on disk (diskStorage), move it; otherwise write from buffer
+        if (req.file.path) {
+          await fs.copyFile(req.file.path, tempPath);
+        } else {
+          await fs.writeFile(tempPath, req.file.buffer);
+        }
 
         // Send initial progress update
         if (sessionId) {
@@ -1272,8 +1296,8 @@ export function registerImagesMvpRoutes(app: Express) {
             fieldsExtracted: metadata.fields_extracted || 0,
             processingMs,
             success: true,
-            ipAddress: req.ip || req.socket.remoteAddress || null,
-            userAgent: req.headers['user-agent'] || null,
+            ipAddress: req.ip || req.socket.remoteAddress,
+            userAgent: req.headers['user-agent'],
           })
           .catch(console.error);
 

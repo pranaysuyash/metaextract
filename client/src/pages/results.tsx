@@ -919,7 +919,7 @@ export default function Results() {
   // Show loading state while fetching metadata
   if (loading) {
     return (
-      <UIAdaptationProvider initialMetadata={null}>
+      <UIAdaptationProvider initialMetadata={undefined}>
         <Layout>
           <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
             <div className="flex flex-col items-center gap-4">
@@ -936,7 +936,7 @@ export default function Results() {
   // Show error state if there was an error
   if (error) {
     return (
-      <UIAdaptationProvider initialMetadata={null}>
+      <UIAdaptationProvider initialMetadata={undefined}>
         <Layout>
           <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
             <div className="max-w-md w-full bg-red-900/30 border border-red-700/50 rounded-lg p-6 text-center">

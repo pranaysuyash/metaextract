@@ -131,6 +131,8 @@ export interface PythonMetadataResponse {
   gaming_entertainment?: Record<string, any> | null;
   // Email and Communication metadata
   email?: EmailMetadata | null;
+  // Phase 3.1 Integration
+  forensic_analysis_integration?: Record<string, any> | null;
   error?: string;
 }
 

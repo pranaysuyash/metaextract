@@ -44,6 +44,7 @@ export function SimpleUploadZone() {
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const navigate = useNavigate();
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
@@ -91,6 +92,14 @@ export function SimpleUploadZone() {
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [checkCreditsAndMaybeResume]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -190,13 +199,13 @@ export function SimpleUploadZone() {
     setCurrentSessionId(sessionId);
     setShowProgressTracker(true);
     const formData = new FormData();
-    formData.append('file', file);
+    
+    // Append metadata fields BEFORE file to ensure streaming parsers see them first
+    formData.append('session_id', sessionId);
     if (file.lastModified) {
       formData.append('client_last_modified', String(file.lastModified));
     }
-
-    // Add session ID for WebSocket progress tracking
-    formData.append('session_id', sessionId);
+    formData.append('file', file);
 
     const sizeBucket = getFileSizeBucket(file.size);
     const mimeType = file.type || 'application/octet-stream';
@@ -410,7 +419,7 @@ export function SimpleUploadZone() {
         </div>
       )}
 
-      <div
+      <label
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
@@ -420,9 +429,9 @@ export function SimpleUploadZone() {
         onKeyDown={onKeyDown}
         role="button"
         tabIndex={0}
-        aria-label="Upload image drop zone. Drag and drop a file here or press enter to browse."
+        aria-label={isMobile ? "Tap to select image" : "Upload image drop zone. Drag and drop a file here or click to browse."}
         className={cn(
-          'relative border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[240px] sm:min-h-auto',
+          'relative border-2 border-dashed rounded-lg sm:rounded-xl p-4 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[160px] sm:min-h-auto',
           isUploading
             ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
             : isDragActive
@@ -481,14 +490,26 @@ export function SimpleUploadZone() {
               </div>
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
-              Drop your image here
+              {isMobile ? 'Tap to select a photo' : 'Drop your image here'}
             </h3>
             <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
-              Supports JPG, PNG, HEIC, WebP <br className="hidden sm:block" />
-              <span className="text-primary text-xs font-mono mt-1 block">
-                <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 free
-                checks (no signup)
-              </span>
+              {isMobile ? (
+                <>
+                  JPG, PNG, HEIC, WebP
+                  <span className="text-primary text-xs font-mono mt-1 block">
+                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 free
+                    checks (no signup)
+                  </span>
+                </>
+              ) : (
+                <>
+                  Supports JPG, PNG, HEIC, WebP <br className="hidden sm:block" />
+                  <span className="text-primary text-xs font-mono mt-1 block">
+                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 free
+                    checks (no signup)
+                  </span>
+                </>
+              )}
             </p>
             <Button
               variant="outline"
@@ -499,7 +520,7 @@ export function SimpleUploadZone() {
             </Button>
           </>
         )}
-      </div>
+      </label>
     </div>
   );
 }

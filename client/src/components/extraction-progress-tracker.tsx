@@ -48,7 +48,6 @@ interface ProgressTrackerProps {
 // needed in future, but the ExtractionProgressTracker component has been
 // removed on purpose.
 
-
 // Quality Indicators Component
 export function QualityIndicators({ metadata }: { metadata: any }) {
   const getQualityScore = () => {

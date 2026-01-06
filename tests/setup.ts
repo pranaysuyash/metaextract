@@ -53,7 +53,8 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
 
 // Polyfill setImmediate for environments that don't provide it (jsdom)
 if (typeof (global as any).setImmediate === 'undefined') {
-  (global as any).setImmediate = (fn: Function, ...args: any[]) => setTimeout(() => fn(...args), 0);
+  (global as any).setImmediate = (fn: Function, ...args: any[]) =>
+    setTimeout(() => fn(...args), 0);
 }
 
 // Mock IntersectionObserver
@@ -125,12 +126,14 @@ beforeAll(async () => {
       // one-by-one so we can report which statement (if any) fails.
       try {
         const sql = await fs.readFile('./init.sql', 'utf8');
-        console.log('Applying init.sql to initialize test schema (statement-by-statement)...');
+        console.log(
+          'Applying init.sql to initialize test schema (statement-by-statement)...'
+        );
 
         // Ensure public schema is the target
-        await client.query("SET search_path TO public");
+        await client.query('SET search_path TO public');
 
-const { splitStatements } = require('../scripts/sql-splitter.cjs');
+        const { splitStatements } = require('../scripts/sql-splitter.cjs');
 
         const statements = splitStatements(sql);
 
@@ -149,8 +152,13 @@ const { splitStatements } = require('../scripts/sql-splitter.cjs');
           }
 
           // Quick verification after DDL that could create the critical table
-          if (stmt.toLowerCase().includes('create table') || stmt.toLowerCase().includes('create index')) {
-            const r = await client.query("SELECT to_regclass('public.credit_grants') AS reg");
+          if (
+            stmt.toLowerCase().includes('create table') ||
+            stmt.toLowerCase().includes('create index')
+          ) {
+            const r = await client.query(
+              "SELECT to_regclass('public.credit_grants') AS reg"
+            );
             if (r.rows[0]?.reg) break; // early exit if critical table is present
           }
         }
@@ -160,7 +168,9 @@ const { splitStatements } = require('../scripts/sql-splitter.cjs');
           "SELECT to_regclass('public.credit_grants') AS reg"
         );
         if (!verify.rows[0]?.reg) {
-          throw new Error('Schema init did not create expected tables (credit_grants missing)');
+          throw new Error(
+            'Schema init did not create expected tables (credit_grants missing)'
+          );
         }
       } catch (initErr) {
         const msg =

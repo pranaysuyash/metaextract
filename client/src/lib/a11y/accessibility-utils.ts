@@ -143,35 +143,29 @@ export const meetsContrastStandard = (
 
 // Screen reader utilities
 export const ScreenReaderOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <span 
-      style={{
-        position: 'absolute',
-        width: '1px',
-        height: '1px',
-        padding: '0',
-        margin: '-1px',
-        overflow: 'hidden',
-        clip: 'rect(0, 0, 0, 0)',
-        whiteSpace: 'nowrap',
-        borderWidth: '0'
-      }}
-      className="sr-only"
-    >
-      {children}
-    </span>
-  );
+  return React.createElement('span', {
+    style: {
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+      padding: '0',
+      margin: '-1px',
+      overflow: 'hidden',
+      clip: 'rect(0, 0, 0, 0)',
+      whiteSpace: 'nowrap',
+      borderWidth: '0'
+    },
+    className: "sr-only",
+    children
+  });
 };
 
 export const SkipLink: React.FC<{ target: string; children: string }> = ({ target, children }) => {
-  return (
-    <a
-      href={target}
-      className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded focus:shadow-lg"
-    >
-      {children}
-    </a>
-  );
+  return React.createElement('a', {
+    href: target,
+    className: "sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded focus:shadow-lg",
+    children
+  });
 };
 
 // Live region utilities
@@ -181,21 +175,18 @@ export interface LiveRegionProps {
   className?: string;
 }
 
-export const LiveRegion: React.FC<LiveRegionProps> = ({ 
-  children, 
+export const LiveRegion: React.FC<LiveRegionProps> = ({
+  children,
   priority = 'polite',
   className = 'sr-only'
 }) => {
-  return (
-    <div
-      role="status"
-      aria-live={priority}
-      aria-atomic="true"
-      className={className}
-    >
-      {children}
-    </div>
-  );
+  return React.createElement('div', {
+    role: "status",
+    'aria-live': priority,
+    'aria-atomic': "true",
+    className,
+    children
+  });
 };
 
 // Focus indicator utilities
@@ -428,10 +419,10 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     setFocusOutline
   };
 
-  return (
-    <AccessibilityContext.Provider value={contextValue}>
-      {children}
-    </AccessibilityContext.Provider>
+  return React.createElement(
+    AccessibilityContext.Provider,
+    { value: contextValue },
+    children
   );
 };
 

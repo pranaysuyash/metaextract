@@ -56,5 +56,6 @@ pytest tests/ -k "test_name" -v
 **Issue Resolution:** Prioritize fixing/implementing over deletion. Understand root cause before modifying code.
 
 **Git Hygiene (multi-agent safety):**
-- Before committing, use `git add -A` (to avoid leaving untracked/modified files behind), OR explicitly `git stash push -u` to keep the working tree clean without losing work.
+- **ALWAYS use `git add -A` before committing** (standard practice to avoid leaving untracked/modified files behind). This ensures all changes—staged and unstaged—are included in the commit, preventing workflow fragmentation across agent sessions.
+- Alternative: Explicitly run `git stash push -u` if you need to preserve work without committing (keeps working tree clean).
 - Never run destructive git/cleanup commands (e.g. `git clean`, `git reset --hard`, deleting files/folders) unless the user explicitly asks for it.

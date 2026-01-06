@@ -33,15 +33,10 @@ export function ProgressTracker({
 
   useEffect(() => {
     // WebSocket connection for real-time progress updates
+    // Uses Vite proxy with ws: true, no need for hardcoded port
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocalhost =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1';
-    const wsHost = isLocalhost
-      ? `${window.location.hostname}:3000`
-      : window.location.host;
     const ws = new WebSocket(
-      `${wsProtocol}//${wsHost}/api/images_mvp/progress/${sessionId}`
+      `${wsProtocol}//${window.location.host}/api/images_mvp/progress/${sessionId}`
     );
 
     ws.onopen = () => {

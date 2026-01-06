@@ -8,6 +8,7 @@ import { storage } from './storage/index';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from './auth';
 import { getOrSetSessionId } from './utils/session-id';
+import { getTrustedAppOrigin } from './utils/trusted-app-origin';
 
 // ============================================================================
 // DodoPayments Configuration
@@ -61,6 +62,11 @@ export const DODO_IMAGES_MVP_PRODUCTS = {
   pro: process.env.DODO_PRODUCT_IMAGES_PRO || 'pdt_images_mvp_pro',
 } as const;
 
+function formatUsdFromCents(cents: number): string {
+  const value = Number.isFinite(cents) ? cents / 100 : 0;
+  return `$${value.toFixed(2)}`;
+}
+
 // Credit pack configuration
 export const CREDIT_PACKS = {
   single: {
@@ -93,7 +99,9 @@ export const IMAGES_MVP_CREDIT_PACKS = {
   starter: {
     credits: 25,
     price: Number(process.env.IMAGES_MVP_STARTER_PRICE_CENTS ?? 400),
-    priceDisplay: process.env.IMAGES_MVP_STARTER_PRICE_DISPLAY || '$4.00',
+    priceDisplay: formatUsdFromCents(
+      Number(process.env.IMAGES_MVP_STARTER_PRICE_CENTS ?? 400)
+    ),
     name: 'Starter Pack',
     description: '25 images',
     productId: DODO_IMAGES_MVP_PRODUCTS.starter,
@@ -101,7 +109,9 @@ export const IMAGES_MVP_CREDIT_PACKS = {
   pro: {
     credits: 100,
     price: Number(process.env.IMAGES_MVP_PRO_PRICE_CENTS ?? 1200),
-    priceDisplay: process.env.IMAGES_MVP_PRO_PRICE_DISPLAY || '$12.00',
+    priceDisplay: formatUsdFromCents(
+      Number(process.env.IMAGES_MVP_PRO_PRICE_CENTS ?? 1200)
+    ),
     name: 'Pro Pack',
     description: '100 images',
     productId: DODO_IMAGES_MVP_PRODUCTS.pro,
@@ -200,7 +210,7 @@ export function registerPaymentRoutes(app: Express) {
           });
         }
 
-        const baseUrl = getBaseUrl();
+        const baseUrl = getTrustedAppOrigin(req) ?? getBaseUrl();
 
         const session = await dodoClient.checkoutSessions.create({
           product_cart: [{ product_id: productId, quantity: 1 }],
@@ -275,7 +285,7 @@ export function registerPaymentRoutes(app: Express) {
       );
       const packInfo = CREDIT_PACKS[pack as keyof typeof CREDIT_PACKS];
 
-      const baseUrl = getBaseUrl();
+      const baseUrl = getTrustedAppOrigin(req) ?? getBaseUrl();
 
       const session = await dodoClient.checkoutSessions.create({
         product_cart: [

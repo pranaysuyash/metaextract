@@ -101,6 +101,15 @@ interface MvpMetadata {
   _trial_limited?: boolean;
   client_last_modified_iso?: string;
   registry_summary?: Record<string, unknown>;
+  quality_metrics?: {
+    confidence_score?: number;
+    extraction_completeness?: number;
+    format_support_level?: string;
+  };
+  processing_insights?: {
+    total_fields_extracted?: number;
+    processing_time_ms?: number;
+  };
   [key: string]: unknown;
 }
 
@@ -1260,7 +1269,7 @@ export default function ImagesMvpResults() {
               {(fieldsExtracted || processingMs) && (
                 <div className="pt-2 text-xs text-slate-500 font-mono">
                   {fieldsExtracted
-                    ? `${fieldsExtracted} fields extracted`
+                    ? (`${fieldsExtracted} fields extracted` as React.ReactNode)
                     : null}
                   {fieldsExtracted && processingMs ? ' • ' : null}
                   {processingMs ? `${Math.round(processingMs)} ms` : null}

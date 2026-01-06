@@ -261,8 +261,8 @@ export function registerExtractionRoutes(app: Express): void {
             fieldsExtracted: metadata.fields_extracted || 0,
             processingMs,
             success: true,
-            ipAddress: req.ip || req.socket.remoteAddress || null,
-            userAgent: req.headers['user-agent'] || null,
+            ipAddress: req.ip || req.socket.remoteAddress,
+            userAgent: req.headers['user-agent'],
           });
         } catch (err) {
           console.error('[Extraction] Failed to log usage:', err);
@@ -375,8 +375,8 @@ export function registerExtractionRoutes(app: Express): void {
               processingMs,
               success: false,
               failureReason,
-              ipAddress: req.ip || req.socket.remoteAddress || null,
-              userAgent: req.headers['user-agent'] || null,
+              ipAddress: req.ip || req.socket.remoteAddress,
+              userAgent: req.headers['user-agent'],
             })
             .catch(err => console.error('Failed to log usage:', err));
         }
