@@ -43,13 +43,13 @@ export default function CheckoutSuccess() {
             Welcome to {normalizedTier ? tierDisplayNames[normalizedTier] || normalizedTier : "MetaExtract"}!
           </h1>
           
-          <p className="text-slate-400 mb-8" data-testid="text-success-message">
+          <p className="text-slate-300 mb-8" data-testid="text-success-message">
             Your subscription is now active. You have full access to all {normalizedTier ? tierDisplayNames[normalizedTier] : ""} features.
           </p>
 
           <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-8">
             <h3 className="text-white font-semibold mb-4">What's included:</h3>
-            <ul className="text-left text-slate-300 space-y-2 text-sm">
+            <ul className="text-left text-slate-200 space-y-2 text-sm">
               {(normalizedTier === "professional") && (
                 <>
                   <li>All images including RAW formats (up to 100MB)</li>

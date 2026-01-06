@@ -34,6 +34,8 @@ import { getClientIP, sanitizeFilename } from '../security-utils';
 import { rateLimitExtraction } from '../rateLimitMiddleware';
 // Utility available for future "Safe Export" feature (stripping metadata for privacy)
 import { processImageBuffer } from '../utils/exif-stripper';
+import { type AuthRequest as ServerAuthRequest } from '../auth';
+import { getOrSetSessionId } from '../utils/session-id';
 
 // WebSocket progress tracking
 interface ProgressConnection {
@@ -48,17 +50,25 @@ const activeConnections = new Map<string, ProgressConnection[]>();
 // Configuration
 // ============================================================================
 
-// Support legacy DOOD_API_KEY/DOOD_ENV naming to prevent misconfig 503s
-const DODO_API_KEY =
-  process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
-const IS_TEST_MODE = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live';
+type AuthRequest = ServerAuthRequest;
 
-const dodoClient = DODO_API_KEY
-  ? new DodoPayments({
-      bearerToken: DODO_API_KEY,
-      environment: IS_TEST_MODE ? 'test_mode' : 'live_mode',
-    })
-  : null;
+function getDodoClient() {
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
+  const env = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
+    ? 'test_mode'
+    : 'live_mode';
+  if (!apiKey) return null;
+
+  const cacheKey = `${apiKey}:${env}`;
+  const cached = (getDodoClient as any)._cached as
+    | { cacheKey: string; client: any }
+    | undefined;
+  if (cached?.cacheKey === cacheKey) return cached.client;
+
+  const client = new DodoPayments({ bearerToken: apiKey, environment: env });
+  (getDodoClient as any)._cached = { cacheKey, client };
+  return client;
+}
 
 // WebSocket Progress Tracking Functions
 function broadcastProgress(
@@ -223,8 +233,12 @@ function getBaseUrl(): string {
   return 'http://localhost:3000';
 }
 
-function getImagesMvpBalanceId(sessionId: string): string {
+function getImagesMvpBalanceKeyForSession(sessionId: string): string {
   return `images_mvp:${sessionId}`;
+}
+
+function getImagesMvpBalanceKeyForUser(userId: string): string {
+  return `images_mvp:user:${userId}`;
 }
 
 const ANALYTICS_LIMIT_DEFAULT = 5000;
@@ -721,18 +735,18 @@ export function registerImagesMvpRoutes(app: Express) {
     '/api/images_mvp/credits/balance',
     async (req: Request, res: Response) => {
       try {
-        // We expect the client to pass the raw sessionId provided by getSessionId helper
-        // But we will internally look up the namespaced session
-        const rawSessionId = req.query.sessionId as string;
+        const authReq = req as AuthRequest;
 
-        if (!rawSessionId) {
-          return res.json({ credits: 0, balanceId: null });
-        }
+        const balanceKey = authReq.user?.id
+          ? getImagesMvpBalanceKeyForUser(authReq.user.id)
+          : getImagesMvpBalanceKeyForSession(
+              getOrSetSessionId(req, res)
+            );
 
-        // Use the namespaced ID for looking up balance
-        const namespacedSessionId = getImagesMvpBalanceId(rawSessionId);
-        const balance =
-          await storage.getOrCreateCreditBalance(namespacedSessionId);
+        const balance = await storage.getOrCreateCreditBalance(
+          balanceKey,
+          authReq.user?.id
+        );
 
         res.json({
           credits: balance.credits,
@@ -746,12 +760,100 @@ export function registerImagesMvpRoutes(app: Express) {
   );
 
   // ---------------------------------------------------------------------------
+  // Credits: Claim (convert session credits -> account credits)
+  // ---------------------------------------------------------------------------
+  app.post('/api/images_mvp/credits/claim', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const rawSessionId = getOrSetSessionId(req, res);
+
+      const fromKey = getImagesMvpBalanceKeyForSession(rawSessionId);
+      const toKey = getImagesMvpBalanceKeyForUser(authReq.user.id);
+
+      const fromBalance = await storage.getCreditBalanceBySessionId(fromKey);
+      if (!fromBalance || (fromBalance.credits ?? 0) <= 0) {
+        return res.json({ transferred: 0 });
+      }
+
+      const toBalance = await storage.getOrCreateCreditBalance(
+        toKey,
+        authReq.user.id
+      );
+
+      const amount = fromBalance.credits;
+      await storage.transferCredits(
+        fromBalance.id,
+        toBalance.id,
+        amount,
+        'Claimed Images MVP credits to account'
+      );
+
+      return res.json({ transferred: amount });
+    } catch (error) {
+      console.error('Images MVP claim credits error:', error);
+      return res.status(500).json({ error: 'Failed to claim credits' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Credits: Dev grant (testing helper)
+  // ---------------------------------------------------------------------------
+  app.post('/api/dev/images_mvp/credits/grant', async (req: Request, res: Response) => {
+    try {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      const authReq = req as AuthRequest;
+      const amount =
+        typeof req.body?.credits === 'number'
+          ? req.body.credits
+          : typeof req.body?.credits === 'string'
+            ? Number(req.body.credits)
+            : 100;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'credits must be a positive number' });
+      }
+
+      const balanceKey = authReq.user?.id
+        ? getImagesMvpBalanceKeyForUser(authReq.user.id)
+        : getImagesMvpBalanceKeyForSession(getOrSetSessionId(req, res));
+
+      const balance = await storage.getOrCreateCreditBalance(
+        balanceKey,
+        authReq.user?.id
+      );
+
+      await storage.addCredits(
+        balance.id,
+        amount,
+        `Dev grant (${amount} credits)`
+      );
+
+      const updated = await storage.getCreditBalance(balance.id);
+      return res.json({
+        ok: true,
+        balanceId: balance.id,
+        credits: updated?.credits ?? balance.credits,
+      });
+    } catch (error) {
+      console.error('Images MVP dev grant credits error:', error);
+      return res.status(500).json({ error: 'Failed to grant credits' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // Credits: Purchase
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/credits/purchase',
     async (req: Request, res: Response) => {
       try {
+        const dodoClient = getDodoClient();
         if (!dodoClient) {
           return res.status(503).json({
             error: 'Payment system not configured',
@@ -759,19 +861,26 @@ export function registerImagesMvpRoutes(app: Express) {
           });
         }
 
-        const { pack, sessionId, email } = req.body;
+      const authReq = req as AuthRequest;
+      const { pack, email } = req.body;
 
         if (!pack || !['starter', 'pro'].includes(pack)) {
           return res.status(400).json({ error: 'Invalid credit pack' });
         }
 
-        if (!sessionId) {
-          return res.status(400).json({ error: 'Session ID required' });
+        if (!authReq.user?.id) {
+          return res.status(401).json({
+            error: 'Authentication required',
+            message: 'Please sign in to purchase credits so they are available across devices.',
+          });
         }
 
-        const namespacedSessionId = getImagesMvpBalanceId(sessionId);
-        const balance =
-          await storage.getOrCreateCreditBalance(namespacedSessionId);
+        const balanceKey = getImagesMvpBalanceKeyForUser(authReq.user.id);
+
+        const balance = await storage.getOrCreateCreditBalance(
+          balanceKey,
+          authReq.user?.id
+        );
         const packInfo =
           IMAGES_MVP_CREDIT_PACKS[pack as keyof typeof IMAGES_MVP_CREDIT_PACKS];
 
@@ -807,6 +916,9 @@ export function registerImagesMvpRoutes(app: Express) {
             pack,
             credits: packInfo.credits.toString(),
             balance_id: balance.id,
+            balance_key: balanceKey,
+            user_id: authReq.user?.id || null,
+            purchaser_email: email || null,
           },
         });
 
@@ -852,6 +964,7 @@ export function registerImagesMvpRoutes(app: Express) {
       const creditCost = 1;
 
       try {
+        const authReq = req as AuthRequest;
         if (!req.file) {
           return sendInvalidRequestError(res, 'No file uploaded');
         }
@@ -888,7 +1001,9 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         const trialEmail = normalizeEmail(req.body?.trial_email);
-        sessionId = getSessionId(req); // Raw session ID
+        // WebSocket progress uses `session_id` (client-provided). Credits use the stable cookie session.
+        sessionId = getSessionId(req); // progress session id
+        const cookieSessionId = authReq.user?.id ? null : getOrSetSessionId(req, res);
 
         // Check Trial Status
         let trialUses = 0;
@@ -915,18 +1030,17 @@ export function registerImagesMvpRoutes(app: Express) {
         if (hasTrialAvailable) {
           useTrial = true;
         } else {
-          if (trialEmail) {
+            if (trialEmail) {
             // Trial email provided but trial is exhausted: require credits (do not stack free quota).
-            if (!sessionId) {
-              return sendQuotaExceededError(
-                res,
-                'Trial limit reached. Purchase credits to continue.'
-              );
-            }
 
-            const namespacedSessionId = getImagesMvpBalanceId(sessionId);
-            const balance =
-              await storage.getOrCreateCreditBalance(namespacedSessionId);
+            const balanceKey = authReq.user?.id
+              ? getImagesMvpBalanceKeyForUser(authReq.user.id)
+              : getImagesMvpBalanceKeyForSession(cookieSessionId!);
+
+            const balance = await storage.getOrCreateCreditBalance(
+              balanceKey,
+              authReq.user?.id
+            );
             creditBalanceId = balance?.id ?? null;
 
             if (!balance || balance.credits < creditCost) {
@@ -949,7 +1063,8 @@ export function registerImagesMvpRoutes(app: Express) {
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 path: '/',
                 httpOnly: true,
-                sameSite: 'strict',
+                // Lax so quota cookie survives checkout redirects.
+                sameSite: 'lax',
               });
               decoded = verifyClientToken(clientToken);
             }
@@ -972,14 +1087,14 @@ export function registerImagesMvpRoutes(app: Express) {
               chargeCredits = false;
             } else {
               // Free quota exhausted: require credits.
-              if (!sessionId) {
-                await handleQuotaExceeded(req, res, decoded.clientId, ip);
-                return;
-              }
+              const balanceKey = authReq.user?.id
+                ? getImagesMvpBalanceKeyForUser(authReq.user.id)
+                : getImagesMvpBalanceKeyForSession(cookieSessionId!);
 
-              const namespacedSessionId = getImagesMvpBalanceId(sessionId);
-              const balance =
-                await storage.getOrCreateCreditBalance(namespacedSessionId);
+              const balance = await storage.getOrCreateCreditBalance(
+                balanceKey,
+                authReq.user?.id
+              );
               creditBalanceId = balance?.id ?? null;
 
               if (!balance || balance.credits < creditCost) {

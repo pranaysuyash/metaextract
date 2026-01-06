@@ -211,7 +211,7 @@ export function SubscriptionManager({
               <h3 className="text-2xl font-bold text-white">
                 {currentTier?.name}
               </h3>
-              <p className="text-sm text-slate-400">{currentTier?.tagline}</p>
+              <p className="text-sm text-slate-300">{currentTier?.tagline}</p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-primary">
@@ -219,7 +219,7 @@ export function SubscriptionManager({
                   ? 'Free'
                   : formatPrice(currentTier?.basePrice || 0, currency)}
               </p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-300">
                 {subscription.billingCycle === 'annual'
                   ? 'per month (billed annually)'
                   : 'per month'}
@@ -228,7 +228,7 @@ export function SubscriptionManager({
           </div>
 
           {/* Billing Period */}
-          <div className="flex items-center gap-4 text-sm text-slate-400">
+          <div className="flex items-center gap-4 text-sm text-slate-300">
             <Calendar className="w-4 h-4" />
             <span>
               Current period:{' '}
@@ -262,14 +262,14 @@ export function SubscriptionManager({
           {/* Usage Stats */}
           {usage && (
             <div className="space-y-4">
-              <h4 className="text-sm font-medium text-slate-300">
+              <h4 className="text-sm font-medium text-slate-200">
                 Usage This Period
               </h4>
 
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Uploads</span>
+                    <span className="text-slate-300">Uploads</span>
                     <span className="text-white">
                       {usage.uploadsThisMonth} /{' '}
                       {usage.uploadsLimit === 'unlimited'
@@ -292,7 +292,7 @@ export function SubscriptionManager({
                 {usage.apiCallsLimit !== 0 && (
                   <div>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-slate-400">API Calls</span>
+                      <span className="text-slate-300">API Calls</span>
                       <span className="text-white">
                         {usage.apiCallsThisMonth} /{' '}
                         {usage.apiCallsLimit === 'unlimited'
@@ -422,12 +422,12 @@ export function SubscriptionManager({
                       ? 'Free'
                       : formatPrice(tier.basePrice, currency)}
                     {tier.basePrice > 0 && (
-                      <span className="text-sm font-normal text-slate-400">
+                      <span className="text-sm font-normal text-slate-300">
                         /mo
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-slate-400">{tier.description}</p>
+                  <p className="text-xs text-slate-300">{tier.description}</p>
                 </div>
               );
             })}
@@ -447,7 +447,7 @@ export function SubscriptionManager({
               )}
               Confirm Plan Change
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-slate-300">
               {preview?.changeType === 'upgrade'
                 ? 'You are upgrading your plan'
                 : 'You are downgrading your plan'}
@@ -459,14 +459,14 @@ export function SubscriptionManager({
               {/* Plan Change Summary */}
               <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
                 <div>
-                  <p className="text-sm text-slate-400">From</p>
+                  <p className="text-sm text-slate-300">From</p>
                   <p className="font-medium">
                     {getPricingTier(preview.fromTier)?.name}
                   </p>
                 </div>
                 <ArrowDown className="w-5 h-5 text-slate-500 rotate-[-90deg]" />
                 <div>
-                  <p className="text-sm text-slate-400">To</p>
+                  <p className="text-sm text-slate-300">To</p>
                   <p className="font-medium text-primary">
                     {getPricingTier(preview.toTier)?.name}
                   </p>
@@ -476,14 +476,14 @@ export function SubscriptionManager({
               {/* Price Change */}
               <div className="p-4 bg-white/5 rounded-lg">
                 <div className="flex justify-between mb-2">
-                  <span className="text-slate-400">New Monthly Price</span>
+                  <span className="text-slate-300">New Monthly Price</span>
                   <span className="font-medium">
                     {formatPrice(preview.newMonthlyPrice, currency)}
                   </span>
                 </div>
                 {preview.proratedAmount !== 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">
+                    <span className="text-slate-300">
                       Prorated{' '}
                       {preview.proratedAmount > 0 ? 'Charge' : 'Credit'}
                     </span>
@@ -510,7 +510,7 @@ export function SubscriptionManager({
                     {preview.featuresGained.map((feature, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-2 text-sm text-slate-300"
+                        className="flex items-center gap-2 text-sm text-slate-200"
                       >
                         <Check className="w-4 h-4 text-emerald-400" />
                         {feature}
@@ -529,7 +529,7 @@ export function SubscriptionManager({
                     {preview.featuresLost.map((feature, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-2 text-sm text-slate-300"
+                        className="flex items-center gap-2 text-sm text-slate-200"
                       >
                         <X className="w-4 h-4 text-amber-400" />
                         {feature}
@@ -554,7 +554,7 @@ export function SubscriptionManager({
               )}
 
               {/* Effective Date */}
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-300">
                 Effective: {preview.effectiveDate.toLocaleDateString()}
               </p>
             </div>
@@ -597,7 +597,7 @@ export function SubscriptionManager({
               <AlertTriangle className="w-5 h-5" />
               Cancel Subscription
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-slate-300">
               Are you sure you want to cancel your subscription?
             </DialogDescription>
           </DialogHeader>
@@ -611,7 +611,7 @@ export function SubscriptionManager({
               </AlertDescription>
             </Alert>
 
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-300">
               Your subscription will remain active until{' '}
               {new Date(subscription.currentPeriodEnd).toLocaleDateString()}.
               You can reactivate anytime before then.

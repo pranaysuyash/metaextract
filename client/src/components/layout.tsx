@@ -151,7 +151,7 @@ export const Layout = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleLogout}
-                    className="w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start"
+                    className="w-full mt-2 text-slate-300 hover:text-white hover:bg-white/5 justify-start"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
@@ -262,7 +262,7 @@ export const Layout = ({
                       handleLogout();
                       setSidebarOpen(false);
                     }}
-                    className="w-full mt-2 text-slate-400 hover:text-white hover:bg-white/5 justify-start"
+                    className="w-full mt-2 text-slate-300 hover:text-white hover:bg-white/5 justify-start"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out

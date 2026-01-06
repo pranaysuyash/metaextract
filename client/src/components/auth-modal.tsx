@@ -117,7 +117,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
           <DialogTitle className="text-xl font-bold">
             {activeTab === "login" ? "Welcome Back" : "Create Account"}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-slate-300">
             {activeTab === "login" 
               ? "Sign in to access your subscription and saved analyses." 
               : "Create an account to unlock premium features."}
@@ -152,7 +152,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
           <TabsContent value="login" className="mt-4">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email" className="text-slate-300">Email</Label>
+                <Label htmlFor="login-email" className="text-slate-200">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input
@@ -168,7 +168,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="login-password" className="text-slate-300">Password</Label>
+                <Label htmlFor="login-password" className="text-slate-200">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input
@@ -204,7 +204,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
           <TabsContent value="register" className="mt-4">
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="register-email" className="text-slate-300">Email</Label>
+                <Label htmlFor="register-email" className="text-slate-200">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input
@@ -220,7 +220,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="register-username" className="text-slate-300">Username</Label>
+                <Label htmlFor="register-username" className="text-slate-200">Username</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input
@@ -238,7 +238,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="register-password" className="text-slate-300">Password</Label>
+                <Label htmlFor="register-password" className="text-slate-200">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input
@@ -256,7 +256,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="register-confirm-password" className="text-slate-300">Confirm Password</Label>
+                <Label htmlFor="register-confirm-password" className="text-slate-200">Confirm Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input

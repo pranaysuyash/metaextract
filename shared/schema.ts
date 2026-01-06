@@ -134,6 +134,23 @@ export const creditBalances = pgTable('credit_balances', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Credit grants ("lots") for safe refunding and FIFO consumption
+export const creditGrants = pgTable('credit_grants', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  balanceId: varchar('balance_id')
+    .notNull()
+    .references(() => creditBalances.id),
+  amount: integer('amount').notNull(),
+  remaining: integer('remaining').notNull(),
+  description: text('description'),
+  pack: text('pack'),
+  dodoPaymentId: text('dodo_payment_id'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at'),
+});
+
 export const creditTransactions = pgTable('credit_transactions', {
   id: varchar('id')
     .primaryKey()
@@ -141,6 +158,7 @@ export const creditTransactions = pgTable('credit_transactions', {
   balanceId: varchar('balance_id')
     .notNull()
     .references(() => creditBalances.id),
+  grantId: varchar('grant_id').references(() => creditGrants.id),
   type: text('type').notNull(), // 'purchase', 'usage', 'refund'
   amount: integer('amount').notNull(), // positive for purchase/refund, negative for usage
   description: text('description'),
@@ -166,6 +184,7 @@ export const insertCreditTransactionSchema = createInsertSchema(
 
 export type InsertCreditBalance = z.infer<typeof insertCreditBalanceSchema>;
 export type CreditBalance = typeof creditBalances.$inferSelect;
+export type CreditGrant = typeof creditGrants.$inferSelect;
 export type InsertCreditTransaction = z.infer<
   typeof insertCreditTransactionSchema
 >;

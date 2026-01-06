@@ -152,25 +152,31 @@ try {
       process.env.NODE_ENV === 'production';
 
     // Verify connection asynchronously; if verification fails and DB is required, exit fast
-    testDatabaseConnection(dbInstance)
-      .then(() => {
-        console.log('✅ Database connection verified');
-      })
-      .catch(error => {
-        initError = error as Error;
-        console.error(
-          `❌ Failed to verify database connection: ${initError.message}`
-        );
-        if (requireDb) {
+    if (process.env.NODE_ENV === 'test') {
+      // Skip real DB connection tests in unit tests to avoid opening real DB sockets
+      dbInstance.isConnected = true;
+      console.log('⚠️ Skipping database verification in test environment');
+    } else {
+      testDatabaseConnection(dbInstance)
+        .then(() => {
+          console.log('✅ Database connection verified');
+        })
+        .catch(error => {
+          initError = error as Error;
           console.error(
-            '❌ STORAGE_REQUIRE_DATABASE=true and database verification failed. Exiting.'
+            `❌ Failed to verify database connection: ${initError.message}`
           );
-          process.exit(1);
-        } else {
-          // Mark disconnected but allow the app to continue using in-memory storage
-          dbInstance!.isConnected = false;
-        }
-      });
+          if (requireDb) {
+            console.error(
+              '❌ STORAGE_REQUIRE_DATABASE=true and database verification failed. Exiting.'
+            );
+            process.exit(1);
+          } else {
+            // Mark disconnected but allow the app to continue using in-memory storage
+            dbInstance!.isConnected = false;
+          }
+        });
+    }
   }
 
   console.log('✅ Database initialization complete');

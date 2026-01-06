@@ -289,6 +289,74 @@ describe('API Endpoint Tests', () => {
       );
     });
 
+    it('should continue and return metadata when saveMetadata returns undefined', async () => {
+      const mockPythonProcess = {
+        stdout: {
+          on: jest.fn().mockImplementation((event, callback) => {
+            if (event === 'data') {
+              callback(Buffer.from(JSON.stringify(mockPythonResponse)));
+            }
+          }),
+        },
+        stderr: { on: jest.fn() },
+        on: jest.fn().mockImplementation((event, callback) => {
+          if (event === 'close') callback(0);
+        }),
+        kill: jest.fn(),
+      };
+
+      (spawn as unknown as jest.Mock).mockReturnValue(mockPythonProcess);
+      (storage.saveMetadata as jest.Mock).mockResolvedValue(undefined);
+
+      const response = await request(app)
+        .post('/api/extract?tier=enterprise')
+        .attach('file', Buffer.from('fake image data'), 'test.jpg')
+        .set('x-test-bypass-credits', '1')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('filename', 'test.jpg');
+      expect(response.body).not.toHaveProperty('id');
+      expect(response.body.storage).toEqual({
+        provider: 'summary-only',
+        has_full_blob: false,
+      });
+    });
+
+    it('should continue and return metadata when saveMetadata throws', async () => {
+      const mockPythonProcess = {
+        stdout: {
+          on: jest.fn().mockImplementation((event, callback) => {
+            if (event === 'data') {
+              callback(Buffer.from(JSON.stringify(mockPythonResponse)));
+            }
+          }),
+        },
+        stderr: { on: jest.fn() },
+        on: jest.fn().mockImplementation((event, callback) => {
+          if (event === 'close') callback(0);
+        }),
+        kill: jest.fn(),
+      };
+
+      (spawn as unknown as jest.Mock).mockReturnValue(mockPythonProcess);
+      (storage.saveMetadata as jest.Mock).mockRejectedValue(
+        new Error('DB down')
+      );
+
+      const response = await request(app)
+        .post('/api/extract?tier=enterprise')
+        .attach('file', Buffer.from('fake image data'), 'test.jpg')
+        .set('x-test-bypass-credits', '1')
+        .expect(200);
+
+      expect(response.body).toHaveProperty('filename', 'test.jpg');
+      expect(response.body).not.toHaveProperty('id');
+      expect(response.body.storage).toEqual({
+        provider: 'summary-only',
+        has_full_blob: false,
+      });
+    });
+
     it('should validate required file upload', async () => {
       const response = await request(app)
         .post('/api/extract?tier=enterprise')

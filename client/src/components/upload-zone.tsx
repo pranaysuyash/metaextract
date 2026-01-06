@@ -473,7 +473,7 @@ export function UploadZone() {
                 <h4 className='font-mono font-bold text-white mb-1'>
                   {uploadError.title}
                 </h4>
-                <p className='text-sm text-slate-400 break-words'>
+                <p className='text-sm text-slate-300 break-words'>
                   {uploadError.message}
                 </p>
               </div>
@@ -490,7 +490,7 @@ export function UploadZone() {
 
             {currentFile && (
               <div className='mb-6 p-3 bg-white/5 rounded-lg border border-white/10'>
-                <div className='text-xs text-slate-400 font-mono'>
+                <div className='text-xs text-slate-300 font-mono'>
                   <span className='text-slate-500'>FILE:</span>{' '}
                   {currentFile.name}
                 </div>
@@ -568,7 +568,7 @@ export function UploadZone() {
               >
                 <Upload
                   className={cn(
-                    'w-8 h-8 text-slate-400 group-hover:text-primary transition-colors',
+                    'w-8 h-8 text-slate-300 group-hover:text-primary transition-colors',
                     isDragging && 'text-primary'
                   )}
                 />
@@ -576,7 +576,7 @@ export function UploadZone() {
               <h3 className='text-xl font-bold text-white mb-2 tracking-tight'>
                 Upload Evidence
               </h3>
-              <p className='text-slate-400 mb-4 max-w-xs mx-auto text-sm'>
+              <p className='text-slate-300 mb-4 max-w-xs mx-auto text-sm'>
                 Drag & drop media files here or browse to start.
               </p>
               <div className='text-slate-500 text-xs mb-8 space-y-1'>
@@ -627,7 +627,7 @@ export function UploadZone() {
 
             {currentFile && (
               <div className='mb-6 p-3 bg-white/5 rounded-lg border border-white/10 relative z-10'>
-                <div className='text-xs text-slate-400 font-mono truncate'>
+                <div className='text-xs text-slate-300 font-mono truncate'>
                   <span className='text-slate-500'>FILE:</span>{' '}
                   {currentFile.name}
                 </div>
@@ -665,19 +665,19 @@ export function UploadZone() {
             <div className='mt-8 grid grid-cols-3 gap-2 relative z-10'>
               <div className='bg-white/5 p-2 rounded border border-white/5 text-center'>
                 <Database className='w-4 h-4 text-slate-500 mx-auto mb-1' />
-                <span className='text-[10px] text-slate-400 block'>
+                <span className='text-[10px] text-slate-300 block'>
                   Extensive field coverage
                 </span>
               </div>
               <div className='bg-white/5 p-2 rounded border border-white/5 text-center'>
                 <Scan className='w-4 h-4 text-slate-500 mx-auto mb-1' />
-                <span className='text-[10px] text-slate-400 block'>
+                <span className='text-[10px] text-slate-300 block'>
                   Deep Scan
                 </span>
               </div>
               <div className='bg-white/5 p-2 rounded border border-white/5 text-center'>
                 <Lock className='w-4 h-4 text-slate-500 mx-auto mb-1' />
-                <span className='text-[10px] text-slate-400 block'>
+                <span className='text-[10px] text-slate-300 block'>
                   Encrypted
                 </span>
               </div>

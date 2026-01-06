@@ -41,6 +41,7 @@ module.exports = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '@testing-library/jest-dom'],
+  globalTeardown: '<rootDir>/tests/global-teardown.js',
   collectCoverageFrom: [
     'client/src/**/*.{ts,tsx}',
     '!client/src/main.tsx',

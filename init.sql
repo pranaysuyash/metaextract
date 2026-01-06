@@ -125,10 +125,26 @@ CREATE TABLE IF NOT EXISTS credit_balances (
 CREATE INDEX IF NOT EXISTS idx_credit_balances_user_id ON credit_balances(user_id);
 CREATE INDEX IF NOT EXISTS idx_credit_balances_session_id ON credit_balances(session_id);
 
+-- Credit grants (lots) for safe refunding and FIFO consumption
+CREATE TABLE IF NOT EXISTS credit_grants (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  balance_id VARCHAR NOT NULL REFERENCES credit_balances(id),
+  amount INTEGER NOT NULL,
+  remaining INTEGER NOT NULL,
+  description TEXT,
+  pack TEXT,
+  dodo_payment_id TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_credit_grants_balance_id ON credit_grants(balance_id);
+
 -- Credit transactions
 CREATE TABLE IF NOT EXISTS credit_transactions (
   id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
   balance_id VARCHAR NOT NULL REFERENCES credit_balances(id),
+  grant_id VARCHAR REFERENCES credit_grants(id),
   type TEXT NOT NULL,
   amount INTEGER NOT NULL,
   description TEXT,
@@ -169,12 +185,25 @@ CREATE INDEX IF NOT EXISTS idx_ui_events_user
   ON public.ui_events (user_id);
 
 -- Indexes for extraction_analytics (high read volume)
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_requested_at
-  ON public.extraction_analytics (requested_at DESC);
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier
-  ON public.extraction_analytics (tier);
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_success
-  ON public.extraction_analytics (success);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind IN ('r','v','m')
+      AND n.nspname = 'public'
+      AND c.relname = 'extraction_analytics'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_requested_at
+      ON public.extraction_analytics (requested_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier
+      ON public.extraction_analytics (tier);
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_success
+      ON public.extraction_analytics (success);
+  END IF;
+END
+$$;
 
 -- Indexes for trial_usages to speed lookups by email/session
 CREATE INDEX IF NOT EXISTS idx_trial_usages_email
@@ -182,44 +211,103 @@ CREATE INDEX IF NOT EXISTS idx_trial_usages_email
 CREATE INDEX IF NOT EXISTS idx_trial_usages_session
   ON public.trial_usages (session_id);
 -- Add missing index for user_id on trial_usages (identified in launch audit)
--- Note: code currently queries by email, but FK index is best practice for deletes/joins
-CREATE INDEX IF NOT EXISTS idx_trial_usages_user 
-  ON public.trial_usages (user_id);
+-- Note: ensure user_id exists before attempting index creation
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='trial_usages' AND column_name='user_id'
+  ) THEN
+    ALTER TABLE public.trial_usages
+      ADD COLUMN IF NOT EXISTS user_id VARCHAR;
+  END IF;
+  -- Add FK constraint if users table exists
+  IF EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = 'users' AND n.nspname = 'public'
+  ) THEN
+    -- Only add the constraint if it doesn't already exist (Postgres ALTER TABLE doesn't support IF NOT EXISTS for constraints)
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'trial_usages_user_id_fkey'
+    ) THEN
+      ALTER TABLE public.trial_usages
+        ADD CONSTRAINT trial_usages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    END IF;
+  END IF;
+  -- Create index only if column exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='trial_usages' AND column_name='user_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_trial_usages_user 
+      ON public.trial_usages (user_id);
+  END IF;
+END
+$$;
 
 -- Ensure critical indexes on underlying tables for views exist (redundancy check)
 CREATE INDEX IF NOT EXISTS idx_ui_events_user_product
   ON public.ui_events (user_id, product);
 
 -- Add composite index for common analytics filter pattern
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier_success
-  ON public.extraction_analytics (tier, success);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind IN ('r','v','m')
+      AND n.nspname = 'public'
+      AND c.relname = 'extraction_analytics'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier_success
+      ON public.extraction_analytics (tier, success);
+  END IF;
+END
+$$;
 -- Migration 008: Update metadata_results table schema
 -- Adds new columns for metadata summary, object storage refs, and size tracking
 -- Date: 2026-01-06
 
--- Add new columns if they don't exist
-ALTER TABLE metadata_results
-ADD COLUMN IF NOT EXISTS metadata_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
-ADD COLUMN IF NOT EXISTS metadata_ref JSONB,
-ADD COLUMN IF NOT EXISTS metadata_sha256 TEXT,
-ADD COLUMN IF NOT EXISTS metadata_size_bytes BIGINT,
-ADD COLUMN IF NOT EXISTS metadata_content_type TEXT;
+-- Guarded migration in case metadata_results table does not exist in older schemas
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = 'metadata_results' AND n.nspname = 'public'
+  ) THEN
+    -- Add new columns if they don't exist (separate ALTERs to be explicit)
+    ALTER TABLE public.metadata_results
+      ADD COLUMN IF NOT EXISTS metadata_summary JSONB NOT NULL DEFAULT '{}'::jsonb;
+    ALTER TABLE public.metadata_results
+      ADD COLUMN IF NOT EXISTS metadata_ref JSONB;
+    ALTER TABLE public.metadata_results
+      ADD COLUMN IF NOT EXISTS metadata_sha256 TEXT;
+    ALTER TABLE public.metadata_results
+      ADD COLUMN IF NOT EXISTS metadata_size_bytes BIGINT;
+    ALTER TABLE public.metadata_results
+      ADD COLUMN IF NOT EXISTS metadata_content_type TEXT;
 
--- Create index on metadata_summary for fast searches
-CREATE INDEX IF NOT EXISTS idx_metadata_results_summary 
-  ON metadata_results USING GIN(metadata_summary);
+    -- Create index on metadata_summary for fast searches
+    CREATE INDEX IF NOT EXISTS idx_metadata_results_summary 
+      ON public.metadata_results USING GIN(metadata_summary);
 
--- Migrate existing data: copy 'metadata' column to 'metadata_summary' if metadata exists
-UPDATE metadata_results
-SET metadata_summary = metadata
-WHERE metadata IS NOT NULL AND metadata_summary = '{}'::jsonb;
+    -- Migrate existing data: copy 'metadata' column to 'metadata_summary' if metadata exists
+    UPDATE public.metadata_results
+    SET metadata_summary = metadata
+    WHERE metadata IS NOT NULL AND metadata_summary = '{}'::jsonb;
 
--- Optional: Keep old metadata column for backward compatibility, or drop it after migration
--- COMMENT ON COLUMN metadata_results.metadata IS 'DEPRECATED: Use metadata_summary and metadata_ref instead';
+    -- Optional: Keep old metadata column for backward compatibility, or drop it after migration
+    -- COMMENT ON COLUMN metadata_results.metadata IS 'DEPRECATED: Use metadata_summary and metadata_ref instead';
 
--- Add comment for documentation
-COMMENT ON COLUMN metadata_results.metadata_summary IS 'Capped metadata summary for search and indexing';
-COMMENT ON COLUMN metadata_results.metadata_ref IS 'Pointer to full metadata blob in object storage';
-COMMENT ON COLUMN metadata_results.metadata_sha256 IS 'SHA256 hash of stored metadata';
-COMMENT ON COLUMN metadata_results.metadata_size_bytes IS 'Size of metadata blob in bytes';
-COMMENT ON COLUMN metadata_results.metadata_content_type IS 'Content type of stored metadata (e.g., application/json)';
+    -- Add comment for documentation
+    COMMENT ON COLUMN public.metadata_results.metadata_summary IS 'Capped metadata summary for search and indexing';
+    COMMENT ON COLUMN public.metadata_results.metadata_ref IS 'Pointer to full metadata blob in object storage';
+    COMMENT ON COLUMN public.metadata_results.metadata_sha256 IS 'SHA256 hash of stored metadata';
+    COMMENT ON COLUMN public.metadata_results.metadata_size_bytes IS 'Size of metadata blob in bytes';
+    COMMENT ON COLUMN public.metadata_results.metadata_content_type IS 'Content type of stored metadata (e.g., application/json)';
+  END IF;
+END
+$$;

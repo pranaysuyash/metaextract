@@ -218,6 +218,49 @@ print(clear_cache_pattern('${pattern}'))
     }
   });
 
+  // Refund eligibility helper (admin): 7-day unused-only by payment_id
+  app.get('/api/admin/credits/refund-eligibility', async (req, res) => {
+    try {
+      const paymentId =
+        typeof req.query.paymentId === 'string' ? req.query.paymentId : '';
+      if (!paymentId) {
+        return res.status(400).json({ error: 'paymentId is required' });
+      }
+
+      const grant = await storage.getCreditGrantByPaymentId(paymentId);
+      if (!grant) {
+        return res.status(404).json({ error: 'Purchase not found' });
+      }
+
+      const now = Date.now();
+      const createdAtMs = grant.createdAt?.getTime?.() ?? 0;
+      const ageDays = createdAtMs
+        ? (now - createdAtMs) / (1000 * 60 * 60 * 24)
+        : null;
+
+      const unused = (grant.remaining ?? 0) === (grant.amount ?? 0);
+      const withinWindow = ageDays !== null ? ageDays <= 7 : false;
+
+      return res.json({
+        eligible: unused && withinWindow,
+        policy: { window_days: 7, unused_only: true },
+        details: {
+          amount: grant.amount,
+          remaining: grant.remaining,
+          createdAt: grant.createdAt,
+          withinWindow,
+          unused,
+          ageDays,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to check refund eligibility',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   app.post('/api/admin/rate-limit/reset/:identifier', async (req, res) => {
     try {
       await resetRateLimit(req, res);

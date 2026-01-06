@@ -45,11 +45,13 @@ This document details the implementation of the "2 Free Images per Device" quota
 **Purpose**: Track device usage with cryptographically secure tokens
 
 **Key Functions**:
+
 - `generateClientToken()`: Creates signed tokens with UUID, expiry, and HMAC signature
 - `verifyClientToken()`: Validates token integrity and expiry
 - Token format: `{clientId}.{expiry}.{hmac_signature}`
 
 **Security Features**:
+
 - HMAC-SHA256 signatures with secret key
 - 30-day token expiry
 - Cryptographically secure UUID generation
@@ -57,6 +59,7 @@ This document details the implementation of the "2 Free Images per Device" quota
 ### 2. Database Schema (`server/db/quota-schema.sql`)
 
 **Tables Created**:
+
 ```sql
 -- Primary usage tracking
 client_usage (
@@ -93,6 +96,7 @@ ip_rate_limits (
 **Integration Point**: POST `/api/images_mvp/extract`
 
 **Logic Flow**:
+
 1. Check for existing client token in cookies
 2. If no token → generate new token and set cookie
 3. Verify token validity
@@ -103,6 +107,7 @@ ip_rate_limits (
 ### 4. Schema Definitions (`shared/schema.ts`)
 
 **Added Types**:
+
 ```typescript
 export const clientUsage = pgTable('client_usage', {
   clientId: varchar('client_id').notNull().unique(),
@@ -121,7 +126,7 @@ export const clientUsage = pgTable('client_usage', {
 ```javascript
 ✅ Basic Quota Enforcement: PASS
   - Image 1: Status 200 (should be 200) ✅
-  - Image 2: Status 200 (should be 200) ✅  
+  - Image 2: Status 200 (should be 200) ✅
   - Image 3: Status 429 (should be 429) ✅
 
 ✅ Rate Limiting: PASS
@@ -151,6 +156,7 @@ Response: {
 ```
 
 **Key Success Indicators**:
+
 - ✅ Proper HTTP 402 status code returned
 - ✅ Clear, user-friendly error message
 - ✅ Credit requirements communicated (required: 1, available: 0)
@@ -175,17 +181,20 @@ Response: {
 ## 🛡️ Security Considerations
 
 ### Token Security
+
 - **HMAC-SHA256** signatures prevent token tampering
 - **30-day expiry** limits token lifetime
 - **HttpOnly cookies** prevent XSS attacks
 - **SameSite=Strict** prevents CSRF attacks
 
 ### Rate Limiting
+
 - **IP-based limits**: 10 requests/day, 2/minute per IP
 - **Conservative thresholds** accommodate shared networks
 - **Redis-backed** for production scalability
 
 ### Abuse Detection
+
 - **Device fingerprinting** identifies suspicious patterns
 - **Behavioral analysis** detects automated usage
 - **Scoring system** for graduated responses
@@ -193,6 +202,7 @@ Response: {
 ## 🔍 Error Handling
 
 ### Quota Exceeded Response
+
 ```json
 {
   "error": "Quota exceeded",
@@ -203,15 +213,17 @@ Response: {
 ```
 
 ### Invalid Session Response
+
 ```json
 {
-  "error": "Invalid session", 
+  "error": "Invalid session",
   "message": "Please refresh the page to continue.",
   "requires_refresh": true
 }
 ```
 
 ### Rate Limit Response
+
 ```json
 {
   "error": "Too many requests",
@@ -223,18 +235,21 @@ Response: {
 ## 🚀 Deployment Steps
 
 ### 1. Database Setup
+
 ```bash
 # Run schema creation
 psql $DATABASE_URL -f server/db/quota-schema.sql
 ```
 
 ### 2. Environment Configuration
+
 ```bash
 # Ensure TOKEN_SECRET is set
 TOKEN_SECRET=your-secure-random-secret-at-least-32-characters
 ```
 
 ### 3. Server Deployment
+
 ```bash
 # Install dependencies
 npm install
@@ -244,6 +259,7 @@ npm run dev:server
 ```
 
 ### 4. Verification
+
 ```bash
 # Run comprehensive tests
 node test_quota_enforcement.js
@@ -273,6 +289,7 @@ tail -f server.log | grep -E "(quota|token|usage)"
    - **Solution**: Check Redis connection and rate limiter configuration
 
 ### Debug Commands
+
 ```bash
 # Check database connectivity
 psql $DATABASE_URL -c "SELECT * FROM client_usage LIMIT 5;"
@@ -287,6 +304,7 @@ tail -f server.log | grep -E "(free_used|quota|extraction)"
 ## 📈 Future Enhancements
 
 ### Planned Features
+
 1. **Payment Integration**: Direct credit purchase flow
 2. **Admin Dashboard**: Usage analytics and monitoring
 3. **Advanced Abuse Detection**: Machine learning patterns
@@ -294,6 +312,7 @@ tail -f server.log | grep -E "(free_used|quota|extraction)"
 5. **Mobile App Support**: Native token management
 
 ### Scalability Considerations
+
 1. **Redis Cluster**: For distributed rate limiting
 2. **Database Sharding**: For client_usage table at scale
 3. **CDN Integration**: Token validation at edge
@@ -302,6 +321,7 @@ tail -f server.log | grep -E "(free_used|quota|extraction)"
 ## 🎉 Success Metrics
 
 ### Implementation Success
+
 - ✅ **Zero breaking changes** to existing functionality
 - ✅ **Seamless user experience** maintained
 - ✅ **100% test coverage** for quota scenarios
@@ -309,6 +329,7 @@ tail -f server.log | grep -E "(free_used|quota|extraction)"
 - ✅ **Production-ready** error handling
 
 ### Business Impact
+
 - **User Retention**: No-account frictionless experience
 - **Revenue Protection**: Clear upgrade path at quota limit
 - **System Stability**: Rate limiting prevents abuse
@@ -317,6 +338,7 @@ tail -f server.log | grep -E "(free_used|quota|extraction)"
 ## 📚 References
 
 ### Code Files Modified
+
 - `server/utils/free-quota-enforcement.ts` - Core quota logic
 - `server/routes/images-mvp.ts` - Route integration
 - `server/middleware/free-quota.ts` - Express middleware
@@ -324,11 +346,13 @@ tail -f server.log | grep -E "(free_used|quota|extraction)"
 - `server/db/quota-schema.sql` - Database migration
 
 ### Test Files Created
+
 - `test_quota_enforcement.js` - Comprehensive test suite
 - `debug_quota.js` - Development debugging tool
 - `test_token_cookie.js` - Token handling verification
 
 ### Configuration Files
+
 - `.env` - Environment variables (TOKEN_SECRET)
 - `server/db/quota-schema.sql` - Database schema
 

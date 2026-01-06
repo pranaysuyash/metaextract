@@ -854,7 +854,7 @@ export default function Results() {
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '-')}`}
       >
-        <span className="text-slate-400 group-hover:text-primary/80 transition-colors break-all">
+        <span className="text-slate-300 group-hover:text-primary/80 transition-colors break-all">
           {label}
         </span>
         <div className="flex items-center gap-2 justify-end min-w-0">
@@ -925,7 +925,7 @@ export default function Results() {
             <div className="flex flex-col items-center gap-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               <p className="text-white text-lg">Loading metadata...</p>
-              <p className="text-slate-400 text-sm">Fetching from database</p>
+              <p className="text-slate-300 text-sm">Fetching from database</p>
             </div>
           </div>
         </Layout>
@@ -944,7 +944,7 @@ export default function Results() {
               <h2 className="text-xl font-bold text-white mb-2">
                 Error Loading Metadata
               </h2>
-              <p className="text-slate-300 mb-4">{error}</p>
+              <p className="text-slate-200 mb-4">{error}</p>
               <Button
                 onClick={() => navigate('/images_mvp')}
                 className="bg-[#6366f1] hover:bg-[#5855eb] text-white w-full"
@@ -969,7 +969,7 @@ export default function Results() {
               <h2 className="text-xl font-bold text-white mb-2">
                 No Results Yet
               </h2>
-              <p className="text-slate-300 mb-4">
+              <p className="text-slate-200 mb-4">
                 Upload a file to view extracted metadata and analysis here.
               </p>
               <Button
@@ -1161,11 +1161,11 @@ export default function Results() {
                         GPS Location
                       </h3>
                       <div className="space-y-2 font-mono text-xs">
-                        <div className="text-slate-400">
+                        <div className="text-slate-300">
                           <span className="text-slate-600">LAT:</span>{' '}
                           {gpsCoords?.latitude.toFixed(6)}
                         </div>
-                        <div className="text-slate-400">
+                        <div className="text-slate-300">
                           <span className="text-slate-600">LON:</span>{' '}
                           {gpsCoords?.longitude.toFixed(6)}
                         </div>
@@ -1494,7 +1494,7 @@ export default function Results() {
 
                             {!isUnlocked && (
                               <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
-                                <p className="text-xs text-slate-400 font-mono mb-2">
+                                <p className="text-xs text-slate-300 font-mono mb-2">
                                   {Object.keys(metadata?.makernote || {})
                                     .length +
                                     Object.keys(metadata?.extended || {})
@@ -1712,7 +1712,7 @@ export default function Results() {
                                 ) : (
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                    <p className="text-xs text-slate-300 font-mono mb-2">
                                       {metadata?.makernote?._count || 0}{' '}
                                       VENDOR-SPECIFIC FIELDS LOCKED
                                     </p>
@@ -1807,7 +1807,7 @@ export default function Results() {
                                 ) : (
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                    <p className="text-xs text-slate-300 font-mono mb-2">
                                       {metadata?.xmp_namespaces?._count || 0}{' '}
                                       NAMESPACE FIELDS LOCKED
                                     </p>
@@ -1909,7 +1909,7 @@ export default function Results() {
                                 ) : (
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                    <p className="text-xs text-slate-300 font-mono mb-2">
                                       {metadata?.embedded_thumbnails?._count ||
                                         0}{' '}
                                       EMBEDDED THUMBNAILS LOCKED
@@ -1981,7 +1981,7 @@ export default function Results() {
                                 ) : (
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                    <p className="text-xs text-slate-300 font-mono mb-2">
                                       SCIENTIFIC_METADATA_LOCKED
                                     </p>
                                     <Button
@@ -2024,7 +2024,7 @@ export default function Results() {
                                 ) : (
                                   <div className="p-4 border border-dashed border-white/10 rounded bg-white/5 text-center">
                                     <Lock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                                    <p className="text-xs text-slate-400 font-mono mb-2">
+                                    <p className="text-xs text-slate-300 font-mono mb-2">
                                       SCIENTIFIC_DATA_LOCKED
                                     </p>
                                     <Button
@@ -2088,7 +2088,7 @@ export default function Results() {
 
                           <TabsContent value="raw" className="mt-0">
                             {isUnlocked ? (
-                              <div className="font-mono text-xs text-slate-400">
+                              <div className="font-mono text-xs text-slate-300">
                                 <div className="mb-4 text-xs text-slate-500 uppercase tracking-widest">
                                   Extended Fields:{' '}
                                   {Object.keys(metadata?.extended || {}).length}

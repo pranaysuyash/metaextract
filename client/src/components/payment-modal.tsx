@@ -111,7 +111,7 @@ export function PaymentModal({
           )}
 
           <div className='mb-6'>
-            <div className='text-slate-400 text-xs uppercase tracking-wider mb-1'>
+            <div className='text-slate-300 text-xs uppercase tracking-wider mb-1'>
               {IS_DEMO ? 'Demo Unlock' : 'Total Due'}
             </div>
             <div className='text-3xl font-bold'>
@@ -122,7 +122,7 @@ export function PaymentModal({
 
           {IS_DEMO ? (
             <div className='space-y-4'>
-              <div className='text-sm text-slate-300'>
+              <div className='text-sm text-slate-200'>
                 In demo mode, you can instantly unlock all premium features to explore the full capabilities of MetaExtract.
               </div>
               
@@ -154,7 +154,7 @@ export function PaymentModal({
               <div className='space-y-2'>
                 <label
                   htmlFor='checkout-email'
-                  className='text-xs font-medium text-slate-300'
+                  className='text-xs font-medium text-slate-200'
                 >
                   Email
                 </label>
@@ -195,7 +195,7 @@ export function PaymentModal({
               </div>
 
               <div className='space-y-2'>
-                <label className='text-xs font-medium text-slate-300'>
+                <label className='text-xs font-medium text-slate-200'>
                   Card Information
                 </label>
                 <div className='bg-[#1A1A1A] border border-white/10 rounded-md overflow-hidden'>

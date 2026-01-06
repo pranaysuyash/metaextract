@@ -14,6 +14,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Results from "@/pages/results";
 import ResultsV2 from "@/pages/results-v2";
+import BatchResultsPage from "@/pages/batch-results";
+import TimelineViewPage from "@/pages/timeline-view";
 import ImagesMvpLanding from "@/pages/images-mvp";
 import ImagesMvpResults from "@/pages/images-mvp/results";
 import ImagesMvpCreditsSuccess from "@/pages/images-mvp/credits-success";
@@ -78,6 +80,22 @@ function AppRouter() {
           <Route path="/results" element={<Results />} />
           <Route path="/results-v2" element={<ResultsV2 />} />
           <Route
+            path="/batch-results"
+            element={
+              <ProtectedRoute>
+                <BatchResultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timeline-view"
+            element={
+              <ProtectedRoute>
+                <TimelineViewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/checkout/success"
             element={
               <ProtectedRoute>
@@ -87,11 +105,7 @@ function AppRouter() {
           />
           <Route
             path="/credits/success"
-            element={
-              <ProtectedRoute>
-                <CreditsSuccess />
-              </ProtectedRoute>
-            }
+            element={<CreditsSuccess />}
           />
           <Route path="/images_mvp" element={<ImagesMvpLanding />} />
           <Route path="/images_mvp/results" element={<ImagesMvpResults />} />

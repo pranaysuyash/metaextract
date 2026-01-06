@@ -28,12 +28,25 @@ CREATE INDEX IF NOT EXISTS idx_ui_events_user
   ON public.ui_events (user_id);
 
 -- Indexes for extraction_analytics (high read volume)
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_requested_at
-  ON public.extraction_analytics (requested_at DESC);
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier
-  ON public.extraction_analytics (tier);
-CREATE INDEX IF NOT EXISTS idx_extraction_analytics_success
-  ON public.extraction_analytics (success);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind IN ('r','v','m')
+      AND n.nspname = 'public'
+      AND c.relname = 'extraction_analytics'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_requested_at
+      ON public.extraction_analytics (requested_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_tier
+      ON public.extraction_analytics (tier);
+    CREATE INDEX IF NOT EXISTS idx_extraction_analytics_success
+      ON public.extraction_analytics (success);
+  END IF;
+END
+$$;
 
 -- Indexes for trial_usages to speed lookups by email/session
 CREATE INDEX IF NOT EXISTS idx_trial_usages_email

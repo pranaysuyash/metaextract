@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Zap, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ProgressBar } from './progress-bar';
 
 interface ProgressData {
   percentage: number;
@@ -18,25 +19,30 @@ interface ProgressTrackerProps {
   className?: string;
 }
 
-export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) {
+export function ProgressTracker({
+  sessionId,
+  className,
+}: ProgressTrackerProps) {
   const shouldReduceMotion = useReducedMotion();
   const [progress, setProgress] = useState<ProgressData>({
     percentage: 0,
-    stage: 'Initializing extraction...'
+    stage: 'Initializing extraction...',
   });
   const [isComplete, setIsComplete] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
     // WebSocket connection for real-time progress updates
-    const ws = new WebSocket(`ws://localhost:3000/api/images_mvp/progress/${sessionId}`);
+    const ws = new WebSocket(
+      `ws://localhost:3000/api/images_mvp/progress/${sessionId}`
+    );
 
     ws.onopen = () => {
       console.log('Progress tracker connected');
       setWsConnected(true);
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'progress') {
@@ -44,7 +50,7 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
             percentage: data.percentage ?? 0,
             stage: data.stage,
             eta: data.estimated_time_remaining,
-            quality_metrics: data.quality_metrics
+            quality_metrics: data.quality_metrics,
           });
 
           // Check if extraction is complete
@@ -60,7 +66,7 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
       }
     };
 
-    ws.onerror = (error) => {
+    ws.onerror = error => {
       console.error('WebSocket error:', error);
       setWsConnected(false);
     };
@@ -82,14 +88,19 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
   };
 
   const getStageIcon = (stage: string) => {
-    if (stage.toLowerCase().includes('complete')) return <CheckCircle className="w-4 h-4" />;
-    if (stage.toLowerCase().includes('analyzing')) return <Zap className="w-4 h-4" />;
+    if (stage.toLowerCase().includes('complete'))
+      return <CheckCircle className="w-4 h-4" />;
+    if (stage.toLowerCase().includes('analyzing'))
+      return <Zap className="w-4 h-4" />;
     return <Clock className="w-4 h-4" />;
   };
 
   return (
     <div
-      className={cn("w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10", className)}
+      className={cn(
+        'w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10',
+        className
+      )}
       role="status"
       aria-live="polite"
     >
@@ -98,7 +109,12 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
         <div className="flex items-center space-x-2">
           <motion.div
             animate={{ rotate: isComplete ? 0 : shouldReduceMotion ? 0 : 360 }}
-            transition={{ duration: 2, repeat: isComplete ? 0 : Infinity, ease: "linear", repeatType: "loop" }}
+            transition={{
+              duration: 2,
+              repeat: isComplete ? 0 : Infinity,
+              ease: 'linear',
+              repeatType: 'loop',
+            }}
             style={{ originX: 0.5, originY: 0.5 }}
           >
             {getStageIcon(progress.stage)}
@@ -107,33 +123,19 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
             {isComplete ? 'Extraction Complete!' : 'Extracting Metadata...'}
           </span>
         </div>
-        <span className="text-sm font-mono text-slate-300">
+        <span className="text-sm font-mono text-slate-200">
           {(progress.percentage ?? 0).toFixed(0)}%
         </span>
       </div>
 
       {/* Progress Bar */}
-      <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden">
-        <motion.div
-          className={`absolute left-0 top-0 h-full ${getProgressColor(progress.percentage)}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${progress.percentage}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-        {progress.percentage > 0 && progress.percentage < 100 && (
-          <motion.div
-            className="absolute right-0 top-0 h-full w-1 bg-white/40"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-        )}
-      </div>
+      <ProgressBar percentage={progress.percentage ?? 0} />
 
       {/* Current Stage */}
       <div className="text-center">
-        <p className="text-sm text-slate-300 mb-1">{progress.stage}</p>
+        <p className="text-sm text-slate-200 mb-1">{progress.stage}</p>
         {progress.eta && progress.eta > 0 && (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-300">
             Estimated time remaining: {Math.ceil(progress.eta / 1000)}s
           </p>
         )}
@@ -143,15 +145,18 @@ export function ProgressTracker({ sessionId, className }: ProgressTrackerProps) 
       {progress.quality_metrics && (
         <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
           <div className="text-center">
-            <div className="text-xs text-slate-300 mb-1">Confidence</div>
+            <div className="text-xs text-slate-200 mb-1">Confidence</div>
             <div className="text-lg font-bold text-green-400">
               {(progress.quality_metrics.confidence_score * 100).toFixed(0)}%
             </div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-slate-300 mb-1">Completeness</div>
+            <div className="text-xs text-slate-200 mb-1">Completeness</div>
             <div className="text-lg font-bold text-blue-400">
-              {(progress.quality_metrics.extraction_completeness * 100).toFixed(0)}%
+              {(progress.quality_metrics.extraction_completeness * 100).toFixed(
+                0
+              )}
+              %
             </div>
           </div>
         </div>

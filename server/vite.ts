@@ -119,13 +119,13 @@ export async function setupVite(
   };
 
   const vite = await createViteServer({
-    ...viteConfig,
+    ...(typeof viteConfig === "function" ? await viteConfig({ command: "serve", mode: "development" }) : viteConfig),
     configFile: false,
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
         viteLogger.error(msg, options);
-        process.exit(1);
+        // Do not exit on error in development
       },
     },
     server: serverOptions,

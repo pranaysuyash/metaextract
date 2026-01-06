@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import * as fsSync from 'fs';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
 import { sanitizeFilename, isPathSafe } from '../security-utils';
@@ -13,17 +13,30 @@ const projectRoot = process.cwd();
 const currentDirPath = path.join(projectRoot, 'server');
 
 // Python executable: prefer project venv, fall back to system python3
-const venvPython = path.join(
-  currentDirPath,
-  '..',
-  '..',
-  '.venv',
-  'bin',
-  'python3'
-);
-export const pythonExecutable =
-  process.env.PYTHON_EXECUTABLE ||
-  (existsSync(venvPython) ? venvPython : 'python3');
+const venvCandidates = [
+  path.join(currentDirPath, '..', '..', '.venv', 'bin', 'python3'),
+  path.join(currentDirPath, '..', '..', 'venv', 'bin', 'python3'),
+  path.join(currentDirPath, '..', '..', '.venv', 'bin', 'python'),
+  path.join(currentDirPath, '..', '..', 'venv', 'bin', 'python'),
+];
+
+export function findPythonExecutable(): string {
+  if (process.env.PYTHON_EXECUTABLE && process.env.PYTHON_EXECUTABLE.length)
+    return process.env.PYTHON_EXECUTABLE;
+
+  for (const candidate of venvCandidates) {
+    try {
+      if (fsSync.existsSync(candidate)) return candidate;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Last resort: rely on system python3 in PATH
+  return 'python3';
+}
+
+export const pythonExecutable = findPythonExecutable();
 
 export const PYTHON_SCRIPT_PATH = path.join(
   currentDirPath,
@@ -571,8 +584,10 @@ export async function extractMetadataWithPython(
     throw new Error(`Invalid file path: path is outside allowed directories`);
   }
 
-  // Ensure the file exists
-  if (!existsSync(resolvedPath)) {
+  // Ensure the file exists (use async access so it's mockable in tests)
+  try {
+    await fs.access(resolvedPath);
+  } catch (err) {
     throw new Error(`File not found: ${filePath}`);
   }
 
@@ -696,6 +711,11 @@ export async function extractMetadataWithPython(
       }
       reject(new Error(`Metadata extraction timed out after ${timeoutMs}ms`));
     }, timeoutMs);
+
+    // Allow timer to not keep the Node process alive (so tests can exit)
+    if (typeof timeoutId.unref === 'function') {
+      timeoutId.unref();
+    }
 
     // Clear timeout on completion
     python.on('close', () => {

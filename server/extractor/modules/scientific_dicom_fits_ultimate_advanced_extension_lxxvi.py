@@ -20,7 +20,7 @@ ENT_PATIENT_PARAMETERS = {
     (0x0010, 0x1020): "patient_size",
     (0x0010, 0x1030): "patient_weight",
     (0x0010, 0x21B0): "additional_patient_history",
-    (0x0010, 0xJ001): "ent_assessment_date",
+    (0x0010, 0x1001): "ent_assessment_date",
     (0x0010, 0xJ002): "ent_diagnosis",
     (0x0010, 0xJ003): "sinusitis_indicator",
     (0x0010, 0xJ004): "acute_sinusitis",

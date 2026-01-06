@@ -4,6 +4,7 @@ import {
   type InsertExtractionAnalytics,
   type ExtractionAnalytics,
   type CreditBalance,
+  type CreditGrant,
   type CreditTransaction,
   type InsertUiEvent,
   type UiEvent,
@@ -20,10 +21,7 @@ import {
   StoredMetadata,
   MetadataObjectRef,
 } from './types';
-import {
-  buildMetadataSummary,
-  generateRecordId,
-} from './metadataPartitioning';
+import { buildMetadataSummary, generateRecordId } from './metadataPartitioning';
 
 // ============================================================================
 // Types
@@ -69,6 +67,7 @@ export class MemStorage implements IStorage {
   private creditBalancesMap: Map<string, CreditBalance>;
   private creditBalancesBySessionId: Map<string, string>; // sessionId -> balanceId for O(1) lookups
   private creditTransactionsList: CreditTransaction[];
+  private creditGrantsList: CreditGrant[];
 
   // Onboarding
   private onboardingSessionsMap: Map<string, OnboardingSession>;
@@ -92,6 +91,7 @@ export class MemStorage implements IStorage {
     this.creditBalancesMap = new Map();
     this.creditBalancesBySessionId = new Map();
     this.creditTransactionsList = [];
+    this.creditGrantsList = [];
     this.onboardingSessionsMap = new Map();
     this.onboardingSessionsByUserId = new Map();
     this.trialUsagesMap = new Map();
@@ -315,10 +315,100 @@ export class MemStorage implements IStorage {
     return balance;
   }
 
+  async getCreditBalanceBySessionId(
+    sessionId: string
+  ): Promise<CreditBalance | undefined> {
+    const balanceId = this.creditBalancesBySessionId.get(sessionId);
+    if (!balanceId) return undefined;
+    return this.creditBalancesMap.get(balanceId);
+  }
+
   async getCreditBalance(
     balanceId: string
   ): Promise<CreditBalance | undefined> {
     return this.creditBalancesMap.get(balanceId);
+  }
+
+  async getCreditGrantByPaymentId(
+    paymentId: string
+  ): Promise<CreditGrant | undefined> {
+    return this.creditGrantsList
+      .filter(g => g.dodoPaymentId === paymentId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  }
+
+  async transferCredits(
+    fromBalanceId: string,
+    toBalanceId: string,
+    amount: number,
+    description: string
+  ): Promise<void> {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Transfer amount must be positive');
+    }
+
+    const from = this.creditBalancesMap.get(fromBalanceId);
+    const to = this.creditBalancesMap.get(toBalanceId);
+    if (!from) throw new Error('Source balance not found');
+    if (!to) throw new Error('Destination balance not found');
+    if ((from.credits ?? 0) < amount) throw new Error('Insufficient credits');
+
+    const remainingTotal = this.creditGrantsList
+      .filter(g => g.balanceId === fromBalanceId && (g.remaining ?? 0) > 0)
+      .reduce((sum, g) => sum + (g.remaining ?? 0), 0);
+    if (remainingTotal !== amount) {
+      const missing = amount - remainingTotal;
+      if (missing <= 0) {
+        throw new Error('Partial credit transfers are not supported');
+      }
+      this.creditGrantsList.push({
+        id: randomUUID(),
+        balanceId: fromBalanceId,
+        amount: missing,
+        remaining: missing,
+        description: 'Legacy credits (unattributed)',
+        pack: null,
+        dodoPaymentId: null,
+        createdAt: new Date(0),
+        expiresAt: null,
+      });
+    }
+
+    from.credits -= amount;
+    from.updatedAt = new Date();
+    to.credits += amount;
+    to.updatedAt = new Date();
+
+    // Move remaining grants to preserve refund eligibility.
+    for (const grant of this.creditGrantsList) {
+      if (grant.balanceId === fromBalanceId && (grant.remaining ?? 0) > 0) {
+        grant.balanceId = toBalanceId;
+      }
+    }
+
+    const now = new Date();
+    this.creditTransactionsList.push(
+      {
+        id: randomUUID(),
+        balanceId: fromBalanceId,
+        type: 'transfer',
+        amount: -amount,
+        description,
+        fileType: null,
+        dodoPaymentId: null,
+        createdAt: now,
+      } as any,
+      {
+        id: randomUUID(),
+        balanceId: toBalanceId,
+        type: 'transfer',
+        amount,
+        description,
+        fileType: null,
+        dodoPaymentId: null,
+        createdAt: now,
+      } as any
+    );
   }
 
   async addCredits(
@@ -335,12 +425,36 @@ export class MemStorage implements IStorage {
       throw new Error(`Credit balance not found: ${balanceId}`);
     }
 
+    if (paymentId) {
+      const existing = this.creditTransactionsList.find(
+        t =>
+          t.balanceId === balanceId &&
+          t.type === 'purchase' &&
+          t.dodoPaymentId === paymentId
+      );
+      if (existing) return existing;
+    }
+
     balance.credits += amount;
     balance.updatedAt = new Date();
+
+    const grant: CreditGrant = {
+      id: randomUUID(),
+      balanceId,
+      amount,
+      remaining: amount,
+      description,
+      pack: null,
+      dodoPaymentId: paymentId || null,
+      createdAt: new Date(),
+      expiresAt: null,
+    };
+    this.creditGrantsList.push(grant);
 
     const tx: CreditTransaction = {
       id: randomUUID(),
       balanceId,
+      grantId: grant.id,
       type: 'purchase',
       amount,
       description,
@@ -369,18 +483,74 @@ export class MemStorage implements IStorage {
     balance.credits -= amount;
     balance.updatedAt = new Date();
 
-    const tx: CreditTransaction = {
-      id: randomUUID(),
-      balanceId,
-      type: 'usage',
-      amount: -amount,
-      description,
-      fileType: fileType || null,
-      dodoPaymentId: null,
-      createdAt: new Date(),
-    };
-    this.creditTransactionsList.push(tx);
-    return tx;
+    // FIFO consume from grants (oldest first)
+    let remainingToCharge = amount;
+    const now = new Date();
+    const grants = this.creditGrantsList
+      .filter(
+        g =>
+          g.balanceId === balanceId &&
+          (g.remaining ?? 0) > 0 &&
+          (!g.expiresAt || g.expiresAt.getTime() > now.getTime())
+      )
+      .sort((a, b) => {
+        const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
+        if (timeDiff !== 0) return timeDiff;
+        // Fall back to insertion order based on internal list index to guarantee FIFO
+        return (
+          this.creditGrantsList.indexOf(a) - this.creditGrantsList.indexOf(b)
+        );
+      });
+
+    const grantsTotal = grants.reduce((sum, g) => sum + (g.remaining ?? 0), 0);
+    if (grantsTotal < amount) {
+      const missing = amount - grantsTotal;
+      const legacyGrant: CreditGrant = {
+        id: randomUUID(),
+        balanceId,
+        amount: missing,
+        remaining: missing,
+        description: 'Legacy credits (unattributed)',
+        pack: null,
+        dodoPaymentId: null,
+        createdAt: new Date(0),
+        expiresAt: null,
+      };
+      this.creditGrantsList.push(legacyGrant);
+      grants.unshift(legacyGrant);
+    }
+
+    let firstTx: CreditTransaction | null = null;
+    for (const grant of grants) {
+      if (remainingToCharge <= 0) break;
+      const take = Math.min(grant.remaining, remainingToCharge);
+      if (take <= 0) continue;
+      grant.remaining -= take;
+      remainingToCharge -= take;
+
+      const tx: CreditTransaction = {
+        id: randomUUID(),
+        balanceId,
+        grantId: grant.id,
+        type: 'usage',
+        amount: -take,
+        description,
+        fileType: fileType || null,
+        dodoPaymentId: null,
+        createdAt: new Date(),
+      };
+      this.creditTransactionsList.push(tx);
+      if (!firstTx) firstTx = tx;
+    }
+
+    if (remainingToCharge > 0) {
+      // Should not happen if balance and grants are consistent; revert balance defensively.
+      balance.credits += amount;
+      balance.updatedAt = new Date();
+      return null;
+    }
+
+    return firstTx;
   }
 
   async getCreditTransactions(
@@ -521,5 +691,97 @@ export class MemStorage implements IStorage {
     id: string
   ): Promise<(StoredMetadata & { metadata: any }) | undefined> {
     return this.metadataMap.get(id);
+  }
+
+  // Optional methods for compatibility
+  async getExtractionHistoryByUser?(userId: string, limit?: number): Promise<any[]> {
+    return [];
+  }
+
+  async anonymizeUserData?(userId: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async incrementFailedLoginAttempts?(userId: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async setTwoFactorSecret?(userId: string, secret: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async clearTwoFactorSecret?(userId: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async getExtractionHistoryByFile?(fileId: string): Promise<any[]> {
+    return [];
+  }
+
+  async getExtractionHistoryByDateRange?(startDate: Date, endDate: Date): Promise<any[]> {
+    return [];
+  }
+
+  async getExtractionHistoryByTier?(tier: string): Promise<any[]> {
+    return [];
+  }
+
+  async getExtractionHistoryByFileType?(fileType: string): Promise<any[]> {
+    return [];
+  }
+
+  async updatePassword?(userId: string, hashedPassword: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async getUserById?(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByEmail?(email: string): Promise<User | undefined> {
+    const normalizedEmail = email.toLowerCase();
+    for (const [_, user] of this.users) {
+      if (user.email.toLowerCase() === normalizedEmail) {
+        return user;
+      }
+    }
+    return undefined;
+  }
+
+  async updateUserPassword?(userId: string, newPassword: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.password = newPassword;
+      user.updatedAt = new Date();
+    }
+  }
+
+  async updateUserProfile?(userId: string, profile: Partial<User>): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      Object.assign(user, profile);
+      user.updatedAt = new Date();
+    }
+  }
+
+  async setPasswordResetToken?(userId: string, token: string, expiresAt: Date): Promise<void> {
+    // Implementation would go here
+  }
+
+  async getUserByResetToken?(token: string): Promise<User | undefined> {
+    // Implementation would go here
+    return undefined;
+  }
+
+  async resetFailedLoginAttempts?(userId: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async enableTwoFactor?(userId: string, secret: string): Promise<void> {
+    // Implementation would go here
+  }
+
+  async disableTwoFactor?(userId: string): Promise<void> {
+    // Implementation would go here
   }
 }

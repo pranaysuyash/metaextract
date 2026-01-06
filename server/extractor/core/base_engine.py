@@ -8,11 +8,39 @@ and defines the standard interface for extraction operations.
 import logging
 import traceback
 import time
+import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, List, Union
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
+
+# Import custom exceptions
+try:
+    from ..exceptions.extraction_exceptions import (
+        MetaExtractException, 
+        ExtractionFailedError, 
+        FileNotSupportedError,
+        DependencyError,
+        FileAccessError,
+        ValidationError
+    )
+    EXTRACTION_EXCEPTIONS_AVAILABLE = True
+except ImportError:
+    # Fallback to basic exceptions if custom ones not available
+    class MetaExtractException(Exception):
+        pass
+    class ExtractionFailedError(MetaExtractException):
+        pass
+    class FileNotSupportedError(MetaExtractException):
+        pass
+    class DependencyError(MetaExtractException):
+        pass
+    class FileAccessError(MetaExtractException):
+        pass
+    class ValidationError(MetaExtractException):
+        pass
+    EXTRACTION_EXCEPTIONS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -100,38 +128,171 @@ class BaseExtractor(ABC):
     
     def extract(self, context: ExtractionContext) -> ExtractionResult:
         """
-        Extract metadata from a file.
+        Extract metadata from a file with comprehensive error handling.
         
         Args:
             context: Extraction context containing file information
             
         Returns:
             ExtractionResult containing metadata and status
+            
+        Raises:
+            ValidationError: If context validation fails
+            FileAccessError: If file cannot be accessed
+            FileNotSupportedError: If file format is not supported
+            ExtractionFailedError: If extraction process fails
         """
         start_time = time.time()
         
+        # Validate context first
         try:
-            if not self.can_extract(context.filepath):
+            validation_warnings = self.validate_context(context)
+            if validation_warnings:
+                self.logger.warning(f"Validation warnings for {context.filepath}: {validation_warnings}")
+        except Exception as e:
+            processing_time = (time.time() - start_time) * 1000
+            error_msg = f"Context validation failed in {self.name}: {str(e)}"
+            self.logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            
+            if EXTRACTION_EXCEPTIONS_AVAILABLE:
+                raise ValidationError(
+                    message=error_msg,
+                    field="context",
+                    value=str(context),
+                    context={"extractor": self.name, "filepath": context.filepath}
+                ) from e
+            else:
+                return ExtractionResult(
+                    metadata={},
+                    status=ExtractionStatus.FAILED,
+                    processing_time_ms=processing_time,
+                    error_message=error_msg,
+                    extraction_info={
+                        "extractor": self.name,
+                        "error_type": "ValidationError",
+                        "file_type": context.file_extension
+                    }
+                )
+        
+        # Check file accessibility
+        try:
+            file_path = Path(context.filepath)
+            if not file_path.exists():
+                error_msg = f"File does not exist: {context.filepath}"
+                if EXTRACTION_EXCEPTIONS_AVAILABLE:
+                    raise FileAccessError(
+                        filepath=context.filepath,
+                        access_type="read",
+                        context={"extractor": self.name}
+                    )
+                else:
+                    processing_time = (time.time() - start_time) * 1000
+                    return ExtractionResult(
+                        metadata={},
+                        status=ExtractionStatus.FAILED,
+                        processing_time_ms=processing_time,
+                        error_message=error_msg,
+                        extraction_info={
+                            "extractor": self.name,
+                            "error_type": "FileAccessError",
+                            "file_type": context.file_extension
+                        }
+                    )
+            
+            # Check file permissions
+            if not os.access(context.filepath, os.R_OK):
+                error_msg = f"No read permission for file: {context.filepath}"
+                if EXTRACTION_EXCEPTIONS_AVAILABLE:
+                    raise FileAccessError(
+                        filepath=context.filepath,
+                        access_type="read",
+                        context={"extractor": self.name, "error": "permission_denied"}
+                    )
+                else:
+                    processing_time = (time.time() - start_time) * 1000
+                    return ExtractionResult(
+                        metadata={},
+                        status=ExtractionStatus.FAILED,
+                        processing_time_ms=processing_time,
+                        error_message=error_msg,
+                        extraction_info={
+                            "extractor": self.name,
+                            "error_type": "FileAccessError",
+                            "file_type": context.file_extension
+                        }
+                    )
+        
+        except FileAccessError:
+            # Re-raise FileAccessError as it's already properly formatted
+            raise
+        except Exception as e:
+            processing_time = (time.time() - start_time) * 1000
+            error_msg = f"File access check failed in {self.name}: {str(e)}"
+            self.logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            
+            if EXTRACTION_EXCEPTIONS_AVAILABLE:
+                raise FileAccessError(
+                    filepath=context.filepath,
+                    access_type="check",
+                    context={"extractor": self.name, "original_error": str(e)}
+                ) from e
+            else:
+                return ExtractionResult(
+                    metadata={},
+                    status=ExtractionStatus.FAILED,
+                    processing_time_ms=processing_time,
+                    error_message=error_msg,
+                    extraction_info={
+                        "extractor": self.name,
+                        "error_type": "FileAccessError",
+                        "file_type": context.file_extension
+                    }
+                )
+        
+        # Check format support
+        if not self.can_extract(context.filepath):
+            error_msg = f"File format not supported by {self.name}: {context.file_extension}"
+            if EXTRACTION_EXCEPTIONS_AVAILABLE:
+                raise FileNotSupportedError(
+                    filepath=context.filepath,
+                    file_format=context.file_extension,
+                    context={"extractor": self.name}
+                )
+            else:
+                processing_time = (time.time() - start_time) * 1000
                 return ExtractionResult(
                     metadata={},
                     status=ExtractionStatus.SKIPPED,
-                    processing_time_ms=(time.time() - start_time) * 1000,
-                    error_message=f"File format not supported by {self.name}"
+                    processing_time_ms=processing_time,
+                    error_message=error_msg,
+                    extraction_info={
+                        "extractor": self.name,
+                        "error_type": "FileNotSupportedError",
+                        "file_type": context.file_extension
+                    }
                 )
-            
+        
+        # Perform the actual extraction with comprehensive error handling
+        try:
             # Call the abstract extraction method
             metadata = self._extract_metadata(context)
             
             processing_time = (time.time() - start_time) * 1000
             
+            # Validate extracted metadata
+            if metadata is None:
+                metadata = {}
+            
             return ExtractionResult(
-                metadata=metadata or {},
+                metadata=metadata,
                 status=ExtractionStatus.SUCCESS,
                 processing_time_ms=processing_time,
+                warnings=validation_warnings if validation_warnings else [],
                 extraction_info={
                     "extractor": self.name,
                     "file_type": context.file_extension,
-                    "tier": context.tier
+                    "tier": context.tier,
+                    "success": True
                 }
             )
             
@@ -140,17 +301,35 @@ class BaseExtractor(ABC):
             error_msg = f"Extraction failed in {self.name}: {str(e)}"
             self.logger.error(f"{error_msg}\n{traceback.format_exc()}")
             
-            return ExtractionResult(
-                metadata={},
-                status=ExtractionStatus.FAILED,
-                processing_time_ms=processing_time,
-                error_message=error_msg,
-                extraction_info={
-                    "extractor": self.name,
-                    "error_type": type(e).__name__,
-                    "file_type": context.file_extension
-                }
-            )
+            # Enhanced error classification
+            error_type = type(e).__name__
+            error_category = self._classify_error(e)
+            
+            if EXTRACTION_EXCEPTIONS_AVAILABLE:
+                raise ExtractionFailedError(
+                    message=error_msg,
+                    extractor_name=self.name,
+                    filepath=context.filepath,
+                    original_error=e,
+                    context={
+                        "error_category": error_category,
+                        "file_type": context.file_extension,
+                        "tier": context.tier
+                    }
+                ) from e
+            else:
+                return ExtractionResult(
+                    metadata={},
+                    status=ExtractionStatus.FAILED,
+                    processing_time_ms=processing_time,
+                    error_message=error_msg,
+                    extraction_info={
+                        "extractor": self.name,
+                        "error_type": error_type,
+                        "error_category": error_category,
+                        "file_type": context.file_extension
+                    }
+                )
     
     @abstractmethod
     def _extract_metadata(self, context: ExtractionContext) -> Dict[str, Any]:
@@ -197,6 +376,50 @@ class BaseExtractor(ABC):
             "supported_formats": self.supported_formats,
             "version": "1.0.0"
         }
+    
+    def _classify_error(self, exception: Exception) -> str:
+        """
+        Classify an exception into error categories for better handling.
+        
+        Args:
+            exception: The exception to classify
+            
+        Returns:
+            String representing the error category
+        """
+        error_type = type(exception).__name__
+        
+        # File-related errors
+        if error_type in ['FileNotFoundError', 'PermissionError', 'IsADirectoryError', 'NotADirectoryError']:
+            return 'file_system'
+        
+        # Memory-related errors
+        elif error_type in ['MemoryError', 'OutOfMemoryError']:
+            return 'memory'
+        
+        # Data format errors
+        elif error_type in ['ValueError', 'TypeError', 'AttributeError', 'KeyError', 'IndexError']:
+            return 'data_format'
+        
+        # Library/dependency errors
+        elif error_type in ['ImportError', 'ModuleNotFoundError']:
+            return 'dependency'
+        
+        # Network/IO errors
+        elif error_type in ['IOError', 'OSError', 'ConnectionError', 'TimeoutError']:
+            return 'io_network'
+        
+        # Parsing errors
+        elif error_type in ['JSONDecodeError', 'XMLSyntaxError', 'ConfigParserError']:
+            return 'parsing'
+        
+        # Custom MetaExtract exceptions
+        elif hasattr(exception, 'error_code'):
+            return 'metaextract_specific'
+        
+        # All other errors
+        else:
+            return 'unknown'
 
 
 class SpecializedExtractor(BaseExtractor):
@@ -223,13 +446,28 @@ class SpecializedExtractor(BaseExtractor):
     def _check_library_availability(self) -> Dict[str, bool]:
         """Check availability of required libraries."""
         availability = {}
+        missing_libraries = []
+        
         for lib_name in self.required_libraries:
             try:
                 __import__(lib_name)
                 availability[lib_name] = True
-            except ImportError:
+            except ImportError as e:
                 availability[lib_name] = False
-                self.logger.warning(f"Required library '{lib_name}' not available for {self.name}")
+                missing_libraries.append(lib_name)
+                self.logger.warning(f"Required library '{lib_name}' not available for {self.name}: {str(e)}")
+        
+        # Raise dependency error if any libraries are missing and exceptions are available
+        if missing_libraries and EXTRACTION_EXCEPTIONS_AVAILABLE:
+            for lib_name in missing_libraries:
+                raise DependencyError(
+                    missing_dependency=lib_name,
+                    context={
+                        "extractor": self.name,
+                        "domain": self.domain,
+                        "all_missing": missing_libraries
+                    }
+                )
         
         return availability
     
@@ -239,6 +477,9 @@ class SpecializedExtractor(BaseExtractor):
         
         Returns:
             True if all required libraries are available
+            
+        Raises:
+            DependencyError: If required libraries are missing (when exceptions available)
         """
         return all(self._libraries_available.values())
     
@@ -251,8 +492,25 @@ class SpecializedExtractor(BaseExtractor):
             
         Returns:
             True if available and file format is supported
+            
+        Raises:
+            DependencyError: If required libraries are missing (when exceptions available)
         """
         if not self.is_available():
             return False
             
         return super().can_extract(filepath)
+    
+    def get_dependency_status(self) -> Dict[str, Any]:
+        """
+        Get detailed dependency status information.
+        
+        Returns:
+            Dictionary with dependency availability and missing libraries
+        """
+        return {
+            "available": self.is_available(),
+            "libraries_available": self._libraries_available,
+            "missing_libraries": [lib for lib, available in self._libraries_available.items() if not available],
+            "domain": self.domain
+        }

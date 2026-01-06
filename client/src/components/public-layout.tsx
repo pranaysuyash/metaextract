@@ -75,19 +75,19 @@ export function PublicLayout({
                 <nav className="hidden md:flex items-center gap-6">
                   <Link
                     to="/#features"
-                    className="text-sm text-slate-300 hover:text-white transition-colors"
+                    className="text-sm text-slate-200 hover:text-white transition-colors"
                   >
                     Features
                   </Link>
                   <Link
                     to="/#pricing"
-                    className="text-sm text-slate-300 hover:text-white transition-colors"
+                    className="text-sm text-slate-200 hover:text-white transition-colors"
                   >
                     Pricing
                   </Link>
                   <Link
                     to="/docs"
-                    className="text-sm text-slate-300 hover:text-white transition-colors"
+                    className="text-sm text-slate-200 hover:text-white transition-colors"
                   >
                     Docs
                   </Link>
@@ -102,7 +102,7 @@ export function PublicLayout({
                       variant="ghost"
                       size="sm"
                       onClick={() => navigate('/images_mvp')}
-                      className="text-slate-300 hover:text-white hover:bg-white/10"
+                      className="text-slate-200 hover:text-white hover:bg-white/10"
                     >
                       <Upload className="w-4 h-4 mr-2" />
                       Extract
@@ -111,7 +111,7 @@ export function PublicLayout({
                       variant="ghost"
                       size="sm"
                       onClick={handleLogout}
-                      className="text-slate-300 hover:text-white hover:bg-white/10"
+                      className="text-slate-200 hover:text-white hover:bg-white/10"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       Logout
@@ -123,7 +123,7 @@ export function PublicLayout({
                       variant="ghost"
                       size="sm"
                       onClick={openLogin}
-                      className="text-slate-300 hover:text-white hover:bg-white/10"
+                      className="text-slate-200 hover:text-white hover:bg-white/10"
                       data-auth="login"
                     >
                       <LogIn className="w-4 h-4 mr-2" />
@@ -167,7 +167,7 @@ export function PublicLayout({
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                     <Link
                       to="/#features"
-                      className="text-sm text-slate-300 hover:text-white py-2"
+                      className="text-sm text-slate-200 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Features
@@ -175,7 +175,7 @@ export function PublicLayout({
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                     <Link
                       to="/#pricing"
-                      className="text-sm text-slate-300 hover:text-white py-2"
+                      className="text-sm text-slate-200 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Pricing
@@ -183,7 +183,7 @@ export function PublicLayout({
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                     <Link
                       to="/docs"
-                      className="text-sm text-slate-300 hover:text-white py-2"
+                      className="text-sm text-slate-200 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Docs
@@ -200,7 +200,7 @@ export function PublicLayout({
                           navigate('/images_mvp');
                           setMobileMenuOpen(false);
                         }}
-                        className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
+                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
                       >
                         <Upload className="w-4 h-4 mr-2" />
                         Extract
@@ -211,7 +211,7 @@ export function PublicLayout({
                           handleLogout();
                           setMobileMenuOpen(false);
                         }}
-                        className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
+                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
                         Logout
@@ -225,7 +225,7 @@ export function PublicLayout({
                           openLogin();
                           setMobileMenuOpen(false);
                         }}
-                        className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
+                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
                       >
                         <LogIn className="w-4 h-4 mr-2" />
                         Sign In
@@ -270,7 +270,7 @@ export function PublicLayout({
                     Meta<span className="text-primary">Extract</span>
                   </span>
                 </Link>
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-slate-200">
                   The world's most comprehensive metadata extraction system.
                 </p>
               </div>
@@ -278,7 +278,7 @@ export function PublicLayout({
               {/* Product */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Product</h4>
-                <ul className="space-y-2 text-sm text-slate-300">
+                <ul className="space-y-2 text-sm text-slate-200">
                   <li>
                     <Link
                       to="/#features"
@@ -317,7 +317,7 @@ export function PublicLayout({
               {/* Company */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Company</h4>
-                <ul className="space-y-2 text-sm text-slate-300">
+                <ul className="space-y-2 text-sm text-slate-200">
                   <li>
                     <Link
                       to="/about"
@@ -348,7 +348,7 @@ export function PublicLayout({
               {/* Legal */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Legal</h4>
-                <ul className="space-y-2 text-sm text-slate-300">
+                <ul className="space-y-2 text-sm text-slate-200">
                   <li>
                     <Link
                       to="/privacy"

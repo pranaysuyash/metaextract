@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, List
 
 from .orchestrator import ExtractionOrchestrator
+from .caching_orchestrator import CachingExtractionOrchestrator
 from .base_engine import ExtractionContext
 from ..extractors.image_extractor import ImageExtractor
 from ..exceptions.extraction_exceptions import MetaExtractException
@@ -27,9 +28,10 @@ class NewComprehensiveMetadataExtractor:
     old monolithic engine to the new modular architecture.
     """
     
-    def __init__(self):
-        """Initialize the new comprehensive extractor."""
-        self.orchestrator = ExtractionOrchestrator()
+    def __init__(self, enable_caching: bool = True):
+        """Initialize the new comprehensive extractor with caching support."""
+        self.enable_caching = enable_caching
+        self.orchestrator = CachingExtractionOrchestrator(enable_caching=enable_caching)
         self._setup_extractors()
         self.logger = logging.getLogger(__name__)
     
@@ -54,7 +56,8 @@ class NewComprehensiveMetadataExtractor:
         from ..extractors.scientific_extractor import ScientificExtractor
         self.orchestrator.add_extractor(ScientificExtractor())
     
-    def extract_comprehensive_metadata(self, filepath: str, tier: str = "super") -> Dict[str, Any]:
+    def extract_comprehensive_metadata(self, filepath: str, tier: str = "super", 
+                                       force_refresh: bool = False) -> Dict[str, Any]:
         """
         Extract comprehensive metadata using the new architecture.
         
@@ -68,8 +71,10 @@ class NewComprehensiveMetadataExtractor:
         start_time = time.time()
         
         try:
-            # Use the orchestrator to extract metadata
-            result = self.orchestrator.extract_metadata(filepath, tier=tier, parallel=True)
+            # Use the orchestrator to extract metadata with caching
+            result = self.orchestrator.extract_metadata(
+                filepath, tier=tier, parallel=True, force_refresh=force_refresh
+            )
             
             # Add registry summary for frontend compatibility
             result = self._add_registry_summary(result)
@@ -240,7 +245,8 @@ class NewComprehensiveMetadataExtractor:
 
 
 # Compatibility function that matches the original API
-def extract_comprehensive_metadata_new(filepath: str, tier: str = "super") -> Dict[str, Any]:
+def extract_comprehensive_metadata_new(filepath: str, tier: str = "super", 
+                                       enable_caching: bool = True) -> Dict[str, Any]:
     """
     Extract comprehensive metadata using the new refactored engine.
     
@@ -254,22 +260,23 @@ def extract_comprehensive_metadata_new(filepath: str, tier: str = "super") -> Di
     Returns:
         Dictionary containing extracted metadata
     """
-    extractor = NewComprehensiveMetadataExtractor()
+    extractor = NewComprehensiveMetadataExtractor(enable_caching=enable_caching)
     return extractor.extract_comprehensive_metadata(filepath, tier)
 
 
 # Create a singleton instance for efficiency
 _default_extractor = None
 
-def get_default_extractor() -> NewComprehensiveMetadataExtractor:
+def get_default_extractor(enable_caching: bool = True) -> NewComprehensiveMetadataExtractor:
     """Get the default comprehensive extractor instance."""
     global _default_extractor
     if _default_extractor is None:
-        _default_extractor = NewComprehensiveMetadataExtractor()
+        _default_extractor = NewComprehensiveMetadataExtractor(enable_caching=enable_caching)
     return _default_extractor
 
 
-def extract_comprehensive_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
+def extract_comprehensive_metadata(filepath: str, tier: str = "super", 
+                                   enable_caching: bool = True) -> Dict[str, Any]:
     """
     Convenience function using the default extractor.
     

@@ -662,8 +662,22 @@ export function getUserFriendlyError(
  */
 export function toUserFriendlyError(error: unknown): UserFriendlyError {
   const code = detectErrorCode(error);
-  const technicalDetails =
-    error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  let technicalDetails: string;
+
+  if (error instanceof Error) {
+    technicalDetails = `${error.name}: ${error.message}`;
+  } else {
+    try {
+      technicalDetails =
+        typeof error === 'string' ? error : JSON.stringify(error);
+    } catch (_) {
+      try {
+        technicalDetails = String(error as any);
+      } catch (_) {
+        technicalDetails = '<unserializable error>';
+      }
+    }
+  }
 
   return getUserFriendlyError(code, technicalDetails);
 }
@@ -745,7 +759,7 @@ export async function withRetry<T>(
       const delay = calculateRetryDelay(attempt, userError.retry!);
       onRetry?.(attempt, delay);
 
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 }

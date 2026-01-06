@@ -1,0 +1,223 @@
+{
+  "timestamp": "2026-01-06T15:58:09.246519",
+  "system_info": {
+    "platform": "darwin",
+    "python_version": "3.11.9",
+    "cpu_count": 14,
+    "memory_total_gb": 96.0
+  },
+  "database_operations": {
+    "store": {
+      "execution_time": 0.004111766815185547,
+      "memory_usage_mb": 0.875,
+      "success": false,
+      "error": "[Errno 2] No such file or directory: 'test_image.jpg'"
+    },
+    "retrieve": {
+      "execution_time": 0.000431060791015625,
+      "memory_usage_mb": 0.03125,
+      "success": true,
+      "error": null,
+      "result_count": 0
+    },
+    "search": {
+      "execution_time": 2.09808349609375e-05,
+      "memory_usage_mb": 0.0,
+      "success": true,
+      "error": null,
+      "result_count": 0
+    },
+    "bulk": {
+      "bulk_store": {
+        "execution_time": 0.0002808570861816406,
+        "memory_usage_mb": 0.0,
+        "success": false,
+        "error": "[Errno 2] No such file or directory: 'bulk_test_0.jpg'",
+        "items_processed": 0,
+        "avg_time_per_item": 0
+      },
+      "bulk_retrieve": {
+        "execution_time": 0.004867076873779297,
+        "memory_usage_mb": 0.0,
+        "success": true,
+        "error": null,
+        "items_retrieved": 0,
+        "avg_time_per_item": 0.0004867076873779297
+      }
+    },
+    "statistics": {
+      "success": true,
+      "data": {
+        "total_files": 0,
+        "total_favorites": 0,
+        "by_type": {},
+        "total_size_bytes": 0,
+        "unique_files": 0
+      }
+    }
+  },
+  "database_file_stats": {
+    "file_size_bytes": 53248,
+    "file_size_mb": 0.05,
+    "created": "2026-01-06T15:58:09.235545",
+    "modified": "2025-12-31T12:53:18.661265",
+    "tables": [
+      "files",
+      "sqlite_sequence",
+      "metadata",
+      "perceptual_hashes",
+      "favorites",
+      "version_history"
+    ],
+    "table_row_counts": {
+      "files": 0,
+      "sqlite_sequence": 0,
+      "metadata": 0,
+      "perceptual_hashes": 0,
+      "favorites": 0,
+      "version_history": 0
+    },
+    "schema": {
+      "files": [
+        [
+          "id",
+          "INTEGER"
+        ],
+        [
+          "file_path",
+          "TEXT"
+        ],
+        [
+          "file_hash",
+          "TEXT"
+        ],
+        [
+          "file_size",
+          "INTEGER"
+        ],
+        [
+          "file_mtime",
+          "REAL"
+        ],
+        [
+          "file_type",
+          "TEXT"
+        ],
+        [
+          "extracted_at",
+          "TEXT"
+        ],
+        [
+          "last_updated",
+          "TEXT"
+        ]
+      ],
+      "sqlite_sequence": [
+        [
+          "name",
+          ""
+        ],
+        [
+          "seq",
+          ""
+        ]
+      ],
+      "metadata": [
+        [
+          "file_id",
+          "INTEGER"
+        ],
+        [
+          "category",
+          "TEXT"
+        ],
+        [
+          "key",
+          "TEXT"
+        ],
+        [
+          "value",
+          "TEXT"
+        ]
+      ],
+      "perceptual_hashes": [
+        [
+          "file_id",
+          "INTEGER"
+        ],
+        [
+          "phash",
+          "TEXT"
+        ],
+        [
+          "dhash",
+          "TEXT"
+        ],
+        [
+          "ahash",
+          "TEXT"
+        ],
+        [
+          "whash",
+          "TEXT"
+        ],
+        [
+          "blockhash",
+          "TEXT"
+        ]
+      ],
+      "favorites": [
+        [
+          "file_id",
+          "INTEGER"
+        ],
+        [
+          "added_at",
+          "TEXT"
+        ],
+        [
+          "notes",
+          "TEXT"
+        ],
+        [
+          "tags",
+          "TEXT"
+        ]
+      ],
+      "version_history": [
+        [
+          "id",
+          "INTEGER"
+        ],
+        [
+          "file_id",
+          "INTEGER"
+        ],
+        [
+          "changed_at",
+          "TEXT"
+        ],
+        [
+          "change_type",
+          "TEXT"
+        ],
+        [
+          "category",
+          "TEXT"
+        ],
+        [
+          "key",
+          "TEXT"
+        ],
+        [
+          "old_value",
+          "TEXT"
+        ],
+        [
+          "new_value",
+          "TEXT"
+        ]
+      ]
+    }
+  }
+}

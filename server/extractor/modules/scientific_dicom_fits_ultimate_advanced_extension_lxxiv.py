@@ -20,7 +20,7 @@ DERMATOLOGY_PATIENT_PARAMETERS = {
     (0x0010, 0x1020): "patient_size",
     (0x0010, 0x1030): "patient_weight",
     (0x0010, 0x21B0): "additional_patient_history",
-    (0x0010, 0xH001): "dermatology_assessment_date",
+    (0x0010, 0x1001): "dermatology_assessment_date",
     (0x0010, 0xH002): "skin_diagnosis",
     (0x0010, 0xH003): "melanoma_indicator",
     (0x0010, 0xH004): "melanoma_thickness",

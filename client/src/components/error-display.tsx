@@ -142,7 +142,7 @@ export function ErrorAlert({
             {onDismiss && (
               <button
                 onClick={onDismiss}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-300 hover:text-white transition-colors"
                 aria-label="Dismiss error"
               >
                 <X className="w-4 h-4" />
@@ -155,7 +155,7 @@ export function ErrorAlert({
             <div className="mt-3">
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+                className="flex items-center gap-1 text-sm text-slate-300 hover:text-white transition-colors"
               >
                 {expanded ? (
                   <ChevronUp className="w-4 h-4" />
@@ -170,7 +170,7 @@ export function ErrorAlert({
                   {error.suggestions.map((suggestion, index) => (
                     <li
                       key={index}
-                      className="flex items-start gap-2 text-sm text-slate-300"
+                      className="flex items-start gap-2 text-sm text-slate-200"
                     >
                       <CheckCircle className="w-4 h-4 mt-0.5 text-slate-500 shrink-0" />
                       {suggestion}
@@ -184,7 +184,7 @@ export function ErrorAlert({
           {/* Technical Details (for debugging) */}
           {showTechnicalDetails && error.technicalDetails && (
             <details className="mt-3">
-              <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-400">
+              <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-300">
                 Technical details
               </summary>
               <pre className="mt-2 text-xs text-slate-500 bg-black/20 rounded p-2 overflow-x-auto">
@@ -215,7 +215,7 @@ export function ErrorAlert({
                 size="sm"
                 variant="ghost"
                 asChild
-                className="text-slate-400 hover:text-white"
+                className="text-slate-300 hover:text-white"
               >
                 <a
                   href={error.helpLink}
@@ -307,7 +307,7 @@ export function ErrorToast({
         <button
           type="button"
           onClick={onDismiss}
-          className="text-slate-400 hover:text-white transition-colors"
+          className="text-slate-300 hover:text-white transition-colors"
           aria-label="Dismiss error"
         >
           <X className="w-4 h-4" />
@@ -350,14 +350,14 @@ export function FullPageError({
         </div>
 
         <h1 className="mt-6 text-2xl font-bold text-white">{error.title}</h1>
-        <p className="mt-2 text-slate-400">{error.message}</p>
+        <p className="mt-2 text-slate-300">{error.message}</p>
 
         {error.suggestions.length > 0 && (
           <ul className="mt-6 space-y-2 text-left">
             {error.suggestions.map((suggestion, index) => (
               <li
                 key={index}
-                className="flex items-start gap-2 text-sm text-slate-300"
+                className="flex items-start gap-2 text-sm text-slate-200"
               >
                 <CheckCircle className="w-4 h-4 mt-0.5 text-slate-500 shrink-0" />
                 {suggestion}
@@ -389,7 +389,7 @@ export function FullPageError({
             <Button
               variant="ghost"
               onClick={onGoHome}
-              className="text-slate-400"
+              className="text-slate-300"
             >
               Go to homepage
             </Button>

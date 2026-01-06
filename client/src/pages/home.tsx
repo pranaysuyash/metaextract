@@ -50,29 +50,6 @@ import { cn } from '@/lib/utils';
 
 // Constants for configuration
 const SESSION_STORAGE_LIMIT = 4 * 1024 * 1024; // 4MB
-const SESSION_ID_KEY = 'metaextract_session_id';
-
-function getSessionId(): string {
-  try {
-    // Check if localStorage is available
-    if (typeof Storage === 'undefined' || !window.localStorage) {
-      console.warn(
-        'localStorage not available, generating temporary session ID'
-      );
-      return crypto.randomUUID();
-    }
-
-    let sessionId = localStorage.getItem(SESSION_ID_KEY);
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      localStorage.setItem(SESSION_ID_KEY, sessionId);
-    }
-    return sessionId;
-  } catch (e) {
-    console.warn('localStorage access failed, using temporary session ID', e);
-    return crypto.randomUUID();
-  }
-}
 
 // Custom hook for mouse parallax
 function useParallax(sensitivity = 20) {
@@ -132,15 +109,22 @@ export default function Home() {
     setCreditPackLoading(packKey);
 
     try {
-      const sessionId = getSessionId();
       const response = await fetch('/api/credits/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pack: packKey, sessionId }),
+        credentials: 'include',
+        body: JSON.stringify({ pack: packKey }),
       });
 
       // Check if response is ok before parsing JSON
       if (!response.ok) {
+        if (response.status === 401) {
+          const loginButton = document.querySelector(
+            '[data-auth="login"]'
+          ) as HTMLButtonElement | null;
+          loginButton?.click();
+          throw new Error('Please sign in to purchase credits.');
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error || `HTTP error! status: ${response.status}`
@@ -294,7 +278,7 @@ export default function Home() {
                   <span className="text-primary">competitors miss.</span>
                 </h1>
 
-                <p className="text-base md:text-lg lg:text-xl text-slate-300 max-w-xl leading-relaxed mb-8">
+                <p className="text-base md:text-lg lg:text-xl text-slate-200 max-w-xl leading-relaxed mb-8">
                   Courts, journalists, and security teams trust MetaExtract to
                   uncover 7,000+ hidden fields, detect manipulation, and
                   preserve digital evidence.
@@ -326,7 +310,7 @@ export default function Home() {
                   >
                     START EXTRACTION
                   </Button>
-                  <div className="flex flex-col gap-1 text-sm text-slate-400">
+                  <div className="flex flex-col gap-1 text-sm text-slate-300">
                     <span>No sign-up required for free scan.</span>
                     <a
                       href="#pricing"
@@ -444,7 +428,7 @@ export default function Home() {
                   <User className="w-5 h-5" />
                   Authentication Status
                 </CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-slate-300">
                   {isAuthenticated
                     ? 'You are logged in and can access all features'
                     : 'Login to access advanced features and save your work'}
@@ -467,7 +451,7 @@ export default function Home() {
                           <p className="font-medium">
                             Welcome back, {user.username}!
                           </p>
-                          <p className="text-sm text-slate-400">{user.email}</p>
+                          <p className="text-sm text-slate-300">{user.email}</p>
                         </div>
                       </div>
                       <Badge
@@ -488,7 +472,7 @@ export default function Home() {
                       <Button
                         onClick={() => navigate('/images_mvp/results')}
                         variant="outline"
-                        className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                        className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
                       >
                         View Results
                       </Button>
@@ -500,7 +484,7 @@ export default function Home() {
                       <h4 className="font-medium mb-2">
                         Test the Authentication System
                       </h4>
-                      <p className="text-sm text-slate-400 mb-4">
+                      <p className="text-sm text-slate-300 mb-4">
                         Use these test credentials to login and explore
                         different subscription tiers:
                       </p>
@@ -513,7 +497,9 @@ export default function Home() {
                           <p className="text-xs font-mono">
                             test@metaextract.com
                           </p>
-                          <p className="text-xs font-mono">testpassword123</p>
+                          <p className="text-xs font-mono">
+                            TestPassword123!
+                          </p>
                         </div>
                         <div className="p-3 bg-white/5 rounded border border-white/10">
                           <p className="text-xs font-mono text-purple-400 mb-1">
@@ -523,7 +509,7 @@ export default function Home() {
                             forensic@metaextract.com
                           </p>
                           <p className="text-xs font-mono">
-                            forensicpassword123
+                            ForensicPassword123!
                           </p>
                         </div>
                         <div className="p-3 bg-white/5 rounded border border-white/10">
@@ -533,9 +519,15 @@ export default function Home() {
                           <p className="text-xs font-mono">
                             admin@metaextract.com
                           </p>
-                          <p className="text-xs font-mono">adminpassword123</p>
+                          <p className="text-xs font-mono">
+                            AdminPassword123!
+                          </p>
                         </div>
                       </div>
+                      <p className="text-xs text-slate-500">
+                        If you don’t have these users in your DB yet, run{' '}
+                        <span className="font-mono">npm run seed:test-users</span>.
+                      </p>
                     </div>
 
                     <div className="flex gap-3">
@@ -561,7 +553,7 @@ export default function Home() {
                           if (registerButton) registerButton.click();
                         }}
                         variant="outline"
-                        className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                        className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
                       >
                         <UserPlus className="w-4 h-4 mr-2" />
                         Register
@@ -582,7 +574,7 @@ export default function Home() {
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter">
                   CORE CAPABILITIES
                 </h2>
-                <p className="font-mono text-slate-300 text-sm">{`SYSTEM_MODULES // V2.4`}</p>
+                <p className="font-mono text-slate-200 text-sm">{`SYSTEM_MODULES // V2.4`}</p>
               </div>
             </div>
 
@@ -605,7 +597,7 @@ export default function Home() {
                   <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
                     Forensic Deep-Dive
                   </h3>
-                  <p className="text-slate-300 leading-relaxed max-w-md">
+                  <p className="text-slate-200 leading-relaxed max-w-md">
                     Bypass standard EXIF viewers. Our engine reconstructs 7,000+
                     data points including Canon MakerNotes, Sony Encrypted Data,
                     and Photoshop History logs to build a complete chain of
@@ -651,7 +643,7 @@ export default function Home() {
                     <Globe className="w-4 h-4" />
                     <span>GLOBAL_STANDARDS</span>
                   </div>
-                  <p className="text-slate-300 text-sm leading-tight">
+                  <p className="text-slate-200 text-sm leading-tight">
                     Full compliance with C2PA, Dublin Core, and GDPR
                     Right-to-Erasure protocols.
                   </p>
@@ -673,7 +665,7 @@ export default function Home() {
                 <h3 className="text-xl md:text-2xl font-bold text-white mb-4">
                   Hex & Entropy Analysis
                 </h3>
-                <p className="text-slate-300 text-sm leading-relaxed mb-8">
+                <p className="text-slate-200 text-sm leading-relaxed mb-8">
                   Direct hex-level access allows you to inspect raw file
                   headers. Entropy analysis helps detect if a file has been
                   artificially manipulated or edited.
@@ -681,15 +673,15 @@ export default function Home() {
 
                 <div className="mt-auto space-y-3 font-mono text-xs">
                   <div className="flex justify-between items-center p-2 bg-white/5 border-l-2 border-emerald-500">
-                    <span className="text-slate-400">HEX_DUMP</span>
+                    <span className="text-slate-300">HEX_DUMP</span>
                     <span className="text-emerald-500">AVAILABLE</span>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-white/5 border-l-2 border-emerald-500">
-                    <span className="text-slate-400">ENTROPY_MAP</span>
+                    <span className="text-slate-300">ENTROPY_MAP</span>
                     <span className="text-emerald-500">GENERATING...</span>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-white/5 border-l-2 border-emerald-500">
-                    <span className="text-slate-400">GPS_RECON</span>
+                    <span className="text-slate-300">GPS_RECON</span>
                     <span className="text-emerald-500">PRECISE</span>
                   </div>
                 </div>
@@ -746,7 +738,7 @@ export default function Home() {
                       </span>
                     </div>
                     <p
-                      className={`text-xs ${tier.recommended ? 'text-black/80' : 'text-slate-400'} mb-6`}
+                      className={`text-xs ${tier.recommended ? 'text-black/80' : 'text-slate-300'} mb-6`}
                     >
                       {tier.description}
                     </p>
@@ -764,7 +756,7 @@ export default function Home() {
                             className={
                               tier.recommended
                                 ? 'text-black/90'
-                                : 'text-slate-300'
+                                : 'text-slate-200'
                             }
                           >
                             {feat}
@@ -804,7 +796,7 @@ export default function Home() {
                     <h4 className="text-white font-bold font-mono">
                       PAY-AS-YOU-GO CREDITS
                     </h4>
-                    <p className="text-slate-400 text-xs max-w-sm mb-2">
+                    <p className="text-slate-300 text-xs max-w-sm mb-2">
                       No subscription required. Buy credits for one-off forensic
                       extractions.
                     </p>
@@ -839,7 +831,7 @@ export default function Home() {
                           </div>
                         ) : (
                           <>
-                            <div className="text-xs text-slate-400 mb-1">
+                            <div className="text-xs text-slate-300 mb-1">
                               {pack.name}
                             </div>
                             <div className="text-xl font-bold text-white group-hover:text-primary">

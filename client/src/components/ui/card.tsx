@@ -1,44 +1,21 @@
+// client/src/components/ui/card.tsx
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-/**
- * Card component with optional interactive feedback
- * 
- * Features:
- * - Base card with subtle border and shadow
- * - Optional interactive variant with hover effects
- * - Smooth transitions for state changes
- * 
- * @validates Requirements 1.2 - Interactive feedback for all components
- */
-
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Enable interactive hover effects */
-  interactive?: boolean;
-}
-
-const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, interactive = false, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        // Base styles
-        "rounded-xl border border-white/10 bg-card text-card-foreground shadow",
-        // Smooth transitions
-        "transition-all duration-200 ease-out",
-        // Interactive variant with hover effects
-        interactive && [
-          "cursor-pointer",
-          "hover:border-white/20 hover:bg-white/[0.02] hover:shadow-lg hover:-translate-y-0.5",
-          "active:translate-y-0 active:shadow-md",
-        ],
-        className
-      )}
-      {...props}
-    />
-  )
-)
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border bg-card text-card-foreground shadow",
+      className
+    )}
+    {...props}
+  />
+))
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<
@@ -54,10 +31,10 @@ const CardHeader = React.forwardRef<
 CardHeader.displayName = "CardHeader"
 
 const CardTitle = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
-  <div
+  <h3
     ref={ref}
     className={cn("font-semibold leading-none tracking-tight", className)}
     {...props}
@@ -66,10 +43,10 @@ const CardTitle = React.forwardRef<
 CardTitle.displayName = "CardTitle"
 
 const CardDescription = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <div
+  <p
     ref={ref}
     className={cn("text-sm text-muted-foreground", className)}
     {...props}

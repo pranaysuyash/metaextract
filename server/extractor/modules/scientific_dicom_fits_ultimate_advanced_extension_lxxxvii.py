@@ -20,7 +20,7 @@ MENS_HEALTH_PATIENT_PARAMETERS = {
     (0x0010, 0x1020): "patient_size",
     (0x0010, 0x1030): "patient_weight",
     (0x0010, 0x21B0): "additional_patient_history",
-    (0x0010, 0xM001): "mens_health_assessment_date",
+    (0x0010, 0x1001): "mens_health_assessment_date",
     (0x0010, 0xM002): "prostate_diagnosis",
     (0x0010, 0xM003): "benign_prostatic_hyperplasia",
     (0x0010, 0xM004): "prostatitis",

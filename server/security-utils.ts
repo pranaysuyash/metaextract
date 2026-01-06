@@ -204,13 +204,63 @@ export function cleanupRateLimitStore(): void {
 /**
  * Security headers to include in all responses
  */
+const IS_DEV = process.env.NODE_ENV !== 'production';
+const DEV_HTTP_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'http://localhost:5175',
+  'http://127.0.0.1:5175',
+];
+const VITE_DEV_WS = [
+  'ws://localhost:3000',
+  'ws://127.0.0.1:3000',
+  'ws://localhost:5173',
+  'ws://127.0.0.1:5173',
+  'ws://localhost:5174',
+  'ws://127.0.0.1:5174',
+  'ws://localhost:5175',
+  'ws://127.0.0.1:5175',
+];
+
+function buildCsp(isDevLike: boolean): string {
+  const scriptSrcValue = isDevLike
+    ? "'self' 'unsafe-inline' 'unsafe-eval' blob:"
+    : "'self'";
+  const scriptSrc = `script-src ${scriptSrcValue}`;
+  const scriptSrcElem = `script-src-elem ${scriptSrcValue}`;
+
+  const styleSrcValue = "'self' 'unsafe-inline' https://fonts.googleapis.com";
+  const styleSrc = `style-src ${styleSrcValue}`;
+  const styleSrcElem = `style-src-elem ${styleSrcValue}`;
+
+  const connectSrc = isDevLike
+    ? `connect-src 'self' ${DEV_HTTP_ORIGINS.join(' ')} ${VITE_DEV_WS.join(' ')}`
+    : "connect-src 'self'";
+
+  return [
+    "default-src 'self'",
+    scriptSrc,
+    scriptSrcElem,
+    styleSrc,
+    styleSrcElem,
+    "img-src 'self' data: https:",
+    "font-src 'self' https://fonts.gstatic.com",
+    connectSrc,
+    "frame-ancestors 'none'",
+    "worker-src 'self' blob:",
+  ].join('; ');
+}
+
 export const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-  'Content-Security-Policy':
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';",
+  // Content-Security-Policy is set dynamically in applySecurityHeaders()
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
 };
@@ -218,10 +268,22 @@ export const SECURITY_HEADERS = {
 /**
  * Apply security headers to response
  */
-export function applySecurityHeaders(res: Response): void {
+export function applySecurityHeaders(res: Response, req?: { headers?: any }): void {
   for (const [header, value] of Object.entries(SECURITY_HEADERS)) {
     res.setHeader(header, value);
   }
+
+  // CSP needs to adapt for local dev (Vite injects inline module scripts and uses WS)
+  const hostHeader =
+    typeof req?.headers?.host === 'string' ? req.headers.host : '';
+  const isLocalhost =
+    hostHeader.startsWith('localhost') ||
+    hostHeader.startsWith('127.0.0.1') ||
+    hostHeader.startsWith('0.0.0.0');
+
+  const isDevLike = IS_DEV || isLocalhost;
+  const csp = buildCsp(isDevLike);
+  res.setHeader('Content-Security-Policy', csp);
 }
 
 // ============================================================================

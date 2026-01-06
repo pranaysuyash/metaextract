@@ -313,8 +313,11 @@ export async function register(req: Request, res: Response): Promise<void> {
       twoFactorSecret: null,
     });
 
-    // Create initial credit balance
-    await storage.getOrCreateCreditBalance(newUser.id);
+    // Create initial credit balance (account-bound)
+    await storage.getOrCreateCreditBalance(
+      `credits:core:user:${newUser.id}`,
+      newUser.id
+    );
 
     // In a real implementation, you'd send a verification email here
     console.log(`Verification email would be sent to: ${email}`);
@@ -335,7 +338,8 @@ export async function register(req: Request, res: Response): Promise<void> {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: 'strict',
+      // Lax is required so refresh persists across external checkout redirects.
+      sameSite: 'lax',
     });
 
     res.status(201).json({
@@ -440,7 +444,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
     res.json({

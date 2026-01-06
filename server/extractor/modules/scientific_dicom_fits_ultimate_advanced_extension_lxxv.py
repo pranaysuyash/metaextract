@@ -20,7 +20,7 @@ OPHTHALMOLOGY_PATIENT_PARAMETERS = {
     (0x0010, 0x1020): "patient_size",
     (0x0010, 0x1030): "patient_weight",
     (0x0010, 0x21B0): "additional_patient_history",
-    (0x0010, 0xI001): "ophthalmology_assessment_date",
+    (0x0010, 0x1001): "ophthalmology_assessment_date",
     (0x0010, 0xI002): "ocular_diagnosis",
     (0x0010, 0xI003): "retinal_diagnosis",
     (0x0010, 0xI004): "diabetic_retinopathy",

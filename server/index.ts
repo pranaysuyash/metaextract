@@ -58,7 +58,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Apply security headers to all responses
 app.use((req: Request, res: Response, next: NextFunction) => {
   try {
-    applySecurityHeaders(res);
+    applySecurityHeaders(res, req);
     next();
   } catch (error) {
     console.error('Security headers middleware error:', error);

@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-01-06T16:03:17.090046",
+  "performance_results": {
+    "file_type_grouping": 0.000102996826171875,
+    "recent_files": 0.0001518726348876953,
+    "metadata_search": 0.00016379356384277344,
+    "favorites_join": 0.0001480579376220703,
+    "size_analysis": 0.00013494491577148438,
+    "version_history": 0.00011873245239257812
+  },
+  "index_usage": {
+    "File type search": {
+      "index_used": false,
+      "expected_index": "idx_files_type",
+      "plan": "<sqlite3.Row object at 0x102891c90>"
+    },
+    "File hash lookup": {
+      "index_used": false,
+      "expected_index": "idx_files_hash",
+      "plan": "<sqlite3.Row object at 0x102891b70>"
+    },
+    "Recent files": {
+      "index_used": false,
+      "expected_index": "idx_files_extracted_at",
+      "plan": "<sqlite3.Row object at 0x102891c90>"
+    },
+    "Metadata category": {
+      "index_used": false,
+      "expected_index": "idx_metadata_category_key",
+      "plan": "<sqlite3.Row object at 0x102891b70>"
+    }
+  },
+  "summary": {
+    "total_queries": 6,
+    "average_query_time": 0.0001367330551147461,
+    "indexes_used": 0,
+    "total_indexes_tested": 4
+  }
+}

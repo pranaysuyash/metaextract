@@ -3,8 +3,7 @@
  * Real-time progress updates during metadata extraction
  */
 
-import React, { useState, useEffect } from 'react';
-import { Card } from './ui/card';
+import React from 'react';
 
 interface ExtractionProgress {
   stage: string;
@@ -38,7 +37,7 @@ interface ProgressTrackerProps {
 export function ExtractionProgressTracker({
   extractionId,
   onComplete,
-  onError
+  onError,
 }: ProgressTrackerProps) {
   // Temporarily disabled — use images-mvp ProgressTracker instead.
   console.warn(
@@ -84,7 +83,9 @@ export function QualityIndicators({ metadata }: { metadata: any }) {
         <div className={`text-3xl font-bold text-${color}-600`}>{score}</div>
         <div className="text-xs text-gray-500">Quality Score</div>
       </div>
-      <div className={`px-3 py-1 rounded-full bg-${color}-100 text-${color}-800 text-sm font-medium`}>
+      <div
+        className={`px-3 py-1 rounded-full bg-${color}-100 text-${color}-800 text-sm font-medium`}
+      >
         {level}
       </div>
       <div className="flex-1">
@@ -104,9 +105,7 @@ function QualityBadge({ present, label }: { present: boolean; label: string }) {
   return (
     <span
       className={`px-2 py-1 rounded ${
-        present
-          ? 'bg-green-100 text-green-800'
-          : 'bg-gray-100 text-gray-400'
+        present ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
       }`}
     >
       {label}

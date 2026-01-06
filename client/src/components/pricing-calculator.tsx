@@ -103,7 +103,7 @@ export function PricingCalculator({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-slate-400" />
+            <Globe className="w-4 h-4 text-slate-300" />
             <Select value={currency} onValueChange={(v) => setCurrency(v as CurrencyCode)}>
               <SelectTrigger className="w-[140px] bg-white/5 border-white/10">
                 <SelectValue />
@@ -125,7 +125,7 @@ export function PricingCalculator({
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
               billingCycle === 'monthly'
                 ? 'bg-primary text-black'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-300 hover:text-white'
             }`}
           >
             Monthly
@@ -135,7 +135,7 @@ export function PricingCalculator({
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
               billingCycle === 'annual'
                 ? 'bg-primary text-black'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-300 hover:text-white'
             }`}
           >
             Annual
@@ -160,7 +160,7 @@ export function PricingCalculator({
               {/* Files per month slider */}
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <Label className="text-slate-300">Files per month</Label>
+                  <Label className="text-slate-200">Files per month</Label>
                   <span className="text-primary font-mono">{usage.filesPerMonth}</span>
                 </div>
                 <Slider
@@ -179,7 +179,7 @@ export function PricingCalculator({
 
               {/* Feature toggles */}
               <div className="space-y-3">
-                <Label className="text-slate-300">Features needed</Label>
+                <Label className="text-slate-200">Features needed</Label>
                 <div className="space-y-2">
                   {[
                     { key: 'needsRawFormats', label: 'RAW image formats' },
@@ -189,7 +189,7 @@ export function PricingCalculator({
                     { key: 'needsPdfReports', label: 'PDF reports' },
                   ].map(({ key, label }) => (
                     <div key={key} className="flex items-center justify-between">
-                      <span className="text-sm text-slate-400">{label}</span>
+                      <span className="text-sm text-slate-300">{label}</span>
                       <Switch
                         checked={usage[key as keyof UsageEstimate] as boolean}
                         onCheckedChange={(checked) =>
@@ -210,7 +210,7 @@ export function PricingCalculator({
                   <p className="text-sm font-medium text-white">
                     Recommended: <span className="text-primary">{PRICING_TIERS.find(t => t.id === recommendedTier)?.name}</span>
                   </p>
-                  <p className="text-xs text-slate-400">Based on your usage estimate</p>
+                  <p className="text-xs text-slate-300">Based on your usage estimate</p>
                 </div>
               </div>
               <Button
@@ -247,7 +247,7 @@ export function PricingCalculator({
       <div className="flex justify-center">
         <button
           onClick={() => setShowComparison(!showComparison)}
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
         >
           <span>Compare all features</span>
           <ChevronDown
@@ -338,7 +338,7 @@ function PricingCard({
           <h3 className={`text-xl font-bold ${tier.recommended ? 'text-black' : 'text-white'}`}>
             {tier.name}
           </h3>
-          <p className={`text-sm ${tier.recommended ? 'text-black/70' : 'text-slate-400'}`}>
+          <p className={`text-sm ${tier.recommended ? 'text-black/70' : 'text-slate-300'}`}>
             {tier.tagline}
           </p>
         </div>
@@ -368,7 +368,7 @@ function PricingCard({
             <li
               key={feature.id}
               className={`flex items-center gap-2 text-sm ${
-                tier.recommended ? 'text-black/80' : 'text-slate-300'
+                tier.recommended ? 'text-black/80' : 'text-slate-200'
               }`}
             >
               {feature.included ? (
@@ -430,7 +430,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-white/10">
-            <th className="text-left p-4 text-slate-400 font-medium">Feature</th>
+            <th className="text-left p-4 text-slate-300 font-medium">Feature</th>
             {PRICING_TIERS.map(tier => (
               <th
                 key={tier.id}
@@ -446,7 +446,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
         <tbody>
           {/* Pricing row */}
           <tr className="border-b border-white/5">
-            <td className="p-4 text-slate-300">Monthly Price</td>
+            <td className="p-4 text-slate-200">Monthly Price</td>
             {PRICING_TIERS.map(tier => (
               <td key={tier.id} className="p-4 text-center">
                 <span className={tier.recommended ? 'text-primary font-bold' : 'text-white'}>
@@ -464,7 +464,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
               <td className="p-4">
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger className="flex items-center gap-2 text-slate-300">
+                    <TooltipTrigger className="flex items-center gap-2 text-slate-200">
                       {feature.name}
                       <Info className="w-3 h-3 text-slate-500" />
                     </TooltipTrigger>
@@ -498,7 +498,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
 
           {/* Limits rows */}
           <tr className="border-b border-white/5">
-            <td className="p-4 text-slate-300">Monthly Uploads</td>
+            <td className="p-4 text-slate-200">Monthly Uploads</td>
             {PRICING_TIERS.map(tier => (
               <td key={tier.id} className="p-4 text-center text-white">
                 {tier.limits.monthlyUploads === 'unlimited' ? 'Unlimited' : tier.limits.monthlyUploads}
@@ -506,7 +506,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
             ))}
           </tr>
           <tr className="border-b border-white/5">
-            <td className="p-4 text-slate-300">Max File Size</td>
+            <td className="p-4 text-slate-200">Max File Size</td>
             {PRICING_TIERS.map(tier => (
               <td key={tier.id} className="p-4 text-center text-white">
                 {tier.limits.maxFileSize >= 1024
@@ -516,7 +516,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
             ))}
           </tr>
           <tr className="border-b border-white/5">
-            <td className="p-4 text-slate-300">Support Level</td>
+            <td className="p-4 text-slate-200">Support Level</td>
             {PRICING_TIERS.map(tier => (
               <td key={tier.id} className="p-4 text-center">
                 <Badge
@@ -526,7 +526,7 @@ function FeatureComparisonTable({ currency, billingCycle }: FeatureComparisonTab
                       ? 'border-emerald-500/30 text-emerald-400'
                       : tier.limits.supportLevel === 'priority'
                       ? 'border-primary/30 text-primary'
-                      : 'border-white/20 text-slate-400'
+                      : 'border-white/20 text-slate-300'
                   }`}
                 >
                   {tier.limits.supportLevel}

@@ -45,6 +45,13 @@ ls -la server/migrations/ | wc -l
 # Should show: 8 migration files
 ```
 
+If `init.sql` fails to apply locally (schema missing or init errors), run the debug runner which applies statements one-by-one and reports the failing statement:
+
+```bash
+# Requires DATABASE_URL to be set
+npm run db:init-debug
+```
+
 **Expected Result**: ✅ Database accessible, 8 migrations present
 
 ---

@@ -112,6 +112,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('auth_token', (data as any).token);
       }
 
+      // Best-effort: claim any guest credits to this account (core + Images MVP)
+      try {
+        await fetch('/api/credits/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        }).catch(() => {});
+        await fetch('/api/images_mvp/credits/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        }).catch(() => {});
+      } catch {
+        // Best-effort only
+      }
+
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
@@ -158,6 +176,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data && (data as any).token) {
         localStorage.setItem('auth_token', (data as any).token);
+      }
+
+      // Best-effort: claim any guest credits to this new account (core + Images MVP)
+      try {
+        await fetch('/api/credits/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        }).catch(() => {});
+        await fetch('/api/images_mvp/credits/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        }).catch(() => {});
+      } catch {
+        // Best-effort only
       }
 
       return { success: true };

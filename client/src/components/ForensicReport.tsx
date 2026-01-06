@@ -111,7 +111,7 @@ export function ForensicReport({
                             <FileText className="w-5 h-5 text-primary" />
                             Forensic Analysis Report
                         </CardTitle>
-                        <CardDescription className="text-slate-400">
+                        <CardDescription className="text-slate-300">
                             Generated {analysisDate}
                         </CardDescription>
                     </div>
@@ -143,7 +143,7 @@ export function ForensicReport({
                 <div className="p-4 bg-muted/30 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-xs text-slate-400 uppercase">File Under Analysis</p>
+                            <p className="text-xs text-slate-300 uppercase">File Under Analysis</p>
                             <p className="text-lg font-medium text-white">{filename}</p>
                         </div>
                         <Badge variant="secondary" className={assessment.color}>
@@ -151,7 +151,7 @@ export function ForensicReport({
                             <span className="ml-1">{assessment.label}</span>
                         </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                    <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
                         <Hash className="w-3 h-3" />
                         <span>SHA-256: {fileHash}</span>
                     </div>
@@ -164,15 +164,15 @@ export function ForensicReport({
                 <div className="grid grid-cols-3 gap-4">
                     <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
                         <p className="text-2xl font-bold text-red-400">{criticalFindings.length}</p>
-                        <p className="text-xs text-slate-400">Critical</p>
+                        <p className="text-xs text-slate-300">Critical</p>
                     </div>
                     <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                         <p className="text-2xl font-bold text-yellow-400">{warningFindings.length}</p>
-                        <p className="text-xs text-slate-400">Warnings</p>
+                        <p className="text-xs text-slate-300">Warnings</p>
                     </div>
                     <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                         <p className="text-2xl font-bold text-blue-400">{infoFindings.length}</p>
-                        <p className="text-xs text-slate-400">Info</p>
+                        <p className="text-xs text-slate-300">Info</p>
                     </div>
                 </div>
 
@@ -187,25 +187,25 @@ export function ForensicReport({
                     <div className="grid grid-cols-2 gap-3">
                         {metadata.device && (
                             <div className="p-2 bg-muted/30 rounded">
-                                <p className="text-xs text-slate-400">Device</p>
+                                <p className="text-xs text-slate-300">Device</p>
                                 <p className="text-sm text-white">{metadata.device}</p>
                             </div>
                         )}
                         {metadata.software && (
                             <div className="p-2 bg-muted/30 rounded">
-                                <p className="text-xs text-slate-400">Software</p>
+                                <p className="text-xs text-slate-300">Software</p>
                                 <p className="text-sm text-white">{metadata.software}</p>
                             </div>
                         )}
                         {metadata.captureDate && (
                             <div className="p-2 bg-muted/30 rounded">
-                                <p className="text-xs text-slate-400">Capture Date</p>
+                                <p className="text-xs text-slate-300">Capture Date</p>
                                 <p className="text-sm text-white">{metadata.captureDate}</p>
                             </div>
                         )}
                         {metadata.dimensions && (
                             <div className="p-2 bg-muted/30 rounded">
-                                <p className="text-xs text-slate-400">Dimensions</p>
+                                <p className="text-xs text-slate-300">Dimensions</p>
                                 <p className="text-sm text-white">{metadata.dimensions}</p>
                             </div>
                         )}
@@ -213,7 +213,7 @@ export function ForensicReport({
                             <div className="p-2 bg-muted/30 rounded col-span-2 flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-primary" />
                                 <div>
-                                    <p className="text-xs text-slate-400">GPS Location</p>
+                                    <p className="text-xs text-slate-300">GPS Location</p>
                                     <p className="text-sm text-white">{metadata.gpsLocation}</p>
                                 </div>
                             </div>
@@ -243,7 +243,7 @@ export function ForensicReport({
                                                 <Badge variant="outline" className="text-xs border-white/20">
                                                     {finding.category}
                                                 </Badge>
-                                                <span className="text-xs text-slate-400">{finding.confidence}% confidence</span>
+                                                <span className="text-xs text-slate-300">{finding.confidence}% confidence</span>
                                             </div>
                                             <p className="text-sm">{finding.finding}</p>
                                         </div>
@@ -265,9 +265,9 @@ export function ForensicReport({
                     <div className="space-y-2">
                         {chainOfCustody.map((entry, i) => (
                             <div key={i} className="flex items-center gap-4 p-2 bg-muted/30 rounded text-sm">
-                                <span className="font-mono text-slate-400 shrink-0 w-32">{entry.timestamp}</span>
+                                <span className="font-mono text-slate-300 shrink-0 w-32">{entry.timestamp}</span>
                                 <span className="text-white flex-1">{entry.action}</span>
-                                <span className="text-slate-400">{entry.actor}</span>
+                                <span className="text-slate-300">{entry.actor}</span>
                             </div>
                         ))}
                     </div>

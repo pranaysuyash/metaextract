@@ -34,7 +34,8 @@ const CONFIG = {
   COOKIE_OPTIONS: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    // Lax so device quota survives external checkout redirects.
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days - reduced for security
   },
 

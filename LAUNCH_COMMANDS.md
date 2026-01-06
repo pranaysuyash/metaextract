@@ -331,6 +331,17 @@ docker-compose logs app | grep DATABASE_URL
 docker-compose exec db pg_isready -U metaextract -d metaextract
 ```
 
+### init.sql Fails to Apply (tests or local debug)
+
+```bash
+# Run the debug runner which applies init.sql statement-by-statement and reports the failing statement
+# Requires DATABASE_URL to be set in your environment
+npm run db:init-debug
+
+# Or run directly
+DATABASE_URL=postgresql://test:test@localhost:5432/metaextract_test node scripts/db-init-debug.cjs
+```
+
 ### WebSocket Errors
 
 ```bash

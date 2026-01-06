@@ -45,7 +45,7 @@ export default function ImagesMvpLanding() {
                         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
                             Metadata for <span className="text-primary">Humans.</span>
                         </h1>
-                    <p className="text-lg text-slate-300 leading-relaxed">
+                    <p className="text-lg text-slate-200 leading-relaxed">
                         Check your photos for hidden location data, device serial numbers, and personal information before you share.
                     </p>
                 </motion.div>
@@ -84,7 +84,7 @@ export default function ImagesMvpLanding() {
                                 <Fingerprint className="w-6 h-6" aria-hidden="true" />
                             </div>
                             <h3 className="text-xl font-bold text-white">Device Fingerprints</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-slate-200 leading-relaxed">
                                 Photos contain unique serial numbers ("MakerNotes") that link images back to your specific camera or phone.
                             </p>
                         </div>
@@ -93,7 +93,7 @@ export default function ImagesMvpLanding() {
                                 <Eye className="w-6 h-6" aria-hidden="true" />
                             </div>
                             <h3 className="text-xl font-bold text-white">Hidden Location</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-slate-200 leading-relaxed">
                                 GPS coordinates are often embedded by default. See exactly where a photo was taken before posting it online.
                             </p>
                         </div>
@@ -102,7 +102,7 @@ export default function ImagesMvpLanding() {
                                 <ShieldCheck className="w-6 h-6" aria-hidden="true" />
                             </div>
                             <h3 className="text-xl font-bold text-white">Safe Sharing</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-slate-200 leading-relaxed">
                                 Understand what you're revealing. We extract the hidden layer so you can decide what stays private.
                             </p>
                         </div>

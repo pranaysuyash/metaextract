@@ -60,7 +60,7 @@ function DifferenceRow({ diff }: { diff: ComparisonDifference }) {
         <div className={`grid grid-cols-3 gap-4 p-3 border-b border-white/5 ${getBgColor()}`}>
             <div className="flex items-center gap-2">
                 {getStatusIcon()}
-                <span className="text-sm font-mono text-slate-300 truncate">{diff.field}</span>
+                <span className="text-sm font-mono text-slate-200 truncate">{diff.field}</span>
             </div>
             <div className="text-sm text-white truncate" title={formatValue(diff.file1_value)}>
                 {diff.status === "only_in_file2" ? (
@@ -101,7 +101,7 @@ export function ComparisonView({
                             <ArrowLeftRight className="w-5 h-5 text-primary" />
                             Metadata Comparison
                         </CardTitle>
-                        <CardDescription className="text-slate-400">
+                        <CardDescription className="text-slate-300">
                             Side-by-side analysis of {file1.filename} vs {file2.filename}
                         </CardDescription>
                     </div>
@@ -117,17 +117,17 @@ export function ComparisonView({
                 {/* Similarity Score */}
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                     <div className="space-y-1">
-                        <p className="text-sm text-slate-400">Similarity Score</p>
+                        <p className="text-sm text-slate-300">Similarity Score</p>
                         <p className="text-3xl font-bold text-white">{similarityScore}%</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-center">
                         <div>
                             <p className="text-2xl font-bold text-emerald-500">{matchCount}</p>
-                            <p className="text-xs text-slate-400">Matching</p>
+                            <p className="text-xs text-slate-300">Matching</p>
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-yellow-500">{diffCount}</p>
-                            <p className="text-xs text-slate-400">Different</p>
+                            <p className="text-xs text-slate-300">Different</p>
                         </div>
                     </div>
                 </div>
@@ -156,11 +156,11 @@ export function ComparisonView({
                 <div className="border border-white/10 rounded-lg overflow-hidden">
                     {/* Header */}
                     <div className="grid grid-cols-3 gap-4 p-3 bg-muted/50 border-b border-white/10">
-                        <span className="text-xs font-semibold text-slate-400 uppercase">Field</span>
-                        <span className="text-xs font-semibold text-slate-400 uppercase truncate" title={file1.filename}>
+                        <span className="text-xs font-semibold text-slate-300 uppercase">Field</span>
+                        <span className="text-xs font-semibold text-slate-300 uppercase truncate" title={file1.filename}>
                             {file1.filename}
                         </span>
-                        <span className="text-xs font-semibold text-slate-400 uppercase truncate" title={file2.filename}>
+                        <span className="text-xs font-semibold text-slate-300 uppercase truncate" title={file2.filename}>
                             {file2.filename}
                         </span>
                     </div>

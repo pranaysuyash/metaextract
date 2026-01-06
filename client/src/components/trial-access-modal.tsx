@@ -39,7 +39,17 @@ export function TrialAccessModal({
 
   return (
     <Dialog open={isOpen} modal={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className='sm:max-w-[420px] p-0 overflow-hidden bg-[#0A0A0A] border border-white/10 shadow-2xl text-white'>
+      <DialogContent
+        className='sm:max-w-[420px] p-0 overflow-hidden bg-[#0A0A0A] border border-white/10 shadow-2xl text-white'
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          // Focus the email input when modal opens
+          setTimeout(() => {
+            const emailInput = document.getElementById('trial-email');
+            emailInput?.focus();
+          }, 100);
+        }}
+      >
         <VisuallyHidden.Root>
           <DialogTitle>Unlock Your Free Report</DialogTitle>
           <DialogDescription>
@@ -49,14 +59,14 @@ export function TrialAccessModal({
 
         <div className='bg-[#111] p-4 border-b border-white/5'>
           <div className='text-sm font-semibold'>Unlock your free full report</div>
-          <div className='text-xs text-slate-300'>
+          <div className='text-xs text-slate-200'>
             One file, all fields. No other free reports.
           </div>
         </div>
 
         <div className='p-6 space-y-4'>
           <div className='space-y-2'>
-            <Label htmlFor='trial-email' className='text-xs text-slate-300'>
+            <Label htmlFor='trial-email' className='text-xs text-slate-200'>
               Email
             </Label>
             <div className='relative'>
@@ -77,12 +87,14 @@ export function TrialAccessModal({
           </div>
 
           {error && (
-            <Alert className='border-red-500/20 bg-red-500/10'>
-              <AlertCircle className='h-4 w-4 text-red-400' />
-              <AlertDescription className='text-red-300'>
-                {error}
-              </AlertDescription>
-            </Alert>
+            <div role="alert">
+              <Alert className='border-red-500/20 bg-red-500/10'>
+                <AlertCircle className='h-4 w-4 text-red-400' />
+                <AlertDescription className='text-red-300'>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
 
           <div className='flex gap-3'>

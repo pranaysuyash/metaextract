@@ -81,13 +81,13 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
           confidenceBg[burned_metadata.confidence]
         }`}
       >
-        <p className='text-xs text-slate-400 mb-3'>
+        <p className='text-xs text-slate-300 mb-3'>
           ✓ This image contains metadata visually overlaid on the pixels
           (extracted via OCR)
         </p>
 
         {parsed.camera_app && (
-          <div className='text-xs text-slate-300 mb-2'>
+          <div className='text-xs text-slate-200 mb-2'>
             <span className='text-slate-500'>Camera App:</span>{' '}
             {parsed.camera_app}
           </div>
@@ -102,11 +102,11 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
               <MapPin className='w-3 h-3' /> GPS Coordinates
             </h5>
             <div className='space-y-1 font-mono text-xs'>
-              <div className='text-slate-400'>
+              <div className='text-slate-300'>
                 <span className='text-slate-600'>LAT:</span>{' '}
                 {parsed.gps.latitude.toFixed(6)}
               </div>
-              <div className='text-slate-400'>
+              <div className='text-slate-300'>
                 <span className='text-slate-600'>LON:</span>{' '}
                 {parsed.gps.longitude.toFixed(6)}
               </div>
@@ -128,7 +128,7 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
             <h5 className='text-xs font-bold text-blue-400 mb-2 flex items-center gap-1'>
               <MapPin className='w-3 h-3' /> Location
             </h5>
-            <div className='space-y-1 text-xs text-slate-400 font-mono'>
+            <div className='space-y-1 text-xs text-slate-300 font-mono'>
               {parsed.location && (
                 <>
                   <div>
@@ -167,7 +167,7 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
             <h5 className='text-xs font-bold text-purple-400 mb-2 flex items-center gap-1'>
               🕐 Timestamp
             </h5>
-            <div className='text-xs text-slate-400 font-mono wrap-break-word'>
+            <div className='text-xs text-slate-300 font-mono wrap-break-word'>
               {parsed.timestamp}
             </div>
           </div>
@@ -179,7 +179,7 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
             <h5 className='text-xs font-bold text-amber-400 mb-2 flex items-center gap-1'>
               <Cloud className='w-3 h-3' /> Weather
             </h5>
-            <div className='space-y-1 text-xs text-slate-400 font-mono'>
+            <div className='space-y-1 text-xs text-slate-300 font-mono'>
               {parsed.weather.temperature && (
                 <div className='flex items-center gap-2'>
                   <Thermometer className='w-3 h-3 text-orange-400' />
@@ -200,7 +200,7 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
               )}
               {parsed.weather.altitude && (
                 <div className='flex items-center gap-2'>
-                  <Mountain className='w-3 h-3 text-slate-400' />
+                  <Mountain className='w-3 h-3 text-slate-300' />
                   <span>{parsed.weather.altitude} m</span>
                 </div>
               )}
@@ -214,7 +214,7 @@ export function BurnedMetadataDisplay({ burned_metadata }: BurnedMetadataDisplay
             <h5 className='text-xs font-bold text-indigo-400 mb-2 flex items-center gap-1'>
               <Compass className='w-3 h-3' /> Compass Direction
             </h5>
-            <div className='text-xs text-slate-400 font-mono'>
+            <div className='text-xs text-slate-300 font-mono'>
               <span className='text-indigo-400 font-bold text-base'>
                 {parsed.compass.degrees}°
               </span>

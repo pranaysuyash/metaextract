@@ -91,7 +91,7 @@ export default function DashboardImproved() {
             <CardContent className="p-6 text-center">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
               <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-              <p className="text-slate-400">Please log in to access settings.</p>
+              <p className="text-slate-300">Please log in to access settings.</p>
             </CardContent>
           </Card>
         </div>
@@ -107,7 +107,7 @@ export default function DashboardImproved() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-slate-400">Manage your account, subscription, and preferences.</p>
+          <p className="text-slate-300">Manage your account, subscription, and preferences.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -121,20 +121,20 @@ export default function DashboardImproved() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm text-slate-400">Username</label>
+                <label className="text-sm text-slate-300">Username</label>
                 <p className="font-medium">{user.username}</p>
               </div>
               <div>
-                <label className="text-sm text-slate-400">Email</label>
+                <label className="text-sm text-slate-300">Email</label>
                 <p className="font-medium">{user.email}</p>
               </div>
               <div>
-                <label className="text-sm text-slate-400">Subscription Tier</label>
+                <label className="text-sm text-slate-300">Subscription Tier</label>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className={`${getTierColor(user.tier)} text-white`}>
                     {user.tier.toUpperCase()}
                   </Badge>
-                  <span className="text-sm text-slate-400">
+                  <span className="text-sm text-slate-300">
                     ({user.subscriptionStatus || "active"})
                   </span>
                 </div>
@@ -142,7 +142,7 @@ export default function DashboardImproved() {
               <div className="flex flex-col gap-2 pt-2">
                 <Button
                   variant="outline"
-                  className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
                   onClick={() => handleNavigate('/images_mvp')}
                 >
                   <Upload className="w-4 h-4 mr-2" />
@@ -150,7 +150,7 @@ export default function DashboardImproved() {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="justify-start text-slate-400 hover:text-white hover:bg-white/10"
+                  className="justify-start text-slate-300 hover:text-white hover:bg-white/10"
                   onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 mr-2" />
@@ -170,13 +170,13 @@ export default function DashboardImproved() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Current Plan</span>
+                <span className="text-sm text-slate-300">Current Plan</span>
                 <Badge className={`${getTierColor(user.tier)} text-white`}>
                   {user.tier.toUpperCase()}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Status</span>
+                <span className="text-sm text-slate-300">Status</span>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                   <span className="text-sm text-green-400">
@@ -187,14 +187,14 @@ export default function DashboardImproved() {
               <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
-                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
                   onClick={() => handleNavigate('/#pricing')}
                 >
                   View Pricing & Credits
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
                   onClick={() => handleNavigate('/images_mvp/analytics')}
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
@@ -213,19 +213,19 @@ export default function DashboardImproved() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-slate-300">
                 Security controls are coming soon. For now, you can sign out and manage your plan.
               </div>
               <Button
                 variant="outline"
-                className="w-full border-white/20 text-slate-400"
+                className="w-full border-white/20 text-slate-300"
                 disabled
               >
                 Change Password
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-white/20 text-slate-400"
+                className="w-full border-white/20 text-slate-300"
                 disabled
               >
                 Manage Devices
@@ -238,7 +238,7 @@ export default function DashboardImproved() {
         <Card className="bg-[#1a1a2e] border-white/10 text-white mt-6">
           <CardHeader>
             <CardTitle>Your {user.tier.charAt(0).toUpperCase() + user.tier.slice(1)} Features</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-slate-300">
               Features available with your current subscription tier
             </CardDescription>
           </CardHeader>

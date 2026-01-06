@@ -6,6 +6,8 @@ import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { storage } from './storage/index';
 import { normalizeTier } from '@shared/tierConfig';
+import type { AuthRequest } from './auth';
+import { getOrSetSessionId } from './utils/session-id';
 
 // ============================================================================
 // DodoPayments Configuration
@@ -90,16 +92,16 @@ export const CREDIT_PACKS = {
 export const IMAGES_MVP_CREDIT_PACKS = {
   starter: {
     credits: 25,
-    price: 300,
-    priceDisplay: '$3.00',
+    price: Number(process.env.IMAGES_MVP_STARTER_PRICE_CENTS ?? 400),
+    priceDisplay: process.env.IMAGES_MVP_STARTER_PRICE_DISPLAY || '$4.00',
     name: 'Starter Pack',
     description: '25 images',
     productId: DODO_IMAGES_MVP_PRODUCTS.starter,
   },
   pro: {
     credits: 100,
-    price: 900,
-    priceDisplay: '$9.00',
+    price: Number(process.env.IMAGES_MVP_PRO_PRICE_CENTS ?? 1200),
+    priceDisplay: process.env.IMAGES_MVP_PRO_PRICE_DISPLAY || '$12.00',
     name: 'Pro Pack',
     description: '100 images',
     productId: DODO_IMAGES_MVP_PRODUCTS.pro,
@@ -123,6 +125,14 @@ function getBaseUrl(): string {
   return 'http://localhost:3000';
 }
 
+function getCoreBalanceKeyForSession(sessionId: string): string {
+  return `credits:core:session:${sessionId}`;
+}
+
+function getCoreBalanceKeyForUser(userId: string): string {
+  return `credits:core:user:${userId}`;
+}
+
 // ============================================================================
 // Webhook Idempotency Store
 // ============================================================================
@@ -132,8 +142,8 @@ function getBaseUrl(): string {
 const processedWebhooks = new Map<string, number>();
 
 // Clean up old entries every 1 hour (webhooks expire after 5 min anyway)
-// In tests, avoid keeping the event loop alive.
-if (process.env.NODE_ENV !== 'test') {
+// In tests, avoid keeping the event loop alive (Jest sets JEST_WORKER_ID).
+if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
   const timer = setInterval(() => {
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
     for (const [webhookId, processedTime] of processedWebhooks.entries()) {
@@ -242,17 +252,27 @@ export function registerPaymentRoutes(app: Express) {
         });
       }
 
-      const { pack, sessionId, email } = req.body;
+      const authReq = req as AuthRequest;
+      const { pack, email } = req.body;
 
       if (!pack || !['single', 'batch', 'bulk'].includes(pack)) {
         return res.status(400).json({ error: 'Invalid credit pack' });
       }
 
-      if (!sessionId) {
-        return res.status(400).json({ error: 'Session ID required' });
+      if (!authReq.user?.id) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          message: 'Please sign in to purchase credits so they are available across devices.',
+        });
       }
 
-      const balance = await storage.getOrCreateCreditBalance(sessionId);
+      let balanceKey: string;
+      balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
+
+      const balance = await storage.getOrCreateCreditBalance(
+        balanceKey,
+        authReq.user?.id
+      );
       const packInfo = CREDIT_PACKS[pack as keyof typeof CREDIT_PACKS];
 
       const baseUrl = getBaseUrl();
@@ -275,9 +295,13 @@ export function registerPaymentRoutes(app: Express) {
         return_url: `${baseUrl}/credits/success?pack=${pack}&balanceId=${balance.id}`,
         metadata: {
           type: 'credit_purchase',
+          product: 'core',
           pack,
           credits: packInfo.credits.toString(),
           balance_id: balance.id,
+          balance_key: balanceKey,
+          user_id: authReq.user?.id || null,
+          purchaser_email: email || null,
         },
       });
 
@@ -305,13 +329,26 @@ export function registerPaymentRoutes(app: Express) {
 
   app.get('/api/credits/balance', async (req: Request, res: Response) => {
     try {
-      const sessionId = req.query.sessionId as string;
+      const authReq = req as AuthRequest;
 
-      if (!sessionId) {
-        return res.json({ credits: 0, balanceId: null });
+      let balanceKey: string | null = null;
+      if (authReq.user?.id) {
+        balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
+      } else {
+        // If no sessionId was provided, still use a stable cookie session id.
+        const cookieSessionId = getOrSetSessionId(req, res);
+        const legacy = await storage.getCreditBalanceBySessionId(cookieSessionId);
+        balanceKey = legacy
+          ? cookieSessionId
+          : getCoreBalanceKeyForSession(cookieSessionId);
       }
 
-      const balance = await storage.getOrCreateCreditBalance(sessionId);
+      if (!balanceKey) return res.json({ credits: 0, balanceId: null });
+
+      const balance = await storage.getOrCreateCreditBalance(
+        balanceKey,
+        authReq.user?.id
+      );
       res.json({
         credits: balance.credits,
         balanceId: balance.id,
@@ -319,6 +356,45 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error('Get credits error:', error);
       res.status(500).json({ error: 'Failed to get credit balance' });
+    }
+  });
+
+  // Claim session credits to account credits (core)
+  app.post('/api/credits/claim', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const cookieSessionId = getOrSetSessionId(req, res);
+      const fromKey = (await storage.getCreditBalanceBySessionId(cookieSessionId))
+        ? cookieSessionId
+        : getCoreBalanceKeyForSession(cookieSessionId);
+      const toKey = getCoreBalanceKeyForUser(authReq.user.id);
+
+      const fromBalance = await storage.getCreditBalanceBySessionId(fromKey);
+      if (!fromBalance || (fromBalance.credits ?? 0) <= 0) {
+        return res.json({ transferred: 0 });
+      }
+
+      const toBalance = await storage.getOrCreateCreditBalance(
+        toKey,
+        authReq.user.id
+      );
+
+      const amount = fromBalance.credits;
+      await storage.transferCredits(
+        fromBalance.id,
+        toBalance.id,
+        amount,
+        'Claimed credits to account'
+      );
+
+      return res.json({ transferred: amount });
+    } catch (error) {
+      console.error('Claim credits error:', error);
+      res.status(500).json({ error: 'Failed to claim credits' });
     }
   });
 
@@ -341,6 +417,10 @@ export function registerPaymentRoutes(app: Express) {
   // Manual credit addition (for testing/admin)
   app.post('/api/credits/add', async (req: Request, res: Response) => {
     try {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
       const { balanceId, credits, description } = req.body;
 
       if (!balanceId || !credits) {
@@ -365,6 +445,58 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error('Add credits error:', error);
       res.status(500).json({ error: 'Failed to add credits' });
+    }
+  });
+
+  // Dev helper: grant credits to the current user/session without needing a balanceId.
+  app.post('/api/dev/credits/grant', async (req: Request, res: Response) => {
+    try {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      const authReq = req as AuthRequest;
+      const amount =
+        typeof req.body?.credits === 'number'
+          ? req.body.credits
+          : typeof req.body?.credits === 'string'
+            ? Number(req.body.credits)
+            : 100;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'credits must be a positive number' });
+      }
+
+      let balanceKey: string;
+      if (authReq.user?.id) {
+        balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
+      } else {
+        const cookieSessionId = getOrSetSessionId(req, res);
+        const legacy = await storage.getCreditBalanceBySessionId(cookieSessionId);
+        balanceKey = legacy
+          ? cookieSessionId
+          : getCoreBalanceKeyForSession(cookieSessionId);
+      }
+
+      const balance = await storage.getOrCreateCreditBalance(
+        balanceKey,
+        authReq.user?.id
+      );
+
+      await storage.addCredits(
+        balance.id,
+        amount,
+        `Dev grant (${amount} credits)`
+      );
+
+      const updated = await storage.getCreditBalance(balance.id);
+      return res.json({
+        ok: true,
+        balanceId: balance.id,
+        credits: updated?.credits ?? balance.credits,
+      });
+    } catch (error) {
+      console.error('Dev grant credits error:', error);
+      return res.status(500).json({ error: 'Failed to grant credits' });
     }
   });
 
@@ -404,6 +536,60 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error('Use credits error:', error);
       res.status(500).json({ error: 'Failed to use credits' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Local payment confirmation (DEV/TEST helper)
+  // ---------------------------------------------------------------------------
+  // When testing checkout flows on localhost, Dodo webhooks can't reach your machine
+  // unless you use a tunnel. This endpoint verifies payment status via the Dodo API
+  // and applies the same credit logic as the webhook handler (idempotent).
+  app.post('/api/payments/confirm', async (req: Request, res: Response) => {
+    try {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      if (!dodoClient) {
+        return res.status(503).json({
+          error: 'Payment system not configured',
+          message: 'Please add DODO_PAYMENTS_API_KEY to enable payments',
+        });
+      }
+
+      const paymentId =
+        typeof req.body?.paymentId === 'string' ? req.body.paymentId : null;
+      if (!paymentId) {
+        return res.status(400).json({ error: 'paymentId is required' });
+      }
+
+      const payment = await dodoClient.payments.retrieve(paymentId);
+      const status = String((payment as any)?.status ?? '').toLowerCase();
+      if (status !== 'succeeded') {
+        return res.status(409).json({
+          error: 'Payment not succeeded',
+          status: (payment as any)?.status ?? null,
+        });
+      }
+
+      const metadata = (payment as any)?.metadata ?? null;
+      if (!metadata || metadata.type !== 'credit_purchase') {
+        return res.status(400).json({ error: 'Unsupported payment type' });
+      }
+
+      await handlePaymentSucceeded({
+        payment_id: paymentId,
+        metadata,
+      });
+
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error('Payment confirm error:', error);
+      return res.status(500).json({
+        error: 'Failed to confirm payment',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   });
 

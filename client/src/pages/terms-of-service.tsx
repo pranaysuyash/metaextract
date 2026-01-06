@@ -176,7 +176,7 @@ const defaultTermsOfServiceContent = `
 <p>We may terminate or suspend your account immediately, without prior notice, for any reason whatsoever, including without limitation if you breach the Terms.</p>
 
 <h2>Refund Policy (Credit Packs)</h2>
-<p><strong>Refunds are available within 7 days of purchase for unused credit packs only.</strong> If any credits are used, the purchase is non-refundable.</p>
+<p><strong>Refunds are available within 7 days of purchase for unused credit packs only.</strong> If any credits are used, the purchase is non-refundable. Credits do not expire.</p>
 
 <h2>Governing Law</h2>
 <p>These Terms shall be governed and construed in accordance with the laws of [Jurisdiction], without regard to its conflict of law provisions.</p>

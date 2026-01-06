@@ -9,10 +9,12 @@ a scalable foundation for the comprehensive metadata extraction engine.
 
 Features:
 - Automatic discovery of extraction modules
-- Dynamic import with error handling
+- Dynamic import with comprehensive error handling
 - Module categorization and prioritization
-- Performance tracking integration
+- Advanced dependency resolution and conflict detection
+- Performance tracking and health monitoring
 - Backward compatibility with existing imports
+- Graceful degradation and error recovery
 """
 
 import os
@@ -24,8 +26,27 @@ import time
 import concurrent.futures
 import threading
 import types
+import traceback
 from typing import Dict, List, Optional, Callable, Any, Tuple, Set
 from pathlib import Path
+
+# Import custom exceptions for enhanced error handling
+try:
+    from .exceptions.extraction_exceptions import (
+        MetaExtractException,
+        DependencyError,
+        ConfigurationError
+    )
+    MODULE_EXCEPTIONS_AVAILABLE = True
+except ImportError:
+    # Fallback exception classes if custom ones not available
+    class MetaExtractException(Exception):
+        pass
+    class DependencyError(MetaExtractException):
+        pass
+    class ConfigurationError(MetaExtractException):
+        pass
+    MODULE_EXCEPTIONS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -137,83 +158,331 @@ class ModuleRegistry:
     
     def discover_modules(self, base_path: str = "server/extractor/modules/") -> None:
         """
-        Discover all extraction modules in the specified directory.
+        Discover all extraction modules in the specified directory with comprehensive error handling.
         
         Args:
             base_path: Base directory to search for modules
+            
+        Raises:
+            ConfigurationError: If modules directory is invalid or inaccessible
+            DependencyError: If critical dependencies are missing
         """
         start_time = time.time()
         logger.info(f"Starting module discovery in {base_path}")
         
+        # Reset counters for fresh discovery
+        self.discovered_count = 0
+        self.loaded_count = 0
+        self.failed_count = 0
+        self.modules.clear()
+        self.categories.clear()
+        self.module_dependencies.clear()
+        
         try:
+            # Validate base path
+            if not base_path or not isinstance(base_path, str):
+                error_msg = f"Invalid modules directory path: {base_path}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="modules_directory",
+                        context={"path": base_path}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.discovery_time = time.time() - start_time
+                    return
+            
             modules_dir = Path(base_path)
+            
+            # Check directory accessibility
             if not modules_dir.exists():
-                logger.warning(f"Modules directory not found: {base_path}")
-                return
+                error_msg = f"Modules directory not found: {base_path}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="modules_directory",
+                        context={"path": base_path, "error": "not_found"}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.discovery_time = time.time() - start_time
+                    return
+            
+            if not modules_dir.is_dir():
+                error_msg = f"Modules path is not a directory: {base_path}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="modules_directory",
+                        context={"path": base_path, "error": "not_directory"}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.discovery_time = time.time() - start_time
+                    return
+            
+            # Check read permissions
+            if not os.access(modules_dir, os.R_OK):
+                error_msg = f"No read permission for modules directory: {base_path}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="modules_directory",
+                        context={"path": base_path, "error": "permission_denied"}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.discovery_time = time.time() - start_time
+                    return
             
             # Discover all Python files in the modules directory
             python_files = []
-            for file_path in modules_dir.glob("*.py"):
-                if file_path.name.startswith("_"):
-                    continue  # Skip __init__.py and other special files
-                python_files.append(file_path)
+            try:
+                for file_path in modules_dir.glob("*.py"):
+                    if file_path.name.startswith("_"):
+                        continue  # Skip __init__.py and other special files
+                    if file_path.is_file() and file_path.suffix == ".py":
+                        python_files.append(file_path)
+            except Exception as e:
+                error_msg = f"Error reading modules directory {base_path}: {str(e)}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="modules_directory",
+                        context={"path": base_path, "original_error": str(e)}
+                    ) from e
+                else:
+                    logger.error(error_msg)
+                    self.discovery_time = time.time() - start_time
+                    return
             
             self.discovered_count = len(python_files)
             logger.info(f"Found {self.discovered_count} potential module files")
             
-            # Process each module file
+            if self.discovered_count == 0:
+                logger.warning(f"No Python module files found in {base_path}")
+            
+            # Process each module file with comprehensive error handling
             for file_path in python_files:
-                module_name = file_path.stem
-                self._process_module_file(file_path, module_name)
+                try:
+                    module_name = file_path.stem
+                    self._process_module_file(file_path, module_name)
+                except Exception as e:
+                    error_msg = f"Failed to process module {file_path.stem}: {str(e)}"
+                    logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                    self.failed_count += 1
+                    self.disabled_modules.add(file_path.stem)
+            
+            # Build dependency graph after all modules are loaded
+            self._build_dependency_graph()
+            
+            # Check for circular dependencies
+            self._detect_circular_dependencies()
             
             self.discovery_time = time.time() - start_time
             logger.info(f"Module discovery completed in {self.discovery_time:.3f}s")
             logger.info(f"Successfully loaded {self.loaded_count} modules, {self.failed_count} failed")
             
+            # Log summary statistics
+            self._log_discovery_summary()
+            
         except Exception as e:
-            logger.error(f"Error during module discovery: {e}")
-            self.discovery_time = time.time() - start_time
+            error_msg = f"Critical error during module discovery: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            
+            if MODULE_EXCEPTIONS_AVAILABLE and isinstance(e, MetaExtractException):
+                raise  # Re-raise our custom exceptions
+            elif MODULE_EXCEPTIONS_AVAILABLE:
+                raise ConfigurationError(
+                    message=error_msg,
+                    config_key="module_discovery",
+                    context={"original_error": str(e), "error_type": type(e).__name__}
+                ) from e
+            else:
+                self.discovery_time = time.time() - start_time
     
     def _process_module_file(self, file_path: Path, module_name: str) -> None:
         """
-        Process a single module file and extract relevant functions.
+        Process a single module file and extract relevant functions with comprehensive error handling.
         
         Args:
             file_path: Path to the module file
             module_name: Name of the module
+            
+        Raises:
+            ImportError: If module cannot be imported
+            ConfigurationError: If module has configuration issues
         """
         try:
-            # Import the module dynamically
-            module_spec = importlib.util.spec_from_file_location(module_name, file_path)
-            if module_spec is None:
-                logger.warning(f"Could not load spec for module {module_name}")
-                self.failed_count += 1
-                return
+            logger.debug(f"Processing module: {module_name}")
             
-            module = importlib.util.module_from_spec(module_spec)
-            module_spec.loader.exec_module(module)
+            # Validate module file
+            if not file_path.exists():
+                error_msg = f"Module file not found: {file_path}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="module_file",
+                        context={"module": module_name, "path": str(file_path)}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.failed_count += 1
+                    self.disabled_modules.add(module_name)
+                    return
+            
+            if not file_path.is_file():
+                error_msg = f"Module path is not a file: {file_path}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="module_file",
+                        context={"module": module_name, "path": str(file_path)}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.failed_count += 1
+                    self.disabled_modules.add(module_name)
+                    return
+            
+            # Import the module dynamically with comprehensive error handling
+            try:
+                module_spec = importlib.util.spec_from_file_location(module_name, file_path)
+                if module_spec is None:
+                    error_msg = f"Could not load spec for module {module_name}"
+                    if MODULE_EXCEPTIONS_AVAILABLE:
+                        raise ConfigurationError(
+                            message=error_msg,
+                            config_key="module_import",
+                            context={"module": module_name, "path": str(file_path)}
+                        )
+                    else:
+                        logger.error(error_msg)
+                        self.failed_count += 1
+                        self.disabled_modules.add(module_name)
+                        return
+                
+                module = importlib.util.module_from_spec(module_spec)
+                module_spec.loader.exec_module(module)
+                
+            except ImportError as e:
+                error_msg = f"Import error in module {module_name}: {str(e)}"
+                logger.warning(f"{error_msg}\n{traceback.format_exc()}")
+                
+                # Check for missing dependencies
+                missing_dep = self._extract_missing_dependency(str(e))
+                if missing_dep and MODULE_EXCEPTIONS_AVAILABLE:
+                    raise DependencyError(
+                        missing_dependency=missing_dep,
+                        context={
+                            "module": module_name,
+                            "path": str(file_path),
+                            "original_error": str(e)
+                        }
+                    ) from e
+                
+                self.failed_count += 1
+                self.disabled_modules.add(module_name)
+                return
+            except Exception as e:
+                error_msg = f"Error loading module {module_name}: {str(e)}"
+                logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="module_load",
+                        context={
+                            "module": module_name,
+                            "path": str(file_path),
+                            "original_error": str(e),
+                            "error_type": type(e).__name__
+                        }
+                    ) from e
+                else:
+                    self.failed_count += 1
+                    self.disabled_modules.add(module_name)
+                    return
             
             # Find extraction functions in the module
-            extraction_functions = self._find_extraction_functions(module)
+            try:
+                extraction_functions = self._find_extraction_functions(module)
+                logger.debug(f"Found {len(extraction_functions)} extraction functions in {module_name}")
+            except Exception as e:
+                error_msg = f"Error finding extraction functions in module {module_name}: {str(e)}"
+                logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                self.failed_count += 1
+                self.disabled_modules.add(module_name)
+                return
             
             # Find module dependencies
-            dependencies = self._find_module_dependencies(module)
+            try:
+                dependencies = self._find_module_dependencies(module)
+                logger.debug(f"Found {len(dependencies)} dependencies in {module_name}")
+            except Exception as e:
+                error_msg = f"Error finding dependencies in module {module_name}: {str(e)}"
+                logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                # Continue with empty dependencies rather than failing the whole module
+                dependencies = []
             
             if extraction_functions:
-                self._register_module(module_name, extraction_functions, dependencies, file_path)
-                self.loaded_count += 1
+                try:
+                    self._register_module(module_name, extraction_functions, dependencies, file_path)
+                    self.loaded_count += 1
+                    logger.info(f"Successfully loaded module: {module_name}")
+                except Exception as e:
+                    error_msg = f"Error registering module {module_name}: {str(e)}"
+                    logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                    self.failed_count += 1
+                    self.disabled_modules.add(module_name)
             else:
                 logger.debug(f"No extraction functions found in module {module_name}")
                 self.failed_count += 1
+                self.disabled_modules.add(module_name)
                 
-        except ImportError as e:
-            logger.warning(f"Import error in module {module_name}: {e}")
-            self.failed_count += 1
-            self.disabled_modules.add(module_name)
         except Exception as e:
-            logger.error(f"Error loading module {module_name}: {e}")
+            error_msg = f"Unexpected error processing module {module_name}: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
             self.failed_count += 1
             self.disabled_modules.add(module_name)
+    
+    def _extract_missing_dependency(self, error_msg: str) -> Optional[str]:
+        """
+        Extract missing dependency name from import error message.
+        
+        Args:
+            error_msg: Import error message
+            
+        Returns:
+            Name of missing dependency if found, None otherwise
+        """
+        try:
+            # Common patterns for missing dependencies
+            patterns = [
+                "No module named '",
+                "No module named \"",
+                "Cannot import name '",
+                "Cannot import name \""
+            ]
+            
+            for pattern in patterns:
+                if pattern in error_msg:
+                    # Extract the module name
+                    start_idx = error_msg.find(pattern) + len(pattern)
+                    end_idx = error_msg.find("'", start_idx)
+                    if end_idx == -1:
+                        end_idx = error_msg.find("\"", start_idx)
+                    
+                    if end_idx != -1:
+                        dep_name = error_msg[start_idx:end_idx].strip()
+                        # Filter out common false positives
+                        if dep_name and not dep_name.startswith("."):
+                            return dep_name.split(".")[0]  # Get base module name
+            
+            return None
+        except Exception:
+            return None
     
     def _find_extraction_functions(self, module: Any) -> Dict[str, Callable]:
         """
@@ -319,6 +588,140 @@ class ModuleRegistry:
             logger.info(f"Module '{module_name}' has dependencies: {dependencies}")
         
         logger.info(f"Registered module '{module_name}' in category '{category}' with {len(functions)} functions")
+    
+    def _build_dependency_graph(self) -> None:
+        """
+        Build a dependency graph from registered module dependencies.
+        
+        This method creates a graph representation of module dependencies
+        to enable dependency resolution and circular dependency detection.
+        """
+        try:
+            self.dependency_graph.clear()
+            self.circular_dependencies.clear()
+            
+            # Build the graph
+            for module_name, deps in self.module_dependencies.items():
+                if module_name not in self.dependency_graph:
+                    self.dependency_graph[module_name] = set()
+                
+                for dep in deps:
+                    if dep not in self.dependency_graph:
+                        self.dependency_graph[dep] = set()
+                    self.dependency_graph[module_name].add(dep)
+            
+            logger.debug(f"Built dependency graph with {len(self.dependency_graph)} nodes")
+            
+        except Exception as e:
+            logger.error(f"Error building dependency graph: {str(e)}")
+            self.dependency_graph.clear()
+    
+    def _detect_circular_dependencies(self) -> None:
+        """
+        Detect circular dependencies in the module dependency graph.
+        
+        Uses depth-first search to identify cycles in the dependency graph.
+        """
+        try:
+            visited = set()
+            recursion_stack = set()
+            
+            def dfs(node: str) -> bool:
+                visited.add(node)
+                recursion_stack.add(node)
+                
+                for neighbor in self.dependency_graph.get(node, set()):
+                    if neighbor not in self.modules:
+                        # Dependency not found - this is a missing dependency, not circular
+                        continue
+                    if neighbor not in visited:
+                        if dfs(neighbor):
+                            return True
+                    elif neighbor in recursion_stack:
+                        # Circular dependency detected
+                        cycle = self._find_cycle_path(node, neighbor)
+                        self.circular_dependencies.update(cycle)
+                        logger.warning(f"Circular dependency detected: {' -> '.join(cycle)}")
+                        return True
+                
+                recursion_stack.remove(node)
+                return False
+            
+            # Check each node in the graph
+            for node in self.dependency_graph:
+                if node not in visited:
+                    dfs(node)
+            
+            if self.circular_dependencies:
+                logger.warning(f"Found {len(self.circular_dependencies)} modules with circular dependencies")
+            else:
+                logger.info("No circular dependencies detected")
+                
+        except Exception as e:
+            logger.error(f"Error detecting circular dependencies: {str(e)}")
+    
+    def _find_cycle_path(self, start: str, end: str) -> List[str]:
+        """
+        Find the path of a circular dependency.
+        
+        Args:
+            start: Starting node of the cycle
+            end: Ending node of the cycle
+            
+        Returns:
+            List of nodes forming the cycle
+        """
+        try:
+            path = []
+            current = start
+            
+            # Trace back to find the cycle path
+            while current != end:
+                path.append(current)
+                # Find the next node in the cycle
+                for neighbor in self.dependency_graph.get(current, set()):
+                    if neighbor in path or neighbor == end:
+                        current = neighbor
+                        break
+            
+            path.append(end)
+            return path
+        except Exception:
+            return [start, end]
+    
+    def _log_discovery_summary(self) -> None:
+        """
+        Log a comprehensive summary of the module discovery process.
+        """
+        try:
+            summary = [
+                f"Module Discovery Summary:",
+                f"  Total modules discovered: {self.discovered_count}",
+                f"  Successfully loaded: {self.loaded_count}",
+                f"  Failed to load: {self.failed_count}",
+                f"  Disabled modules: {len(self.disabled_modules)}",
+                f"  Discovery time: {self.discovery_time:.3f}s"
+            ]
+            
+            if self.disabled_modules:
+                summary.append(f"  Disabled: {', '.join(sorted(self.disabled_modules))}")
+            
+            if self.circular_dependencies:
+                summary.append(f"  Circular dependencies: {len(self.circular_dependencies)}")
+            
+            # Log categories
+            categories_summary = []
+            for category, modules in self.categories.items():
+                categories_summary.append(f"    {category}: {len(modules)} modules")
+            
+            if categories_summary:
+                summary.append("  Categories:")
+                summary.extend(categories_summary)
+            
+            logger.info("\n".join(summary))
+            
+        except Exception as e:
+            logger.error(f"Error logging discovery summary: {str(e)}")
     
     def _categorize_module(self, module_name: str) -> str:
         """
@@ -1144,7 +1547,11 @@ class ModuleRegistry:
     
     def discover_and_load_plugins(self) -> None:
         """
-        Discover and load all plugins from configured paths.
+        Discover and load all plugins from configured paths with enhanced error handling.
+        
+        Raises:
+            ConfigurationError: If plugin discovery fails
+            DependencyError: If critical plugin dependencies are missing
         """
         if not self.plugins_enabled:
             logger.warning("Plugin system is disabled")
@@ -1159,18 +1566,50 @@ class ModuleRegistry:
         self.plugins_loaded_count = 0
         self.plugins_failed_count = 0
         
+        # Initialize plugin health monitoring
+        self._initialize_plugin_health_monitoring()
+        
         try:
-            # Discover plugins in each path
+            # Discover plugins in each path with comprehensive error handling
             for plugin_path in self.plugin_paths:
-                self._discover_plugins_in_path(plugin_path)
+                try:
+                    self._discover_plugins_in_path(plugin_path)
+                except Exception as e:
+                    error_msg = f"Error discovering plugins in path {plugin_path}: {str(e)}"
+                    logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                    
+                    if MODULE_EXCEPTIONS_AVAILABLE:
+                        raise ConfigurationError(
+                            message=error_msg,
+                            config_key="plugin_discovery",
+                            context={
+                                "plugin_path": plugin_path,
+                                "original_error": str(e),
+                                "error_type": type(e).__name__
+                            }
+                        ) from e
             
             self.plugin_discovery_time = time.time() - start_time
             logger.info(f"Plugin discovery completed in {self.plugin_discovery_time:.3f}s")
             logger.info(f"Loaded {self.plugins_loaded_count} plugins, {self.plugins_failed_count} failed")
             
+            # Log plugin discovery summary
+            self._log_plugin_discovery_summary()
+            
         except Exception as e:
-            logger.error(f"Error during plugin discovery: {e}")
-            self.plugin_discovery_time = time.time() - start_time
+            error_msg = f"Critical error during plugin discovery: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            
+            if MODULE_EXCEPTIONS_AVAILABLE and isinstance(e, MetaExtractException):
+                raise  # Re-raise our custom exceptions
+            elif MODULE_EXCEPTIONS_AVAILABLE:
+                raise ConfigurationError(
+                    message=error_msg,
+                    config_key="plugin_discovery",
+                    context={"original_error": str(e), "error_type": type(e).__name__}
+                ) from e
+            else:
+                self.plugin_discovery_time = time.time() - start_time
     
     def _discover_plugins_in_path(self, plugin_path: str) -> None:
         """
@@ -1199,54 +1638,162 @@ class ModuleRegistry:
     
     def _load_plugin_file(self, plugin_file: Path) -> None:
         """
-        Load a single-file plugin.
+        Load a single-file plugin with comprehensive error handling.
         
         Args:
             plugin_file: Path to the plugin file
+            
+        Raises:
+            ConfigurationError: If plugin file is invalid
+            DependencyError: If plugin has missing dependencies
         """
         try:
             plugin_name = plugin_file.stem
             logger.info(f"Loading plugin file: {plugin_name}")
             
-            # Import the plugin module
-            module_spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
-            if module_spec is None:
-                error_msg = f"Could not load spec for plugin {plugin_name}"
-                logger.warning(error_msg)
+            # Validate plugin file
+            if not plugin_file.exists():
+                error_msg = f"Plugin file not found: {plugin_file}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_file",
+                        context={"plugin": plugin_name, "path": str(plugin_file)}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.plugin_load_errors[plugin_name] = error_msg
+                    self.plugins_failed_count += 1
+                    return
+            
+            if not plugin_file.is_file():
+                error_msg = f"Plugin path is not a file: {plugin_file}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_file",
+                        context={"plugin": plugin_name, "path": str(plugin_file)}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.plugin_load_errors[plugin_name] = error_msg
+                    self.plugins_failed_count += 1
+                    return
+            
+            # Import the plugin module with comprehensive error handling
+            try:
+                module_spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
+                if module_spec is None:
+                    error_msg = f"Could not load spec for plugin {plugin_name}"
+                    if MODULE_EXCEPTIONS_AVAILABLE:
+                        raise ConfigurationError(
+                            message=error_msg,
+                            config_key="plugin_import",
+                            context={"plugin": plugin_name, "path": str(plugin_file)}
+                        )
+                    else:
+                        logger.error(error_msg)
+                        self.plugin_load_errors[plugin_name] = error_msg
+                        self.plugins_failed_count += 1
+                        return
+                
+                plugin_module = importlib.util.module_from_spec(module_spec)
+                module_spec.loader.exec_module(plugin_module)
+                
+                # Add to sys.modules so it can be imported later
+                sys.modules[plugin_name] = plugin_module
+                
+                # Register the plugin
+                self._register_plugin(plugin_name, plugin_module, plugin_file)
+                
+            except ImportError as e:
+                error_msg = f"Import error in plugin {plugin_file.name}: {str(e)}"
+                logger.warning(f"{error_msg}\n{traceback.format_exc()}")
+                
+                # Check for missing dependencies
+                missing_dep = self._extract_missing_dependency(str(e))
+                if missing_dep and MODULE_EXCEPTIONS_AVAILABLE:
+                    raise DependencyError(
+                        missing_dependency=missing_dep,
+                        context={
+                            "plugin": plugin_name,
+                            "path": str(plugin_file),
+                            "original_error": str(e),
+                            "plugin_type": "file"
+                        }
+                    ) from e
+                
                 self.plugin_load_errors[plugin_name] = error_msg
                 self.plugins_failed_count += 1
-                return
-            
-            plugin_module = importlib.util.module_from_spec(module_spec)
-            module_spec.loader.exec_module(plugin_module)
-            
-            # Add to sys.modules so it can be imported later
-            sys.modules[plugin_name] = plugin_module
-            
-            # Register the plugin
-            self._register_plugin(plugin_name, plugin_module, plugin_file)
-            
-        except ImportError as e:
-            error_msg = f"Import error in plugin {plugin_file.name}: {e}"
-            logger.warning(error_msg)
-            self.plugin_load_errors[plugin_name] = error_msg
-            self.plugins_failed_count += 1
+            except Exception as e:
+                error_msg = f"Error loading plugin {plugin_file.name}: {str(e)}"
+                logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_load",
+                        context={
+                            "plugin": plugin_name,
+                            "path": str(plugin_file),
+                            "original_error": str(e),
+                            "error_type": type(e).__name__,
+                            "plugin_type": "file"
+                        }
+                    ) from e
+                else:
+                    self.plugin_load_errors[plugin_name] = error_msg
+                    self.plugins_failed_count += 1
+                    
         except Exception as e:
-            error_msg = f"Error loading plugin {plugin_file.name}: {e}"
-            logger.error(error_msg)
+            error_msg = f"Unexpected error loading plugin {plugin_file.name}: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
             self.plugin_load_errors[plugin_name] = error_msg
             self.plugins_failed_count += 1
     
     def _load_plugin_directory(self, plugin_dir: Path) -> None:
         """
-        Load a directory-based plugin.
+        Load a directory-based plugin with comprehensive error handling.
         
         Args:
             plugin_dir: Path to the plugin directory
+            
+        Raises:
+            ConfigurationError: If plugin directory is invalid
+            DependencyError: If plugin has missing dependencies
         """
         try:
             plugin_name = plugin_dir.name
             logger.info(f"Loading plugin directory: {plugin_name}")
+            
+            # Validate plugin directory
+            if not plugin_dir.exists():
+                error_msg = f"Plugin directory not found: {plugin_dir}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_directory",
+                        context={"plugin": plugin_name, "path": str(plugin_dir)}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.plugin_load_errors[plugin_name] = error_msg
+                    self.plugins_failed_count += 1
+                    return
+            
+            if not plugin_dir.is_dir():
+                error_msg = f"Plugin path is not a directory: {plugin_dir}"
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_directory",
+                        context={"plugin": plugin_name, "path": str(plugin_dir)}
+                    )
+                else:
+                    logger.error(error_msg)
+                    self.plugin_load_errors[plugin_name] = error_msg
+                    self.plugins_failed_count += 1
+                    return
             
             # Look for __init__.py or main plugin file
             init_file = plugin_dir / "__init__.py"
@@ -1256,37 +1803,86 @@ class ModuleRegistry:
             
             if not plugin_file.exists():
                 error_msg = f"No plugin file found in directory {plugin_name}"
-                logger.warning(error_msg)
-                self.plugin_load_errors[plugin_name] = error_msg
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_file",
+                        context={"plugin": plugin_name, "path": str(plugin_dir), "error": "no_plugin_file"}
+                    )
+                else:
+                    logger.warning(error_msg)
+                    self.plugin_load_errors[plugin_name] = error_msg
+                    self.plugins_failed_count += 1
+                    return
+            
+            # Import the plugin module with comprehensive error handling
+            try:
+                module_spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
+                if module_spec is None:
+                    error_msg = f"Could not load spec for plugin {plugin_name}"
+                    if MODULE_EXCEPTIONS_AVAILABLE:
+                        raise ConfigurationError(
+                            message=error_msg,
+                            config_key="plugin_import",
+                            context={"plugin": plugin_name, "path": str(plugin_file)}
+                        )
+                    else:
+                        logger.warning(error_msg)
+                        self.plugin_load_errors[plugin_name] = error_msg
+                        self.plugins_failed_count += 1
+                        return
+                
+                plugin_module = importlib.util.module_from_spec(module_spec)
+                module_spec.loader.exec_module(plugin_module)
+                
+                # Add to sys.modules so it can be imported later
+                sys.modules[plugin_name] = plugin_module
+                
+                # Register the plugin
+                self._register_plugin(plugin_name, plugin_module, plugin_dir)
+                
+            except ImportError as e:
+                error_msg = f"Import error in plugin {plugin_dir.name}: {str(e)}"
+                logger.warning(f"{error_msg}\n{traceback.format_exc()}")
+                
+                # Check for missing dependencies
+                missing_dep = self._extract_missing_dependency(str(e))
+                if missing_dep and MODULE_EXCEPTIONS_AVAILABLE:
+                    raise DependencyError(
+                        missing_dependency=missing_dep,
+                        context={
+                            "plugin": plugin_name,
+                            "path": str(plugin_dir),
+                            "original_error": str(e),
+                            "plugin_type": "directory"
+                        }
+                    ) from e
+                
+                self.plugin_load_errors[plugin_dir.name] = error_msg
                 self.plugins_failed_count += 1
-                return
-            
-            # Import the plugin module
-            module_spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
-            if module_spec is None:
-                error_msg = f"Could not load spec for plugin {plugin_name}"
-                logger.warning(error_msg)
-                self.plugin_load_errors[plugin_name] = error_msg
-                self.plugins_failed_count += 1
-                return
-            
-            plugin_module = importlib.util.module_from_spec(module_spec)
-            module_spec.loader.exec_module(plugin_module)
-            
-            # Add to sys.modules so it can be imported later
-            sys.modules[plugin_name] = plugin_module
-            
-            # Register the plugin
-            self._register_plugin(plugin_name, plugin_module, plugin_dir)
-            
-        except ImportError as e:
-            error_msg = f"Import error in plugin {plugin_dir.name}: {e}"
-            logger.warning(error_msg)
-            self.plugin_load_errors[plugin_dir.name] = error_msg
-            self.plugins_failed_count += 1
+            except Exception as e:
+                error_msg = f"Error loading plugin {plugin_dir.name}: {str(e)}"
+                logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                
+                if MODULE_EXCEPTIONS_AVAILABLE:
+                    raise ConfigurationError(
+                        message=error_msg,
+                        config_key="plugin_load",
+                        context={
+                            "plugin": plugin_name,
+                            "path": str(plugin_dir),
+                            "original_error": str(e),
+                            "error_type": type(e).__name__,
+                            "plugin_type": "directory"
+                        }
+                    ) from e
+                else:
+                    self.plugin_load_errors[plugin_dir.name] = error_msg
+                    self.plugins_failed_count += 1
+                    
         except Exception as e:
-            error_msg = f"Error loading plugin {plugin_dir.name}: {e}"
-            logger.error(error_msg)
+            error_msg = f"Unexpected error loading plugin {plugin_dir.name}: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
             self.plugin_load_errors[plugin_dir.name] = error_msg
             self.plugins_failed_count += 1
     
@@ -1321,6 +1917,18 @@ class ModuleRegistry:
             
             # Also add to regular modules for execution
             self._register_module(plugin_name, extraction_functions, dependencies, plugin_path)
+            
+            # Initialize health monitoring for this plugin
+            if plugin_name not in self.health_stats:
+                self.health_stats[plugin_name] = {
+                    'error_count': 0,
+                    'success_count': 0,
+                    'last_error': None,
+                    'last_success': None,
+                    'status': 'healthy',
+                    'last_check': time.time(),
+                    'type': 'plugin'
+                }
             
             self.plugins_loaded_count += 1
             logger.info(f"Successfully loaded plugin: {plugin_name} with {len(extraction_functions)} functions")
@@ -1459,6 +2067,70 @@ class ModuleRegistry:
             return 0.0
         
         return round(self.plugins_loaded_count / total_attempts, 3)
+    
+    def _initialize_plugin_health_monitoring(self) -> None:
+        """
+        Initialize health monitoring for all plugins.
+        """
+        try:
+            # Initialize health metrics for each loaded plugin
+            for plugin_name in self.loaded_plugins.keys():
+                if plugin_name not in self.health_stats:
+                    self.health_stats[plugin_name] = {
+                        'error_count': 0,
+                        'success_count': 0,
+                        'last_error': None,
+                        'last_success': None,
+                        'status': 'healthy',
+                        'last_check': time.time(),
+                        'type': 'plugin'
+                    }
+            
+            logger.debug(f"Initialized health monitoring for {len(self.health_stats)} plugins")
+            
+        except Exception as e:
+            logger.error(f"Error initializing plugin health monitoring: {str(e)}")
+    
+    def _log_plugin_discovery_summary(self) -> None:
+        """
+        Log a comprehensive summary of plugin discovery results.
+        """
+        try:
+            summary = [
+                f"Plugin Discovery Summary:",
+                f"  Total plugins loaded: {self.plugins_loaded_count}",
+                f"  Total plugins failed: {self.plugins_failed_count}",
+                f"  Discovery time: {self.plugin_discovery_time:.3f}s"
+            ]
+            
+            if self.plugin_load_errors:
+                summary.append(f"  Plugins with errors: {len(self.plugin_load_errors)}")
+                # Show first few errors
+                error_plugins = list(self.plugin_load_errors.keys())[:3]
+                for plugin_name in error_plugins:
+                    summary.append(f"    - {plugin_name}: {self.plugin_load_errors[plugin_name]}")
+                if len(self.plugin_load_errors) > 3:
+                    summary.append(f"    - ... and {len(self.plugin_load_errors) - 3} more")
+            
+            if self.loaded_plugins:
+                # Show plugin categories
+                plugin_types = {}
+                for plugin_info in self.loaded_plugins.values():
+                    plugin_type = plugin_info.get('type', 'unknown')
+                    plugin_types[plugin_type] = plugin_types.get(plugin_type, 0) + 1
+                
+                type_summary = []
+                for plugin_type, count in plugin_types.items():
+                    type_summary.append(f"    {plugin_type}: {count}")
+                
+                if type_summary:
+                    summary.append("  Plugin types:")
+                    summary.extend(type_summary)
+            
+            logger.info("\n".join(summary))
+            
+        except Exception as e:
+            logger.error(f"Error logging plugin discovery summary: {str(e)}")
     
     def enable_plugin(self, plugin_name: str) -> bool:
         """

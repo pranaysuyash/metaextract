@@ -105,7 +105,7 @@ export function QualityIndicator({
         )}
       </div>
       {supportLevelLabel && (
-        <p className="text-xs text-white/50">
+        <p className="text-xs text-white/70">
           Format support: {supportLevelLabel}
         </p>
       )}
@@ -116,7 +116,7 @@ export function QualityIndicator({
           {/* Confidence Score */}
           <div className="bg-white/5 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-300">Confidence</span>
+              <span className="text-sm text-slate-200">Confidence</span>
               <div className={getConfidenceColor(qualityMetrics.confidence_score)}>
                 {getConfidenceIcon(qualityMetrics.confidence_score)}
               </div>
@@ -139,7 +139,7 @@ export function QualityIndicator({
           {showCompleteness ? (
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-slate-300">Completeness</span>
+                <span className="text-sm text-slate-200">Completeness</span>
                 <CheckCircle className="w-4 h-4 text-blue-400" aria-hidden="true" />
               </div>
               <div className="text-2xl font-bold text-white">
@@ -155,7 +155,7 @@ export function QualityIndicator({
           ) : (
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-slate-300">Completeness</span>
+                <span className="text-sm text-slate-200">Completeness</span>
                 <Info className="w-4 h-4 text-white/40" aria-hidden="true" />
               </div>
               <div className="text-lg font-semibold text-white">Not reported</div>
@@ -167,7 +167,7 @@ export function QualityIndicator({
           {qualityMetrics.format_support_level && (
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-slate-300">Support Level</span>
+                <span className="text-sm text-slate-200">Support Level</span>
                 <span className={`px-2 py-1 text-xs rounded-full ${getFormatSupportBadge(qualityMetrics.format_support_level)}`}>
                   {qualityMetrics.format_support_level}
                 </span>
@@ -191,7 +191,7 @@ export function QualityIndicator({
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                <span className="text-sm text-slate-300">Processing Time</span>
+                <span className="text-sm text-slate-200">Processing Time</span>
               </div>
               <div className="text-lg font-semibold text-white">
                 {formatTime(processingInsights.processing_time_ms)}
@@ -207,12 +207,12 @@ export function QualityIndicator({
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                <span className="text-sm text-slate-300">Fields Extracted</span>
+                <span className="text-sm text-slate-200">Fields Extracted</span>
               </div>
               <div className="text-lg font-semibold text-white">
                 {processingInsights.total_fields_extracted.toLocaleString()}
               </div>
-              <div className="text-xs text-slate-400 mt-1">Comprehensive metadata</div>
+              <div className="text-xs text-slate-300 mt-1">Comprehensive metadata</div>
             </div>
           )}
 
@@ -221,7 +221,7 @@ export function QualityIndicator({
             <div className="bg-white/5 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="w-2 h-2 bg-orange-400 rounded-full" />
-                <span className="text-sm text-slate-300">Memory Used</span>
+                <span className="text-sm text-slate-200">Memory Used</span>
               </div>
               <div className="text-lg font-semibold text-white">
                 {formatMemory(processingInsights.memory_usage_mb)}

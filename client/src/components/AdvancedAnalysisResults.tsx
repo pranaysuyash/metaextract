@@ -40,7 +40,7 @@ interface AdvancedAnalysisResultsProps {
 function ConfidenceIndicator({ value, label }: { value: number; label?: string }) {
     return (
         <div className="space-y-1">
-            {label && <span className="text-xs text-slate-400">{label}</span>}
+            {label && <span className="text-xs text-slate-300">{label}</span>}
             <div className="flex items-center gap-2">
                 <Progress value={value} className="h-2 flex-1" />
                 <span className="text-sm font-mono text-white">{value}%</span>
@@ -74,7 +74,7 @@ export function AdvancedAnalysisResults({
             <Card className="bg-card border-white/10">
                 <CardContent className="py-8 text-center">
                     <Shield className="w-12 h-12 mx-auto mb-4 text-slate-500" />
-                    <p className="text-slate-400">No advanced analysis data available</p>
+                    <p className="text-slate-300">No advanced analysis data available</p>
                     <p className="text-xs text-slate-500 mt-2">Advanced analysis requires Forensic or Enterprise tier</p>
                 </CardContent>
             </Card>
@@ -88,7 +88,7 @@ export function AdvancedAnalysisResults({
                     <Fingerprint className="w-5 h-5 text-primary" />
                     Forensic Analysis
                 </CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-slate-300">
                     Deep analysis for authenticity and manipulation detection
                 </CardDescription>
             </CardHeader>
@@ -114,7 +114,7 @@ export function AdvancedAnalysisResults({
                                 </div>
                                 {steganography.methods_checked.length > 0 && (
                                     <div>
-                                        <p className="text-xs text-slate-400 mb-2">Methods Analyzed:</p>
+                                        <p className="text-xs text-slate-300 mb-2">Methods Analyzed:</p>
                                         <div className="flex flex-wrap gap-1">
                                             {steganography.methods_checked.map((method, i) => (
                                                 <Badge key={i} variant="outline" className="text-xs border-white/20">
@@ -127,7 +127,7 @@ export function AdvancedAnalysisResults({
                                 {steganography.findings.length > 0 && (
                                     <div className="bg-muted/50 p-3 rounded space-y-1">
                                         {steganography.findings.map((finding, i) => (
-                                            <p key={i} className="text-sm text-slate-300 flex items-start gap-2">
+                                            <p key={i} className="text-sm text-slate-200 flex items-start gap-2">
                                                 <Eye className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                                                 {finding}
                                             </p>
@@ -170,14 +170,14 @@ export function AdvancedAnalysisResults({
                                                                 ? "border-red-500 text-red-400"
                                                                 : indicator.severity === "medium"
                                                                     ? "border-yellow-500 text-yellow-400"
-                                                                    : "border-slate-500 text-slate-400"
+                                                                    : "border-slate-500 text-slate-300"
                                                             }`}
                                                     >
                                                         {indicator.severity.toUpperCase()}
                                                     </Badge>
                                                     <span className="text-sm font-medium text-white">{indicator.type}</span>
                                                 </div>
-                                                <p className="text-xs text-slate-400">{indicator.description}</p>
+                                                <p className="text-xs text-slate-300">{indicator.description}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -201,7 +201,7 @@ export function AdvancedAnalysisResults({
                                 </div>
                                 {aiDetection.model_hints.length > 0 && (
                                     <div>
-                                        <p className="text-xs text-slate-400 mb-2">Model Indicators:</p>
+                                        <p className="text-xs text-slate-300 mb-2">Model Indicators:</p>
                                         <div className="flex flex-wrap gap-1">
                                             {aiDetection.model_hints.map((hint, i) => (
                                                 <Badge key={i} variant="outline" className="text-xs border-white/20">
@@ -240,7 +240,7 @@ export function AdvancedAnalysisResults({
                                                     <p className="text-sm text-white truncate">{event.event_type}</p>
                                                     <p className="text-xs text-slate-500">{event.source}</p>
                                                 </div>
-                                                <span className="text-xs font-mono text-slate-400">{event.timestamp}</span>
+                                                <span className="text-xs font-mono text-slate-300">{event.timestamp}</span>
                                             </div>
                                         ))}
                                     </div>

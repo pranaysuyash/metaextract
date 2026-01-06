@@ -2100,7 +2100,7 @@ class InvestigatorMikeInterpreter:
 
 
 # Security Analyst Sam - Cybersecurity Professional
-class SecurityAnalystSamInterpreter(BasePersonaInterpreter):
+class SecurityAnalystSamInterpreter(PersonaInterpreter):
     """Security-focused interpreter for cybersecurity professionals"""
 
     def __init__(self, metadata: Dict[str, Any]):
@@ -2352,7 +2352,7 @@ class SecurityAnalystSamInterpreter(BasePersonaInterpreter):
 
 
 # Social Media Manager Sophia - Content Creator Professional
-class SocialMediaManagerSophiaInterpreter(BasePersonaInterpreter):
+class SocialMediaManagerSophiaInterpreter(PersonaInterpreter):
     """Social media optimization interpreter for content creators"""
 
     def __init__(self, metadata: Dict[str, Any]):
@@ -2654,7 +2654,7 @@ class SocialMediaManagerSophiaInterpreter(BasePersonaInterpreter):
 
 
 # Genealogy Researcher Grace - Family Historian
-class GenealogyResearcherGraceInterpreter(BasePersonaInterpreter):
+class GenealogyResearcherGraceInterpreter(PersonaInterpreter):
     """Genealogy-focused interpreter for family historians"""
 
     def __init__(self, metadata: Dict[str, Any]):
@@ -2854,7 +2854,7 @@ class GenealogyResearcherGraceInterpreter(BasePersonaInterpreter):
 
 
 # Legal Investigator Liam - Legal Professional
-class LegalInvestigatorLiamInterpreter(BasePersonaInterpreter):
+class LegalInvestigatorLiamInterpreter(PersonaInterpreter):
     """Legal-focused interpreter for legal professionals"""
 
     def __init__(self, metadata: Dict[str, Any]):
@@ -3063,7 +3063,7 @@ class LegalInvestigatorLiamInterpreter(BasePersonaInterpreter):
 
 
 # Insurance Adjuster Ivy - Claims Professional
-class InsuranceAdjusterIvyInterpreter(BasePersonaInterpreter):
+class InsuranceAdjusterIvyInterpreter(PersonaInterpreter):
     """Insurance-focused interpreter for claims processing"""
 
     def __init__(self, metadata: Dict[str, Any]):

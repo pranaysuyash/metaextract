@@ -10,6 +10,7 @@ process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL =
   'postgresql://test:test@localhost:5432/metaextract_test';
 process.env.SESSION_SECRET = 'test-session-secret-for-testing';
+process.env.TOKEN_SECRET = 'test-token-secret-for-testing';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -61,7 +62,7 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: jest.fn().mockImplementation((query) => ({
+    value: jest.fn().mockImplementation(query => ({
       matches: false,
       media: query,
       onchange: null,
@@ -78,6 +79,111 @@ if (typeof window !== 'undefined') {
 beforeEach(() => {
   jest.clearAllMocks();
   (global.fetch as jest.Mock).mockClear();
+});
+
+// ============================================================================
+// Test-time database readiness: attempt to use local Postgres when available.
+// If DATABASE_URL is set and reachable, ensure schema exists by applying
+// `init.sql` when necessary. If DB is unreachable, we set a global flag and
+// tests that require DB will skip. If DB exists but schema init fails, tests
+// will fail with an actionable error so developers can fix their local setup.
+// ============================================================================
+import fs from 'fs/promises';
+import { Client } from 'pg';
+
+beforeAll(async () => {
+  const dbUrl = process.env.DATABASE_URL;
+  // Default: no DB
+  (global as any).__TEST_DB_READY = false;
+  (global as any).__TEST_DB_INIT_ERROR = null;
+
+  if (!dbUrl) {
+    console.log('No DATABASE_URL set; DB-dependent tests will be skipped');
+    return;
+  }
+
+  const client = new Client({ connectionString: dbUrl });
+  try {
+    await client.connect();
+
+    // Quick connectivity probe
+    await client.query('SELECT 1');
+
+    // Check for critical table used by tests
+    const res = await client.query(
+      "SELECT to_regclass('public.credit_grants') AS reg"
+    );
+    const reg = res.rows[0]?.reg;
+
+    if (!reg) {
+      // Try to load and run init.sql from repo root, executing statements
+      // one-by-one so we can report which statement (if any) fails.
+      try {
+        const sql = await fs.readFile('./init.sql', 'utf8');
+        console.log('Applying init.sql to initialize test schema (statement-by-statement)...');
+
+        // Ensure public schema is the target
+        await client.query("SET search_path TO public");
+
+const { splitStatements } = require('../scripts/sql-splitter.cjs');
+
+        const statements = splitStatements(sql);
+
+        for (let idx = 0; idx < statements.length; idx++) {
+          const stmt = statements[idx].trim();
+          if (!stmt) continue;
+          try {
+            await client.query(stmt);
+          } catch (stmtErr) {
+            console.error(
+              `Failed to execute init.sql statement #${idx + 1}:`,
+              stmt.slice(0, 400).replace(/\s+/g, ' '),
+              stmtErr
+            );
+            throw stmtErr;
+          }
+
+          // Quick verification after DDL that could create the critical table
+          if (stmt.toLowerCase().includes('create table') || stmt.toLowerCase().includes('create index')) {
+            const r = await client.query("SELECT to_regclass('public.credit_grants') AS reg");
+            if (r.rows[0]?.reg) break; // early exit if critical table is present
+          }
+        }
+
+        // Verify table exists after init
+        const verify = await client.query(
+          "SELECT to_regclass('public.credit_grants') AS reg"
+        );
+        if (!verify.rows[0]?.reg) {
+          throw new Error('Schema init did not create expected tables (credit_grants missing)');
+        }
+      } catch (initErr) {
+        const msg =
+          initErr instanceof Error ? initErr.message : String(initErr);
+        (global as any).__TEST_DB_INIT_ERROR = msg;
+        console.error(
+          'Failed to initialize test database schema:',
+          (global as any).__TEST_DB_INIT_ERROR
+        );
+        await client.end();
+        return;
+      }
+    }
+
+    // If we reach here, DB is ready
+    (global as any).__TEST_DB_READY = true;
+    console.log('Test database is available and schema is ready');
+    await client.end();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    (global as any).__TEST_DB_INIT_ERROR = msg;
+    console.warn('Postgres not reachable for tests:', msg);
+    try {
+      await client.end();
+    } catch (e) {
+      // ignore
+    }
+  }
 });
 
 // Custom matchers
@@ -122,5 +228,15 @@ afterAll(async () => {
     await closeDatabase();
   } catch (e) {
     // Ignore if not a server test or if db module not found
+  }
+
+  // Shutdown Redis-backed services (rate limiter) to avoid open TCP handles
+  try {
+    const { rateLimitManager } = require('../server/rateLimitRedis');
+    if (rateLimitManager && typeof rateLimitManager.shutdown === 'function') {
+      await rateLimitManager.shutdown();
+    }
+  } catch (e) {
+    // Ignore if not initialized in this test run
   }
 });

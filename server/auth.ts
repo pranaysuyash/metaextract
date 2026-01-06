@@ -44,7 +44,8 @@ const SALT_ROUNDS = 12;
 const COOKIE_NAME = 'auth_token';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'strict' as const,
+  // Lax is required so login persists across Dodo checkout redirects.
+  sameSite: 'lax' as const,
   secure: process.env.NODE_ENV === 'production',
   maxAge: TOKEN_EXPIRY_MS,
 };
@@ -335,6 +336,7 @@ export function registerAuthRoutes(app: Express) {
       try {
         await db.insert(creditBalances).values({
           userId: newUser.id,
+          sessionId: `credits:core:user:${newUser.id}`,
           credits: 0, // New users start with 0 credits
         });
       } catch (creditError) {

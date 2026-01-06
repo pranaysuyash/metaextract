@@ -35,7 +35,8 @@ export function generateCSRF(
   res.cookie('csrf_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    // Lax so token cookie survives external checkout redirects.
+    sameSite: 'lax',
     maxAge: CSRF_TOKEN_EXPIRY_MS,
   });
 

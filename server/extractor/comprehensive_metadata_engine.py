@@ -66,6 +66,7 @@ import subprocess
 import tempfile
 import struct
 import xml.etree.ElementTree as ET
+import importlib.util
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, List, Union, Tuple, Callable
@@ -136,8 +137,7 @@ except ImportError:
         )
     except ImportError:
         # Fallback for different import contexts
-        import sys
-        import os
+        # sys and os are already imported globally
         sys.path.append(os.path.dirname(__file__))
         from metadata_engine import (
             extract_metadata as extract_base_metadata,
@@ -797,9 +797,7 @@ except ImportError:
     extract_icc_profile = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
+    # sys, os, and importlib.util are already imported globally
 
     # Import the emerging technology module directly by file path
     extractor_dir = os.path.dirname(__file__)
@@ -822,10 +820,8 @@ except Exception as e:
     extract_emerging_technology_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the advanced video module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'advanced_video_ultimate.py')
@@ -847,10 +843,8 @@ except Exception as e:
     extract_advanced_video_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the advanced audio module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'advanced_audio_ultimate.py')
@@ -872,10 +866,8 @@ except Exception as e:
     extract_advanced_audio_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the document metadata module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'document_metadata_ultimate.py')
@@ -897,10 +889,8 @@ except Exception as e:
     extract_document_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the scientific research module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'scientific_research_ultimate.py')
@@ -922,10 +912,8 @@ except Exception as e:
     extract_scientific_research_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the multimedia entertainment module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'multimedia_entertainment_ultimate.py')
@@ -947,10 +935,8 @@ except Exception as e:
     extract_multimedia_entertainment_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the industrial manufacturing module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'industrial_manufacturing_ultimate.py')
@@ -972,10 +958,8 @@ except Exception as e:
     extract_industrial_manufacturing_metadata = None  # type: ignore[assignment]
 
 try:
-    import sys
-    import os
-    import importlib.util
-    
+    # sys, os, and importlib.util are already imported globally
+
     # Import the financial business module
     extractor_dir = os.path.dirname(__file__)
     module_path = os.path.join(extractor_dir, 'modules', 'financial_business_ultimate.py')
@@ -1535,8 +1519,7 @@ class AstronomicalDataEngine:
                 from modules.fits_extractor import FITSExtractor
             except (ImportError, ModuleNotFoundError):
                 # If relative import fails, try absolute import
-                import sys
-                from pathlib import Path
+                # sys and Path are already imported globally
                 module_path = Path(__file__).parent / 'modules'
                 if str(module_path) not in sys.path:
                     sys.path.insert(0, str(module_path))
@@ -2004,70 +1987,417 @@ class ComprehensiveMetadataExtractor:
         self.drone_engine = DroneUAVEngine()
         self.blockchain_engine = BlockchainProvenanceEngine()
         
-        # Initialize dynamic module discovery system
+        # Initialize enhanced dynamic module discovery system
         self.module_registry = None
         self.module_discovery_stats = None
+        self.dependency_stats = None
+        self.plugin_stats = None
+        self.module_health_metrics = {}
+        self.module_performance_history = {}
+        
         if MODULE_DISCOVERY_AVAILABLE:
             try:
+                # Initialize module discovery with enhanced error handling
                 self.module_registry = discover_and_register_modules()
                 self.module_discovery_stats = get_module_discovery_stats()
                 
-                # Build dependency graph
+                # Enhanced dependency analysis with circular dependency detection
                 build_dependency_graph_global()
-                dependency_stats = get_dependency_stats_global()
+                self.dependency_stats = get_dependency_stats_global()
                 
-                if dependency_stats["circular_dependencies"]:
-                    logger.warning(f"Circular dependencies detected: {dependency_stats['circular_dependencies']}")
+                # Log dependency analysis results
+                self._log_dependency_analysis()
                 
-                logger.info(f"Dynamic module discovery initialized: {self.module_discovery_stats['loaded_count']} modules loaded")
-                logger.info(f"Dependency analysis: {dependency_stats['total_modules_with_dependencies']} modules with dependencies")
+                # Initialize health monitoring for modules
+                self._initialize_health_monitoring()
                 
-                # Load plugins
+                # Enhanced plugin system initialization
                 enable_plugins_global(True)
                 discover_and_load_plugins_global()
-                plugin_stats = get_plugin_stats_global()
-                logger.info(f"Plugin system initialized: {plugin_stats['plugins_loaded']} plugins loaded")
+                self.plugin_stats = get_plugin_stats_global()
+                
+                # Initialize plugin health monitoring
+                self._initialize_plugin_health_monitoring()
+                
+                logger.info(f"Enhanced module discovery initialized: {self.module_discovery_stats['loaded_count']} modules loaded")
+                logger.info(f"Plugin system initialized: {self.plugin_stats['plugins_loaded']} plugins loaded")
+                logger.info(f"Plugin health: {self.plugin_stats.get('healthy_plugins', 0)} healthy, {self.plugin_stats.get('unhealthy_plugins', 0)} unhealthy")
                 
             except Exception as e:
-                logger.error(f"Failed to initialize module discovery: {e}")
-                MODULE_DISCOVERY_AVAILABLE = False
+                error_msg = f"Failed to initialize enhanced module discovery: {str(e)}"
+                logger.error(f"{error_msg}\n{traceback.format_exc()}")
+                
+                # Enhanced error handling - attempt graceful degradation
+                if self._attempt_graceful_degradation(e):
+                    logger.warning("Module discovery degraded to basic mode")
+                else:
+                    logger.error("Module discovery completely failed, disabling")
+                    MODULE_DISCOVERY_AVAILABLE = False
+    
+    def _log_dependency_analysis(self) -> None:
+        """
+        Log comprehensive dependency analysis results.
+        """
+        try:
+            if not self.dependency_stats:
+                return
+            
+            analysis_results = [
+                f"Dependency Analysis Results:",
+                f"  Total modules with dependencies: {self.dependency_stats.get('total_modules_with_dependencies', 0)}",
+                f"  Total dependencies: {self.dependency_stats.get('total_dependencies', 0)}",
+                f"  Average dependencies per module: {self.dependency_stats.get('average_dependencies', 0):.2f}",
+                f"  Max dependencies: {self.dependency_stats.get('max_dependencies', 0)}"
+            ]
+            
+            if self.dependency_stats.get('circular_dependencies'):
+                circular_deps = self.dependency_stats['circular_dependencies']
+                analysis_results.append(f"  ⚠️  Circular dependencies detected: {len(circular_deps)}")
+                for cycle in circular_deps[:3]:  # Show first 3 cycles
+                    analysis_results.append(f"    - {' -> '.join(cycle)}")
+                if len(circular_deps) > 3:
+                    analysis_results.append(f"    - ... and {len(circular_deps) - 3} more")
+            else:
+                analysis_results.append("  ✅ No circular dependencies detected")
+            
+            logger.info("\n".join(analysis_results))
+            
+        except Exception as e:
+            logger.error(f"Error logging dependency analysis: {str(e)}")
+    
+    def _initialize_health_monitoring(self) -> None:
+        """
+        Initialize health monitoring for all discovered modules.
+        """
+        try:
+            if not self.module_registry:
+                return
+            
+            # Initialize health metrics for each module
+            for module_name in self.module_registry.modules.keys():
+                self.module_health_metrics[module_name] = {
+                    'error_count': 0,
+                    'success_count': 0,
+                    'last_error': None,
+                    'last_success': None,
+                    'status': 'healthy',
+                    'last_check': time.time()
+                }
+            
+            logger.info(f"Initialized health monitoring for {len(self.module_health_metrics)} modules")
+            
+        except Exception as e:
+            logger.error(f"Error initializing health monitoring: {str(e)}")
+    
+    def _attempt_graceful_degradation(self, error: Exception) -> bool:
+        """
+        Attempt graceful degradation when module discovery fails.
+        
+        Args:
+            error: The exception that caused the failure
+            
+        Returns:
+            True if degradation was successful, False otherwise
+        """
+        try:
+            error_type = type(error).__name__
+            
+            # Handle specific error types
+            if "ImportError" in error_type or "ModuleNotFoundError" in error_type:
+                logger.warning("Module import error detected, attempting basic module loading")
+                
+                # Try to load basic modules without advanced features
+                try:
+                    from .module_discovery import ModuleRegistry
+                    basic_registry = ModuleRegistry()
+                    
+                    # Try basic discovery
+                    basic_registry.discover_modules("server/extractor/modules/")
+                    
+                    if basic_registry.loaded_count > 0:
+                        self.module_registry = basic_registry
+                        self.module_discovery_stats = {
+                            'loaded_count': basic_registry.loaded_count,
+                            'discovered_count': basic_registry.discovered_count,
+                            'failed_count': basic_registry.failed_count,
+                            'degraded_mode': True
+                        }
+                        return True
+                except Exception as e:
+                    logger.error(f"Basic module loading also failed: {str(e)}")
+            
+            # Handle configuration errors
+            elif "ConfigurationError" in error_type or "config" in str(error).lower():
+                logger.warning("Configuration error detected, attempting default configuration")
+                
+                try:
+                    # Try with default configuration
+                    from .module_discovery import discover_and_register_modules
+                    self.module_registry = discover_and_register_modules(default_config=True)
+                    if self.module_registry:
+                        self.module_discovery_stats = {'degraded_mode': True, 'loaded_count': 0}
+                        return True
+                except Exception as e:
+                    logger.error(f"Default configuration also failed: {str(e)}")
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Graceful degradation failed: {str(e)}")
+            return False
     
     def _execute_dynamic_modules(self, filepath: str, base_result: Dict[str, Any], tier_config: Any) -> None:
         """
-        Execute dynamically discovered modules based on tier configuration.
+        Execute dynamically discovered modules based on tier configuration with enhanced error handling.
         
         Args:
             filepath: Path to the file being processed
             base_result: Base metadata result dictionary
             tier_config: Tier configuration object
+            
+        Raises:
+            Exception: If critical errors occur during module execution
         """
         if not MODULE_DISCOVERY_AVAILABLE or not self.module_registry:
+            logger.debug("Module discovery not available, skipping dynamic modules")
             return
             
         try:
-            # Create a filter function for tier-based execution
-            def tier_filter(module_name: str, module_info: Dict[str, Any]) -> bool:
-                category = module_info.get("category", "general")
-                return self._should_execute_module_category(category, tier_config)
+            logger.info(f"Starting dynamic module execution for {filepath}")
             
-            # Create execution wrapper for safe_extract_module
-            execution_wrapper = create_safe_execution_wrapper(safe_extract_module)
+            # Enhanced tier-based filtering with dependency resolution
+            def enhanced_tier_filter(module_name: str, module_info: Dict[str, Any]) -> bool:
+                try:
+                    category = module_info.get("category", "general")
+                    
+                    # Check tier configuration
+                    if not self._should_execute_module_category(category, tier_config):
+                        logger.debug(f"Skipping module {module_name} - category {category} not enabled for tier")
+                        return False
+                    
+                    # Check module health status (includes both modules and plugins)
+                    health_status = self.module_health_metrics.get(module_name, {}).get('status')
+                    if health_status == 'unhealthy':
+                        logger.warning(f"Skipping unhealthy module/plugin: {module_name}")
+                        return False
+                    
+                    # Check circular dependencies
+                    if module_name in self.dependency_stats.get('circular_dependencies', []):
+                        logger.warning(f"Skipping module with circular dependencies: {module_name}")
+                        return False
+                    
+                    return True
+                    
+                except Exception as e:
+                    logger.error(f"Error in module filter for {module_name}: {str(e)}")
+                    return False
             
-            # Execute modules using parallel execution
+            # Enhanced execution wrapper with error tracking
+            def enhanced_execution_wrapper(extraction_func: Callable, filepath: str, module_name: str, *args, **kwargs):
+                try:
+                    # Update health metrics - execution started
+                    self._update_module_health(module_name, success=False, execution_started=True)
+                    
+                    # Execute with safe wrapper
+                    result = safe_extract_module(extraction_func, filepath, module_name, *args, **kwargs)
+                    
+                    # Update health metrics - success
+                    self._update_module_health(module_name, success=True)
+                    
+                    return result
+                    
+                except Exception as e:
+                    # Update health metrics - failure
+                    self._update_module_health(module_name, success=False, error=str(e))
+                    
+                    # Create enhanced error result
+                    error_result = create_standardized_error(
+                        exception=e,
+                        module_name=module_name,
+                        filepath=filepath,
+                        start_time=time.time(),
+                        error_code=f"ERR_DYNAMIC_MODULE_{module_name.upper()}",
+                        severity="high",
+                        recoverable=True,
+                        custom_message=f"Dynamic module {module_name} failed",
+                        suggested_action="Check module dependencies and configuration",
+                        error_context={
+                            "module_name": module_name,
+                            "module_category": self.module_registry.modules.get(module_name, {}).get("category", "unknown"),
+                            "execution_phase": "dynamic_module_execution"
+                        }
+                    )
+                    
+                    logger.error(f"Dynamic module {module_name} failed: {str(e)}")
+                    return error_result
+            
+            # Execute modules using parallel execution with enhanced error handling
             results = self.module_registry.execute_modules_parallel(
                 filepath, 
-                execution_wrapper, 
-                tier_filter
+                enhanced_execution_wrapper, 
+                enhanced_tier_filter
             )
             
-            # Store results in base result
+            # Enhanced result processing with health monitoring
+            module_results = {}
+            plugin_results = {}
             for result_key, result in results.items():
-                if result:
-                    base_result[result_key] = result
-                    logger.debug(f"Successfully executed dynamic module: {result_key}")
+                if result and isinstance(result, dict):
+                    # Check if this is an error result
+                    if result.get('error_code'):
+                        logger.warning(f"Dynamic module/plugin {result_key} completed with errors: {result.get('error_code')}")
+                        base_result[f"module_errors"][result_key] = result
+                        module_results[result_key] = 'error'
+                        
+                        # Update health metrics for failed execution
+                        self._update_module_health(result_key, success=False, error=result.get('error_code'))
+                    else:
+                        # Successful result
+                        base_result[result_key] = result
+                        module_results[result_key] = 'success'
+                        logger.info(f"Successfully executed dynamic module/plugin: {result_key}")
+                        
+                        # Update health metrics for successful execution
+                        self._update_module_health(result_key, success=True)
+                else:
+                    module_results[result_key] = 'no_result'
+                    logger.debug(f"Dynamic module/plugin {result_key} returned no result")
+            
+            # Separate plugins from modules for reporting
+            for result_key in module_results:
+                health_data = self.module_health_metrics.get(result_key, {})
+                if health_data.get('type') == 'plugin':
+                    plugin_results[result_key] = module_results[result_key]
+            
+            # Add module execution summary to base result
+            base_result["extraction_info"]["dynamic_modules"] = {
+                "executed_count": len(module_results),
+                "success_count": sum(1 for status in module_results.values() if status == 'success'),
+                "error_count": sum(1 for status in module_results.values() if status == 'error'),
+                "no_result_count": sum(1 for status in module_results.values() if status == 'no_result'),
+                "module_statuses": module_results
+            }
+            
+            # Add plugin execution summary if there are plugins
+            if plugin_results:
+                base_result["extraction_info"]["plugins"] = {
+                    "executed_count": len(plugin_results),
+                    "success_count": sum(1 for status in plugin_results.values() if status == 'success'),
+                    "error_count": sum(1 for status in plugin_results.values() if status == 'error'),
+                    "no_result_count": sum(1 for status in plugin_results.values() if status == 'no_result'),
+                    "plugin_statuses": plugin_results
+                }
+            
+            logger.info(f"Completed dynamic module execution: {len(module_results)} modules processed")
             
         except Exception as e:
-            logger.error(f"Error in dynamic module execution: {e}")
+            error_msg = f"Critical error in dynamic module execution: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            
+            # Add error information to base result
+            if "extraction_info" not in base_result:
+                base_result["extraction_info"] = {}
+            base_result["extraction_info"]["dynamic_module_error"] = {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "timestamp": time.time(),
+                "severity": "critical"
+            }
+            
+            # Mark all modules as unhealthy due to critical error
+            self._mark_all_modules_unhealthy(f"Critical execution error: {str(e)}")
+    
+    def _update_module_health(self, module_name: str, success: bool, error: Optional[str] = None, execution_started: bool = False) -> None:
+        """
+        Update health metrics for a specific module.
+        
+        Args:
+            module_name: Name of the module
+            success: Whether the execution was successful
+            error: Error message if execution failed
+            execution_started: Whether execution has started
+        """
+        try:
+            if not self.module_health_metrics or module_name not in self.module_health_metrics:
+                return
+            
+            health_data = self.module_health_metrics[module_name]
+            
+            if execution_started:
+                health_data['last_check'] = time.time()
+            
+            if success:
+                health_data['success_count'] += 1
+                health_data['last_success'] = time.time()
+                health_data['last_error'] = None
+                
+                # Reset to healthy if we have recent successes
+                if health_data['success_count'] >= 3 and health_data['error_count'] <= 1:
+                    health_data['status'] = 'healthy'
+                    
+            else:
+                health_data['error_count'] += 1
+                health_data['last_error'] = {
+                    'error': error,
+                    'timestamp': time.time()
+                }
+                
+                # Mark as unhealthy if error rate is too high
+                if health_data['error_count'] >= 3 and health_data['success_count'] <= health_data['error_count']:
+                    health_data['status'] = 'unhealthy'
+                    logger.warning(f"Module {module_name} marked as unhealthy due to repeated errors")
+            
+            # Log health status changes
+            if health_data['status'] == 'unhealthy':
+                logger.warning(f"Module {module_name} health: {health_data['status']} (errors: {health_data['error_count']}, successes: {health_data['success_count']})")
+            
+        except Exception as e:
+            logger.error(f"Error updating health for module {module_name}: {str(e)}")
+    
+    def _initialize_plugin_health_monitoring(self) -> None:
+        """
+        Initialize health monitoring for all loaded plugins.
+        """
+        try:
+            from .module_discovery import get_all_plugins_info_global, get_health_stats_global
+            
+            # Get all loaded plugins
+            plugins_info = get_all_plugins_info_global()
+            health_stats = get_health_stats_global()
+            
+            # Initialize plugin health metrics if not already initialized
+            for plugin_name in plugins_info.keys():
+                if plugin_name not in health_stats or health_stats[plugin_name].get('type') != 'plugin':
+                    # This will be handled by the module discovery system
+                    pass
+            
+            logger.debug(f"Initialized plugin health monitoring for {len(plugins_info)} plugins")
+            
+        except Exception as e:
+            logger.error(f"Error initializing plugin health monitoring: {str(e)}")
+    
+    def _mark_all_modules_unhealthy(self, reason: str) -> None:
+        """
+        Mark all modules as unhealthy due to a critical error.
+        
+        Args:
+            reason: Reason for marking modules unhealthy
+        """
+        try:
+            if not self.module_health_metrics:
+                return
+            
+            for module_name in self.module_health_metrics:
+                self.module_health_metrics[module_name]['status'] = 'unhealthy'
+                self.module_health_metrics[module_name]['last_error'] = {
+                    'error': f"Critical system error: {reason}",
+                    'timestamp': time.time()
+                }
+            
+            logger.error(f"All modules marked unhealthy: {reason}")
+            
+        except Exception as e:
+            logger.error(f"Error marking all modules unhealthy: {str(e)}")
     
     def _should_execute_module_category(self, category: str, tier_config: Any) -> bool:
         """

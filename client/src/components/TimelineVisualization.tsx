@@ -60,7 +60,7 @@ function getEventColor(eventType: string) {
         case "saved":
             return "text-blue-500 border-blue-500";
         default:
-            return "text-slate-400 border-slate-400";
+            return "text-slate-300 border-slate-400";
     }
 }
 
@@ -95,7 +95,7 @@ export function TimelineVisualization({
                         <Clock className="w-5 h-5 text-primary" />
                         File Timeline
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
+                    <CardDescription className="text-slate-300">
                         Chronological history of file events from metadata
                     </CardDescription>
                 </CardHeader>
@@ -126,7 +126,7 @@ export function TimelineVisualization({
 
                     {/* Time Range */}
                     {firstTimestamp && lastTimestamp && (
-                        <div className="flex items-center justify-between text-xs text-slate-400 font-mono p-2 bg-muted/30 rounded">
+                        <div className="flex items-center justify-between text-xs text-slate-300 font-mono p-2 bg-muted/30 rounded">
                             <span>{formatTimestamp(firstTimestamp).date}</span>
                             <span>→</span>
                             <span>{formatTimestamp(lastTimestamp).date}</span>
@@ -158,12 +158,12 @@ export function TimelineVisualization({
                                                 <div>
                                                     <p className="font-medium text-white capitalize">{event.event_type}</p>
                                                     {event.description && (
-                                                        <p className="text-sm text-slate-400 mt-1">{event.description}</p>
+                                                        <p className="text-sm text-slate-300 mt-1">{event.description}</p>
                                                     )}
                                                     <p className="text-xs text-slate-500 mt-1">Source: {event.source}</p>
                                                 </div>
                                                 <div className="text-right shrink-0">
-                                                    <p className="text-sm font-mono text-slate-300">{date}</p>
+                                                    <p className="text-sm font-mono text-slate-200">{date}</p>
                                                     {time && <p className="text-xs font-mono text-slate-500">{time}</p>}
                                                 </div>
                                             </div>

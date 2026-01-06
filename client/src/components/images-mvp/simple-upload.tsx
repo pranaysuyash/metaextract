@@ -5,7 +5,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { TrialAccessModal } from '@/components/trial-access-modal';
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
 import { ProgressTracker } from '@/components/images-mvp/progress-tracker';
 import {
@@ -38,12 +37,13 @@ export function SimpleUploadZone() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [trialEmail, setTrialEmail] = useState<string | null>(null);
-  const [showTrialModal, setShowTrialModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [paywallShownAt, setPaywallShownAt] = useState<number | null>(null);
+  const [pricingDismissed, setPricingDismissed] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [showProgressTracker, setShowProgressTracker] = useState(false);
+  const [resumeRequested, setResumeRequested] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
@@ -54,10 +54,43 @@ export function SimpleUploadZone() {
     return name.slice(index).toLowerCase();
   };
 
+  const checkCreditsAndMaybeResume = useCallback(async () => {
+    if (!pendingFile || isUploading) return;
+    try {
+      const res = await fetch('/api/images_mvp/credits/balance', {
+        credentials: 'include',
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const credits =
+        typeof data?.credits === 'number' ? (data.credits as number) : 0;
+      if (credits >= 1) {
+        setShowPricingModal(false);
+        setResumeRequested(false);
+        void uploadFile(pendingFile);
+      }
+    } catch {
+      // Best-effort only
+    }
+  }, [pendingFile, isUploading]);
+
   useEffect(() => {
-    const stored = localStorage.getItem('metaextract_trial_email');
-    if (stored) setTrialEmail(stored);
-  }, []);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'metaextract_images_mvp_purchase_completed') {
+        void checkCreditsAndMaybeResume();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [checkCreditsAndMaybeResume]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void checkCreditsAndMaybeResume();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [checkCreditsAndMaybeResume]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -102,7 +135,7 @@ export function SimpleUploadZone() {
       mime_type: mimeType,
       size_bytes: file.size,
       size_bucket: sizeBucket,
-      has_trial_email: Boolean(trialEmail),
+      has_trial_email: false,
     });
 
     if (!isSupportedExt && !isSupportedMime) {
@@ -141,15 +174,11 @@ export function SimpleUploadZone() {
       return;
     }
 
-    if (!trialEmail) {
-      setPendingFile(file);
-      setShowTrialModal(true);
-    } else {
-      uploadFile(file, trialEmail);
-    }
+    setPendingFile(file);
+    void uploadFile(file);
   };
 
-  const uploadFile = async (file: File, email: string) => {
+  const uploadFile = async (file: File) => {
     setIsUploading(true);
     setUploadProgress(0);
     const startedAt = Date.now();
@@ -162,7 +191,6 @@ export function SimpleUploadZone() {
     setShowProgressTracker(true);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('trial_email', email);
     if (file.lastModified) {
       formData.append('client_last_modified', String(file.lastModified));
     }
@@ -179,7 +207,7 @@ export function SimpleUploadZone() {
       mime_type: mimeType,
       size_bytes: file.size,
       size_bucket: sizeBucket,
-      has_trial_email: Boolean(email),
+      has_trial_email: false,
     });
 
     try {
@@ -270,17 +298,20 @@ export function SimpleUploadZone() {
       if (status === 402) {
         // Trigger Credit Purchase Flow
         trackImagesMvpEvent('paywall_viewed', {
-          reason: 'trial_exhausted',
+          reason: 'free_quota_exhausted_or_insufficient_credits',
           extension,
           mime_type: mimeType,
         });
         toast({
-          title: 'Trial Limit Reached',
-          description:
-            "You've used your 2 free checks. Unlock more with credits.",
+          title: 'Free checks used',
+          description: 'Buy credits to continue analyzing images.',
           variant: 'destructive',
         });
-        setShowPricingModal(true);
+        if (!showPricingModal && !pricingDismissed) {
+          setShowPricingModal(true);
+          setPaywallShownAt(Date.now());
+        }
+        setResumeRequested(true);
         return;
       }
 
@@ -312,29 +343,62 @@ export function SimpleUploadZone() {
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 sm:px-0">
-      <TrialAccessModal
-        isOpen={showTrialModal}
-        onClose={() => {
-          setShowTrialModal(false);
-          setPendingFile(null);
-        }}
-        onConfirm={email => {
-          setTrialEmail(email);
-          localStorage.setItem('metaextract_trial_email', email);
-          setShowTrialModal(false);
-          if (pendingFile) uploadFile(pendingFile, email);
-        }}
-      />
       <PricingModal
         isOpen={showPricingModal}
-        onClose={() => setShowPricingModal(false)}
-        defaultEmail={trialEmail || undefined}
+        onClose={() => {
+          setShowPricingModal(false);
+          setPricingDismissed(true);
+        }}
       />
 
       {/* Real-time Progress Tracker */}
       {showProgressTracker && currentSessionId && (
         <div className="mb-4 sm:mb-6">
           <ProgressTracker sessionId={currentSessionId} />
+        </div>
+      )}
+
+      {resumeRequested && pendingFile && (
+        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-left">
+          <div className="text-xs text-slate-200">
+            Ready to resume: <span className="text-white font-semibold">{pendingFile.name}</span>
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
+              onClick={() => void checkCreditsAndMaybeResume()}
+              disabled={isUploading}
+            >
+              Resume
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-black font-semibold"
+              onClick={() => {
+                setPricingDismissed(false);
+                setShowPricingModal(true);
+              }}
+              disabled={isUploading}
+            >
+              Buy credits
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-slate-300 hover:text-white hover:bg-white/10"
+              onClick={() => {
+                setPendingFile(null);
+                setResumeRequested(false);
+              }}
+              disabled={isUploading}
+            >
+              Pick different file
+            </Button>
+          </div>
+          {paywallShownAt && (
+            <div className="mt-2 text-[10px] text-slate-500">
+              If you completed checkout in another tab, come back here and we’ll continue automatically.
+            </div>
+          )}
         </div>
       )}
 
@@ -411,11 +475,11 @@ export function SimpleUploadZone() {
             <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
               Drop your image here
             </h3>
-            <p className="text-slate-300 text-xs sm:text-sm mb-4 sm:mb-6">
+            <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
               Supports JPG, PNG, HEIC, WebP <br className="hidden sm:block" />
               <span className="text-primary text-xs font-mono mt-1 block">
-                <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 Free
-                Checks
+                <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2 free
+                checks (no signup)
               </span>
             </p>
             <Button

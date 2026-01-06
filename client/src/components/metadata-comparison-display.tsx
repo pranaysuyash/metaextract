@@ -74,7 +74,7 @@ const statusConfig = {
     description: 'No visible overlay detected',
     color: 'slate',
     bg: 'bg-slate-500/10 border-slate-500/30',
-    textColor: 'text-slate-400',
+    textColor: 'text-slate-300',
   },
   no_metadata: {
     icon: XCircle,
@@ -82,7 +82,7 @@ const statusConfig = {
     description: 'Neither embedded nor burned metadata found',
     color: 'slate',
     bg: 'bg-slate-500/10 border-slate-500/30',
-    textColor: 'text-slate-400',
+    textColor: 'text-slate-300',
   },
 };
 
@@ -117,7 +117,7 @@ export function MetadataComparisonDisplay({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <h4 className="flex items-center gap-2 text-xs font-bold mb-4 uppercase tracking-widest text-slate-300 border-b border-white/5 pb-2">
+      <h4 className="flex items-center gap-2 text-xs font-bold mb-4 uppercase tracking-widest text-slate-200 border-b border-white/5 pb-2">
         <Eye className="w-3 h-3" /> Metadata Comparison
       </h4>
 
@@ -129,7 +129,7 @@ export function MetadataComparisonDisplay({
             <h5 className={`text-sm font-bold ${config.textColor}`}>
               {config.title}
             </h5>
-            <p className="text-xs text-slate-400 mt-1">{config.description}</p>
+            <p className="text-xs text-slate-300 mt-1">{config.description}</p>
           </div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export function MetadataComparisonDisplay({
                 ? 'bg-emerald-500/20 text-emerald-300'
                 : summary.gps_comparison === 'mismatch'
                   ? 'bg-rose-500/20 text-rose-300'
-                  : 'bg-slate-500/20 text-slate-300'
+                  : 'bg-slate-500/20 text-slate-200'
             }`}
           >
             {summary.gps_comparison.toUpperCase()}
@@ -183,7 +183,7 @@ export function MetadataComparisonDisplay({
                 ? 'bg-emerald-500/20 text-emerald-300'
                 : summary.timestamp_comparison === 'mismatch'
                   ? 'bg-rose-500/20 text-rose-300'
-                  : 'bg-slate-500/20 text-slate-300'
+                  : 'bg-slate-500/20 text-slate-200'
             }`}
           >
             {summary.timestamp_comparison.toUpperCase()}
@@ -200,18 +200,18 @@ export function MetadataComparisonDisplay({
       {/* Metadata Sources Section */}
       {summary.sources && (
         <div className="bg-slate-800/50 border border-slate-600/30 rounded-lg p-3 mb-3">
-          <h6 className="text-xs font-bold text-slate-300 mb-2">
+          <h6 className="text-xs font-bold text-slate-200 mb-2">
             📊 Data Sources
           </h6>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             {summary.sources.exif !== 'none' && (
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">EXIF:</span>
+                <span className="text-slate-300">EXIF:</span>
                 <span
                   className={`font-mono px-1.5 py-0.5 rounded ${
                     summary.sources.exif === 'embedded'
                       ? 'bg-blue-500/20 text-blue-300'
-                      : 'bg-slate-500/20 text-slate-300'
+                      : 'bg-slate-500/20 text-slate-200'
                   }`}
                 >
                   {summary.sources.exif === 'embedded'
@@ -222,7 +222,7 @@ export function MetadataComparisonDisplay({
             )}
             {summary.sources.gps !== 'none' && (
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">GPS:</span>
+                <span className="text-slate-300">GPS:</span>
                 <span
                   className={`font-mono px-1.5 py-0.5 rounded ${
                     summary.sources.gps === 'both'
@@ -242,7 +242,7 @@ export function MetadataComparisonDisplay({
             )}
             {summary.sources.location !== 'none' && (
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">Location:</span>
+                <span className="text-slate-300">Location:</span>
                 <span
                   className={`font-mono px-1.5 py-0.5 rounded ${
                     summary.sources.location === 'both'
@@ -262,7 +262,7 @@ export function MetadataComparisonDisplay({
             )}
             {summary.sources.timestamp !== 'none' && (
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">Timestamp:</span>
+                <span className="text-slate-300">Timestamp:</span>
                 <span
                   className={`font-mono px-1.5 py-0.5 rounded ${
                     summary.sources.timestamp === 'both'
@@ -299,7 +299,7 @@ export function MetadataComparisonDisplay({
               >
                 <span className="text-emerald-500">✓</span>
                 <span className="capitalize">{match.field}:</span>
-                <span className="text-slate-400">Both sources match</span>
+                <span className="text-slate-300">Both sources match</span>
               </div>
             ))}
           </div>
@@ -342,7 +342,7 @@ export function MetadataComparisonDisplay({
 
       {/* Interpretation Guide */}
       {isSuspicious && (
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400">
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3 mt-3 text-xs text-slate-300">
           <p className="font-semibold text-rose-400 mb-1">What this means:</p>
           <p>
             The GPS or timestamp data in your image's EXIF tags differs from
@@ -357,7 +357,7 @@ export function MetadataComparisonDisplay({
       )}
 
       {isStripped && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mt-3 text-xs text-slate-300">
           <p className="font-semibold text-amber-400 mb-1">What this means:</p>
           <p>
             This image has no EXIF metadata (it may have been removed by social
@@ -369,7 +369,7 @@ export function MetadataComparisonDisplay({
       )}
 
       {isVerified && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mt-3 text-xs text-slate-400">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mt-3 text-xs text-slate-300">
           <p className="font-semibold text-emerald-400 mb-1">
             What this means:
           </p>
