@@ -34,17 +34,20 @@ interface ProgressTrackerProps {
  * `null` and logs a deprecation warning. Keep the file for future
  * refactor and re-implementation if needed.
  */
-export function ExtractionProgressTracker({
-  extractionId,
-  onComplete,
-  onError,
-}: ProgressTrackerProps) {
-  // Temporarily disabled — use images-mvp ProgressTracker instead.
-  console.warn(
-    'ExtractionProgressTracker is disabled — use images-mvp/progress-tracker instead.'
-  );
-  return null;
-}
+/**
+ * Deprecated and removed
+ *
+ * ExtractionProgressTracker was intentionally removed and replaced by
+ * `client/src/components/images-mvp/progress-tracker.tsx`. This file no
+ * longer exports a React component to avoid accidental imports and the
+ * duplicate progress UI issue. Keep this file as documentation of the
+ * previous implementation; do not import `ExtractionProgressTracker`.
+ */
+
+// NOTE: QualityIndicators and helpers remain available in this file if
+// needed in future, but the ExtractionProgressTracker component has been
+// removed on purpose.
+
 
 // Quality Indicators Component
 export function QualityIndicators({ metadata }: { metadata: any }) {

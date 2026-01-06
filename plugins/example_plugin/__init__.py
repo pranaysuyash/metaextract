@@ -230,54 +230,201 @@ def extract_example_metadata(filepath: str) -> dict:
 
 def analyze_example_content(filepath: str) -> dict:
     """
-    Analyze file content with example analysis.
+    Analyze file content with enhanced example analysis.
     
-    This demonstrates a more complex analysis function that could
-    perform advanced processing on files.
+    This demonstrates a robust analysis function with comprehensive error handling,
+    performance monitoring, and advanced content analysis capabilities.
     
     Args:
         filepath: Path to the file being processed
         
     Returns:
         Dictionary containing analysis results
+        
+    Raises:
+        FileNotFoundError: If file does not exist
+        PermissionError: If file cannot be accessed
+        ValueError: If file is invalid or corrupted
     """
     import hashlib
+    import time
     from pathlib import Path
+    import traceback
     
-    file_path = Path(filepath)
+    # Start timing for performance monitoring
+    start_time = time.time()
     
-    # Simple content analysis
-    analysis = {
-        "example_analysis": {
-            "content_hash": "",
-            "content_type": "unknown",
-            "complexity_score": 0.5,
-            "quality_score": 0.8
-        }
-    }
-    
-    # Calculate a simple hash of the file content
     try:
-        with open(filepath, 'rb') as f:
-            content = f.read(1024)  # Read first 1KB for demo
-            hash_object = hashlib.md5(content)
-            analysis["example_analysis"]["content_hash"] = hash_object.hexdigest()
+        file_path = Path(filepath)
+        
+        # Validate file existence and accessibility
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {filepath}")
+        
+        if not file_path.is_file():
+            raise ValueError(f"Path is not a file: {filepath}")
+        
+        if not os.access(filepath, os.R_OK):
+            raise PermissionError(f"No read permission for file: {filepath}")
+        
+        # Simple content analysis with enhanced error handling
+        analysis = {
+            "example_analysis": {
+                "content_hash": "",
+                "content_type": "unknown",
+                "complexity_score": 0.5,
+                "quality_score": 0.8,
+                "analysis_timestamp": time.time(),
+                "health_status": "healthy",
+                "error_count": 0
+            }
+        }
+        
+        # Calculate multiple hashes for comprehensive analysis
+        try:
+            with open(filepath, 'rb') as f:
+                content = f.read(1024)  # Read first 1KB for demo
+                
+                # Calculate multiple hash algorithms
+                hash_md5 = hashlib.md5(content)
+                hash_sha1 = hashlib.sha1(content)
+                hash_sha256 = hashlib.sha256(content)
+                
+                analysis["example_analysis"]["content_hash"] = hash_md5.hexdigest()
+                analysis["example_analysis"]["hashes"] = {
+                    "md5": hash_md5.hexdigest(),
+                    "sha1": hash_sha1.hexdigest(),
+                    "sha256": hash_sha256.hexdigest()
+                }
+                
+                # Calculate content complexity (simple heuristic)
+                if len(content) > 0:
+                    # Calculate entropy as a complexity measure
+                    entropy = 0.0
+                    for byte in content:
+                        entropy += byte * byte
+                    complexity_score = min(1.0, entropy / (255.0 * 255.0 * len(content)))
+                    analysis["example_analysis"]["complexity_score"] = round(complexity_score, 3)
+                    
+                    # Calculate quality score based on content patterns
+                    quality_score = 0.8
+                    if b'\x00' in content:  # Null bytes might indicate corruption
+                        quality_score = 0.3
+                    elif content.count(b'\x00') > 10:
+                        quality_score = 0.1
+                    
+                    analysis["example_analysis"]["quality_score"] = round(quality_score, 3)
+                
+        except Exception as e:
+            analysis["example_analysis"]["content_hash"] = f"error: {str(e)}"
+            analysis["example_analysis"]["health_status"] = "unhealthy"
+            analysis["example_analysis"]["error_count"] = 1
+            analysis["example_analysis"]["error_details"] = str(e)
+        
+        # Enhanced content type detection
+        file_type = file_path.suffix.lower()
+        
+        if file_type in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']:
+            analysis["example_analysis"]["content_type"] = "image"
+            analysis["example_analysis"]["content_category"] = "visual"
+            analysis["example_analysis"]["quality_score"] = min(1.0, analysis["example_analysis"]["quality_score"] + 0.1)
+            
+        elif file_type in ['.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv']:
+            analysis["example_analysis"]["content_type"] = "video"
+            analysis["example_analysis"]["content_category"] = "motion"
+            analysis["example_analysis"]["complexity_score"] = min(1.0, analysis["example_analysis"]["complexity_score"] + 0.2)
+            
+        elif file_type in ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a']:
+            analysis["example_analysis"]["content_type"] = "audio"
+            analysis["example_analysis"]["content_category"] = "sound"
+            
+        elif file_type in ['.txt', '.md', '.json', '.xml', '.html', '.htm', '.csv']:
+            analysis["example_analysis"]["content_type"] = "text"
+            analysis["example_analysis"]["content_category"] = "document"
+            analysis["example_analysis"]["quality_score"] = min(1.0, analysis["example_analysis"]["quality_score"] + 0.15)
+            
+        elif file_type in ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']:
+            analysis["example_analysis"]["content_type"] = "document"
+            analysis["example_analysis"]["content_category"] = "office"
+            
+        elif file_type in ['.zip', '.tar', '.gz', '.rar', '.7z']:
+            analysis["example_analysis"]["content_type"] = "archive"
+            analysis["example_analysis"]["content_category"] = "compressed"
+            
+        else:
+            analysis["example_analysis"]["content_type"] = "binary"
+            analysis["example_analysis"]["content_category"] = "unknown"
+        
+        # Calculate processing time
+        processing_time = (time.time() - start_time) * 1000
+        analysis["example_analysis"]["processing_time_ms"] = round(processing_time, 2)
+        
+        return analysis
+        
+    except FileNotFoundError as e:
+        # Return error analysis for file not found
+        return {
+            "example_analysis": {
+                "analysis_timestamp": time.time(),
+                "error": str(e),
+                "error_type": "file_not_found",
+                "error_code": "ANALYSIS_FILE_NOT_FOUND",
+                "severity": "high",
+                "suggested_action": "Verify file path and existence",
+                "file_path": str(filepath),
+                "health_status": "unhealthy",
+                "error_count": 1
+            }
+        }
+        
+    except PermissionError as e:
+        # Return error analysis for permission issues
+        return {
+            "example_analysis": {
+                "analysis_timestamp": time.time(),
+                "error": str(e),
+                "error_type": "permission_denied",
+                "error_code": "ANALYSIS_PERMISSION_DENIED",
+                "severity": "high",
+                "suggested_action": "Check file permissions and access rights",
+                "file_path": str(filepath),
+                "health_status": "unhealthy",
+                "error_count": 1
+            }
+        }
+        
+    except ValueError as e:
+        # Return error analysis for validation issues
+        return {
+            "example_analysis": {
+                "analysis_timestamp": time.time(),
+                "error": str(e),
+                "error_type": "validation_error",
+                "error_code": "ANALYSIS_VALIDATION_ERROR",
+                "severity": "medium",
+                "suggested_action": "Verify file integrity and format",
+                "file_path": str(filepath),
+                "health_status": "unhealthy",
+                "error_count": 1
+            }
+        }
+        
     except Exception as e:
-        analysis["example_analysis"]["content_hash"] = f"error: {str(e)}"
-    
-    # Determine content type based on extension
-    if file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']:
-        analysis["example_analysis"]["content_type"] = "image"
-    elif file_path.suffix.lower() in ['.mp4', '.mov', '.avi', '.mkv']:
-        analysis["example_analysis"]["content_type"] = "video"
-    elif file_path.suffix.lower() in ['.mp3', '.wav', '.aac', '.flac']:
-        analysis["example_analysis"]["content_type"] = "audio"
-    elif file_path.suffix.lower() in ['.txt', '.md', '.json', '.xml']:
-        analysis["example_analysis"]["content_type"] = "text"
-    else:
-        analysis["example_analysis"]["content_type"] = "binary"
-    
-    return analysis
+        # Return error analysis for unexpected errors
+        return {
+            "example_analysis": {
+                "analysis_timestamp": time.time(),
+                "error": str(e),
+                "error_type": "unexpected_error",
+                "error_code": "ANALYSIS_UNEXPECTED_ERROR",
+                "severity": "critical",
+                "suggested_action": "Check plugin logs and report to support",
+                "file_path": str(filepath),
+                "stack_trace": traceback.format_exc(),
+                "health_status": "unhealthy",
+                "error_count": 1
+            }
+        }
 
 
 def detect_example_features(filepath: str) -> dict:

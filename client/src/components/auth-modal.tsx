@@ -65,8 +65,6 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
       setTimeout(() => {
         resetForms();
         onClose();
-        // Redirect to extraction flow after successful login
-        navigate('/images_mvp', { replace: true });
         onSuccess?.();
       }, 500);
     } else {
@@ -101,8 +99,6 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
       setTimeout(() => {
         resetForms();
         onClose();
-        // Redirect to extraction flow after successful registration
-        navigate('/images_mvp', { replace: true });
         onSuccess?.();
       }, 1000);
     } else {
@@ -181,6 +177,17 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login", onSuccess }: 
                     className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                   />
                 </div>
+                <button
+                  type="button"
+                  className="text-xs text-slate-400 hover:text-white underline underline-offset-4"
+                  onClick={() => {
+                    resetForms();
+                    onClose();
+                    navigate('/reset-password');
+                  }}
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <Button 

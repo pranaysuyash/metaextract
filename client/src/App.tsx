@@ -26,6 +26,7 @@ import CreditsSuccess from "@/pages/credits-success";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
 import GDPRCompliance from "@/pages/gdpr-compliance";
+import ResetPasswordPage from "@/pages/reset-password";
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -120,6 +121,7 @@ function AppRouter() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/gdpr" element={<GDPRCompliance />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

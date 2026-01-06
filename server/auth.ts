@@ -12,6 +12,7 @@ import type { Express, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { db } from './db';
 import { users, subscriptions, creditBalances } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -95,6 +96,22 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
   tier: z.string().optional(),
 });
+
+const passwordResetRequestSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+const passwordResetConfirmSchema = z.object({
+  token: z.string().min(10, 'Invalid token'),
+  password: registerSchema.shape.password,
+});
+
+type ResetTokenRecord = { userId: string; tokenHash: string; expiresAt: number };
+const inMemoryResetTokens = new Map<string, ResetTokenRecord>();
+
+function hashResetToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 // ============================================================================
 // Helper Functions
@@ -260,6 +277,156 @@ export function getEffectiveTier(req: AuthRequest): string {
 // ============================================================================
 
 export function registerAuthRoutes(app: Express) {
+  // -------------------------------------------------------------------------
+  // Password Reset (dev-friendly)
+  // -------------------------------------------------------------------------
+  // This does not send email yet; in development we return the token so you can test.
+  app.post('/api/auth/password-reset/request', async (req: Request, res: Response) => {
+    try {
+      const validation = passwordResetRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: validation.error.flatten().fieldErrors,
+        });
+      }
+
+      if (!db) {
+        return res.status(503).json({
+          error: 'Database not available',
+          message: 'Please configure DATABASE_URL',
+        });
+      }
+
+      const email = validation.data.email;
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+      // Always return a generic message to avoid email enumeration.
+      if (!user) {
+        return res.json({
+          message: 'If an account exists with this email, a reset link has been sent.',
+        });
+      }
+
+      const token = crypto.randomBytes(24).toString('hex');
+      const tokenHash = hashResetToken(token);
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+      // Persist token if table exists; otherwise fall back to in-memory (dev/test).
+      try {
+        await db.execute(
+          // language=sql
+          `
+          insert into password_reset_tokens (user_id, token_hash, expires_at, used_at, created_at)
+          values ($1, $2, to_timestamp($3 / 1000.0), null, now())
+          `,
+          [user.id, tokenHash, expiresAt]
+        );
+      } catch (e: any) {
+        // 42P01: undefined_table
+        if (e?.code === '42P01') {
+          inMemoryResetTokens.set(tokenHash, { userId: user.id, tokenHash, expiresAt });
+        } else {
+          throw e;
+        }
+      }
+
+      const response: any = {
+        message: 'If an account exists with this email, a reset link has been sent.',
+      };
+      if (process.env.NODE_ENV === 'development') {
+        response.token = token;
+      }
+      return res.json(response);
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      return res.status(500).json({ error: 'Password reset request failed' });
+    }
+  });
+
+  app.post('/api/auth/password-reset/confirm', async (req: Request, res: Response) => {
+    try {
+      const validation = passwordResetConfirmSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: validation.error.flatten().fieldErrors,
+        });
+      }
+
+      if (!db) {
+        return res.status(503).json({
+          error: 'Database not available',
+          message: 'Please configure DATABASE_URL',
+        });
+      }
+
+      const { token, password } = validation.data;
+      const tokenHash = hashResetToken(token);
+
+      // Prefer DB-backed tokens, fall back to in-memory if table missing.
+      let userId: string | null = null;
+      let expiresAtMs: number | null = null;
+      let tokenRowId: string | null = null;
+
+      try {
+        const result = await db.execute(
+          // language=sql
+          `
+          select id, user_id as "userId", extract(epoch from expires_at) * 1000 as "expiresAtMs", used_at as "usedAt"
+          from password_reset_tokens
+          where token_hash = $1
+          limit 1
+          `,
+          [tokenHash]
+        );
+
+        const row: any = (result as any).rows?.[0] ?? null;
+        if (row && !row.usedAt) {
+          userId = row.userId;
+          expiresAtMs = Number(row.expiresAtMs);
+          tokenRowId = row.id;
+        }
+      } catch (e: any) {
+        if (e?.code === '42P01') {
+          const rec = inMemoryResetTokens.get(tokenHash);
+          if (rec) {
+            userId = rec.userId;
+            expiresAtMs = rec.expiresAt;
+          }
+        } else {
+          throw e;
+        }
+      }
+
+      if (!userId || !expiresAtMs || Date.now() > expiresAtMs) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      await db.update(users).set({ password: hashedPassword, updatedAt: new Date() }).where(eq(users.id, userId));
+
+      if (tokenRowId) {
+        try {
+          await db.execute(
+            // language=sql
+            `update password_reset_tokens set used_at = now() where id = $1`,
+            [tokenRowId]
+          );
+        } catch {
+          // ignore
+        }
+      } else {
+        inMemoryResetTokens.delete(tokenHash);
+      }
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Password reset confirm error:', error);
+      return res.status(500).json({ error: 'Password reset failed' });
+    }
+  });
+
   // -------------------------------------------------------------------------
   // Register
   // -------------------------------------------------------------------------

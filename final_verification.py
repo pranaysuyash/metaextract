@@ -105,10 +105,12 @@ class FinalVerificationTest:
                         img = Image.fromarray(np.random.randint(0, 255, (100, 100, len(mode)), dtype=np.uint8))
                     
                     img.save(filepath, format=format)
-                    self.test_images.append(str(filepath))
                     print(f"✅ Created {filename}")
                 except Exception as e:
                     print(f"⚠️  Failed to create {filename}: {e}")
+            
+            if filepath.exists():
+                self.test_images.append(str(filepath))
         
         # Create metadata-rich test image
         metadata_rich = test_dir / "test_with_metadata.jpg"
@@ -118,10 +120,12 @@ class FinalVerificationTest:
                 
                 # Add EXIF data (using basic metadata - simplified for compatibility)
                 img.save(metadata_rich, format="JPEG", quality=95)
-                self.test_images.append(str(metadata_rich))
                 print("✅ Created metadata-rich test image")
             except Exception as e:
                 print(f"⚠️  Failed to create metadata-rich image: {e}")
+        
+        if metadata_rich.exists():
+            self.test_images.append(str(metadata_rich))
         
         return list(test_dir.glob("test_*"))
     

@@ -10,7 +10,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
-import { LogIn, UserPlus, Upload, LogOut, Menu, X } from 'lucide-react';
+import { LogIn, UserPlus, Upload, LogOut, Menu, X, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { AuthModal } from './auth-modal';
 
@@ -101,11 +101,20 @@ export function PublicLayout({
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => navigate('/settings')}
+                      className="text-slate-200 hover:text-white hover:bg-white/10"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => navigate('/images_mvp')}
                       className="text-slate-200 hover:text-white hover:bg-white/10"
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      Extract
+                      Images MVP
                     </Button>
                     <Button
                       variant="ghost"
@@ -197,13 +206,24 @@ export function PublicLayout({
                       <Button
                         variant="ghost"
                         onClick={() => {
+                          navigate('/settings');
+                          setMobileMenuOpen(false);
+                        }}
+                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Dashboard
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
                           navigate('/images_mvp');
                           setMobileMenuOpen(false);
                         }}
                         className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        Extract
+                        Images MVP
                       </Button>
                       <Button
                         variant="ghost"
@@ -398,6 +418,11 @@ export function PublicLayout({
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         defaultTab={authModalMode}
+        onSuccess={() => {
+          setAuthModalOpen(false);
+          setMobileMenuOpen(false);
+          navigate('/settings', { replace: true });
+        }}
       />
     </div>
   );

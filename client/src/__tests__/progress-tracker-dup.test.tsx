@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ProgressTracker } from '@/components/images-mvp/progress-tracker';
-import { ExtractionProgressTracker } from '@/components/extraction-progress-tracker';
 
 // Minimal WebSocket mock to prevent actual socket connections during tests
 class MockWebSocket {
@@ -26,16 +25,7 @@ class MockWebSocket {
 global.WebSocket = MockWebSocket as any;
 
 test('only images-mvp ProgressTracker renders and generic tracker is disabled', () => {
-  render(
-    <>
-      <ProgressTracker sessionId="session-test" />
-      <ExtractionProgressTracker
-        extractionId="ex-1"
-        onComplete={() => {}}
-        onError={() => {}}
-      />
-    </>
-  );
+  render(<ProgressTracker sessionId="session-test" />);
 
   // The images-mvp tracker shows 'Extracting Metadata...'
   expect(screen.getAllByText(/Extracting Metadata/).length).toBe(1);
@@ -45,17 +35,4 @@ test('only images-mvp ProgressTracker renders and generic tracker is disabled', 
 
   // Progress bar fill should exist
   expect(screen.getByTestId('progress-bar-fill')).toBeInTheDocument();
-
-  // Rendering the generic tracker alone returns nothing (clean previous DOM first)
-  // cleanup ensures we are inspecting a fresh render
-  const { cleanup } = require('@testing-library/react');
-  cleanup();
-  render(
-    <ExtractionProgressTracker
-      extractionId="ex-2"
-      onComplete={() => {}}
-      onError={() => {}}
-    />
-  );
-  expect(screen.queryByRole('status')).toBeNull();
 });

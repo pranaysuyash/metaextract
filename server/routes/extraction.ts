@@ -79,8 +79,11 @@ function getCoreBalanceKeyForUser(userId: string): string {
 }
 
 function shouldBypassCredits(req: AuthRequest): boolean {
-  // DEV MODE: Always bypass credits for development testing
-  if (process.env.NODE_ENV === 'development') return true;
+  // DEV MODE: opt-in bypass for development testing (disabled by default)
+  const bypassInDev =
+    process.env.NODE_ENV === 'development' &&
+    String(process.env.BYPASS_CREDITS_IN_DEV ?? '').toLowerCase() === 'true';
+  if (bypassInDev) return true;
 
   // Allow deterministic route testing by bypassing credits gates.
   // Never enable this in production.

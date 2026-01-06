@@ -1,0 +1,151 @@
+{
+  "test_type": "synthetic_metadata_test",
+  "timestamp": "2026-01-06T17:25:41.482392",
+  "input_metadata": {
+    "DateTimeOriginal": "2024-07-15 14:30:45",
+    "CreateDate": "2024-07-15 14:30:45",
+    "Make": "Apple",
+    "Model": "iPhone 15 Pro Max",
+    "Software": "iOS 17.0",
+    "ExifImageWidth": 4032,
+    "ExifImageHeight": 3024,
+    "GPSLatitude": 37.7749,
+    "GPSLongitude": -122.4194,
+    "GPSLatitudeRef": "N",
+    "GPSLongitudeRef": "W",
+    "City": "San Francisco",
+    "State": "California",
+    "Country": "United States",
+    "ISO": 100,
+    "FNumber": 1.8,
+    "ExposureTime": "1/120",
+    "FocalLength": "6.86",
+    "LensModel": "iPhone 15 Pro Max back triple camera 6.86mm f/1.78"
+  },
+  "persona_result": {
+    "raw_metadata": {
+      "DateTimeOriginal": "2024-07-15 14:30:45",
+      "CreateDate": "2024-07-15 14:30:45",
+      "Make": "Apple",
+      "Model": "iPhone 15 Pro Max",
+      "Software": "iOS 17.0",
+      "ExifImageWidth": 4032,
+      "ExifImageHeight": 3024,
+      "GPSLatitude": 37.7749,
+      "GPSLongitude": -122.4194,
+      "GPSLatitudeRef": "N",
+      "GPSLongitudeRef": "W",
+      "City": "San Francisco",
+      "State": "California",
+      "Country": "United States",
+      "ISO": 100,
+      "FNumber": 1.8,
+      "ExposureTime": "1/120",
+      "FocalLength": "6.86",
+      "LensModel": "iPhone 15 Pro Max back triple camera 6.86mm f/1.78"
+    },
+    "persona_interpretation": {
+      "key_findings": [
+        "\ud83d\udcc5 Taken on 2024-07-15 14:30:45",
+        "\ud83d\udccd Location data available",
+        "\ud83d\udcf1 Taken with Apple iPhone 15 Pro Max (smartphone)",
+        "\u26a0\ufe0f May have been edited"
+      ],
+      "plain_english_answers": {
+        "when_taken": {
+          "answer": "2024-07-15 14:30:45",
+          "details": "Taken some time ago",
+          "source": "photo_metadata",
+          "confidence": "high",
+          "raw_dates": {
+            "exif_date_original": "2024-07-15 14:30:45",
+            "filesystem_date": null
+          }
+        },
+        "location": {
+          "coordinates": {
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "formatted": "37.774900, -122.419400"
+          },
+          "has_location": true,
+          "answer": "San Francisco, United States",
+          "details": "GPS coordinates found: 37.774900, -122.419400",
+          "confidence": "high",
+          "address": {
+            "formatted": "South Van Ness Avenue, Civic Center, San Francisco, California, 94103, United States",
+            "city": "San Francisco",
+            "state": "California",
+            "country": "United States",
+            "postcode": "94103",
+            "street": "South Van Ness Avenue"
+          },
+          "geocoding_successful": true,
+          "metadata_location": "San Francisco, California, United States"
+        },
+        "device": {
+          "answer": "Apple iPhone 15 Pro Max (smartphone)",
+          "device_type": "smartphone",
+          "details": {
+            "make": "Apple",
+            "model": "iPhone 15 Pro Max",
+            "software": "iOS 17.0"
+          },
+          "enhanced_info": {
+            "type": "smartphone",
+            "category": "mobile_device",
+            "capabilities": [
+              "gps",
+              "geotagging",
+              "auto_stabilization",
+              "face_detection",
+              "hdr",
+              "burst_mode",
+              "video_recording",
+              "front_camera",
+              "touchscreen_focus"
+            ],
+            "confidence": "high",
+            "identification_method": "make_model_matching",
+            "make": "Apple",
+            "model": "iPhone 15 Pro Max",
+            "software": "iOS 17.0",
+            "is_smartphone": true,
+            "is_dslr": false,
+            "is_mirrorless": false,
+            "is_point_and_shoot": false,
+            "is_webcam": false,
+            "is_drone": false,
+            "estimated_release_year": "unknown",
+            "sensor_type": "unknown",
+            "image_quality_indicators": {}
+          },
+          "confidence": "high",
+          "lens": "iPhone 15 Pro Max back triple camera 6.86mm f/1.78"
+        },
+        "authenticity": {
+          "assessment": "possibly_edited",
+          "confidence": "medium",
+          "score": 55,
+          "answer": "Photo possibly edited (medium confidence)",
+          "checks_performed": {
+            "has_original_datetime": true,
+            "has_software_signatures": true,
+            "has_gps": true,
+            "exif_intact": false,
+            "thumbnails_match": false,
+            "suspicious_signs": []
+          },
+          "reasons": [
+            "Editing software detected: iOS 17.0",
+            "EXIF data appears incomplete"
+          ]
+        }
+      },
+      "confidence_scores": {},
+      "warnings": [],
+      "recommendations": [],
+      "persona": "phone_photo_sarah"
+    }
+  }
+}
