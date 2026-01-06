@@ -125,7 +125,7 @@ export function registerExtractionRoutes(app: Express): void {
         // Credits + trial tracking use a stable cookie session id (shared across localhost ports).
         // Prefer an explicitly provided session id (query param or header). Do NOT auto-generate a new session id here
         // because callers without a session_id should be asked to purchase credits rather than having a server-generated id.
-        sessionId = req.user?.id ? null : getSessionId(req as any) ?? null;
+        sessionId = req.user?.id ? null : (getSessionId(req as any) ?? null);
         trialEmail = normalizeEmail(req.body?.trial_email);
         creditCost = getCreditCost(mimeType);
         const bypassCredits = shouldBypassCredits(req);
@@ -204,9 +204,10 @@ export function registerExtractionRoutes(app: Express): void {
 
         // Extract metadata
         // Automatically enable advanced analysis for forensic and enterprise tiers (Phase 3.1)
-        const shouldEnableAdvancedAnalysis = ['forensic', 'enterprise'].includes(normalizedTier) || 
-                                           req.query.advanced === 'true';
-        
+        const shouldEnableAdvancedAnalysis =
+          ['forensic', 'enterprise'].includes(normalizedTier) ||
+          req.query.advanced === 'true';
+
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
           pythonTier,
@@ -837,7 +838,7 @@ export function registerExtractionRoutes(app: Express): void {
     try {
       const raw = await extractMetadataWithPython(
         samplePath,
-        'enterprise',
+        'super',
         true,
         true,
         false
@@ -845,7 +846,7 @@ export function registerExtractionRoutes(app: Express): void {
       const metadata = transformMetadataForFrontend(
         raw,
         path.basename(samplePath),
-        'enterprise'
+        'super'
       );
 
       const exifCount = metadata.exif ? Object.keys(metadata.exif).length : 0;

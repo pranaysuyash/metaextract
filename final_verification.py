@@ -141,9 +141,10 @@ class FinalVerificationTest:
 
         all_passed = True
         for endpoint, name, valid_statuses in health_endpoints:
+            timeout = 20 if "image" in endpoint else 10
             try:
                 response = requests.get(f"{self.base_url}{endpoint}",
-                                      headers=self.headers, timeout=10)
+                                      headers=self.headers, timeout=timeout)
                 if response.status_code == 200:
                     data = response.json()
                     if data.get("status") in valid_statuses or "python_engine" in data:

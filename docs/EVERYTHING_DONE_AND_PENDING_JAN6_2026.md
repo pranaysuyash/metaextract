@@ -1168,11 +1168,12 @@ python3 final_verification.py
 - [x] Verification fixes documented
 - [x] Session summary created
 - [x] All pending items clearly listed
+- [x] Image extract health fixed (Jan 6, 21:51)
 - [ ] Database connection fixed (DB_PASSWORD set)
 - [ ] File type validation added
-- [ ] Image extract health fixed
-- [ ] Verification re-run (> 75% pass rate)
+- [ ] Verification re-run (> 75% pass rate) - NOW 70.6%
 - [ ] Example plugin committed
+- [ ] Test environment credits added
 
 ### Next Session Goals:
 
@@ -1183,7 +1184,74 @@ python3 final_verification.py
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: January 6, 2026 (18:30)
-**Status**: ✅ Documentation complete, 🔴 3 bugs pending fix
-**Next Action**: Fix database connection (ACTION 1 above)
+## Part 7: January 6, 2026 - Additional Progress (21:51)
+
+### Fixes Applied Today
+
+#### Fix #1: Image Extract Health Endpoint (503 → 200)
+
+**File**: `server/routes/extraction.ts` (lines 838-848)
+
+**Problem**:
+
+```python
+# Health check passed invalid tier to Python script
+await extractMetadataWithPython(samplePath, 'enterprise', ...)
+# Error: comprehensive_metadata_engine.py: error: argument --tier/-t: invalid choice: 'enterprise' (choose from 'free', 'starter', 'premium', 'super')
+```
+
+**Solution**:
+
+```python
+# Changed 'enterprise' to 'super' (highest valid tier)
+await extractMetadataWithPython(samplePath, 'super', ...)
+```
+
+**Result**: ✅ Health endpoint returns 200 with 209 fields extracted
+
+---
+
+#### Fix #2: Verification Timeout (10s → 20s)
+
+**File**: `final_verification.py` (lines 142-146)
+
+**Problem**: Image Extract Health takes ~13 seconds, test timeout was 10s
+
+**Solution**:
+
+```python
+# Increase timeout specifically for image health check
+timeout = 20 if "image" in endpoint else 10
+response = requests.get(..., timeout=timeout)
+```
+
+**Result**: ✅ Test now passes
+
+---
+
+### Updated Status (21:51)
+
+**Success Rate**: 64.7% → 70.6% (12/17 tests passing)
+
+**Fixed Today**:
+
+- ✅ Image Extract Health endpoint
+- ✅ Health check tier parameter
+- ✅ Verification timeout
+
+**Remaining Issues**:
+
+1. Single File Extraction (402 - no credits)
+2. Tier-Based Access (auth setup)
+3. Invalid File Type Error (test expectation)
+4. Metadata Storage (database)
+5. End-to-End Pipeline (depends on above)
+
+**Target**: > 75% (13/17 tests)
+
+---
+
+**Document Version**: 1.1
+**Last Updated**: January 6, 2026 (21:51)
+**Status**: ✅ Image Extract Health FIXED, 🔴 4 bugs remaining
+**Next Action**: Fix test environment credits (Priority 2)
