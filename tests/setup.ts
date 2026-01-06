@@ -51,6 +51,11 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
+// Polyfill setImmediate for environments that don't provide it (jsdom)
+if (typeof (global as any).setImmediate === 'undefined') {
+  (global as any).setImmediate = (fn: Function, ...args: any[]) => setTimeout(() => fn(...args), 0);
+}
+
 // Mock IntersectionObserver
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),

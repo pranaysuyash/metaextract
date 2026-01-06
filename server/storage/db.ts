@@ -340,6 +340,16 @@ export class DatabaseStorage implements IStorage {
     }
 
     let lastOp: string | null = null;
+    let hasCreditGrantsTable = true;
+
+    // Check table existence once before transaction to avoid aborting it
+    try {
+      await this.db.execute(sql`SELECT 1 FROM credit_grants LIMIT 1`);
+    } catch (e: any) {
+      if (e?.code === '42P01') {
+        hasCreditGrantsTable = false;
+      }
+    }
 
     const run = async (client: any) => {
       lastOp = `select from creditBalances (from ${fromBalanceId})`;
@@ -360,62 +370,49 @@ export class DatabaseStorage implements IStorage {
       if (!to) throw new Error('Destination balance not found');
       if ((from.credits ?? 0) < amount) throw new Error('Insufficient credits');
 
-      // If credit-grants schema isn't present yet, perform a legacy transfer (no grant move).
-      try {
-        // This transfer is used for "claim" flows; try to transfer whole remaining so we can
-        // move grants without splitting them. If legacy credits exist without grants, synthesize
-        // a non-refundable grant to keep the ledger consistent.
-        const remainingGrants = await client
-          .select({ remaining: creditGrants.remaining })
-          .from(creditGrants)
-          .where(
-            and(
-              eq(creditGrants.balanceId, fromBalanceId),
-              gt(creditGrants.remaining, 0)
-            )
+      // Only proceed with grants if table exists
+      if (hasCreditGrantsTable) {
+        try {
+          const remainingGrants = await client
+            .select({ remaining: creditGrants.remaining })
+            .from(creditGrants)
+            .where(
+              and(
+                eq(creditGrants.balanceId, fromBalanceId),
+                gt(creditGrants.remaining, 0)
+              )
+            );
+          const remainingTotal = remainingGrants.reduce(
+            (sum: number, g: any) => sum + Number(g.remaining || 0),
+            0
           );
-        const remainingTotal = remainingGrants.reduce(
-          (sum: number, g: any) => sum + Number(g.remaining || 0),
-          0
-        );
-        if (remainingTotal !== amount) {
-          const missing = amount - remainingTotal;
-          if (missing <= 0) {
-            throw new Error('Partial credit transfers are not supported');
+          if (remainingTotal !== amount) {
+            const missing = amount - remainingTotal;
+            if (missing > 0) {
+              lastOp = `insert legacy credit_grant (from ${fromBalanceId} amount ${missing})`;
+              await client.insert(creditGrants).values({
+                balanceId: fromBalanceId,
+                amount: missing,
+                remaining: missing,
+                description: 'Legacy credits (unattributed)',
+                createdAt: new Date(0),
+              });
+            }
           }
-          lastOp = `insert legacy credit_grant (from ${fromBalanceId} amount ${missing})`;
-          await client.insert(creditGrants).values({
-            balanceId: fromBalanceId,
-            amount: missing,
-            remaining: missing,
-            description: 'Legacy credits (unattributed)',
-            createdAt: new Date(0),
-          });
-        }
 
-        // Move grants that still have remaining credits so refund eligibility is preserved.
-        lastOp = `update credit_grants set balanceId = ${toBalanceId} from ${fromBalanceId}`;
-        await client
-          .update(creditGrants)
-          .set({ balanceId: toBalanceId })
-          .where(
-            and(
-              eq(creditGrants.balanceId, fromBalanceId),
-              gt(creditGrants.remaining, 0)
-            )
-          );
-      } catch (error) {
-        if (process.env.NODE_ENV === 'test') {
-          try {
-            (this as any).__creditGrantsFallback = (error as Error)?.message || error;
-          } catch (e) {
-            // ignore test state setting errors
-          }
-        } else {
-          console.warn(
-            '[Credits] credit_grants unavailable during transfer; falling back to legacy transfer:',
-            (error as Error)?.message || error
-          );
+          // Move grants that still have remaining credits so refund eligibility is preserved.
+          lastOp = `update credit_grants set balanceId = ${toBalanceId} from ${fromBalanceId}`;
+          await client
+            .update(creditGrants)
+            .set({ balanceId: toBalanceId })
+            .where(
+              and(
+                eq(creditGrants.balanceId, fromBalanceId),
+                gt(creditGrants.remaining, 0)
+              )
+            );
+        } catch (error) {
+          console.warn('[Credits] Transfer grants failed (likely table missing):', error);
         }
       }
 
@@ -640,6 +637,16 @@ export class DatabaseStorage implements IStorage {
       dodoPaymentId: creditTransactions.dodoPaymentId,
       createdAt: creditTransactions.createdAt,
     };
+
+    let hasCreditGrantsTable = true;
+    try {
+      await this.db.execute(sql`SELECT 1 FROM credit_grants LIMIT 1`);
+    } catch (e: any) {
+      if (e?.code === '42P01') {
+        hasCreditGrantsTable = false;
+      }
+    }
+
     // If credit-grants schema isn't present yet, fall back to legacy behavior.
     const legacyUse = async (client: any): Promise<CreditTransaction | null> => {
       const updateResult = await client
@@ -706,6 +713,10 @@ export class DatabaseStorage implements IStorage {
 
       if (updateResult.length === 0) return null;
 
+      if (!hasCreditGrantsTable) {
+        return legacyUse(client);
+      }
+
       // FIFO consume from grants (oldest first). If legacy credits exist without grants,
       // synthesize a non-refundable grant so the ledger stays consistent.
       let availableGrants: CreditGrant[];
@@ -726,7 +737,7 @@ export class DatabaseStorage implements IStorage {
           )
           .orderBy(asc(creditGrants.createdAt), asc(creditGrants.id));
       } catch {
-        // No credit_grants table yet; revert to legacy usage flow.
+        // This should not happen if hasCreditGrantsTable was true, but handle anyway
         return legacyUse(client);
       }
 

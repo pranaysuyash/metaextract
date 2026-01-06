@@ -1083,7 +1083,7 @@ export function registerImagesMvpRoutes(app: Express) {
 
             if (freeUsed < freeLimit) {
               await incrementUsage(decoded.clientId, ip);
-              useTrial = false;
+              useTrial = true; // Use filtered trial view for free device extractions
               chargeCredits = false;
             } else {
               // Free quota exhausted: require credits.

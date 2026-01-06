@@ -2197,7 +2197,99 @@ class ModuleRegistry:
         except Exception as e:
             logger.error(f"Failed to reload plugin {plugin_name}: {e}")
             return False
-    
+
+    def update_plugin(self, plugin_name: str, new_plugin_path: str) -> bool:
+        """
+        Update a plugin by replacing it with a new version.
+        
+        Args:
+            plugin_name: Name of the plugin to update
+            new_plugin_path: Path to the new plugin file or directory
+            
+        Returns:
+            True if update was successful, False otherwise
+        """
+        try:
+            # First disable the current plugin
+            if not self.disable_plugin(plugin_name):
+                logger.warning(f"Plugin {plugin_name} not found or already disabled")
+                return False
+            
+            # Backup the old plugin information
+            old_plugin_info = self.loaded_plugins.get(plugin_name, {})
+            
+            # Remove the old plugin from sys.modules
+            if plugin_name in sys.modules:
+                del sys.modules[plugin_name]
+            
+            # Load the new plugin
+            new_plugin_path_obj = Path(new_plugin_path)
+            if new_plugin_path_obj.is_file():
+                self._load_plugin_file(new_plugin_path_obj)
+            elif new_plugin_path_obj.is_dir():
+                self._load_plugin_directory(new_plugin_path_obj)
+            else:
+                logger.error(f"Invalid plugin path: {new_plugin_path}")
+                return False
+            
+            logger.info(f"Successfully updated plugin: {plugin_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update plugin {plugin_name}: {e}")
+            
+            # Try to restore the old plugin if update failed
+            try:
+                if old_plugin_info:
+                    self.loaded_plugins[plugin_name] = old_plugin_info
+                    logger.warning(f"Restored plugin {plugin_name} after failed update")
+            except Exception as restore_error:
+                logger.error(f"Failed to restore plugin {plugin_name}: {restore_error}")
+            
+            return False
+
+    def check_plugin_updates(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Check for available updates for all loaded plugins.
+        
+        Returns:
+            Dictionary of plugin names to update information
+        """
+        update_info = {}
+        
+        try:
+            for plugin_name, plugin_info in self.loaded_plugins.items():
+                update_available = False
+                update_version = None
+                update_source = None
+                
+                # Check if plugin has update checking capability
+                if hasattr(plugin_info.get('module', {}), 'check_for_updates'):
+                    try:
+                        module = plugin_info.get('module', {})
+                        update_result = module.check_for_updates()
+                        if update_result and update_result.get('available', False):
+                            update_available = True
+                            update_version = update_result.get('version', 'unknown')
+                            update_source = update_result.get('source', 'unknown')
+                    except Exception as e:
+                        logger.warning(f"Error checking updates for plugin {plugin_name}: {e}")
+                
+                update_info[plugin_name] = {
+                    'update_available': update_available,
+                    'current_version': plugin_info.get('metadata', {}).get('version', 'unknown'),
+                    'update_version': update_version,
+                    'update_source': update_source,
+                    'last_checked': time.time()
+                }
+            
+            logger.info(f"Checked updates for {len(update_info)} plugins")
+            return update_info
+            
+        except Exception as e:
+            logger.error(f"Error checking plugin updates: {e}")
+            return {}
+
     def _calculate_hot_reload_success_rate(self) -> float:
         """
         Calculate hot reload success rate.
@@ -2265,6 +2357,30 @@ class ModuleRegistry:
             logger.info(f"Enabled module: {module_name}")
             return True
         return False
+
+    def enable_module_global(module_name: str) -> bool:
+        """
+        Enable a previously disabled module globally.
+        
+        Args:
+            module_name: Name of the module to enable
+            
+        Returns:
+            True if module was enabled, False if not found
+        """
+        return module_registry.enable_module(module_name)
+
+    def disable_module_global(module_name: str) -> bool:
+        """
+        Disable a module to prevent it from being used globally.
+        
+        Args:
+            module_name: Name of the module to disable
+            
+        Returns:
+            True if module was disabled, False if not found
+        """
+        return module_registry.disable_module(module_name)
     
     def enable_parallel_execution(self, enabled: bool = True, max_workers: int = 4) -> None:
         """
@@ -2908,3 +3024,53 @@ def track_execution_performance_global(
         error: Error message if applicable
     """
     module_registry.track_execution_performance(module_name, function_name, execution_time, status, error)
+
+
+def update_plugin_global(plugin_name: str, new_plugin_path: str) -> bool:
+    """
+    Update a plugin by replacing it with a new version globally.
+    
+    Args:
+        plugin_name: Name of the plugin to update
+        new_plugin_path: Path to the new plugin file or directory
+        
+    Returns:
+        True if update was successful, False otherwise
+    """
+    return module_registry.update_plugin(plugin_name, new_plugin_path)
+
+
+def check_plugin_updates_global() -> Dict[str, Dict[str, Any]]:
+    """
+    Check for available updates for all loaded plugins globally.
+    
+    Returns:
+        Dictionary of plugin names to update information
+    """
+    return module_registry.check_plugin_updates()
+
+
+def enable_module_global(module_name: str) -> bool:
+    """
+    Enable a previously disabled module globally.
+    
+    Args:
+        module_name: Name of the module to enable
+        
+    Returns:
+        True if module was enabled, False if not found
+    """
+    return module_registry.enable_module(module_name)
+
+
+def disable_module_global(module_name: str) -> bool:
+    """
+    Disable a module to prevent it from being used globally.
+    
+    Args:
+        module_name: Name of the module to disable
+        
+    Returns:
+        True if module was disabled, False if not found
+    """
+    return module_registry.disable_module(module_name)

@@ -1,0 +1,180 @@
+{
+  "timestamp": "2026-01-06 17:26:29",
+  "tests": [
+    {
+      "name": "Health Check: Main Health",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:26:29",
+      "details": {
+        "endpoint": "/api/health",
+        "response": {
+          "status": "ok",
+          "service": "MetaExtract API",
+          "version": "2.0.0",
+          "timestamp": "2026-01-06T11:56:29.315Z"
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "Health Check: Extract Health",
+      "status": "error",
+      "timestamp": "2026-01-06 17:26:39",
+      "details": {
+        "endpoint": "/api/extract/health"
+      },
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=10)"
+    },
+    {
+      "name": "Health Check: Image Extract Health",
+      "status": "error",
+      "timestamp": "2026-01-06 17:26:49",
+      "details": {
+        "endpoint": "/api/extract/health/image"
+      },
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=10)"
+    },
+    {
+      "name": "Single File Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:03",
+      "details": {
+        "fields": 134
+      },
+      "error": null
+    },
+    {
+      "name": "Batch Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:13",
+      "details": {
+        "total_files": 3,
+        "successful_files": 3
+      },
+      "error": null
+    },
+    {
+      "name": "Advanced Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:24",
+      "details": {
+        "has_advanced_analysis": true
+      },
+      "error": null
+    },
+    {
+      "name": "Timeline Reconstruction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:57",
+      "details": {
+        "files_analyzed": 3,
+        "events_count": 6
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Format Support",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:58",
+      "details": {
+        "supported_formats": [
+          "JPG",
+          "JPEG",
+          "PNG",
+          "HEIC",
+          "HEIF"
+        ]
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:06",
+      "details": {
+        "fields_extracted": 134,
+        "has_quality_metrics": true,
+        "has_processing_insights": true
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Credit Packs",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:06",
+      "details": {
+        "packs_count": 2
+      },
+      "error": null
+    },
+    {
+      "name": "WebSocket Connection",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:06",
+      "details": {
+        "session_id": "test_session_1767700589",
+        "response_type": "connected"
+      },
+      "error": null
+    },
+    {
+      "name": "Public Endpoint Access",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:06",
+      "details": {},
+      "error": null
+    },
+    {
+      "name": "Tier-Based Access",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:37",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=30)"
+    },
+    {
+      "name": "Invalid File Type Error",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:47",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=10)"
+    },
+    {
+      "name": "Missing File Error",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:48",
+      "details": {
+        "status_code": 400
+      },
+      "error": null
+    },
+    {
+      "name": "Metadata Storage",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:29:15",
+      "details": {
+        "no_id_in_response": true
+      },
+      "error": null
+    },
+    {
+      "name": "End-to-End Pipeline",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:29:28",
+      "details": {
+        "processing_time": 13.03,
+        "checks_passed": "4/5",
+        "failed_checks": [
+          "storage_id"
+        ]
+      },
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 11,
+    "failed": 2,
+    "errors": 4
+  },
+  "regressions": []
+}

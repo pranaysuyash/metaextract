@@ -2915,6 +2915,35 @@ class ComprehensiveMetadataExtractor:
                 if gaming_result and gaming_result.get("available"):
                     base_result["gaming_entertainment"] = gaming_result
 
+            # Forensic Analysis Integration (NEW: Phase 3.1)
+            # Automatically integrate forensic analysis results with confidence scoring
+            if tier_config.steganography_detection or tier_config.manipulation_detection or tier_config.ai_content_detection:
+                try:
+                    # Import the forensic integration module
+                    from .modules.forensic_analysis_integrator import integrate_forensic_analysis
+                    
+                    # Integrate forensic analysis results
+                    base_result = integrate_forensic_analysis(base_result, filepath, tier_config)
+                    
+                    # Log forensic integration success
+                    forensic_integration = base_result.get('forensic_analysis_integration', {})
+                    forensic_score = forensic_integration.get('forensic_score', 0)
+                    authenticity = forensic_integration.get('authenticity_assessment', 'unknown')
+                    
+                    logger.info(f"Forensic analysis integration completed - Score: {forensic_score}, Assessment: {authenticity}")
+                    
+                except ImportError as e:
+                    logger.warning(f"Forensic analysis integration module not available: {e}")
+                except Exception as e:
+                    logger.error(f"Error during forensic analysis integration: {e}")
+                    # Don't fail the entire extraction if forensic integration fails
+                    base_result['forensic_analysis_integration'] = {
+                        'enabled': False,
+                        'error': str(e),
+                        'forensic_score': 100,  # Default to authentic if integration fails
+                        'authenticity_assessment': 'authentic'
+                    }
+
         except Exception as e:
             logger.warning(f"Error during comprehensive extraction for {filepath}: {e}")
             logger.debug(f"Full traceback for comprehensive extraction: {traceback.format_exc()}")

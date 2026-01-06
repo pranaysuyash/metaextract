@@ -15,7 +15,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { db } from './db';
 import { users, subscriptions, creditBalances } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { normalizeTier } from '@shared/tierConfig';
 import {
   isLockedOut,
@@ -314,14 +314,12 @@ export function registerAuthRoutes(app: Express) {
 
       // Persist token if table exists; otherwise fall back to in-memory (dev/test).
       try {
-        await db.execute(
-          // language=sql
-          `
-          insert into password_reset_tokens (user_id, token_hash, expires_at, used_at, created_at)
-          values ($1, $2, to_timestamp($3 / 1000.0), null, now())
-          `,
-          [user.id, tokenHash, expiresAt]
-        );
+        await db.execute(sql`
+          insert into password_reset_tokens
+            (user_id, token_hash, expires_at, used_at, created_at)
+          values
+            (${user.id}, ${tokenHash}, to_timestamp(${expiresAt} / 1000.0), null, now())
+        `);
       } catch (e: any) {
         // 42P01: undefined_table
         if (e?.code === '42P01') {
@@ -370,16 +368,16 @@ export function registerAuthRoutes(app: Express) {
       let tokenRowId: string | null = null;
 
       try {
-        const result = await db.execute(
-          // language=sql
-          `
-          select id, user_id as "userId", extract(epoch from expires_at) * 1000 as "expiresAtMs", used_at as "usedAt"
+        const result = await db.execute(sql`
+          select
+            id,
+            user_id as "userId",
+            extract(epoch from expires_at) * 1000 as "expiresAtMs",
+            used_at as "usedAt"
           from password_reset_tokens
-          where token_hash = $1
+          where token_hash = ${tokenHash}
           limit 1
-          `,
-          [tokenHash]
-        );
+        `);
 
         const row: any = (result as any).rows?.[0] ?? null;
         if (row && !row.usedAt) {
@@ -408,11 +406,9 @@ export function registerAuthRoutes(app: Express) {
 
       if (tokenRowId) {
         try {
-          await db.execute(
-            // language=sql
-            `update password_reset_tokens set used_at = now() where id = $1`,
-            [tokenRowId]
-          );
+          await db.execute(sql`
+            update password_reset_tokens set used_at = now() where id = ${tokenRowId}
+          `);
         } catch {
           // ignore
         }
