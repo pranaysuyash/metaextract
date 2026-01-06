@@ -33,8 +33,15 @@ export function ProgressTracker({
 
   useEffect(() => {
     // WebSocket connection for real-time progress updates
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    const wsHost = isLocalhost
+      ? `${window.location.hostname}:3000`
+      : window.location.host;
     const ws = new WebSocket(
-      `ws://localhost:3000/api/images_mvp/progress/${sessionId}`
+      `${wsProtocol}//${wsHost}/api/images_mvp/progress/${sessionId}`
     );
 
     ws.onopen = () => {

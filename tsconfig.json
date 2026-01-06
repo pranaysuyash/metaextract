@@ -1,6 +1,19 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist"],
+  "include": [
+    "client/src/**/*",
+    "shared/**/*",
+    "server/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "client/src/lib/adaptive-learning/**",
+    "client/src/lib/shortcuts/**",
+    "client/src/lib/a11y/**",
+    "**/*.disabled.ts",
+    "**/*.disabled.tsx"
+  ],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",

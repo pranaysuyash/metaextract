@@ -284,6 +284,7 @@ export function SimpleUploadZone() {
 
       const errorMessage = err.message || 'Upload failed';
       const status = err.status || 500;
+      const body = err.data || null;
 
       trackImagesMvpEvent('analysis_completed', {
         success: false,
@@ -295,7 +296,14 @@ export function SimpleUploadZone() {
         elapsed_ms: Date.now() - startedAt,
       });
 
-      if (status === 402) {
+      const isPaywall =
+        status === 402 ||
+        (status === 429 &&
+          (body?.credits_required ||
+            String(body?.error || '').toLowerCase().includes('quota') ||
+            String(body?.message || '').toLowerCase().includes('purchase credits')));
+
+      if (isPaywall) {
         // Trigger Credit Purchase Flow
         trackImagesMvpEvent('paywall_viewed', {
           reason: 'free_quota_exhausted_or_insufficient_credits',

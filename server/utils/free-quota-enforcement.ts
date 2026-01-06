@@ -16,7 +16,7 @@ import { storage } from '../storage/index';
 // import { trackImagesMvpEvent } from '../lib/images-mvp-analytics';
 
 // Token secret validation - fail fast if not set
-const TOKEN_SECRET = process.env.TOKEN_SECRET;
+const TOKEN_SECRET: string = process.env.TOKEN_SECRET || '';
 if (!TOKEN_SECRET) {
   throw new Error(
     'CRITICAL: TOKEN_SECRET environment variable is required for security. ' +
@@ -35,7 +35,7 @@ const CONFIG = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     // Lax so device quota survives external checkout redirects.
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days - reduced for security
   },
 
@@ -380,7 +380,7 @@ export async function getClientUsage(
 
     // Fallback to Redis/storage
     const key = `quota:${clientId}`;
-    const data = await storage.get(key);
+    const data = storage.get ? await storage.get(key) : null;
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error('Error getting client usage:', error);
@@ -397,9 +397,7 @@ export async function incrementUsage(
     if (isDatabaseConnected()) {
       try {
         const db = getDatabase() as any;
-        if (typeof db.insert !== 'function') {
-          throw new Error('Database client missing insert()');
-        }
+        console.log(`[QuotaDebug] Incrementing usage in DB for ${clientId}`);
         await db
           .insert(clientUsage)
           .values({
@@ -416,16 +414,22 @@ export async function incrementUsage(
               lastUsed: new Date(),
             },
           });
+        console.log(`[QuotaDebug] Successfully incremented usage in DB for ${clientId}`);
         return;
-      } catch {
-        // Fall back to storage in test / partial-mock environments.
+      } catch (dbError) {
+        console.warn('[QuotaDebug] Database increment failed, falling back:', dbError);
       }
-    } else {
-      // Fallback to Redis/storage
-      const key = `quota:${clientId}`;
-      const current = await storage.get(key);
+    }
+
+    // Fallback to storage
+    const key = `quota:${clientId}`;
+    if (typeof (storage as any).get === 'function') {
+      const current = await (storage as any).get(key);
       const count = current ? parseInt(current, 10) : 0;
-      await storage.set(key, (count + 1).toString());
+      await (storage as any).set(key, (count + 1).toString());
+      console.log(`[QuotaDebug] Incremented usage in fallback storage for ${clientId}: ${count + 1}`);
+    } else {
+      console.warn('[QuotaDebug] Fallback storage does not support get/set');
     }
   } catch (error) {
     console.error('Error incrementing usage:', error);
@@ -457,9 +461,9 @@ async function trackRequest(
       action: 'request',
     };
 
-    await storage.lpush(key, JSON.stringify(activity));
-    await storage.ltrim(key, 0, 999); // Keep last 1000
-    await storage.expire(key, 3600); // Expire after 1 hour
+    if (storage.lpush) await storage.lpush(key, JSON.stringify(activity));
+    if (storage.ltrim) await storage.ltrim(key, 0, 999); // Keep last 1000
+    if (storage.expire) await storage.expire(key, 3600); // Expire after 1 hour
   } catch (error) {
     console.error('Error tracking request:', error);
   }
@@ -472,7 +476,7 @@ async function getRecentActivity(
 ): Promise<any[]> {
   try {
     const key = `activity:${clientId}`;
-    const activities = await storage.lrange(key, 0, -1);
+    const activities = storage.lrange ? await storage.lrange(key, 0, -1) : [];
     const cutoff = Date.now() - minutes * 60 * 1000;
 
     return activities.map(a => JSON.parse(a)).filter(a => a.timestamp > cutoff);

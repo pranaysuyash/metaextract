@@ -43,7 +43,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
         devBannerModule.devBanner()
       );
     } catch (error) {
-      console.warn('Development plugins not available:', error.message);
+      console.warn('Development plugins not available:', error instanceof Error ? error.message : String(error));
     }
   }
 
