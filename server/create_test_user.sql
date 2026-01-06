@@ -1,9 +1,9 @@
--- Create test user with credits for verification (updated with required columns)
+-- Create test user with credits for verification (minimal columns)
 BEGIN;
 
--- First, create test user in users table with required columns
-INSERT INTO users (id, email, username, password, tier, created_at, updated_at)
-SELECT 'test-user-for-verification', 'test@example.com', 'testuser', 'testpassword123', 'free', NOW(), NOW()
+-- First, create test user in users table with minimal columns
+INSERT INTO users (id, email, username, password, tier, created_at)
+SELECT 'test-user-for-verification', 'test@example.com', 'testuser', 'testpassword123', 'free', NOW()
 WHERE NOT EXISTS (
   SELECT 1 FROM users WHERE id = 'test-user-for-verification'
 );

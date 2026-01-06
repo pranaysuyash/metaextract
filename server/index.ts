@@ -20,6 +20,7 @@ import {
   getClientIP,
   sanitizeErrorMessage,
 } from './security-utils';
+import { pythonExecutable } from './utils/extraction-helpers';
 
 const app = express();
 const httpServer = createServer(app);
@@ -113,6 +114,8 @@ export function log(message: string, source = 'express') {
 
   console.log(`${formattedTime} [${source}] ${message}`);
 }
+
+log(`Python executable: ${pythonExecutable}`, 'startup');
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
