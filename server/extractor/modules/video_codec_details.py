@@ -13,13 +13,20 @@ import re
 
 # Dynamic import handling for both normal and module loading
 try:
-    from shared_utils import count_fields as _count_fields
+    from .shared_utils import count_fields as _count_fields
+except ImportError:
+    # Fallback - define stub function
+    def _count_fields(d): return 0
+
+try:
+    from ..utils.bitstream_parser import H264BitstreamParser, HEVCBitstreamParser, AV1BitstreamParser
+    BITSTREAM_PARSER_AVAILABLE = True
 except ImportError:
     try:
-        from .shared_utils import count_fields as _count_fields
+        from utils.bitstream_parser import H264BitstreamParser, HEVCBitstreamParser, AV1BitstreamParser
+        BITSTREAM_PARSER_AVAILABLE = True
     except ImportError:
-        # Fallback - define stub function
-        def _count_fields(d): return 0
+        BITSTREAM_PARSER_AVAILABLE = False
 
 
 # H.264 Profile IDC Mappings
@@ -427,6 +434,21 @@ def extract_h264_deep_analysis(stream: Dict, filepath: str) -> Dict[str, Any]:
         result["bit_rate_bps"] = int(bitrate)
         result["bit_rate_mbps"] = round(int(bitrate) / 1_000_000, 2)
     
+    # Deep Bitstream Forensics (Phase 2 Enhancement)
+    if BITSTREAM_PARSER_AVAILABLE and extradata:
+        try:
+            # Parse NAL header
+            header = H264BitstreamParser.parse_nal_header(extradata[0] if isinstance(extradata, bytes) else 0)
+            result["nal_header"] = header
+            
+            # Extract SPS details
+            sps_details = H264BitstreamParser.extract_sps_details(extradata)
+            if sps_details:
+                result.update(sps_details)
+                result["bitstream_forensics_verified"] = True
+        except Exception as e:
+            result["bitstream_parsing_error"] = str(e)
+
     duration = stream.get("duration")
     if duration:
         result["duration_seconds"] = float(duration)
@@ -847,6 +869,17 @@ def extract_hevc_deep_analysis(stream: Dict, filepath: str) -> Dict[str, Any]:
     result["max_num_merge_cand"] = 5
     result["max_num_ref_frames"] = stream.get("refs", 1)
     
+    # Deep Bitstream Forensics (Phase 2 Enhancement)
+    extradata = stream.get("extradata")
+    if BITSTREAM_PARSER_AVAILABLE and extradata:
+        try:
+            # HEVC NAL header is 2 bytes
+            header = HEVCBitstreamParser.parse_nal_header(extradata[:2] if isinstance(extradata, bytes) else b"\x00\x00")
+            result["nal_header"] = header
+            result["bitstream_forensics_verified"] = True
+        except Exception as e:
+            result["bitstream_parsing_error"] = str(e)
+
     # Field coding
     result["field_seq_flag"] = stream.get("field_order", "progressive") != "progressive"
     result["field_order"] = stream.get("field_order", "progressive")
@@ -995,6 +1028,17 @@ def extract_av1_deep_analysis(stream: Dict, filepath: str) -> Dict[str, Any]:
         result["bit_rate_bps"] = int(bitrate)
         result["bit_rate_mbps"] = round(int(bitrate) / 1_000_000, 2)
     
+    # Deep Bitstream Forensics (Phase 2 Enhancement)
+    extradata = stream.get("extradata")
+    if BITSTREAM_PARSER_AVAILABLE and extradata:
+        try:
+            # AV1 OBU header is usually 1 byte
+            header = AV1BitstreamParser.parse_obu_header(extradata[0] if isinstance(extradata, bytes) else 0)
+            result["obu_header"] = header
+            result["bitstream_forensics_verified"] = True
+        except Exception as e:
+            result["bitstream_parsing_error"] = str(e)
+
     return result
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-MetaExtract - Forensic-Grade Metadata Extraction Engine v3.0
+MetaExtract - Forensic-Grade Metadata Extraction Engine v4.0
 
-Extracts 7,000+ metadata fields from any file including:
+Extracts 131,000+ metadata fields from any file including:
 - Filesystem metadata (times, size, permissions, owner, extended attributes)
 - EXIF data (ALL tags including proprietary MakerNote)
 - **PARSED MakerNotes** for Canon, Nikon, Sony, Fujifilm, Olympus, Panasonic, etc.

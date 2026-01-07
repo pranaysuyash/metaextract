@@ -106,6 +106,8 @@ cryptography>=40.0.0
 
 # Video Analysis - Professional formats, HDR, broadcast standards
 imageio-ffmpeg>=0.4.8
+bitstruct>=8.19.0
+construct>=2.10.68
 
 # Database and Structured Data
 sqlalchemy>=2.0.0

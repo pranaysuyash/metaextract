@@ -111,6 +111,20 @@ def _extract_broadcast_standards_ultimate_advanced(filepath: str) -> Dict[str, A
     broadcast_data = {'video_broadcast_standards_ultimate_advanced_detected': True}
 
     try:
+        # Heuristic detection for professional standards
+        with open(filepath, "rb") as f:
+            header = f.read(1024)
+            
+        # SMPTE ST 377-1 (MXF) Detection
+        if b"mxf" in header.lower() or header.startswith(b"\x06\x0e\x2b\x34\x02\x05\x01\x01"):
+            broadcast_data['broadcast_ultimate_smpte_mxf_standard'] = "SMPTE ST 377-1"
+            broadcast_data['broadcast_ultimate_smpte_timecode_standard'] = "SMPTE ST 12-1"
+            
+        # EBU Detection (Loudness R128)
+        if b"ebu" in header.lower():
+            broadcast_data['broadcast_ultimate_ebu_tech_3285_detected'] = True
+            broadcast_data['broadcast_ultimate_audio_format_broadcast_compliance'] = "EBU R128"
+
         broadcast_fields = [
             'broadcast_ultimate_smpte_timecode_standard',
             'broadcast_ultimate_atsc_broadcast_standard',

@@ -322,11 +322,21 @@ def get_office_documents_complete_field_count() -> int:
     return len(OFFICE_KEYWORDS)
 
 
+try:
+    from ..utils.document_forensics import OfficeForensics
+    FORENSICS_AVAILABLE = True
+except ImportError:
+    FORENSICS_AVAILABLE = False
+
 def extract_office_documents_complete_metadata(filepath: str) -> Dict[str, Any]:
     """
     Extract complete Office document metadata - Ultimate Edition.
     """
     result: Dict[str, Any] = {'office_complete_extraction': True}
+    
+    # Advanced Forensics Integration
+    if FORENSICS_AVAILABLE:
+        result['forensic_artifacts'] = OfficeForensics.analyze_vba_macros(filepath)
     
     try:
         ext = Path(filepath).suffix.lower()
