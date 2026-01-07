@@ -279,25 +279,25 @@ export default function Home() {
                 </h1>
 
                 <p className="text-base md:text-lg lg:text-xl text-slate-200 max-w-xl leading-relaxed mb-8">
-                  Courts, journalists, and security teams trust MetaExtract to
-                  uncover 7,000+ hidden fields, detect manipulation, and
-                  preserve digital evidence.
-                </p>
+                    Courts, journalists, and security teams trust MetaExtract to
+                    uncover <span className="text-primary font-semibold">131,000+</span> hidden fields, detect AI-generated content, verify C2PA provenance, and
+                    preserve digital evidence.
+                  </p>
 
-                <div className="flex flex-wrap gap-4 items-center mb-12">
-                  <div className="flex items-center gap-2 text-sm text-slate-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    <span>Canon MakerNotes</span>
+                  <div className="flex flex-wrap gap-4 items-center mb-12">
+                    <div className="flex items-center gap-2 text-sm text-slate-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span>AI Detection</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span>C2PA Provenance</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span>Bitstream Forensics</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    <span>Sony Encrypted Data</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    <span>Photoshop History</span>
-                  </div>
-                </div>
 
                 <div className="flex gap-4 items-center">
                   <Button
@@ -589,34 +589,33 @@ export default function Home() {
                   <Database className="w-32 h-32 text-primary -rotate-12 translate-x-10 -translate-y-10" />
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-4 text-primary font-mono text-xs">
-                    <ScanLine className="w-4 h-4" />
-                    <span>DEEP_PACKET_INSPECTION</span>
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 text-primary font-mono text-xs">
+                      <ScanLine className="w-4 h-4" />
+                      <span>DEEP_PACKET_INSPECTION</span>
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                      131,000+ Fields
+                    </h3>
+                    <p className="text-slate-200 leading-relaxed max-w-md">
+                      7x more data than ExifTool. Our engine extracts deep bitstream
+                      forensics, C2PA provenance, AI-generation markers, and
+                      professional broadcast metadata for complete chain of custody.
+                    </p>
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                    Forensic Deep-Dive
-                  </h3>
-                  <p className="text-slate-200 leading-relaxed max-w-md">
-                    Bypass standard EXIF viewers. Our engine reconstructs 7,000+
-                    data points including Canon MakerNotes, Sony Encrypted Data,
-                    and Photoshop History logs to build a complete chain of
-                    custody.
-                  </p>
-                </div>
 
-                <div className="mt-8 flex flex-wrap gap-2">
-                  {['MAKERNOTES', 'IPTC-IIM', 'XMP-EXT', 'ICC_PROFILE'].map(
-                    (tag, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 bg-white/10 text-[10px] font-mono text-slate-200 border border-white/20 rounded"
-                      >
-                        {tag}
-                      </span>
-                    )
-                  )}
-                </div>
+                  <div className="mt-8 flex flex-wrap gap-2">
+                    {['C2PA', 'AI-DETECT', 'BITSTREAM', 'SMPTE/EBU'].map(
+                      (tag, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 bg-white/10 text-[10px] font-mono text-slate-200 border border-white/20 rounded"
+                        >
+                          {tag}
+                        </span>
+                      )
+                    )}
+                  </div>
               </motion.div>
 
               {/* Center Column: Stacked */}

@@ -10,6 +10,9 @@ import subprocess
 import json
 import struct
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Dynamic import handling for both normal and module loading
 try:
@@ -232,11 +235,29 @@ def extract_video_codec_details(filepath: str) -> Dict[str, Any]:
         # Codec efficiency analysis
         result["codec_efficiency"] = analyze_codec_efficiency(primary_stream, probe_data)
         
+        # Binary codec parsing (NEW - Bitstream parser integration)
+        if BITSTREAM_PARSER_AVAILABLE:
+            try:
+                from ..utils.bitstream_parser import (
+                    extract_bitstream_metadata,
+                    get_bitstream_parser_field_count
+                )
+                bitstream_result = extract_bitstream_metadata(filepath)
+                result["bitstream_analysis"] = bitstream_result.get("bitstream_analysis", {})
+                result["h264_deep"] = bitstream_result.get("h264_analysis", {})
+                result["hevc_deep"] = bitstream_result.get("hevc_analysis", {})
+                result["vp9_deep"] = bitstream_result.get("vp9_analysis", {})
+                result["av1_deep"] = bitstream_result.get("av1_analysis", {})
+                result["fields_extracted"] += get_bitstream_parser_field_count()
+            except Exception as e:
+                logger.warning(f"Bitstream parser error: {e}")
+                result["bitstream_error"] = str(e)[:200]
+        
         # Count total fields
         result["fields_extracted"] = sum(
             _count_fields(value)
             for key, value in result.items()
-            if key not in ["fields_extracted"]
+            if key not in ["fields_extracted", "error"]
         )
         
     except Exception as e:
@@ -1309,5 +1330,12 @@ def analyze_codec_efficiency(stream: Dict, probe_data: Dict) -> Dict[str, Any]:
 
 
 def get_video_codec_details_field_count() -> int:
-    """Return estimated field count for video codec details module."""
-    return 650  # Expanded Phase 2 target
+    """
+    Return estimated field count for video codec details module.
+    
+    Includes:
+    - FFprobe JSON enrichment: 650 fields
+    - Bitstream parser integration: 117 fields
+    Total: 767 fields
+    """
+    return 767  # Updated with bitstream parser

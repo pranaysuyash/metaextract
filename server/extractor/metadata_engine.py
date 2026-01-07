@@ -2001,6 +2001,35 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
         result["forensic"] = {"_locked": True}
         result["locked_fields"].append("forensic")
     
+    # C2PA Content Credentials / Provenance
+    if mime_type and (mime_type.startswith("image") or mime_type.startswith("video")):
+        try:
+            from .utils.c2pa_provenance import C2PAProvenanceExtractor
+            c2pa_result = C2PAProvenanceExtractor.extract_manifest(filepath)
+            result["c2pa_provenance"] = c2pa_result
+            if c2pa_result.get("c2pa_detected"):
+                result["summary"]["has_content_credentials"] = True
+                result["summary"]["provenance_verified"] = c2pa_result.get("validation_status") == "valid"
+        except Exception as e:
+            logger.debug(f"C2PA extraction failed: {e}")
+            result["c2pa_provenance"] = {"available": False, "error": str(e)}
+    
+    # AI Generation Detection
+    if mime_type and mime_type.startswith("image"):
+        try:
+            from .utils.ai_detection import AIGenerationDetector
+            ai_analysis = AIGenerationDetector.analyze_metadata_for_ai_markers(result)
+            authenticity = AIGenerationDetector.check_image_authenticity_heuristics(result)
+            result["ai_detection"] = {
+                "generation_analysis": ai_analysis,
+                "authenticity_assessment": authenticity
+            }
+            result["summary"]["ai_generated_likelihood"] = ai_analysis.get("ai_generated_likelihood")
+            result["summary"]["authenticity_assessment"] = authenticity.get("assessment")
+        except Exception as e:
+            logger.debug(f"AI detection failed: {e}")
+            result["ai_detection"] = {"available": False, "error": str(e)}
+    
     # Burned Metadata (OCR from image overlays)
     if tier_config.burned_metadata and mime_type and mime_type.startswith("image"):
         try:
