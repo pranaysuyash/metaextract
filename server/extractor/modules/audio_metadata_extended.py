@@ -23,9 +23,17 @@ import os
 import subprocess
 import json
 import logging
+import warnings
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Suppress audioop deprecation warning from pydub/audioread until upstream fix
+# These libraries use deprecated audioop module scheduled for removal in Python 3.13
+warnings.filterwarnings('ignore',
+                    category=DeprecationWarning,
+                    message='.*audioop.*',
+                    module='audioread|pydub')
 
 # Library availability checks
 try:

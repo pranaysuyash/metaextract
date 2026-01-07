@@ -1,0 +1,177 @@
+{
+  "timestamp": "2026-01-06 17:26:45",
+  "tests": [
+    {
+      "name": "Health Check: Main Health",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:26:45",
+      "details": {
+        "endpoint": "/api/health",
+        "response": {
+          "status": "ok",
+          "service": "MetaExtract API",
+          "version": "2.0.0",
+          "timestamp": "2026-01-06T11:56:45.525Z"
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "Health Check: Extract Health",
+      "status": "error",
+      "timestamp": "2026-01-06 17:26:55",
+      "details": {
+        "endpoint": "/api/extract/health"
+      },
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=10)"
+    },
+    {
+      "name": "Health Check: Image Extract Health",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:27:01",
+      "details": {
+        "endpoint": "/api/extract/health/image",
+        "status_code": 503
+      },
+      "error": null
+    },
+    {
+      "name": "Single File Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:10",
+      "details": {
+        "fields": 134
+      },
+      "error": null
+    },
+    {
+      "name": "Batch Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:22",
+      "details": {
+        "total_files": 3,
+        "successful_files": 3
+      },
+      "error": null
+    },
+    {
+      "name": "Advanced Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:30",
+      "details": {
+        "has_advanced_analysis": true
+      },
+      "error": null
+    },
+    {
+      "name": "Timeline Reconstruction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:06",
+      "details": {
+        "files_analyzed": 3,
+        "events_count": 6
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Format Support",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:06",
+      "details": {
+        "supported_formats": [
+          "JPG",
+          "JPEG",
+          "PNG",
+          "HEIC",
+          "HEIF"
+        ]
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Extraction",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:36",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=30)"
+    },
+    {
+      "name": "Images MVP Credit Packs",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:37",
+      "details": {
+        "packs_count": 2
+      },
+      "error": null
+    },
+    {
+      "name": "WebSocket Connection",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:37",
+      "details": {
+        "session_id": "test_session_1767700605",
+        "response_type": "connected"
+      },
+      "error": null
+    },
+    {
+      "name": "Public Endpoint Access",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:37",
+      "details": {},
+      "error": null
+    },
+    {
+      "name": "Tier-Based Access",
+      "status": "error",
+      "timestamp": "2026-01-06 17:29:08",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=30)"
+    },
+    {
+      "name": "Invalid File Type Error",
+      "status": "error",
+      "timestamp": "2026-01-06 17:29:18",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=10)"
+    },
+    {
+      "name": "Missing File Error",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:29:18",
+      "details": {
+        "status_code": 400
+      },
+      "error": null
+    },
+    {
+      "name": "Metadata Storage",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:29:26",
+      "details": {
+        "no_id_in_response": true
+      },
+      "error": null
+    },
+    {
+      "name": "End-to-End Pipeline",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:29:35",
+      "details": {
+        "processing_time": 8.35,
+        "checks_passed": "4/5",
+        "failed_checks": [
+          "storage_id"
+        ]
+      },
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 10,
+    "failed": 3,
+    "errors": 4
+  },
+  "regressions": []
+}

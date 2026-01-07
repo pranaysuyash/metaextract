@@ -8,11 +8,13 @@ import sys
 import time
 from pathlib import Path
 
-# Add server path
-sys.path.insert(0, str(Path(__file__).parent / "server"))
+# Add project root to sys.path for absolute imports
+PROJECT_ROOT = str(Path(__file__).resolve().parent.parent.parent)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from extractor.extractors.scientific_extractor import ScientificExtractor
-from extractor.core.comprehensive_engine import NewComprehensiveMetadataExtractor
+from server.extractor.extractors.scientific_extractor import ScientificExtractor, Category
+from server.extractor.core.comprehensive_engine import NewComprehensiveMetadataExtractor
 
 
 def test_expanded_integration():
@@ -94,28 +96,28 @@ def test_expanded_integration():
     print("\n3. Testing specific scientific domains...")
     
     # Test biomedical formats
-    biomedical = expanded_extractor.get_formats_by_category(ScientificFormatCategory.BIOMEDICAL)
+    biomedical = expanded_extractor.get_formats_by_category(Category.MEDICAL_IMAGING)
     if biomedical:
         print(f"   ✅ Biomedical: {len(biomedical)} formats")
         for fmt in biomedical[:2]:
             print(f"      - {fmt.format_name}: {fmt.extensions}")
     
     # Test genomics formats
-    genomics = expanded_extractor.get_formats_by_category(ScientificFormatCategory.GENOMICS)
+    genomics = expanded_extractor.get_formats_by_category(Category.SCIENTIFIC_DATA)
     if genomics:
         print(f"   ✅ Genomics: {len(genomics)} formats")
         for fmt in genomics[:2]:
             print(f"      - {fmt.format_name}: {fmt.extensions}")
     
     # Test astronomy formats
-    astronomy = expanded_extractor.get_formats_by_category(ScientificFormatCategory.ASTRONOMY)
+    astronomy = expanded_extractor.get_formats_by_category(Category.ASTRONOMY)
     if astronomy:
         print(f"   ✅ Astronomy: {len(astronomy)} formats")
         for fmt in astronomy[:2]:
             print(f"      - {fmt.format_name}: {fmt.extensions}")
     
     # Test geospatial formats
-    geospatial = expanded_extractor.get_formats_by_category(ScientificFormatCategory.GEOSPATIAL)
+    geospatial = expanded_extractor.get_formats_by_category(Category.GEOSPATIAL)
     if geospatial:
         print(f"   ✅ Geospatial: {len(geospatial)} formats")
         for fmt in geospatial[:2]:

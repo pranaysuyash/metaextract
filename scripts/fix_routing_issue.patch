@@ -1,0 +1,17 @@
+--- a/server/vite.ts
++++ b/server/vite.ts
+@@ -134,7 +134,13 @@
+ 
+   app.use(vite.middlewares);
+ 
+-  app.use('*', async (req, res, next) => {
++  app.use('*', async (req, res, next) => {
++    // CRITICAL FIX: Skip API routes to prevent HTML from being served for API requests
++    if (req.originalUrl.startsWith('/api/')) {
++      return next();
++    }
++    
++    // Only serve client HTML for non-API routes
+     const url = req.originalUrl;
+ 
+     try {

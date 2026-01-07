@@ -1,0 +1,91 @@
+{
+  "javascriptFiles": [
+    {
+      "file": "/src/main.tsx",
+      "url": "http://localhost:5173/src/main.tsx",
+      "statusCode": 200,
+      "contentType": "text/javascript",
+      "size": 2251,
+      "success": true
+    },
+    {
+      "file": "/@vite/client",
+      "url": "http://localhost:5173/@vite/client",
+      "statusCode": 200,
+      "contentType": "text/javascript",
+      "size": 179102,
+      "success": true
+    },
+    {
+      "file": "/@react-refresh",
+      "url": "http://localhost:5173/@react-refresh",
+      "statusCode": 200,
+      "contentType": "text/javascript",
+      "size": 111894,
+      "success": true
+    },
+    {
+      "file": "/src/App.tsx",
+      "url": "http://localhost:5173/src/App.tsx",
+      "statusCode": 200,
+      "contentType": "text/javascript",
+      "size": 25961,
+      "success": true
+    },
+    {
+      "file": "/src/lib/auth.tsx",
+      "url": "http://localhost:5173/src/lib/auth.tsx",
+      "statusCode": 200,
+      "contentType": "text/javascript",
+      "size": 21365,
+      "success": true
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "endpoint": "/api/auth/me",
+      "url": "http://localhost:3000/api/auth/me",
+      "statusCode": 200,
+      "contentType": "application/json; charset=utf-8",
+      "expected": "json",
+      "actual": "json",
+      "success": true,
+      "size": 35
+    },
+    {
+      "endpoint": "/api/extract/health",
+      "url": "http://localhost:3000/api/extract/health",
+      "statusCode": 200,
+      "contentType": "application/json; charset=utf-8",
+      "expected": "json",
+      "actual": "json",
+      "success": true,
+      "size": 173
+    },
+    {
+      "endpoint": "/api/auth/dev/users",
+      "url": "http://localhost:3000/api/auth/dev/users",
+      "statusCode": 200,
+      "contentType": "text/html; charset=utf-8",
+      "expected": "json",
+      "actual": "html",
+      "success": false,
+      "size": 2493
+    },
+    {
+      "endpoint": "/api/invalid/endpoint",
+      "url": "http://localhost:3000/api/invalid/endpoint",
+      "statusCode": 200,
+      "contentType": "text/html; charset=utf-8",
+      "expected": "json",
+      "actual": "html",
+      "success": false,
+      "size": 2493
+    }
+  ],
+  "summary": {
+    "jsSuccessRate": "100.0%",
+    "apiSuccessRate": "50.0%",
+    "timestamp": "2026-01-04T11:21:44.044Z"
+  }
+}

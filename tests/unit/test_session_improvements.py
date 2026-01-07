@@ -442,12 +442,8 @@ class TestSessionCompleteness(unittest.TestCase):
     def test_all_documentation_exists(self):
         """Verify all task documentation was created."""
         docs = [
-            'TASK_FIX_BARE_EXCEPTION_HANDLERS_COMPLETED.md',
-            'TASK_CLEAN_ORPHANED_TODO_LOGGING_COMPLETED.md',
-            'TASK_3_IMPROVE_STUB_MODULES_COMPLETED.md',
-            'TASK_4_THEME_TOGGLE_VERIFICATION_COMPLETED.md',
-            'TASK_5_WATCHDOG_MODULE_REVIEW_COMPLETED.md',
-            'SESSION_SUMMARY_JAN1_2026_FINAL.md',
+            'doc/TASK_5_WATCHDOG_MODULE_REVIEW_COMPLETED.md',
+            'doc/SESSION_SUMMARY_JAN1_2026_FINAL.md',
         ]
         
         for doc in docs:

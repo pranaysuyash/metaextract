@@ -1,0 +1,109 @@
+{
+  "timestamp": "2026-01-06 17:22:33",
+  "tests": [
+    {
+      "name": "Format Support",
+      "status": "passed"
+    },
+    {
+      "name": "Progress Tracking",
+      "status": "passed"
+    },
+    {
+      "name": "Extraction: test_jpg.jpg",
+      "status": "passed",
+      "details": {
+        "file": "test_jpg.jpg",
+        "mime_type": "image/jpeg",
+        "status": "passed",
+        "quality_metrics": {
+          "confidence_score": 0.85,
+          "extraction_completeness": 1,
+          "processing_efficiency": 0.88,
+          "format_support_level": "comprehensive",
+          "recommended_actions": [],
+          "enhanced_extraction": true,
+          "streaming_enabled": false
+        },
+        "processing_insights": {
+          "total_fields_extracted": 134,
+          "processing_time_ms": 3471,
+          "memory_usage_mb": 0,
+          "streaming_enabled": false,
+          "fallback_extraction": false,
+          "progress_updates": []
+        },
+        "error": null,
+        "fields_extracted": 134,
+        "processing_time_ms": 3485.4278564453125,
+        "enhanced_extraction": true
+      }
+    },
+    {
+      "name": "Extraction: test_png.png",
+      "status": "passed",
+      "details": {
+        "file": "test_png.png",
+        "mime_type": "image/png",
+        "status": "passed",
+        "quality_metrics": {
+          "confidence_score": 0.85,
+          "extraction_completeness": 1,
+          "processing_efficiency": 0.88,
+          "format_support_level": "comprehensive",
+          "recommended_actions": [],
+          "enhanced_extraction": true,
+          "streaming_enabled": false
+        },
+        "processing_insights": {
+          "total_fields_extracted": 137,
+          "processing_time_ms": 2960,
+          "memory_usage_mb": 0,
+          "streaming_enabled": false,
+          "fallback_extraction": false,
+          "progress_updates": []
+        },
+        "error": null,
+        "fields_extracted": 137,
+        "processing_time_ms": 2969.1083431243896,
+        "enhanced_extraction": true
+      }
+    },
+    {
+      "name": "Extraction: test_webp.webp",
+      "status": "passed",
+      "details": {
+        "file": "test_webp.webp",
+        "mime_type": "image/webp",
+        "status": "passed",
+        "quality_metrics": {
+          "confidence_score": 0.85,
+          "extraction_completeness": 1,
+          "processing_efficiency": 0.88,
+          "format_support_level": "comprehensive",
+          "recommended_actions": [],
+          "enhanced_extraction": true,
+          "streaming_enabled": false
+        },
+        "processing_insights": {
+          "total_fields_extracted": 130,
+          "processing_time_ms": 4464,
+          "memory_usage_mb": 0,
+          "streaming_enabled": false,
+          "fallback_extraction": false,
+          "progress_updates": []
+        },
+        "error": null,
+        "fields_extracted": 130,
+        "processing_time_ms": 4473.579168319702,
+        "enhanced_extraction": true
+      }
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "errors": 0
+  }
+}

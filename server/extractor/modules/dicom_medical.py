@@ -3,8 +3,11 @@ Complete DICOM Medical Imaging Metadata
 Comprehensive extraction of DICOM tags for medical imaging forensics
 """
 
+import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 try:
     from .dicom_complete_registry import get_dicom_registry_fields

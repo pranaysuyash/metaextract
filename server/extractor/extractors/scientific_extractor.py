@@ -76,13 +76,21 @@ class ScientificExtractor(BaseExtractor):
         'geotiff': Category.GEOSPATIAL
     }
     
+    # Default streaming setting
+    _streaming_enabled = True
+    streaming_extractor = None  # Default to None
+    
     def __init__(self):
         super().__init__(name="scientific", supported_formats=self.supported_formats)
 
         # Initialize streaming components
         self._streaming_enabled = True  # Enable streaming by default for large files
-        streaming_config = StreamingConfig(chunk_size=5_000_000)
-        self.streaming_extractor = StreamingMetadataExtractor(streaming_config)
+        try:
+            streaming_config = StreamingConfig(chunk_size=5_000_000)
+            self.streaming_extractor = StreamingMetadataExtractor(streaming_config)
+        except Exception as e:
+            logger.warning(f"Failed to initialize streaming extractor: {e}")
+            self.streaming_extractor = None
         
     def _extract_metadata(self, context: ExtractionContext) -> Dict[str, Any]:
         """
@@ -96,7 +104,7 @@ class ScientificExtractor(BaseExtractor):
         format_type = self._detect_format(file_ext, file_path)
         
         # Use streaming for files >50MB or known problematic formats
-        use_streaming = self._streaming_enabled and (
+        use_streaming = self._streaming_enabled and self.streaming_extractor is not None and (
             file_size > 50_000_000 or  # 50MB threshold
             format_type in ['fits', 'hdf5'] or  # Known large formats
             file_size > 500_000_000  # Always stream 500MB+

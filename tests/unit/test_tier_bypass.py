@@ -9,7 +9,7 @@ import sys
 
 BASE_URL = "http://localhost:3000"
 
-def test_endpoint(method, endpoint, files=None, expected_success=True):
+def check_endpoint(method, endpoint, files=None, expected_success=True):
     """Test an API endpoint and return success status."""
     try:
         if method == "GET":
@@ -81,7 +81,7 @@ def main():
         total = len(tests)
         
         for method, endpoint, files, expected_success in tests:
-            if test_endpoint(method, endpoint, files, expected_success):
+            if check_endpoint(method, endpoint, files, expected_success):
                 passed += 1
     
     # Close file handles

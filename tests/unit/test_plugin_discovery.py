@@ -82,7 +82,7 @@ def test_plugin_discovery():
         print(f"❌ Unexpected error: {e}")
         return False
 
-def test_plugin_discovery_with_function(get_discovered_plugins_func):
+def test_plugin_discovery_with_function():
     """Test plugin discovery using the provided function"""
     print("🔍 Testing Plugin Discovery and Loading")
     print("=" * 50)
@@ -109,7 +109,7 @@ def test_plugin_discovery_with_function(get_discovered_plugins_func):
             print(f"   {i}. {plugin}")
         
         # Get detailed plugin info
-        plugins_info = get_discovered_plugins_func()
+        plugins_info = get_discovered_plugins()
         print(f"\n📊 Plugin Details:")
         for plugin_name, plugin_info in plugins_info.items():
             print(f"   📦 {plugin_name}:")

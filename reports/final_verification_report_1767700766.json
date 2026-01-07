@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-01-06 17:27:54",
+  "tests": [
+    {
+      "name": "Health Check: Main Health",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:54",
+      "details": {
+        "endpoint": "/api/health",
+        "response": {
+          "status": "ok",
+          "service": "MetaExtract API",
+          "version": "2.0.0",
+          "timestamp": "2026-01-06T11:57:54.206Z"
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "Health Check: Extract Health",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:27:58",
+      "details": {
+        "endpoint": "/api/extract/health",
+        "response": {
+          "status": "healthy",
+          "python_engine": "available",
+          "engine_version": "3.0.0",
+          "timestamp": "2026-01-06T11:57:58.274Z",
+          "message": "Python extraction engine is responding correctly"
+        }
+      },
+      "error": null
+    },
+    {
+      "name": "Health Check: Image Extract Health",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:28:02",
+      "details": {
+        "endpoint": "/api/extract/health/image",
+        "status_code": 503
+      },
+      "error": null
+    },
+    {
+      "name": "Single File Extraction",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:27",
+      "details": {
+        "fields": 134
+      },
+      "error": null
+    },
+    {
+      "name": "Batch Extraction",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:27",
+      "details": {},
+      "error": "[Errno 2] No such file or directory: 'test_images_final/test_basic.jpg'"
+    },
+    {
+      "name": "Advanced Extraction",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:27",
+      "details": {},
+      "error": "[Errno 2] No such file or directory: 'test_images_final/test_basic.jpg'"
+    },
+    {
+      "name": "Timeline Reconstruction",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:27",
+      "details": {},
+      "error": "[Errno 2] No such file or directory: 'test_images_final/test_basic.jpg'"
+    },
+    {
+      "name": "Images MVP Format Support",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:28",
+      "details": {
+        "supported_formats": [
+          "JPG",
+          "JPEG",
+          "PNG",
+          "HEIC",
+          "HEIF"
+        ]
+      },
+      "error": null
+    },
+    {
+      "name": "Images MVP Extraction",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:28",
+      "details": {},
+      "error": "[Errno 2] No such file or directory: 'test_images_final/test_basic.jpg'"
+    },
+    {
+      "name": "Images MVP Credit Packs",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:29",
+      "details": {
+        "packs_count": 2
+      },
+      "error": null
+    },
+    {
+      "name": "WebSocket Connection",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:29",
+      "details": {
+        "session_id": "test_session_1767700674",
+        "response_type": "connected"
+      },
+      "error": null
+    },
+    {
+      "name": "Public Endpoint Access",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:29",
+      "details": {},
+      "error": null
+    },
+    {
+      "name": "Tier-Based Access",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:29",
+      "details": {},
+      "error": "[Errno 2] No such file or directory: 'test_images_final/test_basic.jpg'"
+    },
+    {
+      "name": "Invalid File Type Error",
+      "status": "error",
+      "timestamp": "2026-01-06 17:28:39",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=10)"
+    },
+    {
+      "name": "Missing File Error",
+      "status": "passed",
+      "timestamp": "2026-01-06 17:28:40",
+      "details": {
+        "status_code": 400
+      },
+      "error": null
+    },
+    {
+      "name": "Metadata Storage",
+      "status": "error",
+      "timestamp": "2026-01-06 17:29:11",
+      "details": {},
+      "error": "HTTPConnectionPool(host='localhost', port=3000): Read timed out. (read timeout=30)"
+    },
+    {
+      "name": "End-to-End Pipeline",
+      "status": "failed",
+      "timestamp": "2026-01-06 17:29:26",
+      "details": {
+        "processing_time": 15.57,
+        "checks_passed": "4/5",
+        "failed_checks": [
+          "storage_id"
+        ]
+      },
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 8,
+    "failed": 2,
+    "errors": 7
+  },
+  "regressions": []
+}

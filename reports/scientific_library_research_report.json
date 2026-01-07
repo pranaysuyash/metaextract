@@ -1,0 +1,502 @@
+{
+  "report_metadata": {
+    "generated_at": "2026-01-03T13:07:26.553687Z",
+    "version": "1.0.0",
+    "domains_covered": [
+      "medical_imaging",
+      "astronomical",
+      "climate_weather",
+      "geospatial",
+      "general_scientific"
+    ]
+  },
+  "library_overviews": {
+    "dicom_libraries": {
+      "pydicom": {
+        "name": "pydicom",
+        "description": "The de facto standard Python library for working with DICOM medical imaging data",
+        "domain": "medical_imaging",
+        "category": "primary",
+        "license": "MIT",
+        "python_native": true,
+        "maintenance": "Active",
+        "performance": "good",
+        "features": [
+          "Complete DICOM standard support",
+          "Pixel data handling and decompression",
+          "Structured Report parsing",
+          "De-identification support",
+          "VR (Value Representation) validation",
+          "Private tag handling"
+        ],
+        "limitations": [
+          "Limited image processing capabilities",
+          "No built-in visualization",
+          "Not optimized for very large datasets"
+        ]
+      },
+      "simpleitk": {
+        "name": "SimpleITK",
+        "description": "Simplified interface to the Insight Segmentation and Registration Toolkit for medical image processing",
+        "domain": "medical_imaging",
+        "category": "specialized",
+        "license": "Apache 2.0",
+        "python_native": false,
+        "maintenance": "Active",
+        "performance": "excellent",
+        "features": [
+          "Extensive image processing algorithms",
+          "Multi-modal image registration",
+          "Segmentation capabilities",
+          "Resampling and interpolation",
+          "Integration with ITK"
+        ],
+        "limitations": [
+          "Larger installation footprint",
+          "Steeper learning curve",
+          "Limited metadata extraction compared to pydicom"
+        ]
+      },
+      "dicom2nifti": {
+        "name": "dicom2nifti",
+        "description": "Specialized library for converting DICOM series to NIfTI format for neuroimaging",
+        "domain": "medical_imaging",
+        "category": "conversion",
+        "license": "BSD 3-Clause",
+        "python_native": true,
+        "maintenance": "Active",
+        "performance": "good",
+        "features": [
+          "Automatic slice ordering",
+          "Philips private tags handling",
+          "GE DICOM conformance",
+          "Slice alignment correction"
+        ],
+        "limitations": [
+          "Specialized for neuroimaging only",
+          "Not for general DICOM handling",
+          "Requires complete series for best results"
+        ]
+      }
+    },
+    "fits_libraries": {
+      "astropy": {
+        "name": "astropy.io.fits",
+        "description": "Part of the Astropy Project, providing FITS file I/O and WCS support for astronomical data",
+        "domain": "astronomical",
+        "category": "primary",
+        "license": "BSD 3-Clause",
+        "python_native": true,
+        "maintenance": "Active",
+        "performance": "good",
+        "features": [
+          "Complete FITS 4.0 standard support",
+          "World Coordinate System (WCS) handling",
+          "Header manipulation and validation",
+          "Image compression (RICE, GZIP, HCOMPRESS)",
+          "Table operations (ASCII and Binary)",
+          "Integration with astropy cosmology and units"
+        ],
+        "limitations": [
+          "Memory intensive for very large files",
+          "Streaming support limited",
+          "API can be verbose"
+        ]
+      },
+      "fitsio": {
+        "name": "fitsio",
+        "description": "Python wrapper around CFITSIO (NASA's C library) providing fast FITS I/O",
+        "domain": "astronomical",
+        "category": "primary",
+        "license": "MIT",
+        "python_native": false,
+        "maintenance": "Active",
+        "performance": "excellent",
+        "features": [
+          "Highest performance FITS I/O",
+          "Direct memory mapping for large files",
+          "Tile compression support",
+          "Variable length arrays",
+          "Heap manipulation"
+        ],
+        "limitations": [
+          "Less Pythonic than astropy",
+          "Limited high-level abstractions",
+          "Requires CFITSIO C library"
+        ]
+      }
+    },
+    "hdf5_libraries": {
+      "h5py": {
+        "name": "h5py",
+        "description": "Python interface to the HDF5 binary data format for storing large amounts of numerical data",
+        "domain": "general_scientific",
+        "category": "primary",
+        "license": "BSD 3-Clause",
+        "python_native": false,
+        "maintenance": "Active",
+        "performance": "excellent",
+        "features": [
+          "Pythonic HDF5 interface",
+          "Parallel HDF5 support (with mpi4py)",
+          "Chunking and compression",
+          "Reference and attribute systems",
+          "Dataset selection by hyperslab"
+        ],
+        "limitations": [
+          "No built-in data model validation",
+          "Complex API for advanced features",
+          "File locking on some systems"
+        ]
+      },
+      "netCDF4": {
+        "name": "netCDF4",
+        "description": "Python interface to the netCDF C library with support for netCDF4/HDF5 files",
+        "domain": "climate_weather",
+        "category": "primary",
+        "license": "MIT",
+        "python_native": false,
+        "maintenance": "Active",
+        "performance": "good",
+        "features": [
+          "netCDF4 data model",
+          "CDF-2, netCDF3, netCDF4 support",
+          "HDF5 backend when available",
+          "NUD/CDL metadata",
+          "Chunking and compression",
+          "MFDataset for multi-file datasets"
+        ],
+        "limitations": [
+          "More complex than h5py for HDF5",
+          "Limited parallel write support",
+          "CMIP6 data handling requires care"
+        ]
+      },
+      "xarray": {
+        "name": "xarray",
+        "description": "N-dimensional labeled arrays and datasets with netCDF and Zarr support",
+        "domain": "general_scientific",
+        "category": "utility",
+        "license": "Apache 2.0",
+        "python_native": true,
+        "maintenance": "Active",
+        "performance": "good",
+        "features": [
+          "Labeled dimensions and coordinates",
+          "Pandas-like API for N-D arrays",
+          "Transparent chunking with Dask",
+          "netCDF, Zarr, GRIB support",
+          "Lazy evaluation",
+          "CF conventions support"
+        ],
+        "limitations": [
+          "Wrapper around other libraries",
+          "Memory overhead for metadata",
+          "Learning curve for advanced features"
+        ]
+      }
+    },
+    "geotiff_libraries": {
+      "rasterio": {
+        "name": "rasterio",
+        "description": "Pythonic interface to GDAL for geospatial raster data including GeoTIFF",
+        "domain": "geospatial",
+        "category": "primary",
+        "license": "BSD 3-Clause",
+        "python_native": false,
+        "maintenance": "Active",
+        "performance": "excellent",
+        "features": [
+          "GeoTIFF and other formats",
+          "Multi-band support",
+          "Reprojection and warping",
+          "Windowed reads",
+          "CRS handling with pyproj",
+          "COG (Cloud Optimized GeoTIFF) support"
+        ],
+        "limitations": [
+          "GDAL dependency",
+          "Large binary installation",
+          "Complex API for advanced operations"
+        ]
+      },
+      "rioxarray": {
+        "name": "rioxarray",
+        "description": "Xarray extension for geospatial raster data with rio integration",
+        "domain": "geospatial",
+        "category": "utility",
+        "license": "MIT",
+        "python_native": true,
+        "maintenance": "Active",
+        "performance": "good",
+        "features": [
+          "Xarray integration with rasterio",
+          "CRS handling and reprojection",
+          "Clip and mask operations",
+          "Merge and combine operations",
+          "COG detection and creation"
+        ],
+        "limitations": [
+          "Requires both rasterio and xarray",
+          "Memory overhead from xarray",
+          "Version compatibility issues"
+        ]
+      }
+    }
+  },
+  "comparisons": {
+    "dicom": {
+      "use_case": "DICOM Medical Imaging",
+      "domain": "ScientificDomain.MEDICAL_IMAGING",
+      "libraries": [
+        "LibraryInfo(name='pydicom', description='The de facto standard Python library for working with DICOM medical imaging data', primary_domain=<ScientificDomain.MEDICAL_IMAGING: 'medical_imaging'>, category=<LibraryCategory.PRIMARY: 'primary'>, license='MIT', python_native=True, maintenance_status='Active', last_updated='2024', popularity_stars=2600, weekly_downloads=180000, read_support=True, write_support=True, streaming_support=False, compression_support=True, performance_rating='good', memory_efficiency='moderate', numpy_integration=True, xarray_integration=False, dask_integration=False, key_features=['Complete DICOM standard support', 'Pixel data handling and decompression', 'Structured Report parsing', 'De-identification support', 'VR (Value Representation) validation', 'Private tag handling'], limitations=['Limited image processing capabilities', 'No built-in visualization', 'Not optimized for very large datasets'], usage_example='\\nimport pydicom\\nfrom pydicom import dcmread\\n\\nds = dcmread(\"scan.dcm\")\\npatient_name = ds.PatientName\\narr = ds.pixel_array  # NumPy array\\n')",
+        "LibraryInfo(name='SimpleITK', description='Simplified interface to the Insight Segmentation and Registration Toolkit for medical image processing', primary_domain=<ScientificDomain.MEDICAL_IMAGING: 'medical_imaging'>, category=<LibraryCategory.SPECIALIZED: 'specialized'>, license='Apache 2.0', python_native=False, maintenance_status='Active', last_updated='2024', popularity_stars=1200, weekly_downloads=45000, read_support=True, write_support=True, streaming_support=False, compression_support=True, performance_rating='excellent', memory_efficiency='good', numpy_integration=True, xarray_integration=False, dask_integration=False, key_features=['Extensive image processing algorithms', 'Multi-modal image registration', 'Segmentation capabilities', 'Resampling and interpolation', 'Integration with ITK'], limitations=['Larger installation footprint', 'Steeper learning curve', 'Limited metadata extraction compared to pydicom'], usage_example='\\nimport SimpleITK as sitk\\n\\nimage = sitk.ReadImage(\"scan.dcm\")\\narr = sitk.GetArrayFromImage(image)\\nfiltered = sitk.SmoothingRecursiveGaussian(image, sigma=1.0)\\n')",
+        "LibraryInfo(name='dicom2nifti', description='Specialized library for converting DICOM series to NIfTI format for neuroimaging', primary_domain=<ScientificDomain.MEDICAL_IMAGING: 'medical_imaging'>, category=<LibraryCategory.CONVERSION: 'conversion'>, license='BSD 3-Clause', python_native=True, maintenance_status='Active', last_updated='2024', popularity_stars=350, weekly_downloads=12000, read_support=True, write_support=True, streaming_support=False, compression_support=True, performance_rating='good', memory_efficiency='moderate', numpy_integration=True, xarray_integration=False, dask_integration=False, key_features=['Automatic slice ordering', 'Philips private tags handling', 'GE DICOM conformance', 'Slice alignment correction'], limitations=['Specialized for neuroimaging only', 'Not for general DICOM handling', 'Requires complete series for best results'], usage_example='\\nimport dicom2nifti\\ndicom2nifti.dicom_series_to_nifti(\"dicom_dir/\", \"output.nii.gz\")\\n')"
+      ],
+      "recommendation": "pydicom",
+      "alternative": "simpleitk (for image processing)",
+      "comparison_matrix": {
+        "pydicom": {
+          "metadata_extraction": "Excellent",
+          "pixel_data": "Good",
+          "image_processing": "Limited",
+          "ease_of_use": "Easy",
+          "performance": "Good",
+          "community": "Large"
+        },
+        "simpleitk": {
+          "metadata_extraction": "Moderate",
+          "pixel_data": "Excellent",
+          "image_processing": "Excellent",
+          "ease_of_use": "Moderate",
+          "performance": "Excellent",
+          "community": "Large"
+        },
+        "dicom2nifti": {
+          "metadata_extraction": "Limited",
+          "pixel_data": "Good",
+          "image_processing": "Limited",
+          "ease_of_use": "Easy",
+          "performance": "Good",
+          "community": "Small"
+        }
+      }
+    },
+    "fits": {
+      "use_case": "FITS Astronomical Data",
+      "domain": "ScientificDomain.ASTRONOMICAL",
+      "libraries": [
+        "LibraryInfo(name='astropy.io.fits', description='Part of the Astropy Project, providing FITS file I/O and WCS support for astronomical data', primary_domain=<ScientificDomain.ASTRONOMICAL: 'astronomical'>, category=<LibraryCategory.PRIMARY: 'primary'>, license='BSD 3-Clause', python_native=True, maintenance_status='Active', last_updated='2024', popularity_stars=1500, weekly_downloads=250000, read_support=True, write_support=True, streaming_support=False, compression_support=True, performance_rating='good', memory_efficiency='good', numpy_integration=True, xarray_integration=False, dask_integration=False, key_features=['Complete FITS 4.0 standard support', 'World Coordinate System (WCS) handling', 'Header manipulation and validation', 'Image compression (RICE, GZIP, HCOMPRESS)', 'Table operations (ASCII and Binary)', 'Integration with astropy cosmology and units'], limitations=['Memory intensive for very large files', 'Streaming support limited', 'API can be verbose'], usage_example='\\nfrom astropy.io import fits\\nfrom astropy import units as u\\n\\nwith fits.open(\"observation.fits\") as hdul:\\n    hdul.info()\\n    data = hdul[0].data\\n    header = hdul[0].header\\n    # WCS transformation\\n    from astropy.wcs import WCS\\n    w = WCS(header)\\n')",
+        "LibraryInfo(name='fitsio', description=\"Python wrapper around CFITSIO (NASA's C library) providing fast FITS I/O\", primary_domain=<ScientificDomain.ASTRONOMICAL: 'astronomical'>, category=<LibraryCategory.PRIMARY: 'primary'>, license='MIT', python_native=False, maintenance_status='Active', last_updated='2024', popularity_stars=500, weekly_downloads=35000, read_support=True, write_support=True, streaming_support=True, compression_support=True, performance_rating='excellent', memory_efficiency='excellent', numpy_integration=True, xarray_integration=False, dask_integration=False, key_features=['Highest performance FITS I/O', 'Direct memory mapping for large files', 'Tile compression support', 'Variable length arrays', 'Heap manipulation'], limitations=['Less Pythonic than astropy', 'Limited high-level abstractions', 'Requires CFITSIO C library'], usage_example='\\nimport fitsio\\n\\n# Read FITS file\\nhdr = fitsio.read_header(\"observation.fits\", 0)\\ndata = fitsio.read(\"observation.fits\")\\n\\n# Write compressed FITS\\nfitsio.write(\"output.fits\", data, compress=True, tile_size=(1000, 1000))\\n')"
+      ],
+      "recommendation": "astropy for general use, fitsio for performance",
+      "alternative": "fitsio for large datasets",
+      "comparison_matrix": {
+        "astropy": {
+          "WCS_support": "Excellent",
+          "header_handling": "Excellent",
+          "table_operations": "Excellent",
+          "performance": "Good",
+          "ease_of_use": "Easy",
+          "integration": "Best"
+        },
+        "fitsio": {
+          "WCS_support": "Limited",
+          "header_handling": "Good",
+          "table_operations": "Good",
+          "performance": "Excellent",
+          "ease_of_use": "Moderate",
+          "integration": "Good"
+        }
+      }
+    },
+    "hdf5": {
+      "use_case": "HDF5/NetCDF Scientific Data",
+      "domain": "ScientificDomain.GENERAL_SCIENTIFIC",
+      "libraries": [
+        "LibraryInfo(name='h5py', description='Python interface to the HDF5 binary data format for storing large amounts of numerical data', primary_domain=<ScientificDomain.GENERAL_SCIENTIFIC: 'general_scientific'>, category=<LibraryCategory.PRIMARY: 'primary'>, license='BSD 3-Clause', python_native=False, maintenance_status='Active', last_updated='2024', popularity_stars=1500, weekly_downloads=400000, read_support=True, write_support=True, streaming_support=True, compression_support=True, performance_rating='excellent', memory_efficiency='excellent', numpy_integration=True, xarray_integration=True, dask_integration=True, key_features=['Pythonic HDF5 interface', 'Parallel HDF5 support (with mpi4py)', 'Chunking and compression', 'Reference and attribute systems', 'Dataset selection by hyperslab'], limitations=['No built-in data model validation', 'Complex API for advanced features', 'File locking on some systems'], usage_example='\\nimport h5py\\nimport numpy as np\\n\\nwith h5py.File(\"data.h5\", \"r\") as f:\\n    dataset = f[\"/measurements/temperature\"]\\n    data = dataset[100:200, :]  # Slicing\\n    attrs = dataset.attrs\\n\\n# Write with compression\\nwith h5py.File(\"output.h5\", \"w\") as f:\\n    f.create_dataset(\"data\", data=np.random.rand(1000, 1000),\\n                     chunks=True, compression=\"gzip\", compression_opts=9)\\n')",
+        "LibraryInfo(name='netCDF4', description='Python interface to the netCDF C library with support for netCDF4/HDF5 files', primary_domain=<ScientificDomain.CLIMATE_WEATHER: 'climate_weather'>, category=<LibraryCategory.PRIMARY: 'primary'>, license='MIT', python_native=False, maintenance_status='Active', last_updated='2024', popularity_stars=700, weekly_downloads=150000, read_support=True, write_support=True, streaming_support=False, compression_support=True, performance_rating='good', memory_efficiency='good', numpy_integration=True, xarray_integration=True, dask_integration=False, key_features=['netCDF4 data model', 'CDF-2, netCDF3, netCDF4 support', 'HDF5 backend when available', 'NUD/CDL metadata', 'Chunking and compression', 'MFDataset for multi-file datasets'], limitations=['More complex than h5py for HDF5', 'Limited parallel write support', 'CMIP6 data handling requires care'], usage_example='\\nfrom netCDF4 import Dataset\\nimport numpy as np\\n\\nwith Dataset(\"climate.nc\", \"r\") as nc:\\n    temp = nc.variables[\"temperature\"]\\n    time = nc.variables[\"time\"]\\n    # Read data\\n    data = temp[:]\\n\\n# Create netCDF4 file\\nwith Dataset(\"output.nc\", \"w\") as nc:\\n    nc.createDimension(\"time\", None)\\n    nc.createDimension(\"lat\", 180)\\n    nc.createDimension(\"lon\", 360)\\n    \\n    time_var = nc.createVariable(\"time\", \"f8\", (\"time\",))\\n    temp_var = nc.createVariable(\"temperature\", \"f4\", (\"time\", \"lat\", \"lon\"))\\n')",
+        "LibraryInfo(name='xarray', description='N-dimensional labeled arrays and datasets with netCDF and Zarr support', primary_domain=<ScientificDomain.GENERAL_SCIENTIFIC: 'general_scientific'>, category=<LibraryCategory.UTILITY: 'utility'>, license='Apache 2.0', python_native=True, maintenance_status='Active', last_updated='2024', popularity_stars=3500, weekly_downloads=500000, read_support=True, write_support=True, streaming_support=True, compression_support=True, performance_rating='good', memory_efficiency='good', numpy_integration=True, xarray_integration=True, dask_integration=True, key_features=['Labeled dimensions and coordinates', 'Pandas-like API for N-D arrays', 'Transparent chunking with Dask', 'netCDF, Zarr, GRIB support', 'Lazy evaluation', 'CF conventions support'], limitations=['Wrapper around other libraries', 'Memory overhead for metadata', 'Learning curve for advanced features'], usage_example='\\nimport xarray as xr\\nimport numpy as np\\n\\n# Open netCDF\\nds = xr.open_dataset(\"climate.nc\")\\ntemp = ds.temperature\\n\\n# Create Dataset\\nds_new = xr.Dataset(\\n    {\"temperature\": ([\"time\", \"lat\", \"lon\"], np.random.rand(100, 180, 360))},\\n    coords={\\n        \"time\": np.arange(100),\\n        \"lat\": np.linspace(-90, 90, 180),\\n        \"lon\": np.linspace(-180, 180, 360)\\n    }\\n)\\nds_new.to_netcdf(\"output.nc\")\\n\\n# Lazy loading with Dask\\nds_chunked = xr.open_dataset(\"large.nc\", chunks={\"time\": 100})\\n')"
+      ],
+      "recommendation": "h5py for HDF5, xarray for netCDF",
+      "alternative": "xarray for convenience with any format",
+      "comparison_matrix": {
+        "h5py": {
+          "HDF5_features": "Complete",
+          "netCDF_features": "None",
+          "ease_of_use": "Moderate",
+          "performance": "Excellent",
+          "dask_integration": "Yes",
+          "best_for": "General HDF5"
+        },
+        "netCDF4": {
+          "HDF5_features": "Good",
+          "netCDF_features": "Complete",
+          "ease_of_use": "Moderate",
+          "performance": "Good",
+          "dask_integration": "No",
+          "best_for": "Climate/weather data"
+        },
+        "xarray": {
+          "HDF5_features": "Via h5py",
+          "netCDF_features": "Complete",
+          "ease_of_use": "Easy",
+          "performance": "Good",
+          "dask_integration": "Yes",
+          "best_for": "Analysis workflows"
+        }
+      }
+    },
+    "geotiff": {
+      "use_case": "GeoTIFF Geospatial Rasters",
+      "domain": "ScientificDomain.GEOSPATIAL",
+      "libraries": [
+        "LibraryInfo(name='rasterio', description='Pythonic interface to GDAL for geospatial raster data including GeoTIFF', primary_domain=<ScientificDomain.GEOSPATIAL: 'geospatial'>, category=<LibraryCategory.PRIMARY: 'primary'>, license='BSD 3-Clause', python_native=False, maintenance_status='Active', last_updated='2024', popularity_stars=2000, weekly_downloads=200000, read_support=True, write_support=True, streaming_support=True, compression_support=True, performance_rating='excellent', memory_efficiency='good', numpy_integration=True, xarray_integration=True, dask_integration=True, key_features=['GeoTIFF and other formats', 'Multi-band support', 'Reprojection and warping', 'Windowed reads', 'CRS handling with pyproj', 'COG (Cloud Optimized GeoTIFF) support'], limitations=['GDAL dependency', 'Large binary installation', 'Complex API for advanced operations'], usage_example='\\nimport rasterio\\nimport numpy as np\\nfrom rasterio.warp import calculate_default_transform, reproject, Resampling\\n\\n# Read GeoTIFF\\nwith rasterio.open(\"dem.tif\") as src:\\n    data = src.read(1)\\n    transform = src.transform\\n    crs = src.crs\\n\\n# Reproject\\nwith rasterio.open(\"input.tif\") as src:\\n    transform, width, height = calculate_default_transform(\\n        src.crs, \"EPSG:4326\", src.width, src.height, *src.bounds\\n    )\\n    \\n# Write new raster\\nwith rasterio.open(\"output.tif\", \"w\", driver=\"GTiff\",\\n                   height=height, width=width, count=1,\\n                   dtype=data.dtype, crs=\"EPSG:4326\",\\n                   transform=transform) as dst:\\n    dst.write(data, 1)\\n')",
+        "LibraryInfo(name='rioxarray', description='Xarray extension for geospatial raster data with rio integration', primary_domain=<ScientificDomain.GEOSPATIAL: 'geospatial'>, category=<LibraryCategory.UTILITY: 'utility'>, license='MIT', python_native=True, maintenance_status='Active', last_updated='2024', popularity_stars=800, weekly_downloads=60000, read_support=True, write_support=True, streaming_support=True, compression_support=True, performance_rating='good', memory_efficiency='good', numpy_integration=True, xarray_integration=True, dask_integration=True, key_features=['Xarray integration with rasterio', 'CRS handling and reprojection', 'Clip and mask operations', 'Merge and combine operations', 'COG detection and creation'], limitations=['Requires both rasterio and xarray', 'Memory overhead from xarray', 'Version compatibility issues'], usage_example='\\nimport rioxarray\\nimport xarray as xr\\n\\n# Open GeoTIFF as xarray DataArray\\nda = rioxarray.open_rasterio(\"dem.tif\")\\n\\n# Proper xarray Dataset with CRS\\nds = xr.open_rasterio(\"dem.tif\")\\nds = ds.rio.write_crs(\"EPSG:4326\")\\nds = ds.rio.set_spatial_dims(x_dim=\"x\", y_dim=\"y\")\\n\\n# Clip to geometry\\nclipped = ds.rio.clip(geometries, from_disk=True)\\n\\n# Write COG\\nda.rio.to_raster(\"output_cog.tif\", driver=\"COG\")\\n')"
+      ],
+      "recommendation": "rasterio for core operations, rioxarray for xarray integration",
+      "alternative": "Use both together for best results",
+      "comparison_matrix": {
+        "rasterio": {
+          "basic_io": "Excellent",
+          "reprojection": "Excellent",
+          "crs_handling": "Good",
+          "xarray_integration": "Requires rioxarray",
+          "performance": "Excellent",
+          "ease_of_use": "Moderate"
+        },
+        "rioxarray": {
+          "basic_io": "Good",
+          "reprojection": "Excellent",
+          "crs_handling": "Excellent",
+          "xarray_integration": "Native",
+          "performance": "Good",
+          "ease_of_use": "Easy"
+        }
+      }
+    }
+  },
+  "recommendations": {
+    "metadata_extraction": {
+      "dicom": {
+        "recommended": "pydicom",
+        "reason": "Complete DICOM standard support, excellent metadata extraction, simple API",
+        "install": "pip install pydicom"
+      },
+      "fits": {
+        "recommended": "astropy",
+        "reason": "Best WCS and header support, active development",
+        "install": "pip install astropy"
+      },
+      "hdf5": {
+        "recommended": "h5py",
+        "reason": "Standard Python interface, excellent performance",
+        "install": "pip install h5py"
+      },
+      "netcdf": {
+        "recommended": "netCDF4 or xarray",
+        "reason": "xarray provides best API with netCDF4 backend",
+        "install": "pip install netCDF4 xarray"
+      },
+      "geotiff": {
+        "recommended": "rasterio",
+        "reason": "Pythonic GDAL interface, excellent performance",
+        "install": "pip install rasterio"
+      }
+    },
+    "performance_priority": {
+      "dicom": {
+        "library": "pydicom",
+        "tips": [
+          "Use lazy loading for large series",
+          "Decompress outside pydicom for speed",
+          "Cache parsed files"
+        ]
+      },
+      "fits": {
+        "library": "fitsio",
+        "tips": [
+          "Use memory mapping for large files",
+          "Enable tile compression for writes",
+          "Use streaming reads for huge datasets"
+        ]
+      },
+      "hdf5": {
+        "library": "h5py",
+        "tips": [
+          "Use chunked datasets for large data",
+          "Enable compression (gzip level 4-6)",
+          "Use hyperslab selection for partial reads"
+        ]
+      },
+      "geotiff": {
+        "library": "rasterio",
+        "tips": [
+          "Use windowed reads for large files",
+          "Create COGs for cloud access",
+          "Enable lz4 compression for speed"
+        ]
+      }
+    },
+    "ease_of_use": {
+      "dicom": "pydicom",
+      "fits": "astropy",
+      "hdf5": "xarray",
+      "netcdf": "xarray",
+      "geotiff": "rioxarray"
+    },
+    "feature_comparison": {
+      "medical_imaging": {
+        "metadata": "pydicom",
+        "processing": "simpleitk",
+        "conversion": "dicom2nifti",
+        "all_in_one": "simpleitk"
+      },
+      "astronomy": {
+        "metadata": "astropy",
+        "performance": "fitsio",
+        "analysis": "astropy + photutils"
+      },
+      "climate": {
+        "netcdf": "xarray + netCDF4",
+        "hdf5": "h5py + xarray",
+        "analysis": "xarray"
+      },
+      "geospatial": {
+        "core": "rasterio",
+        "analysis": "rioxarray + xarray",
+        "visualization": "matplotlib + cartopy"
+      }
+    }
+  },
+  "installation": {
+    "core_dicom": [
+      "pip install pydicom",
+      "pip install simpleitk",
+      "pip install dicom2nifti"
+    ],
+    "core_fits": [
+      "pip install astropy",
+      "pip install fitsio"
+    ],
+    "core_hdf5": [
+      "pip install h5py",
+      "pip install netCDF4",
+      "pip install xarray"
+    ],
+    "core_geospatial": [
+      "pip install rasterio",
+      "pip install rioxarray",
+      "pip install pyproj"
+    ],
+    "recommended_metaextract": [
+      "pip install pydicom",
+      "pip install astropy",
+      "pip install h5py",
+      "pip install netCDF4",
+      "pip install xarray",
+      "pip install rasterio",
+      "pip install rioxarray"
+    ]
+  }
+}

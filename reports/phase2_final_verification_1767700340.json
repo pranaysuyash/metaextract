@@ -1,0 +1,2490 @@
+{
+  "timestamp": "2026-01-06 17:22:20",
+  "final_status": "PASSED",
+  "summary": {
+    "total_tests": 7,
+    "passed": 7,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "test_results": [
+    {
+      "name": "Main Health",
+      "endpoint": "/api/health",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "status": "ok",
+        "service": "MetaExtract API",
+        "version": "2.0.0",
+        "timestamp": "2026-01-06T11:52:09.629Z"
+      },
+      "validation_errors": []
+    },
+    {
+      "name": "Extract Health",
+      "endpoint": "/api/extract/health",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "status": "healthy",
+        "python_engine": "available",
+        "engine_version": "3.0.0",
+        "timestamp": "2026-01-06T11:52:11.799Z",
+        "message": "Python extraction engine is responding correctly"
+      },
+      "validation_errors": []
+    },
+    {
+      "name": "Single File Extraction",
+      "endpoint": "/api/extract",
+      "method": "POST",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "filename": "test.jpg",
+        "filesize": "126.00 B",
+        "filetype": "JPG",
+        "mime_type": "image/jpeg",
+        "tier": "enterprise",
+        "fields_extracted": 132,
+        "processing_ms": 2994,
+        "file_integrity": {
+          "md5": "d0d2d3fb27c355cb59191b65f4ea5900",
+          "sha256": "adb48bae94a31efea465fbf7da65c26e3c19c7edf14112101d311efacc6fac50",
+          "sha1": "47e366a0903b79a313126e117399d878d7e20d7e",
+          "crc32": "84c4c7ad"
+        },
+        "filesystem": {
+          "size_bytes": 126,
+          "size_human": "126.00 B",
+          "created": "2026-01-06T17:22:11.809189",
+          "modified": "2026-01-06T17:22:11.809373",
+          "accessed": "2026-01-06T17:22:11.809189",
+          "changed": "2026-01-06T17:22:11.809373",
+          "permissions_octal": "0o644",
+          "permissions_human": "-rw-r--r--",
+          "owner": "pranay",
+          "owner_uid": 501,
+          "group": "wheel",
+          "group_gid": 0,
+          "inode": 195051233,
+          "device": 16777231,
+          "hard_links": 1,
+          "file_type": "regular",
+          "is_hidden": false
+        },
+        "filesystem_source": "server_temp_upload",
+        "calculated": {
+          "aspect_ratio": "1:1",
+          "aspect_ratio_decimal": 1,
+          "megapixels": 0,
+          "orientation": "square",
+          "file_age_days": 0,
+          "file_age_human": "just now",
+          "file_age_hours": 0,
+          "file_age_human_readable": "just now",
+          "time_since_modified_days": 0,
+          "time_since_modified_hours": 0,
+          "time_since_modified_human_readable": "just now",
+          "time_since_accessed_days": 0,
+          "time_since_accessed_hours": 0,
+          "time_since_accessed_human_readable": "just now",
+          "capture_date": null,
+          "capture_date_source": null,
+          "location_embedded": false
+        },
+        "gps": null,
+        "summary": {
+          "filename": "test.jpg",
+          "filesize": "126.00 B",
+          "filesize_bytes": 126,
+          "filetype": "JPG",
+          "mime_type": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        "forensic": {
+          "forensic_digital_signatures": {},
+          "forensic_blockchain_nft": {},
+          "forensic_watermarking": {},
+          "forensic_c2pa": {},
+          "forensic_adobe_credentials": {},
+          "forensic_filesystem": {
+            "file_created": "2026-01-06T17:22:11.809189",
+            "file_modified": "2026-01-06T17:22:11.809373",
+            "file_accessed": "2026-01-06T17:22:13.702796",
+            "file_changed": "2026-01-06T17:22:11.809373",
+            "file_size": 126,
+            "file_permissions": "644",
+            "file_owner": 501,
+            "file_group": 0,
+            "file_inode": 195051233,
+            "file_device": 16777231,
+            "file_hardlinks": 1
+          },
+          "forensic_device_hardware": {},
+          "forensic_network_communication": {},
+          "forensic_email_communication": {},
+          "authentication_is_authenticated": false,
+          "authentication_confidence_score": 0,
+          "authentication_issues": [
+            "No authentication metadata found"
+          ],
+          "authentication_security_flags": [
+            "unauthenticated_content"
+          ],
+          "authentication_processing_errors": [],
+          "integrity_file_hash_md5": "d0d2d3fb27c355cb59191b65f4ea5900",
+          "integrity_file_hash_sha1": "47e366a0903b79a313126e117399d878d7e20d7e",
+          "integrity_file_hash_sha256": "adb48bae94a31efea465fbf7da65c26e3c19c7edf14112101d311efacc6fac50",
+          "integrity_file_hash_sha512": "e272383f42992b2bcc00620c37c7ae5304fbe6d86dd6fe6a4c1afbb5538e703d3576d112357530c35362a135188d11efca891c8408eebc8e4edc422806ad83be",
+          "integrity_error": "'float' object has no attribute 'bit_length'",
+          "fields_extracted": 11
+        },
+        "exif": {},
+        "image": {
+          "width": 1,
+          "height": 1,
+          "format": "JPEG",
+          "mode": "L",
+          "dpi": [
+            72,
+            72
+          ],
+          "bits_per_pixel": 8,
+          "color_palette": "no",
+          "animation": false,
+          "frames": 1,
+          "icc_profile": "no",
+          "is_animated": false,
+          "n_frames": 1,
+          "has_icc_profile": false,
+          "has_transparency": false,
+          "icc_profile_details": {
+            "error": "attempted relative import with no known parent package"
+          }
+        },
+        "iptc": null,
+        "xmp": null,
+        "normalized": {
+          "image_quality": "JPEG",
+          "bit_depth": 8
+        },
+        "web_metadata": null,
+        "social_media": null,
+        "mobile_metadata": null,
+        "forensic_security": null,
+        "action_camera": null,
+        "print_publishing": null,
+        "workflow_dam": null,
+        "audio_advanced": null,
+        "video_advanced": null,
+        "steganography_analysis": null,
+        "manipulation_detection": null,
+        "ai_detection": null,
+        "timeline_analysis": null,
+        "iptc_raw": null,
+        "xmp_raw": null,
+        "thumbnail": {
+          "has_embedded": false,
+          "width": 1,
+          "height": 1
+        },
+        "perceptual_hashes": {
+          "available": false,
+          "error": "broken data stream when reading image file"
+        },
+        "extended_attributes": {
+          "available": false
+        },
+        "extended": {
+          "available": false
+        },
+        "burned_metadata": {
+          "has_burned_metadata": false,
+          "ocr_available": true,
+          "extracted_text": null,
+          "parsed_data": {},
+          "confidence": "none",
+          "processing_errors": []
+        },
+        "metadata_comparison": {
+          "has_both": false,
+          "has_embedded_only": false,
+          "has_burned_only": false,
+          "matches": [],
+          "discrepancies": [],
+          "warnings": [],
+          "summary": {
+            "embedded_metadata_present": false,
+            "burned_metadata_present": false,
+            "gps_comparison": "no_gps",
+            "timestamp_comparison": "no_timestamp",
+            "overall_status": "no_metadata",
+            "sources": {
+              "exif": "none",
+              "gps": "none",
+              "location": "none",
+              "timestamp": "none"
+            }
+          }
+        },
+        "registry_summary": {
+          "image": {
+            "exif": 0,
+            "iptc": 0,
+            "xmp": 0,
+            "mobile": 0,
+            "perceptual_hashes": 2
+          },
+          "email": 0
+        },
+        "locked_fields": [],
+        "extraction_info": {
+          "timestamp": "2026-01-06T17:22:13.602145",
+          "tier": "super",
+          "engine_version": "3.0.0",
+          "exiftool_used": true,
+          "libraries": {
+            "pillow": true,
+            "exifread": true,
+            "ffmpeg": false,
+            "mutagen": false,
+            "pypdf": false,
+            "xattr": false,
+            "exiftool": true,
+            "iptcinfo3": true,
+            "xmp": true,
+            "imagehash": true
+          },
+          "fields_extracted": 132,
+          "locked_categories": 0,
+          "comprehensive_version": "4.0.0",
+          "dynamic_modules_enabled": false,
+          "specialized_engines": {
+            "medical_imaging": true,
+            "astronomical_data": true,
+            "geospatial_analysis": false,
+            "scientific_instruments": true,
+            "drone_telemetry": true,
+            "blockchain_provenance": true,
+            "emerging_technology": true,
+            "advanced_video_analysis": true,
+            "advanced_audio_analysis": true,
+            "document_analysis": true,
+            "scientific_research": true,
+            "multimedia_entertainment": true,
+            "industrial_manufacturing": true,
+            "financial_business": true,
+            "healthcare_medical": true,
+            "transportation_logistics": true,
+            "education_academic": true,
+            "legal_compliance": true,
+            "environmental_sustainability": true,
+            "social_media_digital": true,
+            "gaming_entertainment": true
+          },
+          "comprehensive_fields_extracted": 119,
+          "specialized_field_counts": {
+            "drone_telemetry": 7,
+            "emerging_technology": 12,
+            "scientific_research": 7,
+            "multimedia_entertainment": 7,
+            "industrial_manufacturing": 9,
+            "financial_business": 7
+          },
+          "processing_ms": 2994,
+          "performance_summary": {
+            "total_processing_time_ms": 1036.7851257324219,
+            "successful_modules": 13,
+            "failed_modules": 0,
+            "total_module_processing_time_ms": 5.714893341064453,
+            "overhead_time_ms": 1031.0702323913574
+          }
+        },
+        "medical_imaging": null,
+        "astronomical_data": null,
+        "geospatial_analysis": null,
+        "scientific_instruments": null,
+        "drone_telemetry": {
+          "available": true,
+          "flight_data": {},
+          "camera_data": {
+            "exposure_settings": {
+              "iso": null,
+              "shutter_speed": null,
+              "aperture": null,
+              "focal_length": null
+            },
+            "white_balance": null,
+            "color_space": null
+          },
+          "gps_track": {
+            "has_gps": false,
+            "coordinates": {
+              "latitude": null,
+              "longitude": null,
+              "altitude": null
+            },
+            "movement": {
+              "speed": null,
+              "direction": null,
+              "image_direction": null
+            }
+          },
+          "sensor_data": {},
+          "manufacturer_specific": {},
+          "performance": {
+            "drone_telemetry": {
+              "duration_seconds": 5.412101745605469e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "drone_telemetry"
+            }
+          }
+        },
+        "blockchain_provenance": null,
+        "emerging_technology": {
+          "emerging_technology_analysis": {
+            "version": "1.0.0",
+            "engines_available": {
+              "ai_ml_models": false,
+              "quantum_computing": false,
+              "extended_reality": false,
+              "iot_sensors": true,
+              "blockchain_web3": false,
+              "biometric_data": true,
+              "satellite_remote_sensing": false,
+              "synthetic_media_detection": true
+            }
+          },
+          "synthetic_media_analysis": {
+            "available": true,
+            "analysis_type": "synthetic_media_detection",
+            "ai_indicators": {},
+            "deepfake_analysis": {},
+            "generation_artifacts": {},
+            "confidence_scores": {
+              "ai_generation_likelihood": 0,
+              "confidence_factors": [],
+              "analysis_completeness": "partial"
+            }
+          },
+          "performance": {
+            "emerging_technology": {
+              "duration_seconds": 0.004895925521850586,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "emerging_technology"
+            }
+          }
+        },
+        "document_analysis": null,
+        "scientific_research": {
+          "available": true,
+          "research_type": "unknown",
+          "publication_metadata": {},
+          "laboratory_data": {},
+          "microscopy_data": {},
+          "spectroscopy_data": {},
+          "crystallography_data": {},
+          "genomics_data": {},
+          "chemical_data": {},
+          "environmental_data": {},
+          "particle_physics_data": {},
+          "astronomical_data": {},
+          "materials_science_data": {},
+          "proteomics_data": {},
+          "research_standards": {},
+          "data_quality": {},
+          "performance": {
+            "scientific_research": {
+              "duration_seconds": 8.20159912109375e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "scientific_research"
+            }
+          }
+        },
+        "multimedia_entertainment": {
+          "available": true,
+          "content_type": "unknown",
+          "gaming_assets": {},
+          "streaming_media": {},
+          "digital_art": {},
+          "music_production": {},
+          "video_production": {},
+          "vr_ar_content": {},
+          "interactive_media": {},
+          "digital_publishing": {},
+          "social_media": {},
+          "podcast_audio": {},
+          "live_streaming": {},
+          "entertainment_metadata": {},
+          "content_rating": {},
+          "distribution_info": {},
+          "performance": {
+            "multimedia_entertainment": {
+              "duration_seconds": 0.00012183189392089844,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "multimedia_entertainment"
+            }
+          }
+        },
+        "industrial_manufacturing": {
+          "available": true,
+          "industrial_type": "materials_specs",
+          "cad_engineering": {},
+          "manufacturing_data": {},
+          "quality_control": {},
+          "iot_sensor_data": {},
+          "process_control": {},
+          "supply_chain": {},
+          "maintenance_records": {},
+          "safety_compliance": {},
+          "production_planning": {},
+          "energy_management": {},
+          "robotics_automation": {},
+          "materials_specs": {
+            "materials_analysis": {
+              "file_type": ".jpg",
+              "detected_keywords": [
+                "test"
+              ]
+            }
+          },
+          "industrial_standards": {},
+          "performance_metrics": {},
+          "performance": {
+            "industrial_manufacturing": {
+              "duration_seconds": 7.605552673339844e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "industrial_manufacturing"
+            }
+          }
+        },
+        "financial_business": {
+          "available": true,
+          "business_type": "unknown",
+          "financial_reports": {},
+          "trading_data": {},
+          "banking_data": {},
+          "insurance_data": {},
+          "accounting_data": {},
+          "business_intelligence": {},
+          "crm_data": {},
+          "erp_data": {},
+          "compliance_data": {},
+          "investment_data": {},
+          "cryptocurrency_data": {},
+          "economic_data": {},
+          "financial_metrics": {},
+          "risk_analysis": {},
+          "performance": {
+            "financial_business": {
+              "duration_seconds": 6.818771362304688e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "financial_business"
+            }
+          }
+        },
+        "healthcare_medical": {
+          "available": true,
+          "medical_type": "unknown",
+          "ehr_emr_data": {},
+          "medical_imaging": {},
+          "clinical_trial_data": {},
+          "laboratory_results": {},
+          "pharmaceutical_data": {},
+          "genomic_medicine": {},
+          "telemedicine_data": {},
+          "medical_device_data": {},
+          "public_health_data": {},
+          "medical_literature": {},
+          "healthcare_analytics": {},
+          "regulatory_data": {},
+          "clinical_standards": {},
+          "patient_safety": {},
+          "performance": {
+            "healthcare_medical": {
+              "duration_seconds": 5.817413330078125e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "healthcare_medical"
+            }
+          }
+        },
+        "transportation_logistics": {
+          "available": true,
+          "transport_type": "unknown",
+          "vehicle_telemetry": {},
+          "fleet_management": {},
+          "shipping_freight": {},
+          "aviation_data": {},
+          "maritime_shipping": {},
+          "rail_transportation": {},
+          "public_transit": {},
+          "autonomous_vehicles": {},
+          "traffic_management": {},
+          "supply_chain": {},
+          "last_mile_delivery": {},
+          "transportation_analytics": {},
+          "safety_compliance": {},
+          "environmental_impact": {},
+          "performance": {
+            "transportation_logistics": {
+              "duration_seconds": 5.507469177246094e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "transportation_logistics"
+            }
+          }
+        },
+        "education_academic": {
+          "available": true,
+          "education_type": "assessment",
+          "lms_data": {},
+          "educational_content": {},
+          "academic_research": {},
+          "student_information": {},
+          "assessment_data": {
+            "assessment_type": "unknown",
+            "question_types": [],
+            "scoring_method": null,
+            "rubric_criteria": [],
+            "learning_outcomes": [],
+            "difficulty_distribution": {},
+            "time_limits": null,
+            "adaptive_features": {},
+            "feedback_mechanisms": {},
+            "accessibility_accommodations": {},
+            "proctoring_requirements": {},
+            "statistical_analysis": {}
+          },
+          "educational_technology": {},
+          "institutional_data": {},
+          "library_systems": {},
+          "academic_publishing": {},
+          "educational_standards": {},
+          "professional_development": {},
+          "educational_analytics": {},
+          "performance": {
+            "education_academic": {
+              "duration_seconds": 6.604194641113281e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "education_academic"
+            }
+          }
+        },
+        "legal_compliance": {
+          "available": true,
+          "legal_type": "unknown",
+          "legal_documents": {},
+          "regulatory_compliance": {},
+          "intellectual_property": {},
+          "corporate_governance": {},
+          "risk_management": {},
+          "data_privacy": {},
+          "financial_compliance": {},
+          "employment_law": {},
+          "international_trade": {},
+          "litigation_management": {},
+          "regulatory_reporting": {},
+          "legal_technology": {},
+          "performance": {
+            "legal_compliance": {
+              "duration_seconds": 5.984306335449219e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "legal_compliance"
+            }
+          }
+        },
+        "environmental_sustainability": {
+          "available": true,
+          "environmental_type": "unknown",
+          "environmental_monitoring": {},
+          "climate_data": {},
+          "renewable_energy": {},
+          "waste_management": {},
+          "biodiversity_conservation": {},
+          "sustainability_reporting": {},
+          "environmental_impact": {},
+          "green_building": {},
+          "water_resources": {},
+          "agriculture_food": {},
+          "transportation_emissions": {},
+          "environmental_compliance": {},
+          "performance": {
+            "environmental_sustainability": {
+              "duration_seconds": 5.793571472167969e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "environmental_sustainability"
+            }
+          }
+        },
+        "social_media_digital": {
+          "available": true,
+          "digital_type": "unknown",
+          "social_media_posts": {},
+          "messaging_platforms": {},
+          "digital_marketing": {},
+          "content_management": {},
+          "email_communications": {},
+          "digital_advertising": {},
+          "influencer_marketing": {},
+          "community_management": {},
+          "live_streaming": {},
+          "digital_events": {},
+          "ecommerce_communications": {},
+          "digital_forensics": {
+            "metadata_preservation": {},
+            "chain_of_custody": {},
+            "digital_signature": {},
+            "timestamp_verification": {},
+            "data_integrity": {}
+          },
+          "performance": {
+            "social_media_digital": {
+              "duration_seconds": 6.29425048828125e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "social_media_digital"
+            }
+          }
+        },
+        "gaming_entertainment": {
+          "available": true,
+          "entertainment_type": "unknown",
+          "video_games": {},
+          "game_development": {},
+          "esports_competitive": {},
+          "streaming_content": {},
+          "game_analytics": {},
+          "digital_entertainment": {},
+          "interactive_media": {},
+          "virtual_worlds": {},
+          "game_monetization": {},
+          "community_social": {},
+          "game_accessibility": {
+            "accessibility_features": [],
+            "inclusive_design": {},
+            "assistive_technology": {},
+            "customization_options": {},
+            "barrier_analysis": {}
+          },
+          "entertainment_distribution": {
+            "distribution_platform": "unknown",
+            "content_delivery": {},
+            "regional_availability": {},
+            "age_ratings": {},
+            "content_warnings": []
+          },
+          "performance": {
+            "gaming_entertainment": {
+              "duration_seconds": 5.6743621826171875e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700331809-34a2bfa5-2048-4d58-9ab1-806f2a4df19f-test.jpg",
+              "file_size": 126,
+              "module_name": "gaming_entertainment"
+            }
+          }
+        },
+        "email": null,
+        "persona_interpretation": {
+          "key_findings": [
+            "\ud83d\udcc5 Taken on 2026-01-06T17:22:11.809189",
+            "\ud83d\udccd No GPS location data",
+            "\ud83d\udcf1 Taken with Unknown device (device)",
+            "\u274c Signs of modification detected"
+          ],
+          "plain_english_answers": {
+            "when_taken": {
+              "answer": "2026-01-06T17:22:11.809189",
+              "details": "File created unknown time",
+              "source": "filesystem",
+              "confidence": "low",
+              "warning": "No photo creation date found - using file creation date instead"
+            },
+            "location": {
+              "has_location": false,
+              "answer": "No location data",
+              "details": "This photo doesn't have GPS information",
+              "confidence": "n/a",
+              "possible_reasons": [
+                "GPS was disabled when photo was taken",
+                "Location services were off",
+                "Photo was edited and GPS was stripped",
+                "Photo was taken indoors without GPS signal"
+              ]
+            },
+            "device": {
+              "answer": "Unknown device (device)",
+              "device_type": "device",
+              "details": {
+                "make": "unknown",
+                "model": "unknown",
+                "software": "unknown"
+              },
+              "enhanced_info": {
+                "type": "unknown",
+                "category": "unknown",
+                "capabilities": [],
+                "confidence": "low",
+                "identification_method": "none",
+                "make": "unknown",
+                "model": "unknown",
+                "software": "unknown",
+                "is_smartphone": false,
+                "is_dslr": false,
+                "is_mirrorless": false,
+                "is_point_and_shoot": false,
+                "is_webcam": false,
+                "is_drone": false,
+                "estimated_release_year": "unknown",
+                "sensor_type": "unknown",
+                "image_quality_indicators": {}
+              },
+              "confidence": "low"
+            },
+            "authenticity": {
+              "assessment": "likely_modified",
+              "confidence": "low",
+              "score": 45,
+              "answer": "Photo likely modified (low confidence)",
+              "checks_performed": {
+                "has_original_datetime": false,
+                "has_software_signatures": false,
+                "has_gps": false,
+                "exif_intact": false,
+                "thumbnails_match": false,
+                "suspicious_signs": []
+              },
+              "reasons": [
+                "Missing original date/time",
+                "EXIF data appears incomplete"
+              ]
+            }
+          },
+          "confidence_scores": {},
+          "warnings": [],
+          "recommendations": [],
+          "persona": "phone_photo_sarah"
+        },
+        "access": {
+          "trial_email_present": false,
+          "trial_granted": false,
+          "credits_charged": 0,
+          "credits_required": 1
+        },
+        "storage": {
+          "provider": "summary-only",
+          "has_full_blob": false
+        }
+      },
+      "validation_errors": []
+    },
+    {
+      "name": "Advanced Extraction",
+      "endpoint": "/api/extract/advanced",
+      "method": "POST",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "filename": "test.jpg",
+        "filesize": "126.00 B",
+        "filetype": "JPG",
+        "mime_type": "image/jpeg",
+        "tier": "enterprise",
+        "fields_extracted": 132,
+        "processing_ms": 2612,
+        "file_integrity": {
+          "md5": "d0d2d3fb27c355cb59191b65f4ea5900",
+          "sha256": "adb48bae94a31efea465fbf7da65c26e3c19c7edf14112101d311efacc6fac50",
+          "sha1": "47e366a0903b79a313126e117399d878d7e20d7e",
+          "crc32": "84c4c7ad"
+        },
+        "filesystem": {
+          "size_bytes": 126,
+          "size_human": "126.00 B",
+          "created": "2026-01-06T17:22:14.831342",
+          "modified": "2026-01-06T17:22:14.831511",
+          "accessed": "2026-01-06T17:22:14.831342",
+          "changed": "2026-01-06T17:22:14.831511",
+          "permissions_octal": "0o644",
+          "permissions_human": "-rw-r--r--",
+          "owner": "pranay",
+          "owner_uid": 501,
+          "group": "wheel",
+          "group_gid": 0,
+          "inode": 195051245,
+          "device": 16777231,
+          "hard_links": 1,
+          "file_type": "regular",
+          "is_hidden": false
+        },
+        "filesystem_source": "server_temp_upload",
+        "calculated": {
+          "aspect_ratio": "1:1",
+          "aspect_ratio_decimal": 1,
+          "megapixels": 0,
+          "orientation": "square",
+          "file_age_days": 0,
+          "file_age_human": "just now",
+          "file_age_hours": 0,
+          "file_age_human_readable": "just now",
+          "time_since_modified_days": 0,
+          "time_since_modified_hours": 0,
+          "time_since_modified_human_readable": "just now",
+          "time_since_accessed_days": 0,
+          "time_since_accessed_hours": 0,
+          "time_since_accessed_human_readable": "just now",
+          "capture_date": null,
+          "capture_date_source": null,
+          "location_embedded": false
+        },
+        "gps": null,
+        "summary": {
+          "filename": "test.jpg",
+          "filesize": "126.00 B",
+          "filesize_bytes": 126,
+          "filetype": "JPG",
+          "mime_type": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        "forensic": {
+          "forensic_digital_signatures": {},
+          "forensic_blockchain_nft": {},
+          "forensic_watermarking": {},
+          "forensic_c2pa": {},
+          "forensic_adobe_credentials": {},
+          "forensic_filesystem": {
+            "file_created": "2026-01-06T17:22:14.831342",
+            "file_modified": "2026-01-06T17:22:14.831511",
+            "file_accessed": "2026-01-06T17:22:16.368815",
+            "file_changed": "2026-01-06T17:22:14.831511",
+            "file_size": 126,
+            "file_permissions": "644",
+            "file_owner": 501,
+            "file_group": 0,
+            "file_inode": 195051245,
+            "file_device": 16777231,
+            "file_hardlinks": 1
+          },
+          "forensic_device_hardware": {},
+          "forensic_network_communication": {},
+          "forensic_email_communication": {},
+          "authentication_is_authenticated": false,
+          "authentication_confidence_score": 0,
+          "authentication_issues": [
+            "No authentication metadata found"
+          ],
+          "authentication_security_flags": [
+            "unauthenticated_content"
+          ],
+          "authentication_processing_errors": [],
+          "integrity_file_hash_md5": "d0d2d3fb27c355cb59191b65f4ea5900",
+          "integrity_file_hash_sha1": "47e366a0903b79a313126e117399d878d7e20d7e",
+          "integrity_file_hash_sha256": "adb48bae94a31efea465fbf7da65c26e3c19c7edf14112101d311efacc6fac50",
+          "integrity_file_hash_sha512": "e272383f42992b2bcc00620c37c7ae5304fbe6d86dd6fe6a4c1afbb5538e703d3576d112357530c35362a135188d11efca891c8408eebc8e4edc422806ad83be",
+          "integrity_error": "'float' object has no attribute 'bit_length'",
+          "fields_extracted": 11
+        },
+        "exif": {},
+        "image": {
+          "width": 1,
+          "height": 1,
+          "format": "JPEG",
+          "mode": "L",
+          "dpi": [
+            72,
+            72
+          ],
+          "bits_per_pixel": 8,
+          "color_palette": "no",
+          "animation": false,
+          "frames": 1,
+          "icc_profile": "no",
+          "is_animated": false,
+          "n_frames": 1,
+          "has_icc_profile": false,
+          "has_transparency": false,
+          "icc_profile_details": {
+            "error": "attempted relative import with no known parent package"
+          }
+        },
+        "iptc": null,
+        "xmp": null,
+        "normalized": {
+          "image_quality": "JPEG",
+          "bit_depth": 8
+        },
+        "web_metadata": null,
+        "social_media": null,
+        "mobile_metadata": null,
+        "forensic_security": null,
+        "action_camera": null,
+        "print_publishing": null,
+        "workflow_dam": null,
+        "audio_advanced": null,
+        "video_advanced": null,
+        "steganography_analysis": null,
+        "manipulation_detection": null,
+        "ai_detection": null,
+        "timeline_analysis": null,
+        "iptc_raw": null,
+        "xmp_raw": null,
+        "thumbnail": {
+          "has_embedded": false,
+          "width": 1,
+          "height": 1
+        },
+        "perceptual_hashes": {
+          "available": false,
+          "error": "broken data stream when reading image file"
+        },
+        "extended_attributes": {
+          "available": false
+        },
+        "extended": {
+          "available": false
+        },
+        "burned_metadata": {
+          "has_burned_metadata": false,
+          "ocr_available": true,
+          "extracted_text": null,
+          "parsed_data": {},
+          "confidence": "none",
+          "processing_errors": []
+        },
+        "metadata_comparison": {
+          "has_both": false,
+          "has_embedded_only": false,
+          "has_burned_only": false,
+          "matches": [],
+          "discrepancies": [],
+          "warnings": [],
+          "summary": {
+            "embedded_metadata_present": false,
+            "burned_metadata_present": false,
+            "gps_comparison": "no_gps",
+            "timestamp_comparison": "no_timestamp",
+            "overall_status": "no_metadata",
+            "sources": {
+              "exif": "none",
+              "gps": "none",
+              "location": "none",
+              "timestamp": "none"
+            }
+          }
+        },
+        "registry_summary": {
+          "image": {
+            "exif": 0,
+            "iptc": 0,
+            "xmp": 0,
+            "mobile": 0,
+            "perceptual_hashes": 2
+          },
+          "email": 0
+        },
+        "locked_fields": [],
+        "extraction_info": {
+          "timestamp": "2026-01-06T17:22:16.280595",
+          "tier": "super",
+          "engine_version": "3.0.0",
+          "exiftool_used": true,
+          "libraries": {
+            "pillow": true,
+            "exifread": true,
+            "ffmpeg": false,
+            "mutagen": false,
+            "pypdf": false,
+            "xattr": false,
+            "exiftool": true,
+            "iptcinfo3": true,
+            "xmp": true,
+            "imagehash": true
+          },
+          "fields_extracted": 132,
+          "locked_categories": 0,
+          "comprehensive_version": "4.0.0",
+          "dynamic_modules_enabled": false,
+          "specialized_engines": {
+            "medical_imaging": true,
+            "astronomical_data": true,
+            "geospatial_analysis": false,
+            "scientific_instruments": true,
+            "drone_telemetry": true,
+            "blockchain_provenance": true,
+            "emerging_technology": true,
+            "advanced_video_analysis": true,
+            "advanced_audio_analysis": true,
+            "document_analysis": true,
+            "scientific_research": true,
+            "multimedia_entertainment": true,
+            "industrial_manufacturing": true,
+            "financial_business": true,
+            "healthcare_medical": true,
+            "transportation_logistics": true,
+            "education_academic": true,
+            "legal_compliance": true,
+            "environmental_sustainability": true,
+            "social_media_digital": true,
+            "gaming_entertainment": true
+          },
+          "comprehensive_fields_extracted": 120,
+          "specialized_field_counts": {
+            "drone_telemetry": 7,
+            "emerging_technology": 12,
+            "scientific_research": 7,
+            "multimedia_entertainment": 7,
+            "industrial_manufacturing": 9,
+            "financial_business": 7
+          },
+          "processing_ms": 2612,
+          "performance_summary": {
+            "total_processing_time_ms": 994.8041439056396,
+            "successful_modules": 13,
+            "failed_modules": 0,
+            "total_module_processing_time_ms": 1.9965171813964844,
+            "overhead_time_ms": 992.8076267242432
+          }
+        },
+        "medical_imaging": null,
+        "astronomical_data": null,
+        "geospatial_analysis": null,
+        "scientific_instruments": null,
+        "drone_telemetry": {
+          "available": true,
+          "flight_data": {},
+          "camera_data": {
+            "exposure_settings": {
+              "iso": null,
+              "shutter_speed": null,
+              "aperture": null,
+              "focal_length": null
+            },
+            "white_balance": null,
+            "color_space": null
+          },
+          "gps_track": {
+            "has_gps": false,
+            "coordinates": {
+              "latitude": null,
+              "longitude": null,
+              "altitude": null
+            },
+            "movement": {
+              "speed": null,
+              "direction": null,
+              "image_direction": null
+            }
+          },
+          "sensor_data": {},
+          "manufacturer_specific": {},
+          "performance": {
+            "drone_telemetry": {
+              "duration_seconds": 9.083747863769531e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "drone_telemetry"
+            }
+          }
+        },
+        "blockchain_provenance": null,
+        "emerging_technology": {
+          "emerging_technology_analysis": {
+            "version": "1.0.0",
+            "engines_available": {
+              "ai_ml_models": false,
+              "quantum_computing": false,
+              "extended_reality": false,
+              "iot_sensors": true,
+              "blockchain_web3": false,
+              "biometric_data": true,
+              "satellite_remote_sensing": false,
+              "synthetic_media_detection": true
+            }
+          },
+          "synthetic_media_analysis": {
+            "available": true,
+            "analysis_type": "synthetic_media_detection",
+            "ai_indicators": {},
+            "deepfake_analysis": {},
+            "generation_artifacts": {},
+            "confidence_scores": {
+              "ai_generation_likelihood": 0,
+              "confidence_factors": [],
+              "analysis_completeness": "partial"
+            }
+          },
+          "performance": {
+            "emerging_technology": {
+              "duration_seconds": 0.0006380081176757812,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "emerging_technology"
+            }
+          }
+        },
+        "document_analysis": null,
+        "scientific_research": {
+          "available": true,
+          "research_type": "unknown",
+          "publication_metadata": {},
+          "laboratory_data": {},
+          "microscopy_data": {},
+          "spectroscopy_data": {},
+          "crystallography_data": {},
+          "genomics_data": {},
+          "chemical_data": {},
+          "environmental_data": {},
+          "particle_physics_data": {},
+          "astronomical_data": {},
+          "materials_science_data": {},
+          "proteomics_data": {},
+          "research_standards": {},
+          "data_quality": {},
+          "performance": {
+            "scientific_research": {
+              "duration_seconds": 8.511543273925781e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "scientific_research"
+            }
+          }
+        },
+        "multimedia_entertainment": {
+          "available": true,
+          "content_type": "unknown",
+          "gaming_assets": {},
+          "streaming_media": {},
+          "digital_art": {},
+          "music_production": {},
+          "video_production": {},
+          "vr_ar_content": {},
+          "interactive_media": {},
+          "digital_publishing": {},
+          "social_media": {},
+          "podcast_audio": {},
+          "live_streaming": {},
+          "entertainment_metadata": {},
+          "content_rating": {},
+          "distribution_info": {},
+          "performance": {
+            "multimedia_entertainment": {
+              "duration_seconds": 8.988380432128906e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "multimedia_entertainment"
+            }
+          }
+        },
+        "industrial_manufacturing": {
+          "available": true,
+          "industrial_type": "materials_specs",
+          "cad_engineering": {},
+          "manufacturing_data": {},
+          "quality_control": {},
+          "iot_sensor_data": {},
+          "process_control": {},
+          "supply_chain": {},
+          "maintenance_records": {},
+          "safety_compliance": {},
+          "production_planning": {},
+          "energy_management": {},
+          "robotics_automation": {},
+          "materials_specs": {
+            "materials_analysis": {
+              "file_type": ".jpg",
+              "detected_keywords": [
+                "test"
+              ]
+            }
+          },
+          "industrial_standards": {},
+          "performance_metrics": {},
+          "performance": {
+            "industrial_manufacturing": {
+              "duration_seconds": 9.584426879882812e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "industrial_manufacturing"
+            }
+          }
+        },
+        "financial_business": {
+          "available": true,
+          "business_type": "unknown",
+          "financial_reports": {},
+          "trading_data": {},
+          "banking_data": {},
+          "insurance_data": {},
+          "accounting_data": {},
+          "business_intelligence": {},
+          "crm_data": {},
+          "erp_data": {},
+          "compliance_data": {},
+          "investment_data": {},
+          "cryptocurrency_data": {},
+          "economic_data": {},
+          "financial_metrics": {},
+          "risk_analysis": {},
+          "performance": {
+            "financial_business": {
+              "duration_seconds": 0.000141143798828125,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "financial_business"
+            }
+          }
+        },
+        "healthcare_medical": {
+          "available": true,
+          "medical_type": "unknown",
+          "ehr_emr_data": {},
+          "medical_imaging": {},
+          "clinical_trial_data": {},
+          "laboratory_results": {},
+          "pharmaceutical_data": {},
+          "genomic_medicine": {},
+          "telemedicine_data": {},
+          "medical_device_data": {},
+          "public_health_data": {},
+          "medical_literature": {},
+          "healthcare_analytics": {},
+          "regulatory_data": {},
+          "clinical_standards": {},
+          "patient_safety": {},
+          "performance": {
+            "healthcare_medical": {
+              "duration_seconds": 0.00019097328186035156,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "healthcare_medical"
+            }
+          }
+        },
+        "transportation_logistics": {
+          "available": true,
+          "transport_type": "unknown",
+          "vehicle_telemetry": {},
+          "fleet_management": {},
+          "shipping_freight": {},
+          "aviation_data": {},
+          "maritime_shipping": {},
+          "rail_transportation": {},
+          "public_transit": {},
+          "autonomous_vehicles": {},
+          "traffic_management": {},
+          "supply_chain": {},
+          "last_mile_delivery": {},
+          "transportation_analytics": {},
+          "safety_compliance": {},
+          "environmental_impact": {},
+          "performance": {
+            "transportation_logistics": {
+              "duration_seconds": 0.0001537799835205078,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "transportation_logistics"
+            }
+          }
+        },
+        "education_academic": {
+          "available": true,
+          "education_type": "assessment",
+          "lms_data": {},
+          "educational_content": {},
+          "academic_research": {},
+          "student_information": {},
+          "assessment_data": {
+            "assessment_type": "unknown",
+            "question_types": [],
+            "scoring_method": null,
+            "rubric_criteria": [],
+            "learning_outcomes": [],
+            "difficulty_distribution": {},
+            "time_limits": null,
+            "adaptive_features": {},
+            "feedback_mechanisms": {},
+            "accessibility_accommodations": {},
+            "proctoring_requirements": {},
+            "statistical_analysis": {}
+          },
+          "educational_technology": {},
+          "institutional_data": {},
+          "library_systems": {},
+          "academic_publishing": {},
+          "educational_standards": {},
+          "professional_development": {},
+          "educational_analytics": {},
+          "performance": {
+            "education_academic": {
+              "duration_seconds": 8.702278137207031e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "education_academic"
+            }
+          }
+        },
+        "legal_compliance": {
+          "available": true,
+          "legal_type": "unknown",
+          "legal_documents": {},
+          "regulatory_compliance": {},
+          "intellectual_property": {},
+          "corporate_governance": {},
+          "risk_management": {},
+          "data_privacy": {},
+          "financial_compliance": {},
+          "employment_law": {},
+          "international_trade": {},
+          "litigation_management": {},
+          "regulatory_reporting": {},
+          "legal_technology": {},
+          "performance": {
+            "legal_compliance": {
+              "duration_seconds": 0.00012969970703125,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "legal_compliance"
+            }
+          }
+        },
+        "environmental_sustainability": {
+          "available": true,
+          "environmental_type": "unknown",
+          "environmental_monitoring": {},
+          "climate_data": {},
+          "renewable_energy": {},
+          "waste_management": {},
+          "biodiversity_conservation": {},
+          "sustainability_reporting": {},
+          "environmental_impact": {},
+          "green_building": {},
+          "water_resources": {},
+          "agriculture_food": {},
+          "transportation_emissions": {},
+          "environmental_compliance": {},
+          "performance": {
+            "environmental_sustainability": {
+              "duration_seconds": 0.00012302398681640625,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "environmental_sustainability"
+            }
+          }
+        },
+        "social_media_digital": {
+          "available": true,
+          "digital_type": "digital_advertising",
+          "social_media_posts": {},
+          "messaging_platforms": {},
+          "digital_marketing": {},
+          "content_management": {},
+          "email_communications": {},
+          "digital_advertising": {
+            "ad_platform": "unknown",
+            "ad_format": "unknown",
+            "targeting_criteria": {},
+            "bid_strategy": {},
+            "budget_management": {},
+            "creative_elements": {},
+            "landing_page_analysis": {},
+            "conversion_funnel": {},
+            "audience_insights": {},
+            "competitive_analysis": {},
+            "ad_scheduling": {},
+            "geographic_targeting": {},
+            "device_targeting": {},
+            "frequency_capping": {}
+          },
+          "influencer_marketing": {},
+          "community_management": {},
+          "live_streaming": {},
+          "digital_events": {},
+          "ecommerce_communications": {},
+          "digital_forensics": {
+            "metadata_preservation": {},
+            "chain_of_custody": {},
+            "digital_signature": {},
+            "timestamp_verification": {},
+            "data_integrity": {}
+          },
+          "performance": {
+            "social_media_digital": {
+              "duration_seconds": 9.322166442871094e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "social_media_digital"
+            }
+          }
+        },
+        "gaming_entertainment": {
+          "available": true,
+          "entertainment_type": "unknown",
+          "video_games": {},
+          "game_development": {},
+          "esports_competitive": {},
+          "streaming_content": {},
+          "game_analytics": {},
+          "digital_entertainment": {},
+          "interactive_media": {},
+          "virtual_worlds": {},
+          "game_monetization": {},
+          "community_social": {},
+          "game_accessibility": {
+            "accessibility_features": [],
+            "inclusive_design": {},
+            "assistive_technology": {},
+            "customization_options": {},
+            "barrier_analysis": {}
+          },
+          "entertainment_distribution": {
+            "distribution_platform": "unknown",
+            "content_delivery": {},
+            "regional_availability": {},
+            "age_ratings": {},
+            "content_warnings": []
+          },
+          "performance": {
+            "gaming_entertainment": {
+              "duration_seconds": 7.796287536621094e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/1767700334831-cd11eade-9169-4629-b734-ef4f4ff59193-test.jpg",
+              "file_size": 126,
+              "module_name": "gaming_entertainment"
+            }
+          }
+        },
+        "email": null,
+        "persona_interpretation": {
+          "key_findings": [
+            "\ud83d\udcc5 Taken on 2026-01-06T17:22:14.831342",
+            "\ud83d\udccd No GPS location data",
+            "\ud83d\udcf1 Taken with Unknown device (device)",
+            "\u274c Signs of modification detected"
+          ],
+          "plain_english_answers": {
+            "when_taken": {
+              "answer": "2026-01-06T17:22:14.831342",
+              "details": "File created unknown time",
+              "source": "filesystem",
+              "confidence": "low",
+              "warning": "No photo creation date found - using file creation date instead"
+            },
+            "location": {
+              "has_location": false,
+              "answer": "No location data",
+              "details": "This photo doesn't have GPS information",
+              "confidence": "n/a",
+              "possible_reasons": [
+                "GPS was disabled when photo was taken",
+                "Location services were off",
+                "Photo was edited and GPS was stripped",
+                "Photo was taken indoors without GPS signal"
+              ]
+            },
+            "device": {
+              "answer": "Unknown device (device)",
+              "device_type": "device",
+              "details": {
+                "make": "unknown",
+                "model": "unknown",
+                "software": "unknown"
+              },
+              "enhanced_info": {
+                "type": "unknown",
+                "category": "unknown",
+                "capabilities": [],
+                "confidence": "low",
+                "identification_method": "none",
+                "make": "unknown",
+                "model": "unknown",
+                "software": "unknown",
+                "is_smartphone": false,
+                "is_dslr": false,
+                "is_mirrorless": false,
+                "is_point_and_shoot": false,
+                "is_webcam": false,
+                "is_drone": false,
+                "estimated_release_year": "unknown",
+                "sensor_type": "unknown",
+                "image_quality_indicators": {}
+              },
+              "confidence": "low"
+            },
+            "authenticity": {
+              "assessment": "likely_modified",
+              "confidence": "low",
+              "score": 45,
+              "answer": "Photo likely modified (low confidence)",
+              "checks_performed": {
+                "has_original_datetime": false,
+                "has_software_signatures": false,
+                "has_gps": false,
+                "exif_intact": false,
+                "thumbnails_match": false,
+                "suspicious_signs": []
+              },
+              "reasons": [
+                "Missing original date/time",
+                "EXIF data appears incomplete"
+              ]
+            }
+          },
+          "confidence_scores": {},
+          "warnings": [],
+          "recommendations": [],
+          "persona": "phone_photo_sarah"
+        },
+        "advanced_analysis": {
+          "enabled": true,
+          "processing_time_ms": 2612,
+          "modules_run": [
+            "steganography_detection",
+            "manipulation_detection",
+            "ai_detection",
+            "timeline_analysis"
+          ],
+          "forensic_score": 100,
+          "authenticity_assessment": "authentic"
+        }
+      },
+      "validation_errors": []
+    },
+    {
+      "name": "Images MVP Extraction",
+      "endpoint": "/api/images_mvp/extract",
+      "method": "POST",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "filename": "test.jpg",
+        "filesize": "126.00 B",
+        "filetype": "JPG",
+        "mime_type": "image/jpeg",
+        "tier": "professional",
+        "fields_extracted": 132,
+        "processing_ms": 2739,
+        "file_integrity": {
+          "md5": "d0d2d3fb27c355cb59191b65f4ea5900",
+          "sha256": "adb48bae94a31efea465fbf7da65c26e3c19c7edf14112101d311efacc6fac50",
+          "sha1": "47e366a0903b79a313126e117399d878d7e20d7e",
+          "crc32": "84c4c7ad"
+        },
+        "filesystem": {
+          "size_bytes": 126,
+          "size_human": "126.00 B",
+          "created": "2026-01-06T17:22:17.458194",
+          "modified": "2026-01-06T17:22:17.458555",
+          "accessed": "2026-01-06T17:22:17.458194",
+          "changed": "2026-01-06T17:22:17.458555",
+          "permissions_octal": "0o644",
+          "permissions_human": "-rw-r--r--",
+          "owner": "pranay",
+          "owner_uid": 501,
+          "group": "wheel",
+          "group_gid": 0,
+          "inode": 195051257,
+          "device": 16777231,
+          "hard_links": 1,
+          "file_type": "regular",
+          "is_hidden": false
+        },
+        "filesystem_source": "server_temp_upload",
+        "calculated": {
+          "aspect_ratio": "1:1",
+          "aspect_ratio_decimal": 1,
+          "megapixels": 0,
+          "orientation": "square",
+          "file_age_days": 0,
+          "file_age_human": "just now",
+          "file_age_hours": 0,
+          "file_age_human_readable": "just now",
+          "time_since_modified_days": 0,
+          "time_since_modified_hours": 0,
+          "time_since_modified_human_readable": "just now",
+          "time_since_accessed_days": 0,
+          "time_since_accessed_hours": 0,
+          "time_since_accessed_human_readable": "just now",
+          "capture_date": null,
+          "capture_date_source": null,
+          "location_embedded": false
+        },
+        "gps": null,
+        "summary": {
+          "filename": "test.jpg",
+          "filesize": "126.00 B",
+          "filesize_bytes": 126,
+          "filetype": "JPG",
+          "mime_type": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        "forensic": {
+          "forensic_digital_signatures": {},
+          "forensic_blockchain_nft": {},
+          "forensic_watermarking": {},
+          "forensic_c2pa": {},
+          "forensic_adobe_credentials": {},
+          "forensic_filesystem": {
+            "file_created": "2026-01-06T17:22:17.458194",
+            "file_modified": "2026-01-06T17:22:17.458555",
+            "file_accessed": "2026-01-06T17:22:18.975684",
+            "file_changed": "2026-01-06T17:22:17.458555",
+            "file_size": 126,
+            "file_permissions": "644",
+            "file_owner": 501,
+            "file_group": 0,
+            "file_inode": 195051257,
+            "file_device": 16777231,
+            "file_hardlinks": 1
+          },
+          "forensic_device_hardware": {},
+          "forensic_network_communication": {},
+          "forensic_email_communication": {},
+          "authentication_is_authenticated": false,
+          "authentication_confidence_score": 0,
+          "authentication_issues": [
+            "No authentication metadata found"
+          ],
+          "authentication_security_flags": [
+            "unauthenticated_content"
+          ],
+          "authentication_processing_errors": [],
+          "integrity_file_hash_md5": "d0d2d3fb27c355cb59191b65f4ea5900",
+          "integrity_file_hash_sha1": "47e366a0903b79a313126e117399d878d7e20d7e",
+          "integrity_file_hash_sha256": "adb48bae94a31efea465fbf7da65c26e3c19c7edf14112101d311efacc6fac50",
+          "integrity_file_hash_sha512": "e272383f42992b2bcc00620c37c7ae5304fbe6d86dd6fe6a4c1afbb5538e703d3576d112357530c35362a135188d11efca891c8408eebc8e4edc422806ad83be",
+          "integrity_error": "'float' object has no attribute 'bit_length'",
+          "fields_extracted": 11
+        },
+        "exif": {},
+        "image": {
+          "width": 1,
+          "height": 1,
+          "format": "JPEG",
+          "mode": "L",
+          "dpi": [
+            72,
+            72
+          ],
+          "bits_per_pixel": 8,
+          "color_palette": "no",
+          "animation": false,
+          "frames": 1,
+          "icc_profile": "no",
+          "is_animated": false,
+          "n_frames": 1,
+          "has_icc_profile": false,
+          "has_transparency": false,
+          "icc_profile_details": {
+            "error": "attempted relative import with no known parent package"
+          }
+        },
+        "iptc": null,
+        "xmp": null,
+        "normalized": {
+          "image_quality": "JPEG",
+          "bit_depth": 8
+        },
+        "web_metadata": null,
+        "social_media": null,
+        "mobile_metadata": null,
+        "forensic_security": null,
+        "action_camera": null,
+        "print_publishing": null,
+        "workflow_dam": null,
+        "audio_advanced": null,
+        "video_advanced": null,
+        "steganography_analysis": null,
+        "manipulation_detection": null,
+        "ai_detection": null,
+        "timeline_analysis": null,
+        "iptc_raw": null,
+        "xmp_raw": null,
+        "thumbnail": {
+          "has_embedded": false,
+          "width": 1,
+          "height": 1
+        },
+        "perceptual_hashes": {
+          "available": false,
+          "error": "broken data stream when reading image file"
+        },
+        "extended_attributes": {
+          "available": false
+        },
+        "extended": {
+          "available": false
+        },
+        "burned_metadata": {
+          "has_burned_metadata": false,
+          "ocr_available": true,
+          "extracted_text": null,
+          "parsed_data": {},
+          "confidence": "none",
+          "processing_errors": []
+        },
+        "metadata_comparison": {
+          "has_both": false,
+          "has_embedded_only": false,
+          "has_burned_only": false,
+          "matches": [],
+          "discrepancies": [],
+          "warnings": [],
+          "summary": {
+            "embedded_metadata_present": false,
+            "burned_metadata_present": false,
+            "gps_comparison": "no_gps",
+            "timestamp_comparison": "no_timestamp",
+            "overall_status": "no_metadata",
+            "sources": {
+              "exif": "none",
+              "gps": "none",
+              "location": "none",
+              "timestamp": "none"
+            }
+          }
+        },
+        "registry_summary": {
+          "image": {
+            "exif": 0,
+            "iptc": 0,
+            "xmp": 0,
+            "mobile": 0,
+            "perceptual_hashes": 2
+          },
+          "email": 0
+        },
+        "locked_fields": [],
+        "extraction_info": {
+          "timestamp": "2026-01-06T17:22:18.885090",
+          "tier": "super",
+          "engine_version": "3.0.0",
+          "exiftool_used": true,
+          "libraries": {
+            "pillow": true,
+            "exifread": true,
+            "ffmpeg": false,
+            "mutagen": false,
+            "pypdf": false,
+            "xattr": false,
+            "exiftool": true,
+            "iptcinfo3": true,
+            "xmp": true,
+            "imagehash": true
+          },
+          "fields_extracted": 132,
+          "locked_categories": 0,
+          "comprehensive_version": "4.0.0",
+          "dynamic_modules_enabled": false,
+          "specialized_engines": {
+            "medical_imaging": true,
+            "astronomical_data": true,
+            "geospatial_analysis": false,
+            "scientific_instruments": true,
+            "drone_telemetry": true,
+            "blockchain_provenance": true,
+            "emerging_technology": true,
+            "advanced_video_analysis": true,
+            "advanced_audio_analysis": true,
+            "document_analysis": true,
+            "scientific_research": true,
+            "multimedia_entertainment": true,
+            "industrial_manufacturing": true,
+            "financial_business": true,
+            "healthcare_medical": true,
+            "transportation_logistics": true,
+            "education_academic": true,
+            "legal_compliance": true,
+            "environmental_sustainability": true,
+            "social_media_digital": true,
+            "gaming_entertainment": true
+          },
+          "comprehensive_fields_extracted": 119,
+          "specialized_field_counts": {
+            "drone_telemetry": 7,
+            "emerging_technology": 12,
+            "scientific_research": 7,
+            "multimedia_entertainment": 7,
+            "industrial_manufacturing": 9,
+            "financial_business": 7
+          },
+          "processing_ms": 2739,
+          "performance_summary": {
+            "total_processing_time_ms": 1055.7000637054443,
+            "successful_modules": 13,
+            "failed_modules": 0,
+            "total_module_processing_time_ms": 1.4514923095703125,
+            "overhead_time_ms": 1054.248571395874
+          },
+          "enhanced_extraction": true,
+          "total_fields_extracted": 132,
+          "streaming_enabled": false,
+          "fallback_extraction": false
+        },
+        "medical_imaging": null,
+        "astronomical_data": null,
+        "geospatial_analysis": null,
+        "scientific_instruments": null,
+        "drone_telemetry": {
+          "available": true,
+          "flight_data": {},
+          "camera_data": {
+            "exposure_settings": {
+              "iso": null,
+              "shutter_speed": null,
+              "aperture": null,
+              "focal_length": null
+            },
+            "white_balance": null,
+            "color_space": null
+          },
+          "gps_track": {
+            "has_gps": false,
+            "coordinates": {
+              "latitude": null,
+              "longitude": null,
+              "altitude": null
+            },
+            "movement": {
+              "speed": null,
+              "direction": null,
+              "image_direction": null
+            }
+          },
+          "sensor_data": {},
+          "manufacturer_specific": {},
+          "performance": {
+            "drone_telemetry": {
+              "duration_seconds": 7.390975952148438e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "drone_telemetry"
+            }
+          }
+        },
+        "blockchain_provenance": null,
+        "emerging_technology": {
+          "emerging_technology_analysis": {
+            "version": "1.0.0",
+            "engines_available": {
+              "ai_ml_models": false,
+              "quantum_computing": false,
+              "extended_reality": false,
+              "iot_sensors": true,
+              "blockchain_web3": false,
+              "biometric_data": true,
+              "satellite_remote_sensing": false,
+              "synthetic_media_detection": true
+            }
+          },
+          "synthetic_media_analysis": {
+            "available": true,
+            "analysis_type": "synthetic_media_detection",
+            "ai_indicators": {},
+            "deepfake_analysis": {},
+            "generation_artifacts": {},
+            "confidence_scores": {
+              "ai_generation_likelihood": 0,
+              "confidence_factors": [],
+              "analysis_completeness": "partial"
+            }
+          },
+          "performance": {
+            "emerging_technology": {
+              "duration_seconds": 0.00044417381286621094,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "emerging_technology"
+            }
+          }
+        },
+        "document_analysis": null,
+        "scientific_research": {
+          "available": true,
+          "research_type": "unknown",
+          "publication_metadata": {},
+          "laboratory_data": {},
+          "microscopy_data": {},
+          "spectroscopy_data": {},
+          "crystallography_data": {},
+          "genomics_data": {},
+          "chemical_data": {},
+          "environmental_data": {},
+          "particle_physics_data": {},
+          "astronomical_data": {},
+          "materials_science_data": {},
+          "proteomics_data": {},
+          "research_standards": {},
+          "data_quality": {},
+          "performance": {
+            "scientific_research": {
+              "duration_seconds": 5.507469177246094e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "scientific_research"
+            }
+          }
+        },
+        "multimedia_entertainment": {
+          "available": true,
+          "content_type": "unknown",
+          "gaming_assets": {},
+          "streaming_media": {},
+          "digital_art": {},
+          "music_production": {},
+          "video_production": {},
+          "vr_ar_content": {},
+          "interactive_media": {},
+          "digital_publishing": {},
+          "social_media": {},
+          "podcast_audio": {},
+          "live_streaming": {},
+          "entertainment_metadata": {},
+          "content_rating": {},
+          "distribution_info": {},
+          "performance": {
+            "multimedia_entertainment": {
+              "duration_seconds": 7.605552673339844e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "multimedia_entertainment"
+            }
+          }
+        },
+        "industrial_manufacturing": {
+          "available": true,
+          "industrial_type": "materials_specs",
+          "cad_engineering": {},
+          "manufacturing_data": {},
+          "quality_control": {},
+          "iot_sensor_data": {},
+          "process_control": {},
+          "supply_chain": {},
+          "maintenance_records": {},
+          "safety_compliance": {},
+          "production_planning": {},
+          "energy_management": {},
+          "robotics_automation": {},
+          "materials_specs": {
+            "materials_analysis": {
+              "file_type": ".jpg",
+              "detected_keywords": [
+                "test"
+              ]
+            }
+          },
+          "industrial_standards": {},
+          "performance_metrics": {},
+          "performance": {
+            "industrial_manufacturing": {
+              "duration_seconds": 0.00025391578674316406,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "industrial_manufacturing"
+            }
+          }
+        },
+        "financial_business": {
+          "available": true,
+          "business_type": "unknown",
+          "financial_reports": {},
+          "trading_data": {},
+          "banking_data": {},
+          "insurance_data": {},
+          "accounting_data": {},
+          "business_intelligence": {},
+          "crm_data": {},
+          "erp_data": {},
+          "compliance_data": {},
+          "investment_data": {},
+          "cryptocurrency_data": {},
+          "economic_data": {},
+          "financial_metrics": {},
+          "risk_analysis": {},
+          "performance": {
+            "financial_business": {
+              "duration_seconds": 8.20159912109375e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "financial_business"
+            }
+          }
+        },
+        "healthcare_medical": {
+          "available": true,
+          "medical_type": "unknown",
+          "ehr_emr_data": {},
+          "medical_imaging": {},
+          "clinical_trial_data": {},
+          "laboratory_results": {},
+          "pharmaceutical_data": {},
+          "genomic_medicine": {},
+          "telemedicine_data": {},
+          "medical_device_data": {},
+          "public_health_data": {},
+          "medical_literature": {},
+          "healthcare_analytics": {},
+          "regulatory_data": {},
+          "clinical_standards": {},
+          "patient_safety": {},
+          "performance": {
+            "healthcare_medical": {
+              "duration_seconds": 7.224082946777344e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "healthcare_medical"
+            }
+          }
+        },
+        "transportation_logistics": {
+          "available": true,
+          "transport_type": "unknown",
+          "vehicle_telemetry": {},
+          "fleet_management": {},
+          "shipping_freight": {},
+          "aviation_data": {},
+          "maritime_shipping": {},
+          "rail_transportation": {},
+          "public_transit": {},
+          "autonomous_vehicles": {},
+          "traffic_management": {},
+          "supply_chain": {},
+          "last_mile_delivery": {},
+          "transportation_analytics": {},
+          "safety_compliance": {},
+          "environmental_impact": {},
+          "performance": {
+            "transportation_logistics": {
+              "duration_seconds": 5.698204040527344e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "transportation_logistics"
+            }
+          }
+        },
+        "education_academic": {
+          "available": true,
+          "education_type": "assessment",
+          "lms_data": {},
+          "educational_content": {},
+          "academic_research": {},
+          "student_information": {},
+          "assessment_data": {
+            "assessment_type": "unknown",
+            "question_types": [],
+            "scoring_method": null,
+            "rubric_criteria": [],
+            "learning_outcomes": [],
+            "difficulty_distribution": {},
+            "time_limits": null,
+            "adaptive_features": {},
+            "feedback_mechanisms": {},
+            "accessibility_accommodations": {},
+            "proctoring_requirements": {},
+            "statistical_analysis": {}
+          },
+          "educational_technology": {},
+          "institutional_data": {},
+          "library_systems": {},
+          "academic_publishing": {},
+          "educational_standards": {},
+          "professional_development": {},
+          "educational_analytics": {},
+          "performance": {
+            "education_academic": {
+              "duration_seconds": 6.508827209472656e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "education_academic"
+            }
+          }
+        },
+        "legal_compliance": {
+          "available": true,
+          "legal_type": "unknown",
+          "legal_documents": {},
+          "regulatory_compliance": {},
+          "intellectual_property": {},
+          "corporate_governance": {},
+          "risk_management": {},
+          "data_privacy": {},
+          "financial_compliance": {},
+          "employment_law": {},
+          "international_trade": {},
+          "litigation_management": {},
+          "regulatory_reporting": {},
+          "legal_technology": {},
+          "performance": {
+            "legal_compliance": {
+              "duration_seconds": 6.604194641113281e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "legal_compliance"
+            }
+          }
+        },
+        "environmental_sustainability": {
+          "available": true,
+          "environmental_type": "unknown",
+          "environmental_monitoring": {},
+          "climate_data": {},
+          "renewable_energy": {},
+          "waste_management": {},
+          "biodiversity_conservation": {},
+          "sustainability_reporting": {},
+          "environmental_impact": {},
+          "green_building": {},
+          "water_resources": {},
+          "agriculture_food": {},
+          "transportation_emissions": {},
+          "environmental_compliance": {},
+          "performance": {
+            "environmental_sustainability": {
+              "duration_seconds": 6.604194641113281e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "environmental_sustainability"
+            }
+          }
+        },
+        "social_media_digital": {
+          "available": true,
+          "digital_type": "unknown",
+          "social_media_posts": {},
+          "messaging_platforms": {},
+          "digital_marketing": {},
+          "content_management": {},
+          "email_communications": {},
+          "digital_advertising": {},
+          "influencer_marketing": {},
+          "community_management": {},
+          "live_streaming": {},
+          "digital_events": {},
+          "ecommerce_communications": {},
+          "digital_forensics": {
+            "metadata_preservation": {},
+            "chain_of_custody": {},
+            "digital_signature": {},
+            "timestamp_verification": {},
+            "data_integrity": {}
+          },
+          "performance": {
+            "social_media_digital": {
+              "duration_seconds": 7.605552673339844e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "social_media_digital"
+            }
+          }
+        },
+        "gaming_entertainment": {
+          "available": true,
+          "entertainment_type": "unknown",
+          "video_games": {},
+          "game_development": {},
+          "esports_competitive": {},
+          "streaming_content": {},
+          "game_analytics": {},
+          "digital_entertainment": {},
+          "interactive_media": {},
+          "virtual_worlds": {},
+          "game_monetization": {},
+          "community_social": {},
+          "game_accessibility": {
+            "accessibility_features": [],
+            "inclusive_design": {},
+            "assistive_technology": {},
+            "customization_options": {},
+            "barrier_analysis": {}
+          },
+          "entertainment_distribution": {
+            "distribution_platform": "unknown",
+            "content_delivery": {},
+            "regional_availability": {},
+            "age_ratings": {},
+            "content_warnings": []
+          },
+          "performance": {
+            "gaming_entertainment": {
+              "duration_seconds": 6.389617919921875e-05,
+              "status": "success",
+              "file_path": "/tmp/metaextract/a4c1f378-e3ac-418f-b66e-6f541850c61c-test.jpg",
+              "file_size": 126,
+              "module_name": "gaming_entertainment"
+            }
+          }
+        },
+        "email": null,
+        "persona_interpretation": {
+          "key_findings": [
+            "\ud83d\udcc5 Taken on 2026-01-06T17:22:17.458194",
+            "\ud83d\udccd No GPS location data",
+            "\ud83d\udcf1 Taken with Unknown device (device)",
+            "\u274c Signs of modification detected"
+          ],
+          "plain_english_answers": {
+            "when_taken": {
+              "answer": "2026-01-06T17:22:17.458194",
+              "details": "File created unknown time",
+              "source": "filesystem",
+              "confidence": "low",
+              "warning": "No photo creation date found - using file creation date instead"
+            },
+            "location": {
+              "has_location": false,
+              "answer": "No location data",
+              "details": "This photo doesn't have GPS information",
+              "confidence": "n/a",
+              "possible_reasons": [
+                "GPS was disabled when photo was taken",
+                "Location services were off",
+                "Photo was edited and GPS was stripped",
+                "Photo was taken indoors without GPS signal"
+              ]
+            },
+            "device": {
+              "answer": "Unknown device (device)",
+              "device_type": "device",
+              "details": {
+                "make": "unknown",
+                "model": "unknown",
+                "software": "unknown"
+              },
+              "enhanced_info": {
+                "type": "unknown",
+                "category": "unknown",
+                "capabilities": [],
+                "confidence": "low",
+                "identification_method": "none",
+                "make": "unknown",
+                "model": "unknown",
+                "software": "unknown",
+                "is_smartphone": false,
+                "is_dslr": false,
+                "is_mirrorless": false,
+                "is_point_and_shoot": false,
+                "is_webcam": false,
+                "is_drone": false,
+                "estimated_release_year": "unknown",
+                "sensor_type": "unknown",
+                "image_quality_indicators": {}
+              },
+              "confidence": "low"
+            },
+            "authenticity": {
+              "assessment": "likely_modified",
+              "confidence": "low",
+              "score": 45,
+              "answer": "Photo likely modified (low confidence)",
+              "checks_performed": {
+                "has_original_datetime": false,
+                "has_software_signatures": false,
+                "has_gps": false,
+                "exif_intact": false,
+                "thumbnails_match": false,
+                "suspicious_signs": []
+              },
+              "reasons": [
+                "Missing original date/time",
+                "EXIF data appears incomplete"
+              ]
+            }
+          },
+          "confidence_scores": {},
+          "warnings": [],
+          "recommendations": [],
+          "persona": "phone_photo_sarah"
+        },
+        "quality_metrics": {
+          "confidence_score": 0.85,
+          "extraction_completeness": 1,
+          "processing_efficiency": 0.88,
+          "format_support_level": "comprehensive",
+          "recommended_actions": [],
+          "enhanced_extraction": true,
+          "streaming_enabled": false
+        },
+        "processing_insights": {
+          "total_fields_extracted": 132,
+          "processing_time_ms": 2739,
+          "memory_usage_mb": 0,
+          "streaming_enabled": false,
+          "fallback_extraction": false,
+          "progress_updates": []
+        },
+        "access": {
+          "trial_email_present": false,
+          "trial_granted": false,
+          "credits_charged": 0,
+          "credits_required": 1
+        }
+      },
+      "validation_errors": []
+    },
+    {
+      "name": "Images MVP Credit Packs",
+      "endpoint": "/api/images_mvp/credits/packs",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "packs": {
+          "starter": {
+            "credits": 25,
+            "price": 400,
+            "priceDisplay": "$4.00",
+            "name": "Starter Pack",
+            "description": "25 images",
+            "productId": "pdt_0NVggYNCK9SUPkDIweP6J"
+          },
+          "pro": {
+            "credits": 100,
+            "price": 1200,
+            "priceDisplay": "$12.00",
+            "name": "Pro Pack",
+            "description": "100 images",
+            "productId": "pdt_0NVggezPHtcIRmmpv9hyS"
+          }
+        },
+        "description": "Credits for using the Images Metadata tool."
+      },
+      "validation_errors": []
+    },
+    {
+      "name": "Forensic Capabilities",
+      "endpoint": "/api/forensic/capabilities",
+      "method": "GET",
+      "success": true,
+      "status_code": 200,
+      "error": null,
+      "response_data": {
+        "tier": "enterprise",
+        "advanced_analysis_available": true,
+        "modules": {
+          "steganography_detection": {
+            "available": true,
+            "description": "Detect hidden data using LSB analysis, frequency domain analysis, and entropy calculation",
+            "methods": [
+              "LSB Analysis",
+              "FFT Analysis",
+              "Entropy Calculation",
+              "Visual Attack Detection"
+            ]
+          },
+          "manipulation_detection": {
+            "available": true,
+            "description": "Detect image manipulation using JPEG analysis, noise patterns, and edge inconsistencies",
+            "methods": [
+              "JPEG Compression Analysis",
+              "Noise Pattern Analysis",
+              "Edge Inconsistency Detection",
+              "Copy-Move Detection"
+            ]
+          },
+          "ai_content_detection": {
+            "available": true,
+            "description": "Detect AI-generated content in images and text",
+            "methods": [
+              "Neural Network Analysis",
+              "Pattern Recognition",
+              "Metadata Analysis"
+            ]
+          },
+          "metadata_comparison": {
+            "available": true,
+            "description": "Compare metadata across multiple files for consistency analysis",
+            "methods": [
+              "Field-by-field Comparison",
+              "Similarity Scoring",
+              "Pattern Detection"
+            ]
+          },
+          "timeline_reconstruction": {
+            "available": true,
+            "description": "Reconstruct chronological timeline from multiple files",
+            "methods": [
+              "Timestamp Correlation",
+              "Gap Analysis",
+              "Chain of Custody"
+            ]
+          },
+          "batch_processing": {
+            "available": true,
+            "description": "Process multiple files simultaneously",
+            "max_files": 100
+          }
+        },
+        "reporting": {
+          "pdf_reports": true,
+          "forensic_reports": true,
+          "expert_witness_format": true
+        },
+        "api_access": {
+          "available": true,
+          "rate_limits": {
+            "requestsPerMinute": 100,
+            "requestsPerDay": 50000
+          }
+        }
+      },
+      "validation_errors": []
+    }
+  ]
+}

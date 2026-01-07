@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .orchestrator import ExtractionOrchestrator
 from .base_engine import ExtractionContext, ExtractionResult, ExtractionStatus
-from ...cache.cache_manager import get_cache_manager
+from server.cache.cache_manager import get_cache_manager
 
 logger = logging.getLogger("metaextract.core.caching_orchestrator")
 

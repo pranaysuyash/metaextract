@@ -5,6 +5,7 @@ Test video extraction using ffprobe directly to verify our logic.
 
 import subprocess
 import json
+import os
 
 def test_ffprobe_capabilities():
     """Test what ffprobe can extract from various video formats."""
