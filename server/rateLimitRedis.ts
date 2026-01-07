@@ -57,10 +57,63 @@ export class RateLimitManager {
   private config: RateLimitConfig;
   private metrics: RateLimitMetrics;
   private initialized: boolean = false;
+  
+  // In-memory fallback for when Redis is unavailable
+  private inMemoryFallback = new Map<string, { count: number; windowStart: number }>();
+  private fallbackWindowMs = 60000; // 1 minute window
+  private fallbackCleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = { ...DEFAULT_RATE_LIMIT_CONFIG, ...config };
     this.metrics = new RateLimitMetrics();
+    this.startFallbackCleanup();
+  }
+  
+  /**
+   * Start periodic cleanup of in-memory fallback entries
+   */
+  private startFallbackCleanup(): void {
+    if (this.fallbackCleanupInterval) return;
+    
+    this.fallbackCleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, entry] of this.inMemoryFallback.entries()) {
+        if (now - entry.windowStart > this.fallbackWindowMs * 2) {
+          this.inMemoryFallback.delete(key);
+        }
+      }
+    }, this.fallbackWindowMs);
+    
+    if (typeof this.fallbackCleanupInterval.unref === 'function') {
+      this.fallbackCleanupInterval.unref();
+    }
+  }
+  
+  /**
+   * In-memory rate limit check when Redis is unavailable
+   * Uses conservative limits to prevent abuse during Redis outages
+   */
+  private checkInMemoryFallback(
+    identifier: string, 
+    limits: { requestsPerMinute: number; requestsPerDay: number }
+  ): { allowed: boolean; remaining: number } {
+    const now = Date.now();
+    const entry = this.inMemoryFallback.get(identifier);
+    
+    // Conservative limit during Redis outage (50% of normal)
+    const fallbackLimit = Math.max(1, Math.floor(limits.requestsPerMinute / 2));
+    
+    if (!entry || now - entry.windowStart > this.fallbackWindowMs) {
+      this.inMemoryFallback.set(identifier, { count: 1, windowStart: now });
+      return { allowed: true, remaining: fallbackLimit - 1 };
+    }
+    
+    if (entry.count >= fallbackLimit) {
+      return { allowed: false, remaining: 0 };
+    }
+    
+    entry.count++;
+    return { allowed: true, remaining: fallbackLimit - entry.count };
   }
 
   async initialize(): Promise<void> {
@@ -185,10 +238,23 @@ export class RateLimitManager {
       console.error('❌ Rate limit check error:', error);
       this.metrics.incrementError();
 
-      // Fail open - allow request on error
+      // SECURITY FIX: Use in-memory fallback instead of fail-open
+      // This prevents attackers from bypassing rate limits by causing Redis errors
+      console.warn('⚠️  Using in-memory rate limit fallback due to Redis error');
+      const fallbackResult = this.checkInMemoryFallback(identifier, limits);
+      
+      if (!fallbackResult.allowed) {
+        return {
+          allowed: false,
+          remaining: 0,
+          resetTime: Date.now() + 60000,
+          retryAfter: 60,
+        };
+      }
+      
       return {
         allowed: true,
-        remaining: limits.requestsPerMinute,
+        remaining: fallbackResult.remaining,
         resetTime: Date.now() + 60000,
       };
     }

@@ -1,10 +1,16 @@
 /**
  * MetaExtract Free Quota Enforcement System
- * Implements "2 Free Images per Device" with 3-tier protection
+ * Implements "2 Free Images per Device" with 4-tier protection
  *
- * Tier 1: Device-based quota with signed tokens
- * Tier 2: IP rate limiting and abuse detection
- * Tier 3: Advanced fingerprinting and CAPTCHA escalation
+ * Tier 1: Server-issued device tokens (not client-controllable)
+ * Tier 2: IP rate limiting with fail-closed Redis fallback
+ * Tier 3: Advanced fingerprinting and abuse scoring
+ * Tier 4: Circuit breaker for load shedding
+ * 
+ * Security changelog:
+ * - 2026-01-07: Added server-issued device tokens (device-token.ts)
+ * - 2026-01-07: Fixed fail-open Redis to use in-memory fallback
+ * - 2026-01-07: Added circuit breaker for load shedding
  */
 
 import crypto from 'crypto';
@@ -13,6 +19,12 @@ import { eq, sql } from 'drizzle-orm';
 import { getDatabase } from '../db';
 import { clientUsage } from '@shared/schema';
 import { storage } from '../storage/index';
+import { circuitBreaker } from './circuit-breaker';
+import { 
+  getOrCreateDeviceToken, 
+  verifyDeviceToken as verifyServerDeviceToken,
+  isDeviceSuspicious 
+} from './device-token';
 // import { trackImagesMvpEvent } from '../lib/images-mvp-analytics';
 
 // Token secret validation - fail fast if not set
@@ -524,4 +536,64 @@ function isDatabaseConnected(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Check circuit breaker for free tier requests
+ * Returns delay info if system is under load
+ */
+export function checkCircuitBreaker(isPaid: boolean): {
+  allowed: boolean;
+  delayed: boolean;
+  message: string;
+  estimatedWaitSeconds: number;
+} {
+  if (isPaid) {
+    const result = circuitBreaker.checkPaidTier();
+    return {
+      allowed: result.allowed,
+      delayed: result.delayed,
+      message: result.message,
+      estimatedWaitSeconds: result.estimatedWaitSeconds,
+    };
+  }
+  
+  const result = circuitBreaker.checkFreeTier();
+  return {
+    allowed: result.allowed,
+    delayed: result.delayed,
+    message: result.message,
+    estimatedWaitSeconds: result.estimatedWaitSeconds,
+  };
+}
+
+/**
+ * Get server-issued device ID for quota tracking
+ * Uses the new secure device token system
+ */
+export function getServerDeviceId(req: Request, res: Response): string {
+  return getOrCreateDeviceToken(req, res);
+}
+
+/**
+ * Check if device shows suspicious behavior patterns
+ */
+export async function checkDeviceSuspicious(
+  req: Request, 
+  deviceId: string
+): Promise<boolean> {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  
+  // Get recent IPs for this device
+  const recentActivity = await getRecentActivity(deviceId, ip, 15); // Last 15 minutes
+  const recentIps = recentActivity.map(a => a.ip).filter(Boolean);
+  
+  // Get device token for age check
+  const token = req.cookies?.metaextract_device;
+  if (!token) return false;
+  
+  const decoded = verifyServerDeviceToken(token);
+  if (!decoded) return false;
+  
+  return isDeviceSuspicious(decoded, ip, recentIps);
 }

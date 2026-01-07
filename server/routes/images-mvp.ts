@@ -30,7 +30,11 @@ import {
   getClientUsage,
   incrementUsage,
   handleQuotaExceeded,
+  checkCircuitBreaker,
+  getServerDeviceId,
+  checkDeviceSuspicious,
 } from '../utils/free-quota-enforcement';
+import { circuitBreaker } from '../utils/circuit-breaker';
 import { IMAGES_MVP_CREDIT_PACKS, DODO_IMAGES_MVP_PRODUCTS } from '../payments';
 import { getClientIP, sanitizeFilename } from '../security-utils';
 import { rateLimitExtraction } from '../rateLimitMiddleware';
@@ -1184,37 +1188,67 @@ export function registerImagesMvpRoutes(app: Express) {
             // No trial available: allow up to 2 free extractions per device, then require credits.
             const ip = req.ip || req.socket.remoteAddress || 'unknown';
 
-            let clientToken = req.cookies?.metaextract_client;
-            let decoded = verifyClientToken(clientToken ?? '');
+            // Use SERVER-ISSUED device token (resistant to cookie clearing)
+            // Falls back to old client token for backward compatibility
+            let deviceId: string;
+            try {
+              deviceId = getServerDeviceId(req, res);
+            } catch {
+              // Fallback to legacy client token
+              let clientToken = req.cookies?.metaextract_client;
+              let decoded = verifyClientToken(clientToken ?? '');
 
-            if (!decoded) {
-              clientToken = generateClientToken();
-              res.cookie('metaextract_client', clientToken, {
-                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                path: '/',
-                httpOnly: true,
-                // Lax so quota cookie survives checkout redirects.
-                sameSite: 'lax',
-              });
-              decoded = verifyClientToken(clientToken);
+              if (!decoded) {
+                clientToken = generateClientToken();
+                res.cookie('metaextract_client', clientToken, {
+                  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+                  path: '/',
+                  httpOnly: true,
+                  sameSite: 'lax',
+                });
+                decoded = verifyClientToken(clientToken);
+              }
+
+              if (!decoded) {
+                return res.status(429).json({
+                  error: 'Invalid session',
+                  message: 'Please refresh the page to continue.',
+                  requires_refresh: true,
+                });
+              }
+              deviceId = decoded.clientId;
             }
 
-            if (!decoded) {
-              return res.status(429).json({
-                error: 'Invalid session',
-                message: 'Please refresh the page to continue.',
-                requires_refresh: true,
+            // Check for suspicious device behavior
+            const isSuspicious = await checkDeviceSuspicious(req, deviceId);
+            if (isSuspicious) {
+              console.warn(`[Security] Suspicious device detected: ${deviceId} from IP ${ip}`);
+              // For now, just log - in future, could require CAPTCHA
+            }
+
+            // Check circuit breaker for free tier load shedding
+            const loadCheck = checkCircuitBreaker(false); // isPaid = false
+            if (loadCheck.delayed && loadCheck.estimatedWaitSeconds > 60) {
+              // Under extreme load, suggest purchasing
+              return res.status(503).json({
+                error: 'High demand',
+                message: loadCheck.message,
+                estimated_wait_seconds: loadCheck.estimatedWaitSeconds,
+                upgrade_available: true,
               });
             }
 
-            const usage = await getClientUsage(decoded.clientId);
+            const usage = await getClientUsage(deviceId);
             const freeUsed = usage?.freeUsed || 0;
             const freeLimit = 2;
 
             if (freeUsed < freeLimit) {
-              await incrementUsage(decoded.clientId, ip);
+              await incrementUsage(deviceId, ip);
               useTrial = true; // Use filtered trial view for free device extractions
               chargeCredits = false;
+              
+              // Record success for circuit breaker recovery
+              circuitBreaker.recordSuccess();
             } else {
               // Free quota exhausted: require credits.
               const balanceKey = authReq.user?.id
@@ -1228,7 +1262,7 @@ export function registerImagesMvpRoutes(app: Express) {
               creditBalanceId = balance?.id ?? null;
 
               if (!balance || balance.credits < creditCost) {
-                await handleQuotaExceeded(req, res, decoded.clientId, ip);
+                await handleQuotaExceeded(req, res, deviceId, ip);
                 return;
               }
               chargeCredits = true;
