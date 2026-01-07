@@ -465,14 +465,15 @@ export function SimpleUploadZone() {
             ? 'Tap to select image'
             : 'Upload image drop zone. Drag and drop a file here or click to browse.'
         }
-        className={cn(
-          'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-4 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[160px] sm:min-h-auto touch-manipulation select-none',
-          isUploading
-            ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
-            : isDragActive
-              ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
-              : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
-        )}
+          className={cn(
+            'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
+            isUploading
+              ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
+              : isDragActive
+                ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
+                : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
+          )}
+
       >
         <input
           id="mvp-upload"

@@ -1107,12 +1107,12 @@ export function registerImagesMvpRoutes(app: Express) {
           ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
           : false;
         if (!isSupportedMime && !isSupportedExt) {
-          // Return a 400 with specific message
-          return res.status(400).json({
-            error: 'Invalid file type',
+          // Return a 403 Forbidden for unsupported files as per security policy
+          return res.status(403).json({
+            error: 'File type not permitted',
             message:
-              'We support popular photo formats: JPG, PNG, HEIC (iPhone), WebP, and more. Please upload a standard photo.',
-            code: 'INVALID_FILE_TYPE',
+              'For security reasons, we only support standard photo formats: JPG, PNG, HEIC, and WebP. Please upload a supported image file.',
+            code: 'FILE_TYPE_FORBIDDEN',
             supported: ['JPG', 'JPEG', 'PNG', 'HEIC', 'HEIF', 'WebP'],
           });
         }
@@ -1122,12 +1122,12 @@ export function registerImagesMvpRoutes(app: Express) {
           req.file.buffer || (await fs.readFile(req.file.path));
         const detectedType = await fileTypeFromBuffer(fileBuffer);
         if (detectedType && !SUPPORTED_IMAGE_MIMES.has(detectedType.mime)) {
-          // File content doesn't match a supported image type
-          return res.status(400).json({
+          // File content doesn't match a supported image type - potential spoofing attempt
+          return res.status(403).json({
             error: 'Invalid file content',
             message:
-              'The uploaded file does not appear to be a valid image. Please upload a standard photo file.',
-            code: 'INVALID_MAGIC_BYTES',
+              'The uploaded file content does not match a supported image type. Please upload a genuine photo file.',
+            code: 'INVALID_MAGIC_BYTES_FORBIDDEN',
             detected: detectedType.mime,
           });
         }

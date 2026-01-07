@@ -418,8 +418,12 @@ export class DatabaseStorage implements IStorage {
         .where(eq(creditBalances.sessionId, sessionId))
         .limit(1);
       return balance;
-    } catch (error) {
-      console.error('Failed to get credit balance by sessionId:', error);
+    } catch (error: any) {
+      if (error?.message?.includes('aborted transaction')) {
+        console.error('❌ Critical: Database transaction aborted. Connection may be poisoned.', error);
+      } else {
+        console.error('Failed to get credit balance by sessionId:', error);
+      }
       return undefined;
     }
   }
