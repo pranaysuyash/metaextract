@@ -2970,8 +2970,15 @@ def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
 
 
 def get_audio_codec_details_field_count() -> int:
-    """Return estimated field count for audio codec details module."""
-    return 930  # Expanded Phase 2 target
+    """
+    Return estimated field count for audio codec details module.
+
+    Includes:
+    - Mutagen-based extraction: 930 fields
+    - Audio bitstream parsing: 68 fields
+    Total: 998 fields
+    """
+    return 998  # Updated with audio bitstream parser
 
 
 def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
