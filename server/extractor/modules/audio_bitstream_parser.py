@@ -390,11 +390,11 @@ if __name__ == "__main__":
         if data.startswith(b'\xff\xfb') or data.startswith(b'\xff\xfa'):
             print("MP3 detected")
             header = parse_mp3_frame_header(data[:4])
-            print(f"Frame header: {header['valid']}")
+            print(f"Frame header valid: {header['valid']}")
 
         elif data.startswith(b'\xff\xf1') or data.startswith(b'\xff\xf9'):
             print("AAC ADTS detected")
             adts = parse_aac_adts_header(data[:9])
-            print(f"ADTS header: {adts['valid']}")
+            print(f"ADTS header valid: {adts['valid']}")
 
         print(f"Total audio bitstream fields: {get_audio_bitstream_field_count()}")

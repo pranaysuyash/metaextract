@@ -11,6 +11,23 @@ import subprocess
 import json
 import hashlib
 import xml.etree.ElementTree as ET
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Import audio bitstream parser
+try:
+    from .audio_bitstream_parser import (
+        parse_mp3_frame_header,
+        parse_lame_tag,
+        parse_aac_adts_header,
+        parse_opus_header,
+        parse_vorbis_header,
+        get_audio_bitstream_field_count,
+    )
+    AUDIO_BITSTREAM_AVAILABLE = True
+except ImportError:
+    AUDIO_BITSTREAM_AVAILABLE = False
 
 from .shared_utils import count_fields as _count_fields, decode_mp4_data as _decode_mp4_data
 
@@ -2953,15 +2970,8 @@ def extract_generic_audio_properties(stream: Dict) -> Dict[str, Any]:
 
 
 def get_audio_codec_details_field_count() -> int:
-    """
-    Return estimated field count for audio codec details module.
-
-    Includes:
-    - Mutagen-based extraction: 930 fields
-    - Audio bitstream parsing: 68 fields
-    Total: 998 fields
-    """
-    return 998  # Updated with audio bitstream parser
+    """Return estimated field count for audio codec details module."""
+    return 930  # Expanded Phase 2 target
 
 
 def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
@@ -3000,10 +3010,69 @@ def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
             result["stream_details"]["has_tags"] = True
             result["stream_details"]["tag_count"] = len(audio_file.tags) if audio_file.tags else 0
 
-        # Map to registry fields
+         # Map to registry fields
         for key, value in result["codec_info"].items():
             if value is not None:
                 result["audio_parameters"][f"audio_{key}"] = str(value)[:200]
+
+        # Binary Bitstream Parsing (NEW - Audio Codec Deep Analysis)
+        if AUDIO_BITSTREAM_AVAILABLE:
+            try:
+                with open(filepath, 'rb') as f:
+                    file_data = f.read(1000)
+
+                # MP3 detection and parsing
+                if file_data.startswith(b'\xff\xfb') or file_data.startswith(b'\xff\xfa'):
+                    result["bitstream_analysis"] = {}
+                    result["bitstream_analysis"]["codec_type"] = "MP3"
+                    result["bitstream_analysis"]["file_format"] = "MP3"
+
+                    # Parse MP3 frame header
+                    mp3_header = parse_mp3_frame_header(file_data[:4])
+                    result["bitstream_analysis"]["frame_header"] = mp3_header
+                    result["field_count"] += 14
+
+                    # Parse LAME tag
+                    lame_tag = parse_lame_tag(file_data)
+                    result["bitstream_analysis"]["lame_tag"] = lame_tag
+                    result["field_count"] += 16
+
+                # AAC ADTS detection and parsing
+                elif file_data.startswith(b'\xff\xf1') or file_data.startswith(b'\xff\xf9'):
+                    result["bitstream_analysis"] = {}
+                    result["bitstream_analysis"]["codec_type"] = "AAC"
+                    result["bitstream_analysis"]["file_format"] = "AAC ADTS"
+
+                    # Parse AAC ADTS header
+                    adts_header = parse_aac_adts_header(file_data[:9])
+                    result["bitstream_analysis"]["adts_header"] = adts_header
+                    result["field_count"] += 16
+
+                # Opus detection (Ogg container)
+                elif file_data.startswith(b'OggS') and b'OpusHead' in file_data[:50]:
+                    result["bitstream_analysis"] = {}
+                    result["bitstream_analysis"]["codec_type"] = "Opus"
+                    result["bitstream_analysis"]["file_format"] = "Ogg/Opus"
+
+                    # Parse Opus header
+                    opus_header = parse_opus_header(file_data[:21])
+                    result["bitstream_analysis"]["opus_header"] = opus_header
+                    result["field_count"] += 10
+
+                # Vorbis detection (Ogg container)
+                elif file_data.startswith(b'OggS') and b'\x01vorbis' in file_data[:50]:
+                    result["bitstream_analysis"] = {}
+                    result["bitstream_analysis"]["codec_type"] = "Vorbis"
+                    result["bitstream_analysis"]["file_format"] = "Ogg/Vorbis"
+
+                    # Parse Vorbis header
+                    vorbis_header = parse_vorbis_header(file_data[:50])
+                    result["bitstream_analysis"]["vorbis_header"] = vorbis_header
+                    result["field_count"] += 12
+
+            except Exception as e:
+                logger.warning(f"Audio bitstream parsing error: {e}")
+                result["bitstream_error"] = str(e)[:200]
 
         result["fields_extracted"] = len(result["codec_info"]) + len(result["audio_parameters"])
 
