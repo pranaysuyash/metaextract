@@ -2982,6 +2982,7 @@ def get_audio_codec_details_field_count() -> int:
 
 
 def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
+    """Audio bitstream integration marker"""
     '''Extract detailed audio codec metadata from audio files'''
     result = {
         "codec_info": {},
@@ -3037,12 +3038,12 @@ def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
                     # Parse MP3 frame header
                     mp3_header = parse_mp3_frame_header(file_data[:4])
                     result["bitstream_analysis"]["frame_header"] = mp3_header
-                    result["field_count"] += 14
+                    result["fields_extracted"] += 14
 
                     # Parse LAME tag
                     lame_tag = parse_lame_tag(file_data)
                     result["bitstream_analysis"]["lame_tag"] = lame_tag
-                    result["field_count"] += 16
+                    result["fields_extracted"] += 16
 
                 # AAC ADTS detection and parsing
                 elif file_data.startswith(b'\xff\xf1') or file_data.startswith(b'\xff\xf9'):
@@ -3053,7 +3054,7 @@ def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
                     # Parse AAC ADTS header
                     adts_header = parse_aac_adts_header(file_data[:9])
                     result["bitstream_analysis"]["adts_header"] = adts_header
-                    result["field_count"] += 16
+                    result["fields_extracted"] += 16
 
                 # Opus detection (Ogg container)
                 elif file_data.startswith(b'OggS') and b'OpusHead' in file_data[:50]:
@@ -3064,7 +3065,7 @@ def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
                     # Parse Opus header
                     opus_header = parse_opus_header(file_data[:21])
                     result["bitstream_analysis"]["opus_header"] = opus_header
-                    result["field_count"] += 10
+                    result["fields_extracted"] += 10
 
                 # Vorbis detection (Ogg container)
                 elif file_data.startswith(b'OggS') and b'\x01vorbis' in file_data[:50]:
@@ -3075,13 +3076,11 @@ def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
                     # Parse Vorbis header
                     vorbis_header = parse_vorbis_header(file_data[:50])
                     result["bitstream_analysis"]["vorbis_header"] = vorbis_header
-                    result["field_count"] += 12
+                    result["fields_extracted"] += 12
 
             except Exception as e:
                 logger.warning(f"Audio bitstream parsing error: {e}")
                 result["bitstream_error"] = str(e)[:200]
-
-        result["fields_extracted"] = len(result["codec_info"]) + len(result["audio_parameters"])
 
     except ImportError:
         result["error"] = "Mutagen library not available"
