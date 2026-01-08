@@ -11,9 +11,11 @@ import {
   type ProgressiveDisclosureData,
 } from '@/components/v2-results/ProgressiveDisclosure';
 import {
-  ActionsToolbar,
-  ActionsToolbarCompact,
-} from '@/components/v2-results/ActionsToolbar';
+    ActionsToolbar,
+    ActionsToolbarCompact,
+    ExpertView,
+  } from '@/components/v2-results';
+
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, FileText, Cpu, Smartphone } from 'lucide-react';
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
@@ -420,28 +422,35 @@ export default function ResultsV2() {
             </div>
           )}
 
-          {/* Actions Toolbar */}
-          <div
-            className={cn(
-              'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
-            )}
-          >
-            {isMobile ? (
-              <ActionsToolbarCompact
-                filename={metadata.filename}
-                metadata={metadata}
-                className="m-4"
-              />
-            ) : (
-              <ActionsToolbar
-                filename={metadata.filename}
-                metadata={metadata}
-                className="p-6"
-              />
-            )}
+            {/* Actions Toolbar */}
+            <div
+              className={cn(
+                'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
+              )}
+            >
+              {isMobile ? (
+                <ActionsToolbarCompact
+                  filename={metadata.filename}
+                  metadata={metadata}
+                  className="m-4"
+                />
+              ) : (
+                <ActionsToolbar
+                  filename={metadata.filename}
+                  metadata={metadata}
+                  className="p-6"
+                />
+              )}
+            </div>
+
+            {/* Expert Registry View (v4.0 Launch Enhancement) */}
+            <ExpertView 
+              metadata={metadata} 
+              className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg"
+            />
           </div>
         </div>
       </div>
-    </div>
+
   );
 }

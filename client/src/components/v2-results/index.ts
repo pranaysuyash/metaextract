@@ -31,6 +31,9 @@ export type {
   ForensicSummaryBadgeProps,
 } from './ForensicBadges';
 
+// Expert Registry View (131k fields)
+export { ExpertView } from './ExpertView';
+
 // Enhanced key findings with forensic integration
 export { KeyFindings, KeyFindingsCompact } from './KeyFindings';
 export type { KeyFindingsProps } from './KeyFindings';
