@@ -42,6 +42,12 @@ echo "Added lines: $ADDED"
 echo "Deleted lines: $DELETED"
 echo "Churn: $CHURN"
 
+HEAD_SHA=$(git rev-parse HEAD)
+if [ "${CI:-false}" != "true" ] && [ "${ALLOW_BIG_CHANGE:-0}" = "1" ] && [ "${ALLOW_BIG_CHANGE_SHA:-}" = "$HEAD_SHA" ]; then
+  echo "OVERRIDE: ALLOW_BIG_CHANGE=1 for HEAD $HEAD_SHA. LOC guard bypassed."
+  exit 0
+fi
+
 FAILED=0
 if [ "$FILE_COUNT" -gt "$MAX_FILES" ]; then
   echo "FAIL: too many files changed"
