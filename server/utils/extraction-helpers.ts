@@ -627,13 +627,13 @@ export async function extractMetadataWithPython(
       args.push('--max-dim', String(maxDim));
     }
 
-    // Log the Python process startup
-    console.log(
-      `[DEBUG] extractMetadataWithPython: tier=${tier}, file=${path.basename(filePath)}`
-    );
-    console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
-    console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
-    console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
+    // Log the Python process startup (opt-in, to support manual smoke)
+    if (process.env.METAEXTRACT_LOG_PY_ARGS === '1') {
+      console.log(
+        `[DEBUG] extractMetadataWithPython: tier=${tier}, file=${path.basename(filePath)}`
+      );
+      console.log(`Command: ${pythonExecutable} ${args.join(' ')}`);
+    }
 
     const python = spawn(pythonExecutable, args);
 

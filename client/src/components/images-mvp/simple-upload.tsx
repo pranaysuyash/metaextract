@@ -776,10 +776,10 @@ export function SimpleUploadZone() {
               </div>
               <div className="grid gap-1">
                 <div>
-                  Base {activeQuoteEntry.breakdown.base} + Embedding{' '}
-                  {activeQuoteEntry.breakdown.embedding} + OCR{' '}
-                  {activeQuoteEntry.breakdown.ocr} + Forensics{' '}
-                  {activeQuoteEntry.breakdown.forensics} + Size{' '}
+                  Base scan{' '}
+                  {activeQuoteEntry.breakdown.base +
+                    activeQuoteEntry.breakdown.embedding}{' '}
+                  + Text scan {activeQuoteEntry.breakdown.ocr} + Size{' '}
                   {activeQuoteEntry.breakdown.mp} ={' '}
                   <span className="text-white font-semibold">
                     {activeQuoteEntry.creditsTotal}
@@ -792,7 +792,7 @@ export function SimpleUploadZone() {
                   </span>{' '}
                   credits
                   {quoteData?.quote.standardEquivalents
-                    ? ` (~${quoteData.quote.standardEquivalents} standard images)`
+                    ? ` (~${quoteData.quote.standardEquivalents} base scans)`
                     : ''}
                 </div>
               </div>
@@ -803,29 +803,11 @@ export function SimpleUploadZone() {
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={quoteOps.embedding}
-                onChange={() => handleOpsToggle('embedding')}
-                disabled={quoteLoading || isUploading}
-              />
-              Embedding (default)
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
                 checked={quoteOps.ocr}
                 onChange={() => handleOpsToggle('ocr')}
                 disabled={quoteLoading || isUploading}
               />
-              OCR
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={quoteOps.forensics}
-                onChange={() => handleOpsToggle('forensics')}
-                disabled={quoteLoading || isUploading}
-              />
-              Forensics
+              Text scan (+6 credits)
             </label>
           </div>
 
