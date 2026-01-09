@@ -284,8 +284,8 @@ export function organizeMetadata(
       }
       
       // Search query
-      if (filter.query) {
-        const queryLower = filter.query.toLowerCase();
+      if (filter.query && filter.query.trim()) {
+        const queryLower = filter.query.trim().toLowerCase();
         if (!field.searchableText.includes(queryLower)) {
           return false;
         }
