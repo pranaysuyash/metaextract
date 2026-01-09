@@ -12,25 +12,64 @@ import {
   getImagesMvpSessionId,
   trackImagesMvpEvent,
 } from '@/lib/images-mvp-analytics';
+import { validateUploadFile } from '@/lib/upload-guards';
 
-const SUPPORTED_EXTENSIONS = [
-  // Popular photo formats for casual users
+const IMAGES_MVP_MAX_BYTES = 100 * 1024 * 1024;
+const IMAGES_MVP_ALLOWED_MIMES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/tiff',
+  'image/bmp',
+  'image/gif',
+  'image/x-icon',
+  'image/svg+xml',
+  'image/x-raw',
+  'image/x-canon-cr2',
+  'image/x-nikon-nef',
+  'image/x-sony-arw',
+  'image/x-adobe-dng',
+  'image/x-olympus-orf',
+  'image/x-fuji-raf',
+  'image/x-pentax-pef',
+  'image/x-sigma-x3f',
+  'image/x-samsung-srw',
+  'image/x-panasonic-rw2',
+];
+const IMAGES_MVP_ALLOWED_EXTENSIONS = [
   '.jpg',
   '.jpeg',
   '.png',
+  '.webp',
   '.heic',
   '.heif',
-  '.webp',
+  '.tiff',
+  '.tif',
+  '.bmp',
+  '.gif',
+  '.ico',
+  '.svg',
+  '.raw',
+  '.cr2',
+  '.nef',
+  '.arw',
+  '.dng',
+  '.orf',
+  '.raf',
+  '.pef',
+  '.x3f',
+  '.srw',
+  '.rw2',
 ];
 
-const SUPPORTED_MIMES = [
-  // Popular photo formats for casual users
-  'image/jpeg',
-  'image/png',
-  'image/heic',
-  'image/heif',
-  'image/webp',
-];
+const IMAGES_MVP_UPLOAD_GUARD = {
+  maxBytes: IMAGES_MVP_MAX_BYTES,
+  allowedMimes: IMAGES_MVP_ALLOWED_MIMES,
+  allowedExtensions: IMAGES_MVP_ALLOWED_EXTENSIONS,
+};
 
 export function SimpleUploadZone() {
   const [isDragActive, setIsDragActive] = useState(false);
@@ -158,8 +197,6 @@ export function SimpleUploadZone() {
 
   const handleFile = (file: File) => {
     const ext = getExtension(file.name);
-    const isSupportedExt = ext ? SUPPORTED_EXTENSIONS.includes(ext) : false;
-    const isSupportedMime = SUPPORTED_MIMES.includes(file.type);
     const mimeType = file.type || 'application/octet-stream';
     const sizeBucket = getFileSizeBucket(file.size);
 
@@ -171,43 +208,26 @@ export function SimpleUploadZone() {
       has_trial_email: false,
     });
 
-    if (!isSupportedExt && !isSupportedMime) {
+    const guard = validateUploadFile(file, IMAGES_MVP_UPLOAD_GUARD);
+    if (!guard.ok) {
       trackImagesMvpEvent('upload_rejected', {
         extension: ext,
         mime_type: mimeType,
         size_bytes: file.size,
         size_bucket: sizeBucket,
-        reason: 'unsupported_format',
+        reason: guard.reason || 'unsupported_format',
       });
       toast({
-        title: 'Unsupported File',
-        description:
-          'Please upload a photo (JPG, PNG, HEIC from iPhone, or WebP).',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Client-side file size validation (100MB limit)
-    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-    if (file.size > MAX_FILE_SIZE) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      trackImagesMvpEvent('upload_rejected', {
-        extension: ext,
-        mime_type: mimeType,
-        size_bytes: file.size,
-        size_bucket: sizeBucket,
-        reason: 'file_too_large',
-      });
-      toast({
-        title: 'File Too Large',
-        description: `Your file is ${sizeMB}MB. Maximum size is 100MB. Try compressing or resizing the image.`,
+        title: 'Upload blocked',
+        description: guard.message || 'Unsupported file.',
         variant: 'destructive',
       });
       return;
     }
 
     setPendingFile(file);
+    sessionStorage.setItem('images_mvp_status', 'uploading');
+    sessionStorage.removeItem('images_mvp_error');
     void uploadFile(file);
   };
 
@@ -223,6 +243,7 @@ export function SimpleUploadZone() {
     setCurrentSessionId(sessionId);
     setShowProgressTracker(true);
     const formData = new FormData();
+    sessionStorage.setItem('images_mvp_status', 'processing');
 
     // Append metadata fields BEFORE file to ensure streaming parsers see them first
     formData.append('session_id', sessionId);
@@ -307,6 +328,8 @@ export function SimpleUploadZone() {
 
       setUploadProgress(100);
       sessionStorage.setItem('currentMetadata', JSON.stringify(data));
+      sessionStorage.setItem('images_mvp_status', 'success');
+      sessionStorage.removeItem('images_mvp_error');
       // Hide progress tracker and navigate to results
       setShowProgressTracker(false);
       setTimeout(() => {
@@ -318,6 +341,14 @@ export function SimpleUploadZone() {
       const errorMessage = err.message || 'Upload failed';
       const status = err.status || 500;
       const body = err.data || null;
+      sessionStorage.setItem('images_mvp_status', 'fail');
+      sessionStorage.setItem(
+        'images_mvp_error',
+        JSON.stringify({
+          status,
+          message: errorMessage,
+        })
+      );
 
       trackImagesMvpEvent('analysis_completed', {
         success: false,
@@ -372,6 +403,22 @@ export function SimpleUploadZone() {
           title: 'Backend unavailable',
           description:
             'API is not reachable. Start the server with `npm run dev:server`.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (status === 413) {
+        toast({
+          title: 'File too large',
+          description: `Max ${Math.round(IMAGES_MVP_MAX_BYTES / (1024 * 1024))} MB. Allowed: ${IMAGES_MVP_ALLOWED_EXTENSIONS.join(', ')}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (status === 415) {
+        toast({
+          title: 'Unsupported file type',
+          description: `Allowed: ${IMAGES_MVP_ALLOWED_EXTENSIONS.join(', ')}`,
           variant: 'destructive',
         });
         return;
@@ -460,6 +507,7 @@ export function SimpleUploadZone() {
         htmlFor="mvp-upload"
         role="button"
         tabIndex={0}
+        data-testid="image-dropzone"
         aria-label={
           isMobile
             ? 'Tap to select image'
@@ -480,9 +528,10 @@ export function SimpleUploadZone() {
           ref={inputRef}
           type="file"
           className="hidden"
-          accept={SUPPORTED_EXTENSIONS.join(',')}
+          accept={IMAGES_MVP_ALLOWED_EXTENSIONS.join(',')}
           onChange={handleFileSelect}
           title="Upload image"
+          data-testid="image-upload-input"
         />
 
         {isUploading ? (
@@ -532,7 +581,7 @@ export function SimpleUploadZone() {
             <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
               {isMobile ? (
                 <>
-                  JPG, PNG, HEIC, WebP
+                  JPG, PNG, HEIC, WebP (max {Math.round(IMAGES_MVP_MAX_BYTES / (1024 * 1024))} MB)
                   <span className="text-primary text-xs font-mono mt-1 block">
                     <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
                     free checks (no signup)
@@ -540,7 +589,7 @@ export function SimpleUploadZone() {
                 </>
               ) : (
                 <>
-                  Supports JPG, PNG, HEIC, WebP{' '}
+                  Supports JPG, PNG, HEIC, WebP (max {Math.round(IMAGES_MVP_MAX_BYTES / (1024 * 1024))} MB){' '}
                   <br className="hidden sm:block" />
                   <span className="text-primary text-xs font-mono mt-1 block">
                     <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2

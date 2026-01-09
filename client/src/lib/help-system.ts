@@ -228,7 +228,7 @@ export const helpTopics: Record<string, HelpTopic> = {
     relatedTopics: ['file-limits'],
     keywords: ['pricing', 'plan', 'tier', 'cost', 'free', 'pro', 'enterprise'],
     category: 'pricing',
-    externalLink: '/#pricing',
+    externalLink: '/home#pricing',
   },
 
   // Security Topics

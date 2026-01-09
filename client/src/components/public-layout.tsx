@@ -39,7 +39,9 @@ export function PublicLayout({
     'login'
   );
   const isImagesMvp = location.pathname.startsWith('/images_mvp');
-  const pricingLink = isImagesMvp ? '/images_mvp?pricing=1' : '/#pricing';
+  const marketingRoot = '/home';
+  const pricingLink = isImagesMvp ? '/images_mvp?pricing=1' : `${marketingRoot}#pricing`;
+  const featuresLink = `${marketingRoot}#features`;
 
   const openLogin = () => {
     setAuthModalMode('login');
@@ -53,7 +55,7 @@ export function PublicLayout({
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/images_mvp');
   };
 
   return (
@@ -64,7 +66,7 @@ export function PublicLayout({
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
-              <Link to="/" className="flex items-center gap-2 group">
+              <Link to={marketingRoot} className="flex items-center gap-2 group">
                 <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
                   <span className="text-black font-bold text-sm">M</span>
                 </div>
@@ -77,7 +79,7 @@ export function PublicLayout({
               {!isAuthenticated && (
                 <nav className="hidden md:flex items-center gap-6">
                   <Link
-                    to="/#features"
+                    to={featuresLink}
                     className="text-sm text-slate-200 hover:text-white transition-colors"
                   >
                     Features
@@ -187,7 +189,7 @@ export function PublicLayout({
                   <nav className="flex flex-col gap-2">
                     {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
                     <Link
-                      to="/#features"
+                      to={featuresLink}
                       className="text-sm text-slate-200 hover:text-white py-2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -305,7 +307,7 @@ export function PublicLayout({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {/* Brand */}
               <div className="space-y-4">
-                <Link to="/" className="flex items-center gap-2">
+                <Link to={marketingRoot} className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
                     <span className="text-black font-bold text-sm">M</span>
                   </div>
@@ -324,7 +326,7 @@ export function PublicLayout({
                 <ul className="space-y-2 text-sm text-slate-200">
                   <li>
                     <Link
-                      to="/#features"
+                      to={featuresLink}
                       className="hover:text-white transition-colors"
                     >
                       Features

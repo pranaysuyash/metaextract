@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { TrialAccessModal } from '@/components/trial-access-modal';
+import { validateUploadFile } from '@/lib/upload-guards';
 
 // File validation configuration
 const FILE_CONFIG = {
@@ -137,60 +138,11 @@ function getSessionId(): string {
   return sessionId;
 }
 
-interface ValidationResult {
-  valid: boolean;
-  error?: string;
-  warning?: string;
-}
-
-function validateFile(file: File): ValidationResult {
-  // Check file size
-  if (file.size > FILE_CONFIG.maxSizeBytes) {
-    return {
-      valid: false,
-      error: `File size (${(file.size / 1024 / 1024).toFixed(
-        1
-      )}MB) exceeds maximum of ${FILE_CONFIG.maxSizeMB}MB`,
-    };
-  }
-
-  // Check if file is empty
-  if (file.size === 0) {
-    return {
-      valid: false,
-      error: 'File is empty',
-    };
-  }
-
-  // Check MIME type
-  const allSupportedMimes = Object.values(
-    FILE_CONFIG.supportedCategories
-  ).flat();
-  const mimeSupported = allSupportedMimes.includes(file.type);
-
-  // Check extension as fallback
-  const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-  const extensionSupported =
-    FILE_CONFIG.supportedExtensions.includes(extension);
-
-  if (!mimeSupported && !extensionSupported) {
-    return {
-      valid: false,
-      error: `Unsupported file type: ${file.type || extension
-        }. We support images, videos, audio, PDFs, and specialized formats (DICOM, FITS, etc.)`,
-    };
-  }
-
-  // Warning for potentially problematic files
-  if (!mimeSupported && extensionSupported) {
-    return {
-      valid: true,
-      warning: `File type "${file.type}" not recognized, but extension "${extension}" is supported. Processing will continue.`,
-    };
-  }
-
-  return { valid: true };
-}
+const CORE_UPLOAD_GUARD = {
+  maxBytes: FILE_CONFIG.maxSizeBytes,
+  allowedMimes: Object.values(FILE_CONFIG.supportedCategories).flat(),
+  allowedExtensions: FILE_CONFIG.supportedExtensions,
+};
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';
@@ -276,28 +228,19 @@ export function UploadZone() {
 
   const processFile = async (file: File) => {
     // Validate file
-    const validation = validateFile(file);
-
-    if (!validation.valid) {
+    const guard = validateUploadFile(file, CORE_UPLOAD_GUARD);
+    if (!guard.ok) {
       setUploadError({
         title: 'Invalid File',
-        message: validation.error || 'File validation failed',
+        message: guard.message || 'File validation failed',
         canRetry: true,
       });
       toast({
         title: 'File Validation Failed',
-        description: validation.error,
+        description: guard.message,
         variant: 'destructive',
       });
       return;
-    }
-
-    if (validation.warning) {
-      toast({
-        title: 'File Notice',
-        description: validation.warning,
-        variant: 'default',
-      });
     }
 
     setCurrentFile(file);
@@ -382,7 +325,7 @@ export function UploadZone() {
 
       // Navigate to results
       setTimeout(() => {
-        navigate('/results');
+        navigate('/images_mvp/results');
       }, 600);
     } catch (error) {
       if (progressInterval) clearInterval(progressInterval);

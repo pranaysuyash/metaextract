@@ -12,6 +12,39 @@ env:
 
 jobs:
   # =========================================================================
+  # PR Guards
+  # =========================================================================
+  pr-guards:
+    name: PR Guards
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate branch name
+        run: bash scripts/ci/check-branch-name.sh
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+
+      - name: LOC churn guard
+        run: bash scripts/ci/check-pr-loc.sh
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+
+      - name: PR size guard
+        run: bash scripts/ci/check-pr-size.sh
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+
+      - name: Backend change guard
+        run: bash scripts/ci/check-backend-changes.sh
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+  # =========================================================================
   # Frontend Build and Test
   # =========================================================================
   frontend:
@@ -173,12 +206,40 @@ jobs:
           pytest -q tests/test_integration.py || true
 
   # =========================================================================
+  # E2E Smoke Tests (Images MVP)
+  # =========================================================================
+  e2e-smoke:
+    name: E2E Smoke (Images MVP)
+    runs-on: ubuntu-latest
+    needs: [frontend]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Images MVP smoke test
+        run: npm run test:e2e:smoke
+
+  # =========================================================================
   # Summary
   # =========================================================================
   summary:
     name: Summary
     runs-on: ubuntu-latest
-    needs: [frontend, backend, security, integration]
+    needs: [frontend, backend, security, integration, e2e-smoke]
     if: always()
 
     steps:

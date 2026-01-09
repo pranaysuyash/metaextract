@@ -646,7 +646,7 @@ export const accessibilityTestRunner = new AccessibilityTestRunner({
   pages: [
     { path: '/', name: 'Home Page', description: 'Main landing page' },
     { path: '/dashboard', name: 'Dashboard', description: 'User dashboard' },
-    { path: '/results', name: 'Results Page', description: 'Metadata results page' },
+    { path: '/images_mvp/results', name: 'Results Page', description: 'Metadata results page' },
     { path: '/upload', name: 'Upload Page', description: 'File upload page' },
     { path: '/analytics', name: 'Analytics', description: 'Analytics dashboard' },
     { path: '/settings', name: 'Settings', description: 'User settings page' },

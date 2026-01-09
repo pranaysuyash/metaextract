@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "Blocked: do not push directly from $branch. Work on a feat/ or chore/ branch."
+  exit 1
+fi
+
+echo "Running gate before push..."
+npm run gate

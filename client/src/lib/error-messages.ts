@@ -369,7 +369,7 @@ const errorTemplates: Record<
       'Contact sales for enterprise options',
     ],
     recoverable: false,
-    helpLink: '/#pricing',
+    helpLink: '/home#pricing',
   },
   [ERROR_CODES.AUTHZ_FEATURE_LOCKED]: {
     code: ERROR_CODES.AUTHZ_FEATURE_LOCKED,
@@ -382,7 +382,7 @@ const errorTemplates: Record<
       "Check what's included in each plan",
     ],
     recoverable: false,
-    helpLink: '/#pricing',
+    helpLink: '/home#pricing',
   },
   [ERROR_CODES.AUTHZ_RATE_LIMITED]: {
     code: ERROR_CODES.AUTHZ_RATE_LIMITED,
@@ -504,7 +504,7 @@ const errorTemplates: Record<
       'View your usage in account settings',
     ],
     recoverable: false,
-    helpLink: '/#pricing',
+    helpLink: '/home#pricing',
   },
   [ERROR_CODES.QUOTA_DAILY_LIMIT]: {
     code: ERROR_CODES.QUOTA_DAILY_LIMIT,
@@ -517,7 +517,7 @@ const errorTemplates: Record<
       'Upgrade for unlimited daily extractions',
     ],
     recoverable: false,
-    helpLink: '/#pricing',
+    helpLink: '/home#pricing',
   },
   [ERROR_CODES.QUOTA_STORAGE_FULL]: {
     code: ERROR_CODES.QUOTA_STORAGE_FULL,

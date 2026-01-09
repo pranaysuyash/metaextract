@@ -1,0 +1,21 @@
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  timeout: 90_000,
+  expect: {
+    timeout: 30_000,
+  },
+  retries: 0,
+  reporter: 'list',
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
+    trace: 'retain-on-failure',
+  },
+  webServer: {
+    command: 'npm run dev',
+    url: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173/images_mvp',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
+});

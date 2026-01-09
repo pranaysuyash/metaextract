@@ -189,9 +189,9 @@ describe('Navigation Configuration - Property Tests', () => {
     });
 
     it('should handle hash links correctly', () => {
-      expect(isActivePath('/', '/#features')).toBe(true);
-      expect(isActivePath('/', '/#pricing')).toBe(true);
-      expect(isActivePath('/settings', '/#features')).toBe(false);
+      expect(isActivePath('/home', '/home#features')).toBe(true);
+      expect(isActivePath('/home', '/home#pricing')).toBe(true);
+      expect(isActivePath('/settings', '/home#features')).toBe(false);
     });
 
     it('should handle nested routes', () => {

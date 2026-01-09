@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { validateUploadFile } from '@/lib/upload-guards';
 import { analyzeFile, type FileAnalysis } from '@/utils/fileAnalysis';
 import {
   estimateProcessingTime,
@@ -179,6 +180,50 @@ const ACCEPTED_TYPES = {
   'application/x-rar-compressed': ['.rar'],
   'application/x-7z-compressed': ['.7z'],
 };
+
+const CORE_ALLOWED_MIMES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/tiff',
+  'image/bmp',
+  'image/heic',
+  'image/heif',
+  'image/svg+xml',
+  'video/mp4',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+  'video/webm',
+  'video/x-ms-wmv',
+  'video/x-flv',
+  'video/3gpp',
+  'audio/mpeg',
+  'audio/flac',
+  'audio/wav',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/aac',
+  'audio/x-aiff',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/markdown',
+  'text/html',
+  'application/xml',
+  'application/json',
+  'text/csv',
+];
+const CORE_ALLOWED_EXTENSIONS = Array.from(
+  new Set(Object.values(ACCEPTED_TYPES).flat())
+);
 
 const getFileIcon = (file?: File) => {
   const name = file?.name ? String(file.name) : '';
@@ -371,8 +416,36 @@ export function EnhancedUploadZone({
         });
       });
 
+      const maxBytes =
+        tier === 'enterprise' || tier === 'super'
+          ? 2000 * 1024 * 1024
+          : tier === 'forensic' || tier === 'premium'
+            ? 500 * 1024 * 1024
+            : tier === 'professional' || tier === 'starter'
+              ? 100 * 1024 * 1024
+              : 10 * 1024 * 1024;
+      const guardConfig = {
+        maxBytes,
+        allowedMimes: CORE_ALLOWED_MIMES,
+        allowedExtensions: CORE_ALLOWED_EXTENSIONS,
+      };
+
+      const preflightPassed: File[] = [];
+      acceptedFiles.forEach(file => {
+        const guard = validateUploadFile(file, guardConfig);
+        if (!guard.ok) {
+          toast({
+            title: 'Upload blocked',
+            description: guard.message || 'Unsupported file.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        preflightPassed.push(file);
+      });
+
       // Add accepted files with analysis and estimates
-      const newFilesPromises = acceptedFiles.map(async file => {
+      const newFilesPromises = preflightPassed.map(async file => {
         // Run analysis and estimation in parallel
         const [analysis, estimate] = await Promise.all([
           analyzeFile(file),
@@ -494,7 +567,7 @@ export function EnhancedUploadZone({
 
         // V2 Navigation: Navigate immediately for single file
         if (useV2) {
-          navigate('/results-v2', { state: { results, metadata: result } });
+          navigate('/images_mvp/results', { state: { metadata: result } });
         }
       } else {
         // Batch processing
@@ -550,7 +623,7 @@ export function EnhancedUploadZone({
       console.log('[EnhancedUploadZone] useV2 flag:', useV2);
       if (useV2) {
         console.log('[EnhancedUploadZone] Navigating to V2 results');
-        navigate('/results-v2', { state: { results, metadata: results[0] } });
+        navigate('/images_mvp/results', { state: { metadata: results[0] } });
       } else {
         console.log(
           '[EnhancedUploadZone] Calling onResults with',

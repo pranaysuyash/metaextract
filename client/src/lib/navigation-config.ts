@@ -68,14 +68,14 @@ export const publicNavItems: NavItem[] = [
   {
     id: 'features',
     name: 'Features',
-    href: '/#features',
+    href: '/home#features',
     icon: Cpu,
     description: 'Explore our metadata extraction capabilities',
   },
   {
     id: 'pricing',
     name: 'Pricing',
-    href: '/#pricing',
+    href: '/home#pricing',
     icon: CreditCard,
     description: 'View pricing plans and features',
   },
@@ -186,8 +186,8 @@ export const footerNavSections: NavSection[] = [
     id: 'product',
     title: 'Product',
     items: [
-      { id: 'footer-features', name: 'Features', href: '/#features', icon: Cpu },
-      { id: 'footer-pricing', name: 'Pricing', href: '/#pricing', icon: CreditCard },
+      { id: 'footer-features', name: 'Features', href: '/home#features', icon: Cpu },
+      { id: 'footer-pricing', name: 'Pricing', href: '/home#pricing', icon: CreditCard },
       { id: 'footer-docs', name: 'Documentation', href: '/docs', icon: FileText },
       { id: 'footer-api', name: 'API', href: '/api', icon: Activity },
     ],

@@ -270,7 +270,7 @@ export default function Dashboard() {
               <Button 
                 variant="outline" 
                 className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
-                onClick={() => window.location.href = "/results"}
+                onClick={() => window.location.href = "/images_mvp/results"}
               >
                 <FileText className="w-4 h-4 mr-2" />
                 View Results

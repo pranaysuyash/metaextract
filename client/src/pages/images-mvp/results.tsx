@@ -117,14 +117,16 @@ interface MvpMetadata {
 type TabValue = 'privacy' | 'authenticity' | 'photography' | 'raw';
 type PurposeValue = 'privacy' | 'authenticity' | 'photography' | 'explore';
 type DensityMode = 'normal' | 'advanced';
+type ResultsViewState = 'idle' | 'processing' | 'success' | 'empty' | 'fail';
 
 const PURPOSE_STORAGE_KEY = 'images_mvp_purpose';
 const DENSITY_STORAGE_KEY = 'images_mvp_density';
 
 export default function ImagesMvpResults() {
   const [metadata, setMetadata] = useState<MvpMetadata | null>(null);
-  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'empty'>(
-    'loading'
+  const [viewState, setViewState] = useState<ResultsViewState>('processing');
+  const [errorInfo, setErrorInfo] = useState<{ status?: number; message?: string } | null>(
+    null
   );
   const [activeTab, setActiveTab] = useState<TabValue>('privacy');
   const [rawSearch, setRawSearch] = useState('');
@@ -144,17 +146,47 @@ export default function ImagesMvpResults() {
 
   useEffect(() => {
     const stored = sessionStorage.getItem('currentMetadata');
-    if (!stored) {
-      setLoadState('empty');
+    const status = sessionStorage.getItem('images_mvp_status');
+    const errorRaw = sessionStorage.getItem('images_mvp_error');
+
+    if (status === 'fail') {
+      setViewState('fail');
+      if (errorRaw) {
+        try {
+          setErrorInfo(JSON.parse(errorRaw));
+        } catch {
+          setErrorInfo({ message: 'Extraction failed' });
+        }
+      } else {
+        setErrorInfo({ message: 'Extraction failed' });
+      }
       return;
     }
-    try {
-      setMetadata(JSON.parse(stored));
-      setLoadState('ready');
-    } catch {
-      setLoadState('empty');
+
+    if (!stored) {
+      if (status === 'uploading' || status === 'processing') {
+        setViewState('processing');
+      } else {
+        setViewState('idle');
+      }
+      return;
     }
-  }, [navigate]);
+
+    try {
+      const parsed = JSON.parse(stored) as MvpMetadata;
+      setMetadata(parsed);
+      const fieldCount =
+        typeof parsed.fields_extracted === 'number'
+          ? parsed.fields_extracted
+          : typeof parsed.processing_insights?.total_fields_extracted === 'number'
+            ? parsed.processing_insights.total_fields_extracted
+            : 0;
+      setViewState(fieldCount > 0 ? 'success' : 'empty');
+    } catch {
+      setViewState('fail');
+      setErrorInfo({ message: 'Failed to load results' });
+    }
+  }, []);
 
   const isTabValue = (value: string): value is TabValue =>
     value === 'privacy' ||
@@ -301,14 +333,14 @@ export default function ImagesMvpResults() {
     }
   }, [metadata?.filename]);
 
-  if (loadState === 'loading') {
+  if (viewState === 'processing') {
     return (
       <Layout showHeader={true} showFooter={true}>
         <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
           <div className="container mx-auto px-4 max-w-3xl">
             <Card className="bg-[#11121a] border-white/10">
               <CardContent className="p-8 text-center text-slate-200">
-                Loading results...
+                Processing your image...
               </CardContent>
             </Card>
           </div>
@@ -317,7 +349,7 @@ export default function ImagesMvpResults() {
     );
   }
 
-  if (loadState === 'empty' || !metadata) {
+  if (viewState === 'idle') {
     return (
       <Layout showHeader={true} showFooter={true}>
         <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
@@ -326,7 +358,7 @@ export default function ImagesMvpResults() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileImage className="w-5 h-5 text-primary" />
-                  No results yet
+                  Ready when you are
                 </CardTitle>
                 <CardDescription className="text-slate-200">
                   Upload an image to extract metadata and view the analysis
@@ -356,6 +388,73 @@ export default function ImagesMvpResults() {
     );
   }
 
+  if (viewState === 'fail') {
+    return (
+      <Layout showHeader={true} showFooter={true}>
+        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <Card className="bg-[#11121a] border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-amber-400" />
+                  Extraction failed
+                </CardTitle>
+                <CardDescription className="text-slate-200">
+                  {errorInfo?.message || 'We could not process this file.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {errorInfo?.status && (
+                  <p className="text-xs text-slate-400">
+                    Error code: {errorInfo.status}
+                  </p>
+                )}
+                <Button
+                  className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                  onClick={() => navigate('/images_mvp')}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Try another image
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (viewState === 'empty' || !metadata) {
+    return (
+      <Layout showHeader={true} showFooter={true}>
+        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <Card className="bg-[#11121a] border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Info className="w-5 h-5 text-primary" />
+                  No metadata found
+                </CardTitle>
+                <CardDescription className="text-slate-200">
+                  We didn’t detect metadata in this file. Try another image or
+                  a different format.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <Button
+                  className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                  onClick={() => navigate('/images_mvp')}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload another image
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   const isTrialLimited =
     metadata._trial_limited || metadata.access?.trial_granted;
   const canExport = !isTrialLimited;
@@ -990,7 +1089,10 @@ export default function ImagesMvpResults() {
 
   return (
     <Layout showHeader={true} showFooter={true}>
-      <div className="min-h-screen bg-[#0B0C10] text-white pt-16 sm:pt-20 pb-20">
+      <div
+        className="min-h-screen bg-[#0B0C10] text-white pt-16 sm:pt-20 pb-20"
+        data-testid="results-root"
+      >
         <div className="container mx-auto px-3 sm:px-4 max-w-4xl">
           <PricingModal
             isOpen={showPricingModal}
@@ -1076,7 +1178,10 @@ export default function ImagesMvpResults() {
                   {metadata.filename}
                 </span>
               </h1>
-              <p className="text-slate-200 text-xs sm:text-sm font-mono mt-1 break-words">
+              <p
+                className="text-slate-200 text-xs sm:text-sm font-mono mt-1 break-words"
+                data-testid="key-field-mime-type"
+              >
                 {metadata.filesize} • {metadata.mime_type}
               </p>
             </div>

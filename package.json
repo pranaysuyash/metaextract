@@ -33,6 +33,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
+    "test:e2e:smoke": "playwright test tests/e2e/images-mvp.smoke.spec.ts",
     "smoke-server": "node scripts/smoke-server.js",
     "check:db": "node scripts/check_db.js",
     "db:init-debug": "node scripts/db-init-debug.cjs",
@@ -43,6 +44,7 @@
     "clean": "rm -rf dist && rm -rf client/dist",
     "type-check": "tsc --noEmit",
     "validate": "npm run type-check && npm run lint && npm run test:ci",
+    "gate": "bash ./gate.sh",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -145,6 +147,7 @@
     "@axe-core/react": "^4.11.0",
     "@babel/preset-env": "^7.24.0",
     "@babel/preset-react": "^7.24.0",
+    "@playwright/test": "^1.57.0",
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.4",

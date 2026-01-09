@@ -23,7 +23,6 @@ import {
   MoveRight,
   ScanLine,
   Terminal,
-  Cpu,
   Share2,
   ShieldAlert,
   Zap,
@@ -100,7 +99,7 @@ export default function Home() {
 
       // Navigate with state AND ID param if available (for shareable links)
       const search = result.id ? `?id=${result.id}` : '';
-      navigate(`/results${search}`, { state: { metadata: result } });
+      navigate(`/images_mvp/results${search}`, { state: { metadata: result } });
     }
   };
 
@@ -363,46 +362,6 @@ export default function Home() {
                   maxFiles={1}
                   advanced={advancedMode && hasAdvancedAccess}
                 />
-
-                {/* V2 Experimental UI Button */}
-                {import.meta.env.DEV && (
-                  <Button
-                    onClick={() => {
-                      const stored = sessionStorage.getItem('currentMetadata');
-                      if (!stored) {
-                        toast({
-                          title: 'No result in memory',
-                          description:
-                            'Upload a file first, then click V2 to view it.',
-                          variant: 'destructive',
-                        });
-                        return;
-                      }
-                      try {
-                        const parsed = JSON.parse(stored);
-                        navigate('/results-v2', {
-                          state: { metadata: parsed },
-                        });
-                      } catch (e) {
-                        console.error(
-                          'Failed to parse stored metadata for V2',
-                          e
-                        );
-                        toast({
-                          title: 'Corrupted metadata',
-                          description:
-                            'Please re-upload the file to view in V2.',
-                          variant: 'destructive',
-                        });
-                      }
-                    }}
-                    variant="outline"
-                    className="mt-4 border-2 border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                  >
-                    <Cpu className="w-4 h-4 mr-2" />
-                    V2 Experimental UI
-                  </Button>
-                )}
 
                 {/* Decorative orbiting elements */}
                 <motion.div
