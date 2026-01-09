@@ -109,23 +109,23 @@ export const CREDIT_PACKS = {
 
 export const IMAGES_MVP_CREDIT_PACKS = {
   starter: {
-    credits: 25,
+    credits: 100,
     price: Number(process.env.IMAGES_MVP_STARTER_PRICE_CENTS ?? 400),
     priceDisplay: formatUsdFromCents(
       Number(process.env.IMAGES_MVP_STARTER_PRICE_CENTS ?? 400)
     ),
     name: 'Starter Pack',
-    description: '25 images',
+    description: '25 standard images',
     productId: DODO_IMAGES_MVP_PRODUCTS.starter,
   },
   pro: {
-    credits: 100,
+    credits: 400,
     price: Number(process.env.IMAGES_MVP_PRO_PRICE_CENTS ?? 1200),
     priceDisplay: formatUsdFromCents(
       Number(process.env.IMAGES_MVP_PRO_PRICE_CENTS ?? 1200)
     ),
     name: 'Pro Pack',
-    description: '100 images',
+    description: '100 standard images',
     productId: DODO_IMAGES_MVP_PRODUCTS.pro,
   },
 } as const;

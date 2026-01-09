@@ -122,7 +122,7 @@ describe('Images MVP API Tests', () => {
 
       expect(response.body).toHaveProperty('packs');
       expect(response.body.packs).toHaveProperty('starter');
-      expect(response.body.packs.starter).toHaveProperty('credits', 25);
+      expect(response.body.packs.starter).toHaveProperty('credits', 100);
     });
   });
 

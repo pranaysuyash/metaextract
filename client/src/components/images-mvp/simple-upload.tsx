@@ -12,64 +12,12 @@ import {
   getImagesMvpSessionId,
   trackImagesMvpEvent,
 } from '@/lib/images-mvp-analytics';
-import { validateUploadFile } from '@/lib/upload-guards';
-
-const IMAGES_MVP_MAX_BYTES = 100 * 1024 * 1024;
-const IMAGES_MVP_ALLOWED_MIMES = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/tiff',
-  'image/bmp',
-  'image/gif',
-  'image/x-icon',
-  'image/svg+xml',
-  'image/x-raw',
-  'image/x-canon-cr2',
-  'image/x-nikon-nef',
-  'image/x-sony-arw',
-  'image/x-adobe-dng',
-  'image/x-olympus-orf',
-  'image/x-fuji-raf',
-  'image/x-pentax-pef',
-  'image/x-sigma-x3f',
-  'image/x-samsung-srw',
-  'image/x-panasonic-rw2',
-];
-const IMAGES_MVP_ALLOWED_EXTENSIONS = [
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.webp',
-  '.heic',
-  '.heif',
-  '.tiff',
-  '.tif',
-  '.bmp',
-  '.gif',
-  '.ico',
-  '.svg',
-  '.raw',
-  '.cr2',
-  '.nef',
-  '.arw',
-  '.dng',
-  '.orf',
-  '.raf',
-  '.pef',
-  '.x3f',
-  '.srw',
-  '.rw2',
-];
-
-const IMAGES_MVP_UPLOAD_GUARD = {
-  maxBytes: IMAGES_MVP_MAX_BYTES,
-  allowedMimes: IMAGES_MVP_ALLOWED_MIMES,
-  allowedExtensions: IMAGES_MVP_ALLOWED_EXTENSIONS,
-};
+import {
+  createDefaultQuoteOps,
+  fetchImagesMvpQuote,
+  type ImagesMvpQuoteOps,
+  type ImagesMvpQuoteResponse,
+} from '@/lib/images-mvp-quote';
 
 export function SimpleUploadZone() {
   const [isDragActive, setIsDragActive] = useState(false);
@@ -77,6 +25,11 @@ export function SimpleUploadZone() {
   const [uploadError, setUploadError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFileId, setPendingFileId] = useState<string | null>(null);
+  const [pendingDimensions, setPendingDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [paywallShownAt, setPaywallShownAt] = useState<number | null>(null);
   const [pricingDismissed, setPricingDismissed] = useState(false);
@@ -84,18 +37,93 @@ export function SimpleUploadZone() {
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [quoteOps, setQuoteOps] = useState<ImagesMvpQuoteOps>(
+    createDefaultQuoteOps()
+  );
+  const [quoteData, setQuoteData] = useState<ImagesMvpQuoteResponse | null>(
+    null
+  );
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const openedFromQueryRef = useRef(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
+  const maxBytesDisplay =
+    typeof quoteData?.limits?.maxBytes === 'number'
+      ? quoteData.limits.maxBytes
+      : null;
 
   const getExtension = (name: string): string | null => {
     const index = name.lastIndexOf('.');
     if (index <= 0) return null;
     return name.slice(index).toLowerCase();
   };
+
+  const probeImageDimensions = async (
+    file: File
+  ): Promise<{ width: number; height: number } | null> => {
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const result = await new Promise<{ width: number; height: number } | null>(
+        resolve => {
+          const img = new Image();
+          img.onload = () => {
+            resolve({ width: img.width, height: img.height });
+            URL.revokeObjectURL(objectUrl);
+          };
+          img.onerror = () => {
+            resolve(null);
+            URL.revokeObjectURL(objectUrl);
+          };
+          img.src = objectUrl;
+        }
+      );
+      return result;
+    } catch {
+      return null;
+    }
+  };
+
+  const requestQuote = useCallback(
+    async (
+      file: File,
+      fileId: string,
+      dimensions: { width: number; height: number } | null,
+      ops: ImagesMvpQuoteOps
+    ) => {
+      setQuoteLoading(true);
+      setQuoteError(null);
+      try {
+        const response = await fetchImagesMvpQuote(
+          [
+            {
+              id: fileId,
+              name: file.name,
+              mime: file.type || null,
+              sizeBytes: file.size,
+              width: dimensions?.width ?? null,
+              height: dimensions?.height ?? null,
+            },
+          ],
+          ops
+        );
+        setQuoteData(response);
+        return response;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to get quote';
+        setQuoteError(message);
+        setQuoteData(null);
+        return null;
+      } finally {
+        setQuoteLoading(false);
+      }
+    },
+    []
+  );
 
   const checkCreditsAndMaybeResume = useCallback(async () => {
     if (!pendingFile || isUploading) return;
@@ -108,6 +136,14 @@ export function SimpleUploadZone() {
       const credits =
         typeof data?.credits === 'number' ? (data.credits as number) : 0;
       if (credits >= 1) {
+        if (!quoteData || !pendingFileId) {
+          toast({
+            title: 'Quote expired',
+            description: 'Please select the file again to refresh the quote.',
+            variant: 'destructive',
+          });
+          return;
+        }
         setShowPricingModal(false);
         setResumeRequested(false);
         void uploadFile(pendingFile);
@@ -188,6 +224,17 @@ export function SimpleUploadZone() {
     }
   }, []);
 
+  const activeQuoteEntry =
+    quoteData?.quote?.perFile?.find(entry => entry.id === pendingFileId) ?? null;
+
+  const handleOpsToggle = (key: keyof ImagesMvpQuoteOps) => {
+    const nextOps = { ...quoteOps, [key]: !quoteOps[key] };
+    setQuoteOps(nextOps);
+    if (pendingFile && pendingFileId) {
+      void requestQuote(pendingFile, pendingFileId, pendingDimensions, nextOps);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       handleFile(e.target.files[0]);
@@ -195,7 +242,7 @@ export function SimpleUploadZone() {
     e.target.value = ''; // reset
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     const ext = getExtension(file.name);
     const mimeType = file.type || 'application/octet-stream';
     const sizeBucket = getFileSizeBucket(file.size);
@@ -208,30 +255,71 @@ export function SimpleUploadZone() {
       has_trial_email: false,
     });
 
-    const guard = validateUploadFile(file, IMAGES_MVP_UPLOAD_GUARD);
-    if (!guard.ok) {
+    const fileId = crypto.randomUUID();
+    setPendingFile(file);
+    setPendingFileId(fileId);
+    setPendingDimensions(null);
+    sessionStorage.setItem('images_mvp_status', 'idle');
+    sessionStorage.removeItem('images_mvp_error');
+
+    const dimensions = await probeImageDimensions(file);
+    setPendingDimensions(dimensions);
+
+    const quote = await requestQuote(file, fileId, dimensions, quoteOps);
+    const fileQuote = quote?.quote?.perFile?.find(entry => entry.id === fileId);
+    if (!quote || !fileQuote) {
       trackImagesMvpEvent('upload_rejected', {
         extension: ext,
         mime_type: mimeType,
         size_bytes: file.size,
         size_bucket: sizeBucket,
-        reason: guard.reason || 'unsupported_format',
+        reason: 'quote_failed',
+      });
+      toast({
+        title: 'Quote failed',
+        description: 'We could not price this file. Please try again.',
+        variant: 'destructive',
+      });
+      setPendingFile(null);
+      setPendingFileId(null);
+      return;
+    }
+
+    if (!fileQuote.accepted) {
+      trackImagesMvpEvent('upload_rejected', {
+        extension: ext,
+        mime_type: mimeType,
+        size_bytes: file.size,
+        size_bucket: sizeBucket,
+        reason: fileQuote.reason || 'unsupported_format',
       });
       toast({
         title: 'Upload blocked',
-        description: guard.message || 'Unsupported file.',
+        description:
+          fileQuote.reason === 'file_too_large'
+            ? 'File exceeds the maximum size limit.'
+            : fileQuote.reason === 'megapixels_exceed_limit'
+              ? 'Image resolution exceeds the supported limit.'
+              : 'Unsupported file type.',
+        variant: 'destructive',
+      });
+      setPendingFile(null);
+      setPendingFileId(null);
+      setQuoteData(null);
+      return;
+    }
+  };
+
+  const uploadFile = async (file: File) => {
+    if (!quoteData || !pendingFileId) {
+      toast({
+        title: 'Quote required',
+        description: 'Please select the file again to get a fresh quote.',
         variant: 'destructive',
       });
       return;
     }
 
-    setPendingFile(file);
-    sessionStorage.setItem('images_mvp_status', 'uploading');
-    sessionStorage.removeItem('images_mvp_error');
-    void uploadFile(file);
-  };
-
-  const uploadFile = async (file: File) => {
     setIsUploading(true);
     setUploadProgress(0);
     const startedAt = Date.now();
@@ -247,6 +335,11 @@ export function SimpleUploadZone() {
 
     // Append metadata fields BEFORE file to ensure streaming parsers see them first
     formData.append('session_id', sessionId);
+    formData.append('quote_id', quoteData.quoteId);
+    formData.append('client_file_id', pendingFileId);
+    formData.append('op_embedding', String(quoteOps.embedding));
+    formData.append('op_ocr', String(quoteOps.ocr));
+    formData.append('op_forensics', String(quoteOps.forensics));
     if (file.lastModified) {
       formData.append('client_last_modified', String(file.lastModified));
     }
@@ -407,10 +500,23 @@ export function SimpleUploadZone() {
         });
         return;
       }
+      if (body?.code && String(body.code).startsWith('QUOTE_')) {
+        toast({
+          title: 'Quote expired',
+          description: 'Please select the file again to refresh the quote.',
+          variant: 'destructive',
+        });
+        setPendingFile(null);
+        setPendingFileId(null);
+        setQuoteData(null);
+        return;
+      }
       if (status === 413) {
+        const maxBytes = quoteData?.limits?.maxBytes ?? 100 * 1024 * 1024;
+        const maxMb = Math.round(maxBytes / (1024 * 1024));
         toast({
           title: 'File too large',
-          description: `Max ${Math.round(IMAGES_MVP_MAX_BYTES / (1024 * 1024))} MB. Allowed: ${IMAGES_MVP_ALLOWED_EXTENSIONS.join(', ')}`,
+          description: `Max ${maxMb} MB.`,
           variant: 'destructive',
         });
         return;
@@ -418,7 +524,17 @@ export function SimpleUploadZone() {
       if (status === 415) {
         toast({
           title: 'Unsupported file type',
-          description: `Allowed: ${IMAGES_MVP_ALLOWED_EXTENSIONS.join(', ')}`,
+          description: 'Unsupported file type. Please upload a supported image.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (status === 403) {
+        toast({
+          title: 'Upload blocked',
+          description:
+            body?.message ||
+            'For security reasons, this file type is not permitted.',
           variant: 'destructive',
         });
         return;
@@ -528,7 +644,7 @@ export function SimpleUploadZone() {
           ref={inputRef}
           type="file"
           className="hidden"
-          accept={IMAGES_MVP_ALLOWED_EXTENSIONS.join(',')}
+          accept="image/*"
           onChange={handleFileSelect}
           title="Upload image"
           data-testid="image-upload-input"
@@ -581,7 +697,10 @@ export function SimpleUploadZone() {
             <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
               {isMobile ? (
                 <>
-                  JPG, PNG, HEIC, WebP (max {Math.round(IMAGES_MVP_MAX_BYTES / (1024 * 1024))} MB)
+                  JPG, PNG, HEIC, WebP
+                  {maxBytesDisplay
+                    ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
+                    : ''}
                   <span className="text-primary text-xs font-mono mt-1 block">
                     <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
                     free checks (no signup)
@@ -589,7 +708,11 @@ export function SimpleUploadZone() {
                 </>
               ) : (
                 <>
-                  Supports JPG, PNG, HEIC, WebP (max {Math.round(IMAGES_MVP_MAX_BYTES / (1024 * 1024))} MB){' '}
+                  Supports JPG, PNG, HEIC, WebP
+                  {maxBytesDisplay
+                    ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
+                    : ''}
+                  {' '}
                   <br className="hidden sm:block" />
                   <span className="text-primary text-xs font-mono mt-1 block">
                     <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
@@ -608,6 +731,134 @@ export function SimpleUploadZone() {
           </>
         )}
       </label>
+
+      {pendingFile && (
+        <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-white">
+                {pendingFile.name}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                {(pendingFile.size / (1024 * 1024)).toFixed(2)} MB
+                {pendingDimensions
+                  ? ` • ${pendingDimensions.width}×${pendingDimensions.height}`
+                  : ' • dimensions pending'}
+              </div>
+            </div>
+            <div className="text-xs text-slate-300">
+              {quoteLoading
+                ? 'Calculating quote...'
+                : activeQuoteEntry?.accepted
+                  ? `Credits: ${activeQuoteEntry.creditsTotal}`
+                  : 'Quote unavailable'}
+            </div>
+          </div>
+
+          {quoteError && (
+            <div className="mt-2 text-xs text-red-300">{quoteError}</div>
+          )}
+
+          {activeQuoteEntry?.accepted && activeQuoteEntry.breakdown && (
+            <div className="mt-3 space-y-2 text-xs text-slate-300">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
+                  {activeQuoteEntry.mpBucket || 'standard'}
+                </span>
+                {activeQuoteEntry.warnings?.map(warning => (
+                  <span
+                    key={warning}
+                    className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
+                  >
+                    {warning}
+                  </span>
+                ))}
+              </div>
+              <div className="grid gap-1">
+                <div>
+                  Base {activeQuoteEntry.breakdown.base} + Embedding{' '}
+                  {activeQuoteEntry.breakdown.embedding} + OCR{' '}
+                  {activeQuoteEntry.breakdown.ocr} + Forensics{' '}
+                  {activeQuoteEntry.breakdown.forensics} + Size{' '}
+                  {activeQuoteEntry.breakdown.mp} ={' '}
+                  <span className="text-white font-semibold">
+                    {activeQuoteEntry.creditsTotal}
+                  </span>
+                </div>
+                <div>
+                  Batch total:{' '}
+                  <span className="text-white font-semibold">
+                    {quoteData?.quote.totalCredits ?? 0}
+                  </span>{' '}
+                  credits
+                  {quoteData?.quote.standardEquivalents
+                    ? ` (~${quoteData.quote.standardEquivalents} standard images)`
+                    : ''}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-2 text-xs text-slate-300">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={quoteOps.embedding}
+                onChange={() => handleOpsToggle('embedding')}
+                disabled={quoteLoading || isUploading}
+              />
+              Embedding (default)
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={quoteOps.ocr}
+                onChange={() => handleOpsToggle('ocr')}
+                disabled={quoteLoading || isUploading}
+              />
+              OCR
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={quoteOps.forensics}
+                onChange={() => handleOpsToggle('forensics')}
+                disabled={quoteLoading || isUploading}
+              />
+              Forensics
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              className="bg-primary hover:bg-primary/90 text-black font-semibold"
+              onClick={() => void uploadFile(pendingFile)}
+              disabled={
+                isUploading ||
+                quoteLoading ||
+                !activeQuoteEntry?.accepted ||
+                !quoteData
+              }
+            >
+              Analyze
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-slate-300 hover:text-white hover:bg-white/10"
+              onClick={() => {
+                setPendingFile(null);
+                setPendingFileId(null);
+                setPendingDimensions(null);
+                setQuoteData(null);
+                setQuoteError(null);
+              }}
+              disabled={isUploading}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

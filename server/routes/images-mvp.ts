@@ -261,7 +261,7 @@ const upload = multer({
     },
   }),
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB Limit for images
+    fileSize: IMAGES_MVP_MAX_BYTES,
   },
 });
 
@@ -320,6 +320,131 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.srw',
   '.rw2',
 ]);
+
+const IMAGES_MVP_MAX_BYTES = 100 * 1024 * 1024;
+const IMAGES_MVP_MAX_FILES = 1;
+const IMAGES_MVP_QUOTE_TTL_MS = 10 * 60 * 1000;
+const IMAGES_MVP_QUOTE_VERSION = 'images_mvp_quote_v1';
+
+const IMAGES_MVP_MP_BUCKETS = [
+  { label: 'standard', maxMp: 12, credits: 0 },
+  { label: 'large', maxMp: 24, credits: 1 },
+  { label: 'xl', maxMp: 48, credits: 3 },
+  { label: 'xxl', maxMp: 96, credits: 7 },
+] as const;
+
+const IMAGES_MVP_CREDIT_SCHEDULE = {
+  base: 1,
+  embedding: 3,
+  ocr: 6,
+  forensics: 4,
+  mpBuckets: IMAGES_MVP_MP_BUCKETS,
+  standardCreditsPerImage: 4,
+} as const;
+
+type ImagesMvpQuoteOps = {
+  embedding?: boolean;
+  ocr?: boolean;
+  forensics?: boolean;
+};
+
+type ImagesMvpQuoteFile = {
+  id: string;
+  name: string;
+  mime?: string | null;
+  sizeBytes: number;
+  width?: number | null;
+  height?: number | null;
+};
+
+type ImagesMvpQuoteEntry = {
+  accepted: boolean;
+  reason?: string;
+  detected_type?: string | null;
+  creditsTotal?: number;
+  mp?: number | null;
+  mpBucket?: string | null;
+  breakdown?: {
+    base: number;
+    embedding: number;
+    ocr: number;
+    forensics: number;
+    mp: number;
+  };
+  warnings?: string[];
+  sizeBytes?: number;
+  name?: string;
+};
+
+const imagesMvpQuoteStore = new Map<
+  string,
+  {
+    expiresAt: number;
+    signature: string;
+    files: ImagesMvpQuoteFile[];
+    ops: ImagesMvpQuoteOps;
+    perFile: Record<string, ImagesMvpQuoteEntry>;
+  }
+>();
+
+function getExtensionFromName(name: string): string | null {
+  const idx = name.lastIndexOf('.');
+  if (idx <= 0) return null;
+  return name.slice(idx).toLowerCase();
+}
+
+function computeMp(width?: number | null, height?: number | null): number | null {
+  if (!width || !height || width <= 0 || height <= 0) return null;
+  const mp = (width * height) / 1_000_000;
+  return Number.isFinite(mp) ? Math.round(mp * 10) / 10 : null;
+}
+
+function resolveMpBucket(mp: number | null): {
+  label: string;
+  credits: number;
+  maxMp: number;
+  warning?: string;
+  invalid?: boolean;
+} {
+  const maxBucket = IMAGES_MVP_MP_BUCKETS[IMAGES_MVP_MP_BUCKETS.length - 1];
+  if (mp === null) {
+    return {
+      label: 'unknown',
+      credits: maxBucket.credits,
+      maxMp: maxBucket.maxMp,
+      warning: 'Dimensions unknown; using conservative size bucket.',
+    };
+  }
+  for (const bucket of IMAGES_MVP_MP_BUCKETS) {
+    if (mp <= bucket.maxMp) {
+      return {
+        label: bucket.label,
+        credits: bucket.credits,
+        maxMp: bucket.maxMp,
+      };
+    }
+  }
+  return {
+    label: 'oversize',
+    credits: maxBucket.credits,
+    maxMp: maxBucket.maxMp,
+    invalid: true,
+  };
+}
+
+function buildQuoteSignature(payload: unknown): string {
+  return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+}
+
+function getStoredQuote(quoteId: string) {
+  const stored = imagesMvpQuoteStore.get(quoteId);
+  if (!stored) return null;
+  if (Date.now() > stored.expiresAt) {
+    imagesMvpQuoteStore.delete(quoteId);
+    return null;
+  }
+  return stored;
+}
 
 function getBaseUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {
@@ -821,6 +946,217 @@ export function registerImagesMvpRoutes(app: Express) {
   );
 
   // ---------------------------------------------------------------------------
+  // Quote: Preflight credits + limits
+  // ---------------------------------------------------------------------------
+  app.post('/api/images_mvp/quote', async (req: Request, res: Response) => {
+    try {
+      const rawFiles = Array.isArray(req.body?.files) ? req.body.files : [];
+      const ops: ImagesMvpQuoteOps = {
+        embedding:
+          typeof req.body?.ops?.embedding === 'boolean'
+            ? req.body.ops.embedding
+            : true,
+        ocr:
+          typeof req.body?.ops?.ocr === 'boolean' ? req.body.ops.ocr : false,
+        forensics:
+          typeof req.body?.ops?.forensics === 'boolean'
+            ? req.body.ops.forensics
+            : false,
+      };
+
+      if (rawFiles.length === 0) {
+        return res.status(400).json({ error: 'No files provided' });
+      }
+      if (rawFiles.length > IMAGES_MVP_MAX_FILES) {
+        return res.status(400).json({
+          error: 'Too many files',
+          maxFiles: IMAGES_MVP_MAX_FILES,
+        });
+      }
+
+      const files: ImagesMvpQuoteFile[] = rawFiles
+        .map((file: any) => ({
+          id: typeof file?.id === 'string' ? file.id : '',
+          name: typeof file?.name === 'string' ? file.name : '',
+          mime: typeof file?.mime === 'string' ? file.mime : null,
+          sizeBytes:
+            typeof file?.sizeBytes === 'number'
+              ? file.sizeBytes
+              : Number(file?.sizeBytes ?? 0),
+          width:
+            typeof file?.width === 'number'
+              ? file.width
+              : file?.width
+                ? Number(file.width)
+                : null,
+          height:
+            typeof file?.height === 'number'
+              ? file.height
+              : file?.height
+                ? Number(file.height)
+                : null,
+        }))
+        .filter(file => file.id && file.name);
+
+      if (files.length === 0) {
+        return res.status(400).json({ error: 'Invalid file metadata' });
+      }
+
+      const perFile: Record<string, ImagesMvpQuoteEntry> = {};
+      let totalCredits = 0;
+      const warnings: string[] = [];
+
+      for (const file of files) {
+        const ext = getExtensionFromName(file.name);
+        const mimeType = file.mime?.toLowerCase() ?? '';
+        const hasValidMime = mimeType
+          ? SUPPORTED_IMAGE_MIMES.has(mimeType)
+          : false;
+        const hasValidExt = ext ? SUPPORTED_IMAGE_EXTENSIONS.has(ext) : false;
+
+        if (!hasValidMime && !hasValidExt) {
+          perFile[file.id] = {
+            accepted: false,
+            reason: 'unsupported_type',
+            detected_type: mimeType || null,
+            name: file.name,
+            sizeBytes: file.sizeBytes,
+          };
+          continue;
+        }
+
+        if (!Number.isFinite(file.sizeBytes) || file.sizeBytes <= 0) {
+          perFile[file.id] = {
+            accepted: false,
+            reason: 'invalid_size',
+            detected_type: mimeType || null,
+            name: file.name,
+            sizeBytes: file.sizeBytes,
+          };
+          continue;
+        }
+
+        if (file.sizeBytes > IMAGES_MVP_MAX_BYTES) {
+          perFile[file.id] = {
+            accepted: false,
+            reason: 'file_too_large',
+            detected_type: mimeType || null,
+            name: file.name,
+            sizeBytes: file.sizeBytes,
+          };
+          continue;
+        }
+
+        const mp = computeMp(file.width, file.height);
+        const bucket = resolveMpBucket(mp);
+        if (bucket.invalid) {
+          perFile[file.id] = {
+            accepted: false,
+            reason: 'megapixels_exceed_limit',
+            detected_type: mimeType || null,
+            name: file.name,
+            sizeBytes: file.sizeBytes,
+            mp,
+            mpBucket: bucket.label,
+          };
+          continue;
+        }
+
+        const fileWarnings: string[] = [];
+        if (bucket.warning) {
+          fileWarnings.push(bucket.warning);
+          warnings.push(bucket.warning);
+        }
+
+        const breakdown = {
+          base: IMAGES_MVP_CREDIT_SCHEDULE.base,
+          embedding: ops.embedding ? IMAGES_MVP_CREDIT_SCHEDULE.embedding : 0,
+          ocr: ops.ocr ? IMAGES_MVP_CREDIT_SCHEDULE.ocr : 0,
+          forensics: ops.forensics ? IMAGES_MVP_CREDIT_SCHEDULE.forensics : 0,
+          mp: bucket.credits,
+        };
+
+        const creditsTotal =
+          breakdown.base +
+          breakdown.embedding +
+          breakdown.ocr +
+          breakdown.forensics +
+          breakdown.mp;
+
+        totalCredits += creditsTotal;
+
+        perFile[file.id] = {
+          accepted: true,
+          detected_type: mimeType || null,
+          creditsTotal,
+          breakdown,
+          mp,
+          mpBucket: bucket.label,
+          warnings: fileWarnings,
+          name: file.name,
+          sizeBytes: file.sizeBytes,
+        };
+      }
+
+      const signaturePayload = {
+        files: files.map(file => ({
+          id: file.id,
+          name: file.name,
+          mime: file.mime ?? null,
+          sizeBytes: file.sizeBytes,
+          width: file.width ?? null,
+          height: file.height ?? null,
+        })),
+        ops,
+        scheduleVersion: IMAGES_MVP_QUOTE_VERSION,
+      };
+
+      const signature = buildQuoteSignature(signaturePayload);
+      const quoteId = `q_${crypto.randomUUID()}`;
+      const expiresAt = Date.now() + IMAGES_MVP_QUOTE_TTL_MS;
+
+      imagesMvpQuoteStore.set(quoteId, {
+        expiresAt,
+        signature,
+        files,
+        ops,
+        perFile,
+      });
+
+      res.json({
+        limits: {
+          maxBytes: IMAGES_MVP_MAX_BYTES,
+          allowedMimes: Array.from(SUPPORTED_IMAGE_MIMES),
+          maxFiles: IMAGES_MVP_MAX_FILES,
+        },
+        creditSchedule: IMAGES_MVP_CREDIT_SCHEDULE,
+        quote: {
+          perFile: files.map(file => ({
+            id: file.id,
+            ...perFile[file.id],
+          })),
+          totalCredits,
+          standardEquivalents:
+            IMAGES_MVP_CREDIT_SCHEDULE.standardCreditsPerImage > 0
+              ? Number(
+                  (
+                    totalCredits /
+                    IMAGES_MVP_CREDIT_SCHEDULE.standardCreditsPerImage
+                  ).toFixed(2)
+                )
+              : null,
+        },
+        quoteId,
+        expiresAt: new Date(expiresAt).toISOString(),
+        warnings,
+      });
+    } catch (error) {
+      console.error('Images MVP quote error:', error);
+      res.status(500).json({ error: 'Failed to generate quote' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // Credits: Get Packs
   // ---------------------------------------------------------------------------
   app.get('/api/images_mvp/credits/packs', (req: Request, res: Response) => {
@@ -1090,8 +1426,13 @@ export function registerImagesMvpRoutes(app: Express) {
       let useTrial = false;
       let chargeCredits = false;
 
-      // Fixed cost for MVP
-      const creditCost = 1;
+      let creditCost = 1;
+      const quoteId =
+        typeof req.body?.quote_id === 'string' ? req.body.quote_id : null;
+      const clientFileId =
+        typeof req.body?.client_file_id === 'string'
+          ? req.body.client_file_id
+          : null;
 
       try {
         const authReq = req as AuthRequest;
@@ -1130,6 +1471,48 @@ export function registerImagesMvpRoutes(app: Express) {
             code: 'INVALID_MAGIC_BYTES_FORBIDDEN',
             detected: detectedType.mime,
           });
+        }
+
+        if (quoteId) {
+          const storedQuote = getStoredQuote(quoteId);
+          if (!storedQuote) {
+            return res.status(400).json({
+              error: 'Quote expired or invalid',
+              code: 'QUOTE_INVALID',
+            });
+          }
+          if (!clientFileId) {
+            return res.status(400).json({
+              error: 'Missing client file id for quote validation',
+              code: 'QUOTE_MISSING_FILE_ID',
+            });
+          }
+          const quotedFile = storedQuote.perFile[clientFileId];
+          if (!quotedFile || !quotedFile.accepted) {
+            return res.status(400).json({
+              error: 'Quote does not match uploaded file',
+              code: 'QUOTE_MISMATCH',
+            });
+          }
+          if (
+            typeof quotedFile.sizeBytes === 'number' &&
+            quotedFile.sizeBytes !== req.file.size
+          ) {
+            return res.status(400).json({
+              error: 'Quote does not match uploaded file size',
+              code: 'QUOTE_SIZE_MISMATCH',
+            });
+          }
+          if (
+            typeof quotedFile.creditsTotal !== 'number' ||
+            !Number.isFinite(quotedFile.creditsTotal)
+          ) {
+            return res.status(400).json({
+              error: 'Quote missing credit total',
+              code: 'QUOTE_MISSING_CREDITS',
+            });
+          }
+          creditCost = quotedFile.creditsTotal;
         }
 
         const trialEmail = normalizeEmail(req.body?.trial_email);
