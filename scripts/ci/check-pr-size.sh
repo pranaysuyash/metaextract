@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE_REF="${BASE_REF:-origin/main}"
 
-MAX_FILE_MB="${MAX_FILE_MB:-5}"
+MAX_FILE_MB="${MAX_FILE_MB:-10}"
 MAX_TOTAL_MB="${MAX_TOTAL_MB:-20}"
 
 MAX_FILE_BYTES=$((MAX_FILE_MB * 1024 * 1024))
