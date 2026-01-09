@@ -282,9 +282,9 @@ describe('Images MVP API Tests', () => {
           filename: 'test.pdf',
           contentType: 'application/pdf',
         })
-        .expect(400);
+        .expect(403);
 
-      expect(response.body.error).toBe('Invalid file type');
+      expect(response.body.error).toBe('File type not permitted');
     });
 
     it('should use trial if available (uses < 2)', async () => {
