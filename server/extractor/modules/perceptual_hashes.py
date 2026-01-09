@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional, List
 from pathlib import Path
 import base64
 import io
+import os
 
 
 try:
@@ -30,6 +31,23 @@ except ImportError:
     IMAGEHASH_AVAILABLE = True
 
 
+def _load_image_for_compute(filepath: str, max_dim: int = 2048) -> Image.Image:
+    """Load image, apply EXIF orientation, convert to RGB, and resize for compute."""
+    img = Image.open(filepath)
+    try:
+        from PIL import ImageOps
+        img = ImageOps.exif_transpose(img)
+    except Exception:
+        pass
+    img = img.convert('RGB')
+    try:
+        if max(img.size) > max_dim:
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+    except Exception:
+        pass
+    return img
+
+
 def extract_perceptual_hashes(filepath: str) -> Optional[Dict[str, Any]]:
     """
     Extract multiple perceptual hashes from an image for visual similarity detection.
@@ -44,8 +62,11 @@ def extract_perceptual_hashes(filepath: str) -> Optional[Dict[str, Any]]:
         raise ImportError("imagehash and Pillow are required for perceptual hashing")
     
     try:
+        max_dim_env = os.getenv("METAEXTRACT_MAX_DIM")
+        max_dim = int(max_dim_env) if max_dim_env and max_dim_env.isdigit() else 2048
+
         with Image.open(filepath) as img:
-            img = img.convert('RGB')
+            img = _load_image_for_compute(filepath, max_dim=max_dim)
             
             result = {
                 "perceptual_hashes": {},

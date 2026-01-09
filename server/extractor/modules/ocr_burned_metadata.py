@@ -18,11 +18,18 @@ import re
 import shutil
 import subprocess
 import tempfile
+import uuid
 from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
 import json
 import logging
 from datetime import datetime
+
+try:
+    from PIL import Image, ImageOps
+except ImportError:
+    Image = None
+    ImageOps = None
 
 # Configure logging with better formatting
 logging.basicConfig(
@@ -52,7 +59,7 @@ def log_extraction_event(
         duration: Processing duration in seconds (if applicable)
     """
     file_size = "unknown"
-    try:
+try:
         if Path(filepath).exists():
             file_size = Path(filepath).stat().st_size
     except:
@@ -252,7 +259,8 @@ class BurnedMetadataExtractor:
             return None
 
         try:
-            text, error = self._run_tesseract(path)
+            resized_path = self._prepare_ocr_image(path)
+            text, error = self._run_tesseract(resized_path)
             if text is not None:
                 duration = (datetime.now() - start_time).total_seconds()
                 log_extraction_event(
@@ -365,6 +373,42 @@ class BurnedMetadataExtractor:
 
         error = result.stderr.strip() if result.stderr else "tesseract failed"
         return None, error
+
+    def _prepare_ocr_image(self, path: Path) -> Path:
+        """
+        Prepare a resized, orientation-corrected image for OCR.
+        Returns a temp file path (original if resize not possible).
+        """
+        max_dim_env = os.getenv("METAEXTRACT_MAX_DIM")
+        try:
+            max_dim = int(max_dim_env) if max_dim_env and max_dim_env.isdigit() else 2048
+        except Exception:
+            max_dim = 2048
+
+        if Image is None:
+            return path
+
+        try:
+            with Image.open(path) as img:
+                if ImageOps:
+                    try:
+                        img = ImageOps.exif_transpose(img)
+                    except Exception:
+                        pass
+                img = img.convert("RGB")
+
+                if max(img.size) > max_dim:
+                    img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+
+                temp_dir = Path(tempfile.gettempdir()) / "metaextract-ocr"
+                temp_dir.mkdir(parents=True, exist_ok=True)
+                temp_path = temp_dir / f"ocr-{uuid.uuid4().hex}.png"
+                img.save(temp_path, format="PNG")
+                return temp_path
+        except Exception as e:
+            logger.debug(f"Failed to prepare resized OCR image, using original: {e}")
+
+        return path
 
     def _should_retry_with_copy(self, path: Path, error: Optional[str]) -> bool:
         """Retry OCR from a readable temp location when paths are problematic."""

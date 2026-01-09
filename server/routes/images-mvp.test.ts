@@ -388,6 +388,38 @@ describe('Images MVP API Tests', () => {
         'user_1'
       );
     });
+
+    it('should pass ocr flag from quote to extractor', async () => {
+      // First create a quote with OCR disabled
+      const quoteResponse = await request(app)
+        .post('/api/images_mvp/quote')
+        .send({
+          files: [
+            {
+              id: 'file_1',
+              name: 'test.jpg',
+              mime: 'image/jpeg',
+              sizeBytes: 8,
+              width: 100,
+              height: 100,
+            },
+          ],
+          ops: { embedding: true, ocr: false, forensics: false },
+        })
+        .expect(200);
+
+      const quoteId = quoteResponse.body.quoteId;
+
+      await request(app)
+        .post('/api/images_mvp/extract')
+        .field('quote_id', quoteId)
+        .field('client_file_id', 'file_1')
+        .attach('file', Buffer.from('fake jpg'), 'test.jpg')
+        .expect(200);
+
+      const call = (extractMetadataWithPython as jest.Mock).mock.calls.slice(-1)[0];
+      expect(call[5]).toMatchObject({ ocr: false, maxDim: 2048 });
+    });
   });
 
   describe('GET /api/images_mvp/analytics/report', () => {

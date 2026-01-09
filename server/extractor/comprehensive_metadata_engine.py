@@ -2432,7 +2432,8 @@ class ComprehensiveMetadataExtractor:
     def extract_comprehensive_metadata(
         self,
         filepath: str,
-        tier: str = "super"
+        tier: str = "super",
+        enable_ocr: bool = True,
     ) -> Dict[str, Any]:
         """
         Extract comprehensive metadata using all available engines
@@ -2442,7 +2443,9 @@ class ComprehensiveMetadataExtractor:
 
         try:
             # Start with base metadata extraction
-            base_result = extract_base_metadata(filepath, tier)
+            base_result = extract_base_metadata(
+                filepath, tier, enable_burned_metadata=enable_ocr
+            )
 
             if "error" in base_result:
                 # Add performance tracking even for error cases
@@ -3203,7 +3206,11 @@ def get_comprehensive_extractor() -> ComprehensiveMetadataExtractor:
         _comprehensive_extractor = ComprehensiveMetadataExtractor()
     return _comprehensive_extractor
 
-def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[str, Any]:
+def extract_comprehensive_metadata(
+    filepath: str,
+    tier: str = "free",
+    enable_ocr: bool = True,
+) -> Dict[str, Any]:
     """
     Extract comprehensive metadata using all available specialized engines.
 
@@ -3226,8 +3233,8 @@ def extract_comprehensive_metadata(filepath: str, tier: str = "free") -> Dict[st
         return cached_result
 
     try:
-        extractor = get_comprehensive_extractor()
-        result = extractor.extract_comprehensive_metadata(filepath, tier)
+    extractor = get_comprehensive_extractor()
+    result = extractor.extract_comprehensive_metadata(filepath, tier, enable_ocr=enable_ocr)
 
         # Log successful completion
         duration = time.time() - start_time
@@ -3363,6 +3370,7 @@ def extract_comprehensive_batch(
     tier: str = "super",
     max_workers: int = 4,
     store_results: bool = False,
+    enable_ocr: bool = True,
 ) -> Dict[str, Any]:
     """Extract metadata for multiple files with optional storage."""
     start_time = time.time()
@@ -3386,7 +3394,9 @@ def extract_comprehensive_batch(
 
     def _process(path: str) -> Tuple[str, Dict[str, Any]]:
         try:
-            metadata = extractor.extract_comprehensive_metadata(path, tier)
+            metadata = extractor.extract_comprehensive_metadata(
+                path, tier, enable_ocr=enable_ocr
+            )
             if store_results and store_file_metadata and "error" not in metadata:
                 try:
                     store_file_metadata(path, metadata, metadata.get("perceptual_hashes"))
@@ -3491,7 +3501,11 @@ def extract_comprehensive_batch(
         }
 
 
-async def extract_comprehensive_metadata_async(filepath: str, tier: str = "free") -> Dict[str, Any]:
+async def extract_comprehensive_metadata_async(
+    filepath: str,
+    tier: str = "free",
+    enable_ocr: bool = True,
+) -> Dict[str, Any]:
     """
     Asynchronously extract comprehensive metadata using all available specialized engines.
 
@@ -3521,7 +3535,8 @@ async def extract_comprehensive_metadata_async(filepath: str, tier: str = "free"
             None,
             extractor.extract_comprehensive_metadata,
             filepath,
-            tier
+            tier,
+            enable_ocr,
         )
 
         # Log successful completion
@@ -3578,6 +3593,7 @@ async def extract_comprehensive_batch_async(
     tier: str = "super",
     max_workers: int = 4,
     store_results: bool = False,
+    enable_ocr: bool = True,
 ) -> Dict[str, Any]:
     """
     Asynchronously extract metadata for multiple files with optional storage.
@@ -3608,7 +3624,9 @@ async def extract_comprehensive_batch_async(
     async def _process_async(path: str) -> Tuple[str, Dict[str, Any]]:
         async with semaphore:
             try:
-                metadata = await extract_comprehensive_metadata_async(path, tier)
+                metadata = await extract_comprehensive_metadata_async(
+                    path, tier, enable_ocr=enable_ocr
+                )
                 if store_results and store_file_metadata and "error" not in metadata:
                     try:
                         # Run storage in thread pool to avoid blocking
@@ -3748,9 +3766,17 @@ def main():
     parser.add_argument("--max-workers", type=int, default=4, help="Batch concurrency")
     parser.add_argument("--performance", action="store_true", help="Include performance metrics (compat)")
     parser.add_argument("--advanced", action="store_true", help="Enable advanced analysis (compat)")
+    parser.add_argument("--ocr", action="store_true", help="Run burned metadata OCR")
+    parser.add_argument("--max-dim", type=int, default=2048, help="Resize cap for OCR/hash compute paths")
     parser.add_argument("--quiet", "-q", action="store_true", help="JSON only output")
     
     args = parser.parse_args()
+
+    # Expose max dimension to downstream modules via environment for compute-heavy paths
+    try:
+        os.environ["METAEXTRACT_MAX_DIM"] = str(args.max_dim)
+    except Exception:
+        pass
     
     if args.engines:
         print("Available Specialized Engines:")
@@ -3772,6 +3798,7 @@ def main():
             tier=args.tier,
             max_workers=args.max_workers,
             store_results=args.store,
+            enable_ocr=args.ocr,
         )
         json_out = json.dumps(result, indent=2, default=str)
     else:
@@ -3781,7 +3808,9 @@ def main():
                 f"Tier: {args.tier} | Engines: Medical={'✓' if DICOM_AVAILABLE else '✗'} Astro={'✓' if FITS_AVAILABLE else '✗'} Geo={'✓' if RASTERIO_AVAILABLE else '✗'}",
                 file=sys.stderr,
             )
-        result = extract_comprehensive_metadata(args.files[0], tier=args.tier)
+        result = extract_comprehensive_metadata(
+            args.files[0], tier=args.tier, enable_ocr=args.ocr
+        )
         if args.store and store_file_metadata and "error" not in result:
             try:
                 store_file_metadata(args.files[0], result, result.get("perceptual_hashes"))

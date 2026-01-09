@@ -15,7 +15,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # Add server/extractor/modules to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "server" / "extractor" / "modules"))
 
 from unified_field_registry import FieldRegistryCore, FieldRegistryError
 from field_definitions import (

@@ -186,6 +186,7 @@ export default function Results() {
   const [metadata, setMetadata] = useState<MetadataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const creditsCharged = metadata?.access?.credits_charged;
 
   // Fetch metadata from the database instead of using session storage
   useEffect(() => {
@@ -1033,7 +1034,13 @@ export default function Results() {
                   </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 items-center">
+                  {typeof creditsCharged === 'number' && (
+                    <div className="px-3 py-2 bg-white/5 border border-white/10 rounded text-xs text-slate-200 font-mono">
+                      Charged: {creditsCharged} credits
+                      {creditsCharged >= 10 ? ' (Text scan applied)' : ''}
+                    </div>
+                  )}
                   {isProcessingAdvanced && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-xs font-mono">
                       <Zap className="w-4 h-4 animate-pulse" />

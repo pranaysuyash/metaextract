@@ -53,7 +53,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, List, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 # Configure logging
@@ -1475,7 +1475,11 @@ def calculate_metadata(metadata: Dict[str, Any], current_time: datetime) -> Dict
 # Main Extraction Function
 # ============================================================================
 
-def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
+def extract_metadata(
+    filepath: str,
+    tier: str = "super",
+    enable_burned_metadata: bool = True,
+) -> Dict[str, Any]:
     current_time = datetime.now()
     path = Path(filepath)
     
@@ -1486,6 +1490,12 @@ def extract_metadata(filepath: str, tier: str = "super") -> Dict[str, Any]:
     except ValueError: tier_enum = Tier.SUPER
     
     tier_config = TIER_CONFIGS[tier_enum]
+    if not enable_burned_metadata:
+        tier_config = replace(
+            tier_config,
+            burned_metadata=False,
+            metadata_comparison=False,
+        )
     mime_type = detect_mime_type(filepath)
     
     result = {

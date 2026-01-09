@@ -574,12 +574,18 @@ export function transformMetadataForFrontend(
   };
 }
 
+type ExtractOptions = {
+  ocr?: boolean;
+  maxDim?: number;
+};
+
 export async function extractMetadataWithPython(
   filePath: string,
   tier: string,
   includePerformanceMetrics: boolean = false,
   enableAdvancedAnalysis: boolean = false,
-  storeMetadata: boolean = false
+  storeMetadata: boolean = false,
+  opts: ExtractOptions = {}
 ): Promise<PythonMetadataResponse> {
   // Validate and sanitize the file path
   const resolvedPath = path.resolve(filePath);
@@ -610,6 +616,15 @@ export async function extractMetadataWithPython(
 
     if (storeMetadata) {
       args.push('--store');
+    }
+
+    if (opts?.ocr) {
+      args.push('--ocr');
+    }
+
+    const maxDim = typeof opts?.maxDim === 'number' ? opts.maxDim : 2048;
+    if (maxDim && Number.isFinite(maxDim)) {
+      args.push('--max-dim', String(maxDim));
     }
 
     // Log the Python process startup

@@ -1428,6 +1428,7 @@ export function registerImagesMvpRoutes(app: Express) {
       let chargeCredits = false;
 
       let creditCost = 1;
+      let runOcr = true;
       const quoteId =
         typeof req.body?.quote_id === 'string' ? req.body.quote_id : null;
       const clientFileId =
@@ -1514,6 +1515,7 @@ export function registerImagesMvpRoutes(app: Express) {
             });
           }
           creditCost = quotedFile.creditsTotal;
+          runOcr = (quotedFile.breakdown?.ocr ?? 0) > 0;
         }
 
         const trialEmail = normalizeEmail(req.body?.trial_email);
@@ -1697,7 +1699,11 @@ export function registerImagesMvpRoutes(app: Express) {
           pythonTier,
           true, // performance
           true, // advanced (needed for authenticity signals)
-          req.query.store === 'true'
+          req.query.store === 'true',
+          {
+            ocr: runOcr,
+            maxDim: 2048,
+          }
         );
 
         // Send progress update after extraction
