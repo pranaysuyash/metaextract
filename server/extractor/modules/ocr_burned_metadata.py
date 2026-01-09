@@ -59,10 +59,10 @@ def log_extraction_event(
         duration: Processing duration in seconds (if applicable)
     """
     file_size = "unknown"
-try:
+    try:
         if Path(filepath).exists():
             file_size = Path(filepath).stat().st_size
-    except:
+    except Exception:
         pass
 
     log_message = f"[{event_type}] File: {filepath}, Module: {module_name}, Size: {file_size}"

@@ -3233,8 +3233,8 @@ def extract_comprehensive_metadata(
         return cached_result
 
     try:
-    extractor = get_comprehensive_extractor()
-    result = extractor.extract_comprehensive_metadata(filepath, tier, enable_ocr=enable_ocr)
+        extractor = get_comprehensive_extractor()
+        result = extractor.extract_comprehensive_metadata(filepath, tier, enable_ocr=enable_ocr)
 
         # Log successful completion
         duration = time.time() - start_time

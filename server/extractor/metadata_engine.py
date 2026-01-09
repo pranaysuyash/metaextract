@@ -2089,7 +2089,10 @@ def extract_metadata(
             result["ai_detection"] = {"available": False, "error": str(e)}
     
     # Burned Metadata (OCR from image overlays)
-    if tier_config.burned_metadata and mime_type and mime_type.startswith("image"):
+    if not enable_burned_metadata:
+        # For Images MVP pricing truth: when OCR isn't selected, treat burned metadata as absent.
+        result["burned_metadata"] = None
+    elif tier_config.burned_metadata and mime_type and mime_type.startswith("image"):
         try:
             from modules.ocr_burned_metadata import extract_burned_metadata
             result["burned_metadata"] = extract_burned_metadata(filepath)
@@ -2101,7 +2104,9 @@ def extract_metadata(
         result["locked_fields"].append("burned_metadata")
     
     # Metadata Comparison (verify embedded vs burned data)
-    if tier_config.metadata_comparison and mime_type and mime_type.startswith("image"):
+    if not enable_burned_metadata:
+        result["metadata_comparison"] = None
+    elif tier_config.metadata_comparison and mime_type and mime_type.startswith("image"):
         try:
             from modules.metadata_comparator import compare_metadata
             embedded_data = {
