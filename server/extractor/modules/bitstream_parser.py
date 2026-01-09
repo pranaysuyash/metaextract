@@ -508,6 +508,10 @@ def extract_bitstream_metadata(filepath: str) -> Dict[str, Any]:
         "h264_analysis": {},
         "hevc_analysis": {},
         "av1_analysis": {},
+        "mp3_analysis": {},
+        "aac_analysis": {},
+        "opus_analysis": {},
+        "vorbis_analysis": {},
         "field_count": 0,
     }
 
@@ -607,6 +611,30 @@ def extract_bitstream_metadata(filepath: str) -> Dict[str, Any]:
             result["av1_analysis"]["bitstream_parsing_status"] = "detected" if len(file_data) >= 32 else "not_detected"
 
             result["field_count"] += get_av1_bitstream_field_count()
+
+        # MP3 detection
+        elif file_data.startswith(b'\xff\xfb') or file_data.startswith(b'\xff\xfa') or file_data.startswith(b'\x49\x44\x33'):
+            codec_type = "mp3"
+            result["mp3_analysis"] = parse_mp3_bitstream(file_data)
+            result["field_count"] += get_mp3_bitstream_field_count()
+
+        # AAC ADTS detection
+        elif file_data.startswith(b'\xff\xf1') or file_data.startswith(b'\xff\xf9'):
+            codec_type = "aac"
+            result["aac_analysis"] = parse_aac_adts(file_data)
+            result["field_count"] += get_aac_adts_field_count()
+
+        # Opus detection (Ogg container)
+        elif file_data.startswith(b'OggS') and b'OpusHead' in file_data[:50]:
+            codec_type = "opus"
+            result["opus_analysis"] = parse_opus_header(file_data)
+            result["field_count"] += get_opus_header_field_count()
+
+        # Vorbis detection (Ogg container)
+        elif file_data.startswith(b'OggS') and b'\x01vorbis' in file_data[:50]:
+            codec_type = "vorbis"
+            result["vorbis_analysis"] = parse_vorbis_header(file_data)
+            result["field_count"] += get_vorbis_header_field_count()
 
     except (IOError, BitstreamError) as e:
         logger.error(f"Bitstream extraction error: {e}")
