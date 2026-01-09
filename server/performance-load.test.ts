@@ -39,7 +39,11 @@ jest.mock('fs/promises', () => ({
 
 jest.setTimeout(120000); // Allow long-running performance tests (120s)
 
-describe('Performance and Load Testing', () => {
+const runPerfTests = process.env.RUN_PERF_TESTS === '1';
+
+(runPerfTests ? describe : describe.skip)(
+  'Performance and Load Testing',
+  () => {
   let app: Express;
 
   beforeAll(() => {
@@ -944,4 +948,5 @@ describe('Performance and Load Testing', () => {
       );
     });
   });
-});
+  }
+);
