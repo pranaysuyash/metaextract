@@ -15,6 +15,10 @@ test('Images MVP smoke: upload -> results render -> key field exists', async ({ 
   const input = page.getByTestId('image-upload-input');
   await input.setInputFiles(filePath);
 
+  const analyzeButton = page.getByRole('button', { name: 'Analyze' });
+  await expect(analyzeButton).toBeEnabled({ timeout: 60_000 });
+  await analyzeButton.click();
+
   await expect(page.getByTestId('results-root')).toBeVisible({
     timeout: 60_000,
   });

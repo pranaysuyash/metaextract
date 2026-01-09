@@ -242,85 +242,6 @@ function cleanupConnections(sessionId: string) {
   }
 }
 
-// Use disk storage to prevent DoS via memory exhaustion
-const uploadDir = path.join(os.tmpdir(), 'metaextract-uploads');
-fs.mkdir(uploadDir, { recursive: true }).catch(e =>
-  console.warn('Failed to create upload dir:', e)
-);
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-      const hash = crypto.randomBytes(8).toString('hex');
-      const sanitized = sanitizeFilename(file.originalname).replace(
-        /[^a-z0-9._-]/gi,
-        '_'
-      );
-      cb(null, `${hash}-${Date.now()}-${sanitized}`);
-    },
-  }),
-  limits: {
-    fileSize: IMAGES_MVP_MAX_BYTES,
-  },
-});
-
-const SUPPORTED_IMAGE_MIMES = new Set([
-  // Original MVP formats
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-
-  // Enhanced formats
-  'image/tiff',
-  'image/bmp',
-  'image/gif',
-  'image/x-icon',
-  'image/svg+xml',
-  'image/x-raw',
-  'image/x-canon-cr2',
-  'image/x-nikon-nef',
-  'image/x-sony-arw',
-  'image/x-adobe-dng',
-  'image/x-olympus-orf',
-  'image/x-fuji-raf',
-  'image/x-pentax-pef',
-  'image/x-sigma-x3f',
-  'image/x-samsung-srw',
-  'image/x-panasonic-rw2',
-]);
-
-const SUPPORTED_IMAGE_EXTENSIONS = new Set([
-  // Original MVP formats (maintained for backward compatibility)
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.webp',
-  '.heic',
-  '.heif',
-
-  // Enhanced formats from our comprehensive system
-  '.tiff',
-  '.tif',
-  '.bmp',
-  '.gif',
-  '.ico',
-  '.svg',
-  '.raw',
-  '.cr2',
-  '.nef',
-  '.arw',
-  '.dng',
-  '.orf',
-  '.raf',
-  '.pef',
-  '.x3f',
-  '.srw',
-  '.rw2',
-]);
-
 const IMAGES_MVP_MAX_BYTES = 100 * 1024 * 1024;
 const IMAGES_MVP_MAX_FILES = 1;
 const IMAGES_MVP_QUOTE_TTL_MS = 10 * 60 * 1000;
@@ -445,6 +366,86 @@ function getStoredQuote(quoteId: string) {
   }
   return stored;
 }
+
+// Use disk storage to prevent DoS via memory exhaustion
+const uploadDir = path.join(os.tmpdir(), 'metaextract-uploads');
+fs.mkdir(uploadDir, { recursive: true }).catch(e =>
+  console.warn('Failed to create upload dir:', e)
+);
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, cb) => {
+      const hash = crypto.randomBytes(8).toString('hex');
+      const sanitized = sanitizeFilename(file.originalname).replace(
+        /[^a-z0-9._-]/gi,
+        '_'
+      );
+      cb(null, `${hash}-${Date.now()}-${sanitized}`);
+    },
+  }),
+  limits: {
+    fileSize: IMAGES_MVP_MAX_BYTES,
+  },
+});
+
+const SUPPORTED_IMAGE_MIMES = new Set([
+  // Original MVP formats
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+
+  // Enhanced formats
+  'image/tiff',
+  'image/bmp',
+  'image/gif',
+  'image/x-icon',
+  'image/svg+xml',
+  'image/x-raw',
+  'image/x-canon-cr2',
+  'image/x-nikon-nef',
+  'image/x-sony-arw',
+  'image/x-adobe-dng',
+  'image/x-olympus-orf',
+  'image/x-fuji-raf',
+  'image/x-pentax-pef',
+  'image/x-sigma-x3f',
+  'image/x-samsung-srw',
+  'image/x-panasonic-rw2',
+]);
+
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  // Original MVP formats (maintained for backward compatibility)
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.heic',
+  '.heif',
+
+  // Enhanced formats from our comprehensive system
+  '.tiff',
+  '.tif',
+  '.bmp',
+  '.gif',
+  '.ico',
+  '.svg',
+  '.raw',
+  '.cr2',
+  '.nef',
+  '.arw',
+  '.dng',
+  '.orf',
+  '.raf',
+  '.pef',
+  '.x3f',
+  '.srw',
+  '.rw2',
+]);
+
 
 function getBaseUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {

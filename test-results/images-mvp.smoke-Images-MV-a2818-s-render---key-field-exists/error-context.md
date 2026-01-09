@@ -1,0 +1,132 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - link "Skip to navigation" [ref=e4] [cursor=pointer]:
+    - /url: "#main-navigation"
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e8]:
+        - link "M MetaExtract" [ref=e9] [cursor=pointer]:
+          - /url: /home
+          - generic [ref=e11]: M
+          - generic [ref=e12]: MetaExtract
+        - navigation [ref=e13]:
+          - link "Features" [ref=e14] [cursor=pointer]:
+            - /url: /home#features
+          - link "Pricing" [ref=e15] [cursor=pointer]:
+            - /url: /images_mvp?pricing=1
+          - link "Docs" [ref=e16] [cursor=pointer]:
+            - /url: /docs
+        - generic [ref=e17]:
+          - button "Sign In" [ref=e18]:
+            - img
+            - text: Sign In
+          - button "Get Started" [ref=e19]:
+            - img
+            - text: Get Started
+    - main [ref=e20]:
+      - link "Skip to main content" [ref=e21] [cursor=pointer]:
+        - /url: "#main-content"
+      - main [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: BETA ACCESS // IMAGES_ONLY
+            - heading "Metadata for Humans." [level=1] [ref=e26]
+            - paragraph [ref=e27]: Check your photos for hidden location data, device serial numbers, and personal information before you share.
+          - generic [ref=e28]:
+            - region "Upload Analysis" [ref=e29]:
+              - heading "Upload Analysis" [level=2] [ref=e30]
+              - button "Upload image drop zone. Drag and drop a file here or click to browse." [ref=e32] [cursor=pointer]:
+                - img [ref=e35]
+                - heading "Drop your image here" [level=3] [ref=e38]
+                - paragraph [ref=e39]:
+                  - text: Supports JPG, PNG, HEIC, WebP
+                  - generic [ref=e40]:
+                    - img [ref=e41]
+                    - text: 2 free checks (no signup)
+                - button "Browse Files" [ref=e43]
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - img [ref=e46]
+                - generic [ref=e48]: Instant Check
+              - generic [ref=e49]:
+                - img [ref=e50]
+                - generic [ref=e53]: 100% Private
+        - region "Key Features" [ref=e54]:
+          - generic [ref=e55]:
+            - heading "Key Features" [level=2] [ref=e56]
+            - generic [ref=e57]:
+              - generic [ref=e58]:
+                - img [ref=e60]
+                - heading "Device Fingerprints" [level=3] [ref=e69]
+                - paragraph [ref=e70]: Photos contain unique serial numbers ("MakerNotes") that link images back to your specific camera or phone.
+              - generic [ref=e71]:
+                - img [ref=e73]
+                - heading "Hidden Location" [level=3] [ref=e76]
+                - paragraph [ref=e77]: GPS coordinates are often embedded by default. See exactly where a photo was taken before posting it online.
+              - generic [ref=e78]:
+                - img [ref=e80]
+                - heading "Safe Sharing" [level=3] [ref=e83]
+                - paragraph [ref=e84]: Understand what you're revealing. We extract the hidden layer so you can decide what stays private.
+    - contentinfo [ref=e85]:
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - link "M MetaExtract" [ref=e89] [cursor=pointer]:
+              - /url: /home
+              - generic [ref=e91]: M
+              - generic [ref=e92]: MetaExtract
+            - paragraph [ref=e93]: The world's most comprehensive metadata extraction system.
+          - generic [ref=e94]:
+            - heading "Product" [level=4] [ref=e95]
+            - list [ref=e96]:
+              - listitem [ref=e97]:
+                - link "Features" [ref=e98] [cursor=pointer]:
+                  - /url: /home#features
+              - listitem [ref=e99]:
+                - link "Pricing" [ref=e100] [cursor=pointer]:
+                  - /url: /images_mvp?pricing=1
+              - listitem [ref=e101]:
+                - link "Documentation" [ref=e102] [cursor=pointer]:
+                  - /url: /docs
+              - listitem [ref=e103]:
+                - link "API" [ref=e104] [cursor=pointer]:
+                  - /url: /api
+          - generic [ref=e105]:
+            - heading "Company" [level=4] [ref=e106]
+            - list [ref=e107]:
+              - listitem [ref=e108]:
+                - link "About" [ref=e109] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e110]:
+                - link "Blog" [ref=e111] [cursor=pointer]:
+                  - /url: /blog
+              - listitem [ref=e112]:
+                - link "Contact" [ref=e113] [cursor=pointer]:
+                  - /url: /contact
+          - generic [ref=e114]:
+            - heading "Legal" [level=4] [ref=e115]
+            - list [ref=e116]:
+              - listitem [ref=e117]:
+                - link "Privacy Policy" [ref=e118] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e119]:
+                - link "Terms of Service" [ref=e120] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e121]:
+                - link "Security" [ref=e122] [cursor=pointer]:
+                  - /url: /security
+        - generic [ref=e123]:
+          - paragraph [ref=e124]: © 2026 MetaExtract. All rights reserved.
+          - generic [ref=e125]:
+            - generic [ref=e126]: Zero Data Retention
+            - generic [ref=e127]: •
+            - generic [ref=e128]: GDPR Compliant
+            - generic [ref=e129]: •
+            - generic [ref=e130]: SOC 2 Type II
+```
