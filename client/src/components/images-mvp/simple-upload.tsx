@@ -18,8 +18,10 @@ import {
   type ImagesMvpQuoteOps,
   type ImagesMvpQuoteResponse,
 } from '@/lib/images-mvp-quote';
+import { useAuth } from '@/lib/auth';
 
 export function SimpleUploadZone() {
+  const { isAuthenticated } = useAuth();
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
@@ -126,6 +128,7 @@ export function SimpleUploadZone() {
   );
 
   const checkCreditsAndMaybeResume = useCallback(async () => {
+    if (!resumeRequested) return;
     if (!pendingFile || isUploading) return;
     try {
       const res = await fetch('/api/images_mvp/credits/balance', {
@@ -146,12 +149,22 @@ export function SimpleUploadZone() {
         }
         setShowPricingModal(false);
         setResumeRequested(false);
-        void uploadFile(pendingFile);
+        toast({
+          title: 'Credits available',
+          description: 'Ready to analyze. Click Analyze to continue.',
+        });
       }
     } catch {
       // Best-effort only
     }
-  }, [pendingFile, isUploading]);
+  }, [
+    pendingFile,
+    pendingFileId,
+    isUploading,
+    quoteData,
+    resumeRequested,
+    toast,
+  ]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -161,14 +174,6 @@ export function SimpleUploadZone() {
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, [checkCreditsAndMaybeResume]);
-
-  useEffect(() => {
-    const onFocus = () => {
-      void checkCreditsAndMaybeResume();
-    };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
   }, [checkCreditsAndMaybeResume]);
 
   useEffect(() => {
@@ -701,10 +706,12 @@ export function SimpleUploadZone() {
                   {maxBytesDisplay
                     ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
                     : ''}
-                  <span className="text-primary text-xs font-mono mt-1 block">
-                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
-                    free checks (no signup)
-                  </span>
+                  {!isAuthenticated && (
+                    <span className="text-primary text-xs font-mono mt-1 block">
+                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
+                      free checks (no signup)
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
@@ -714,10 +721,12 @@ export function SimpleUploadZone() {
                     : ''}
                   {' '}
                   <br className="hidden sm:block" />
-                  <span className="text-primary text-xs font-mono mt-1 block">
-                    <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
-                    free checks (no signup)
-                  </span>
+                  {!isAuthenticated && (
+                    <span className="text-primary text-xs font-mono mt-1 block">
+                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
+                      free checks (no signup)
+                    </span>
+                  )}
                 </>
               )}
             </p>
@@ -733,10 +742,10 @@ export function SimpleUploadZone() {
       </label>
 
       {pendingFile && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-sm font-semibold text-white">
+        <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left overflow-hidden">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-white truncate" title={pendingFile.name}>
                 {pendingFile.name}
               </div>
               <div className="text-[11px] text-slate-400">
@@ -746,7 +755,7 @@ export function SimpleUploadZone() {
                   : ' • dimensions pending'}
               </div>
             </div>
-            <div className="text-xs text-slate-300">
+            <div className="text-xs text-slate-300 shrink-0">
               {quoteLoading
                 ? 'Calculating quote...'
                 : activeQuoteEntry?.accepted
@@ -761,53 +770,77 @@ export function SimpleUploadZone() {
 
           {activeQuoteEntry?.accepted && activeQuoteEntry.breakdown && (
             <div className="mt-3 space-y-2 text-xs text-slate-300">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
-                  {activeQuoteEntry.mpBucket || 'standard'}
-                </span>
-                {activeQuoteEntry.warnings?.map(warning => (
-                  <span
-                    key={warning}
-                    className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
-                  >
-                    {warning}
+              {/* Size badge - only show if not standard */}
+              {activeQuoteEntry.mpBucket && activeQuoteEntry.mpBucket !== 'standard' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
+                    {activeQuoteEntry.mpBucket === 'large' ? 'Large image' : activeQuoteEntry.mpBucket}
                   </span>
-                ))}
-              </div>
-              <div className="grid gap-1">
-                <div>
-                  Base scan{' '}
-                  {activeQuoteEntry.breakdown.base +
-                    activeQuoteEntry.breakdown.embedding}{' '}
-                  + Text scan {activeQuoteEntry.breakdown.ocr} + Size{' '}
-                  {activeQuoteEntry.breakdown.mp} ={' '}
+                  {activeQuoteEntry.warnings?.map(warning => (
+                    <span
+                      key={warning}
+                      className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
+                    >
+                      {warning}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {/* User-friendly breakdown */}
+              <div className="grid gap-1.5 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300">Base scan</span>
                   <span className="text-white font-semibold">
-                    {activeQuoteEntry.creditsTotal}
+                    {activeQuoteEntry.breakdown.base + activeQuoteEntry.breakdown.embedding} credits
                   </span>
                 </div>
-                <div>
-                  Batch total:{' '}
-                  <span className="text-white font-semibold">
-                    {quoteData?.quote.totalCredits ?? 0}
-                  </span>{' '}
-                  credits
-                  {quoteData?.quote.standardEquivalents
-                    ? ` (~${quoteData.quote.standardEquivalents} base scans)`
-                    : ''}
+                
+                {activeQuoteEntry.breakdown.ocr > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Text scan</span>
+                    <span className="text-white font-semibold">
+                      +{activeQuoteEntry.breakdown.ocr} credits
+                    </span>
+                  </div>
+                )}
+                
+                {activeQuoteEntry.breakdown.mp > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Large image fee</span>
+                    <span className="text-white font-semibold">
+                      +{activeQuoteEntry.breakdown.mp} credits
+                    </span>
+                  </div>
+                )}
+                
+                <div className="h-px bg-white/10 my-1"></div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-white font-medium">Total</span>
+                  <span className="text-white font-bold text-base">
+                    {activeQuoteEntry.creditsTotal} credits
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
           <div className="mt-4 grid gap-2 text-xs text-slate-300">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={quoteOps.ocr}
                 onChange={() => handleOpsToggle('ocr')}
                 disabled={quoteLoading || isUploading}
+                className="cursor-pointer"
               />
-              Text scan (+6 credits)
+              <span className="select-none">
+                Detect overlaid text{' '}
+                <span className="text-slate-400">
+                  (+6 credits if text found)
+                </span>
+              </span>
             </label>
           </div>
 

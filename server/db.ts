@@ -249,7 +249,7 @@ export function getDb(): ReturnType<typeof drizzle> {
  * Direct export for code that imports `db` directly
  * This is the actual Drizzle client instance
  */
-let _db: ReturnType<typeof drizzle> | null = null;
+const _db: ReturnType<typeof drizzle> | null = null;
 
 export const db = new Proxy({} as any, {
   get: (target, prop) => {

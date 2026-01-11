@@ -279,7 +279,7 @@ export function PremiumTimeline({
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const allTimelinePoints: TimelineEvent[] = useMemo(() => {
-    let points: TimelineEvent[] = [];
+    const points: TimelineEvent[] = [];
     const filesToProcess =
       fileMode === 'single' ? [files[selectedFileIdx]] : files;
 

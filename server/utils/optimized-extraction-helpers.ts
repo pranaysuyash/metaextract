@@ -15,8 +15,6 @@ import path from 'path';
 import fs from 'fs/promises';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
-import { normalizeTier } from '@shared/tierConfig';
-import type { AuthRequest } from '../auth';
 import { metadataCacheManager } from '../cache/metadata-cache';
 import type { PythonMetadataResponse } from './extraction-helpers';
 
@@ -247,15 +245,15 @@ function getCacheTTLForTier(tier: string, result: PythonMetadataResponse): numbe
     case 'pro':
       return 3600; // 1 hour for pro tier
     case 'super':
-    case 'enterprise':
+    case 'enterprise': {
       // For enterprise, cache longer but consider metadata size
       const fieldCount = result.extraction_info?.fields_extracted || 0;
       if (fieldCount > 1000) {
         // Large extractions get shorter cache time to avoid memory issues
         return 7200; // 2 hours
-      } else {
-        return 14400; // 4 hours
       }
+      return 14400; // 4 hours
+    }
     default:
       return 1800; // 30 minutes default
   }

@@ -174,7 +174,7 @@ export class PermissionManager {
     }
 
     // Get existing roles for user
-    let userRoles = this.userTeamRoles.get(userId) || [];
+    const userRoles = this.userTeamRoles.get(userId) || [];
     
     // Check if user already has a role in this team
     const existingRoleIndex = userRoles.findIndex(ur => ur.teamId === teamId);

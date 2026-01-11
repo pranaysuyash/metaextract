@@ -4,7 +4,7 @@ import { spawn } from 'child_process';
 import * as fsSync from 'fs';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
-import { sanitizeFilename, isPathSafe } from '../security-utils';
+import { isPathSafe } from '../security-utils';
 
 // Get the server directory - resolve from project root
 // During tests, use process.cwd() which is the project root
@@ -27,7 +27,7 @@ export function findPythonExecutable(): string {
   for (const candidate of venvCandidates) {
     try {
       if (fsSync.existsSync(candidate)) return candidate;
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -350,8 +350,6 @@ export function transformMetadataForFrontend(
   originalFilename: string,
   tier: string
 ): FrontendMetadataResponse {
-  const normalizedTier = normalizeTier(tier);
-
   const normalizeGps = (
     gps: Record<string, any> | null
   ): Record<string, any> | null => {
@@ -388,26 +386,6 @@ export function transformMetadataForFrontend(
       longitude: lon,
       google_maps_url: googleMapsUrl,
     };
-  };
-
-  const flattenForensic = (
-    forensic: Record<string, any> | null
-  ): Record<string, any> => {
-    if (!forensic || typeof forensic !== 'object') return {};
-    const flat: Record<string, any> = {};
-
-    // Flatten nested objects
-    Object.entries(forensic).forEach(([key, value]) => {
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        Object.entries(value).forEach(([subKey, subValue]) => {
-          flat[`${key}_${subKey}`] = subValue;
-        });
-      } else {
-        flat[key] = value;
-      }
-    });
-
-    return flat;
   };
 
   const flattenObject = (
@@ -494,7 +472,7 @@ export function transformMetadataForFrontend(
       raw.file?.mime_type ||
       raw.summary?.mime_type ||
       'application/octet-stream',
-    tier,
+    tier: normalizeTier(tier),
     fields_extracted: raw.extraction_info?.fields_extracted || 0,
     processing_ms: raw.extraction_info?.processing_ms || 0,
     file_integrity: raw.hashes?._locked ? { _locked: true } : raw.hashes || {},
@@ -599,7 +577,7 @@ export async function extractMetadataWithPython(
   // Ensure the file exists (use async access so it's mockable in tests)
   try {
     await fs.access(resolvedPath);
-  } catch (err) {
+  } catch {
     throw new Error(`File not found: ${filePath}`);
   }
 

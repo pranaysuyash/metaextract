@@ -8,7 +8,6 @@ import {
   TimelineHeader,
   TimelineTitle,
   TimelineTime,
-  TimelineDescription,
   TimelineIcon,
   TimelineContent,
 } from '@/components/ui/timeline';
@@ -21,7 +20,7 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
-import { format, differenceInSeconds, differenceInMinutes } from 'date-fns';
+import { format, differenceInSeconds } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface BatchResult {

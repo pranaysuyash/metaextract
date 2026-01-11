@@ -372,11 +372,12 @@ export class TeamAnalytics {
         case 'daily':
           key = activity.timestamp.toISOString().split('T')[0];
           break;
-        case 'weekly':
+        case 'weekly': {
           const weekStart = new Date(activity.timestamp);
           weekStart.setDate(weekStart.getDate() - weekStart.getDay());
           key = weekStart.toISOString().split('T')[0];
           break;
+        }
         case 'monthly':
           key = `${activity.timestamp.getFullYear()}-${activity.timestamp.getMonth() + 1}`;
           break;

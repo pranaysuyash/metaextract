@@ -275,7 +275,7 @@ function cleanDeviceName(name: string): string {
   if (!name) return '';
 
   // Replace common patterns
-  let cleaned = name
+  const cleaned = name
     .replace(/CORPORATION/gi, '')
     .replace(/ELECTRONICS?/gi, '')
     .replace(/INC\.?/gi, '')

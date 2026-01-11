@@ -1,20 +1,11 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  FileText, 
-  Camera, 
-  MapPin, 
-  Calendar, 
-  Hash,
-  Eye,
-  Settings,
-  Image,
+import {
+  FileText,
   FileImage,
-  Database,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,7 +47,9 @@ export const FileComparison: React.FC<FileComparisonProps> = ({ results }) => {
   });
   
   const commonKeys = Array.from(allKeys).filter(key => {
-    return results.every(result => result.metadata.hasOwnProperty(key));
+    return results.every(result =>
+      Object.prototype.hasOwnProperty.call(result.metadata, key)
+    );
   });
 
   // Camera-specific keys
@@ -156,7 +149,7 @@ export const FileComparison: React.FC<FileComparisonProps> = ({ results }) => {
   const renderFileCards = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {results.map((result, idx) => (
+        {results.map(result => (
           <Card key={result.id} className="bg-card border-white/10">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">

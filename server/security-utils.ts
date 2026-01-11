@@ -89,6 +89,7 @@ export function sanitizeString(
   maxLength: number = 1000
 ): string {
   // Remove null bytes and control characters
+  // eslint-disable-next-line no-control-regex
   let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
   // Limit length
@@ -104,6 +105,7 @@ export function sanitizeString(
  */
 export function sanitizeFilename(filename: string): string {
   // Remove path separators and dangerous characters
+  // eslint-disable-next-line no-control-regex
   const dangerous = /[<>:"/\\|?*\x00-\x1f]/g;
   let sanitized = filename.replace(dangerous, '_');
 

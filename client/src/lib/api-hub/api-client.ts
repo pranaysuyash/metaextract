@@ -445,9 +445,9 @@ export class ApiHub {
     const limits = await this.getRateLimits(userId);
     
     // Find the most specific rate limit (endpoint-specific first, then tier-specific)
-    let applicableLimit = limits.find(l => l.endpoint === endpoint) ||
-                         limits.find(l => !l.endpoint) ||
-                         this.config.defaultRateLimit;
+    const applicableLimit = limits.find(l => l.endpoint === endpoint) ||
+      limits.find(l => !l.endpoint) ||
+      this.config.defaultRateLimit;
 
     // In a real implementation, we would check the actual request count
     // against the time window to determine if the user is rate limited

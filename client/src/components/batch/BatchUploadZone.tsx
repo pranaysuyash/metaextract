@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Upload, 
@@ -22,8 +21,6 @@ import {
   FileSpreadsheet,
   Database,
   Clock,
-  Hash,
-  Eye
 } from 'lucide-react';
 import { formatFileSize } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';

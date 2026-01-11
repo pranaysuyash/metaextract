@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
-import { Filter, Calendar as CalendarIcon, FileText, Image, FileSpreadsheet, Database } from 'lucide-react';
+import { Calendar as CalendarIcon, FileText, Image as ImageIcon, FileSpreadsheet, Database } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
@@ -31,7 +31,7 @@ interface BatchResult {
   metadata: Record<string, any>;
 }
 
-interface BatchFilters {
+interface BatchFiltersState {
   status?: string;
   fileType?: string;
   dateRange?: { start: Date; end: Date };
@@ -40,8 +40,8 @@ interface BatchFilters {
 }
 
 interface BatchFiltersProps {
-  filters: BatchFilters;
-  onFiltersChange: (filters: BatchFilters) => void;
+  filters: BatchFiltersState;
+  onFiltersChange: (filters: BatchFiltersState) => void;
   results: BatchResult[];
 }
 
@@ -56,16 +56,6 @@ export const BatchFilters: React.FC<BatchFiltersProps> = ({ filters, onFiltersCh
       types.add(mainType);
     });
     return Array.from(types).sort();
-  }, [results]);
-
-  // Get field count range
-  const fieldCountRange = React.useMemo(() => {
-    if (results.length === 0) return { min: 0, max: 0 };
-    const counts = results.map(r => r.fieldsExtracted);
-    return {
-      min: Math.min(...counts),
-      max: Math.max(...counts),
-    };
   }, [results]);
 
   const handleStatusChange = (status: string) => {
@@ -100,7 +90,7 @@ export const BatchFilters: React.FC<BatchFiltersProps> = ({ filters, onFiltersCh
 
   const getFileTypeIcon = (type: string) => {
     switch (type) {
-      case 'image': return <Image className="w-4 h-4" />;
+      case 'image': return <ImageIcon className="w-4 h-4" aria-hidden="true" />;
       case 'application': return <FileSpreadsheet className="w-4 h-4" />;
       case 'text': return <FileText className="w-4 h-4" />;
       case 'video': return <Database className="w-4 h-4" />;

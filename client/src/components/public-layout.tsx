@@ -10,9 +10,10 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
-import { LogIn, UserPlus, Upload, LogOut, Menu, X, Settings, CreditCard } from 'lucide-react';
+import { LogIn, UserPlus, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { AuthModal } from './auth-modal';
+import { AccountMenu } from './account-menu';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -30,7 +31,7 @@ export function PublicLayout({
   showFooter = true,
   headerContent,
 }: PublicLayoutProps) {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,7 +40,13 @@ export function PublicLayout({
     'login'
   );
   const isImagesMvp = location.pathname.startsWith('/images_mvp');
+  const isAppRoute =
+    isImagesMvp ||
+    location.pathname === '/credits' ||
+    location.pathname === '/settings';
+  const effectiveShowFooter = showFooter && !isAppRoute;
   const marketingRoot = '/home';
+  const logoTarget = isAuthenticated ? '/images_mvp' : marketingRoot;
   const pricingLink = isImagesMvp ? '/images_mvp?pricing=1' : `${marketingRoot}#pricing`;
   const featuresLink = `${marketingRoot}#features`;
 
@@ -52,10 +59,9 @@ export function PublicLayout({
     setAuthModalMode('register');
     setAuthModalOpen(true);
   };
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/images_mvp');
+  const handleMobileNavigate = (path: string) => {
+    navigate(path);
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -66,7 +72,7 @@ export function PublicLayout({
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
-              <Link to={marketingRoot} className="flex items-center gap-2 group">
+              <Link to={logoTarget} className="flex items-center gap-2 group">
                 <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
                   <span className="text-black font-bold text-sm">M</span>
                 </div>
@@ -99,47 +105,10 @@ export function PublicLayout({
                 </nav>
               )}
 
-              {/* Auth Buttons */}
+              {/* Auth Section - Desktop */}
               <div className="hidden md:flex items-center gap-3">
-                {isAuthenticated && user ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate('/settings')}
-                      className="text-slate-200 hover:text-white hover:bg-white/10"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate('/credits')}
-                      className="text-slate-200 hover:text-white hover:bg-white/10"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Credits
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate('/images_mvp')}
-                      className="text-slate-200 hover:text-white hover:bg-white/10"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Images MVP
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLogout}
-                      className="text-slate-200 hover:text-white hover:bg-white/10"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </Button>
-                  </>
+                {isAuthenticated ? (
+                  <AccountMenu />
                 ) : (
                   <>
                     <Button
@@ -187,81 +156,36 @@ export function PublicLayout({
               <div className="container mx-auto px-4 py-4 space-y-4">
                 {!isAuthenticated && (
                   <nav className="flex flex-col gap-2">
-                    {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                    <Link
-                      to={featuresLink}
-                      className="text-sm text-slate-200 hover:text-white py-2"
-                      onClick={() => setMobileMenuOpen(false)}
+                    <Button
+                      variant="ghost"
+                      className="justify-start px-2 text-sm text-slate-200 hover:text-white hover:bg-white/10"
+                      onClick={() => handleMobileNavigate(featuresLink)}
                     >
                       Features
-                    </Link>
-                    {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                    <Link
-                      to={pricingLink}
-                      className="text-sm text-slate-200 hover:text-white py-2"
-                      onClick={() => setMobileMenuOpen(false)}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start px-2 text-sm text-slate-200 hover:text-white hover:bg-white/10"
+                      onClick={() => handleMobileNavigate(pricingLink)}
                     >
                       Pricing
-                    </Link>
-                    {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                    <Link
-                      to="/docs"
-                      className="text-sm text-slate-200 hover:text-white py-2"
-                      onClick={() => setMobileMenuOpen(false)}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start px-2 text-sm text-slate-200 hover:text-white hover:bg-white/10"
+                      onClick={() => handleMobileNavigate('/docs')}
                     >
                       Docs
-                    </Link>
+                    </Button>
                   </nav>
                 )}
 
+                {/* Mobile Auth Section */}
                 <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
-                  {isAuthenticated && user ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          navigate('/settings');
-                          setMobileMenuOpen(false);
-                        }}
-                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Dashboard
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          navigate('/credits');
-                          setMobileMenuOpen(false);
-                        }}
-                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Credits
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          navigate('/images_mvp');
-                          setMobileMenuOpen(false);
-                        }}
-                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Images MVP
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          handleLogout();
-                          setMobileMenuOpen(false);
-                        }}
-                        className="justify-start text-slate-200 hover:text-white hover:bg-white/10"
-                      >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Logout
-                      </Button>
-                    </>
+                  {isAuthenticated ? (
+                    <div className="px-2">
+                      <AccountMenu />
+                    </div>
                   ) : (
                     <>
                       <Button
@@ -301,7 +225,7 @@ export function PublicLayout({
       </main>
 
       {/* Footer */}
-      {showFooter && (
+      {effectiveShowFooter && (
         <footer className="bg-[#0B0C10] border-t border-white/5 py-12">
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">

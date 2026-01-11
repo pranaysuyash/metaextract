@@ -290,8 +290,7 @@ export function registerPaymentRoutes(app: Express) {
         });
       }
 
-      let balanceKey: string;
-      balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
+      const balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
 
       const balance = await storage.getOrCreateCreditBalance(
         balanceKey,

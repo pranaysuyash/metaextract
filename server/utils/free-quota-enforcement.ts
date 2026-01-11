@@ -257,7 +257,7 @@ async function handleExtractionRequest(
     startTime: number;
   }
 ): Promise<void> {
-  const { clientId, ip, userAgent, isNewToken, startTime } = context;
+  const { clientId, ip } = context;
 
   try {
     // Check if user has trial email (bypasses free limits)
@@ -429,7 +429,7 @@ export async function incrementUsage(
         await db
           .insert(clientUsage)
           .values({
-            clientId: clientId,
+            clientId,
             freeUsed: 1,
             lastIp: ip,
             lastUsed: new Date(),
@@ -498,9 +498,9 @@ async function trackRequest(
     const key = `activity:${clientId}`;
     const activity = {
       client_id: clientId,
-      ip: ip,
+      ip,
       user_agent: userAgent,
-      timestamp: timestamp,
+      timestamp,
       action: 'request',
     };
 

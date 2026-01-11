@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -32,28 +32,21 @@ import {
   Filter,
   FileJson,
   Database,
-  Image,
+  Image as ImageIcon,
   Video,
   Music,
   FileText,
   Globe,
-  Lock,
   Shield,
-  Calendar,
   MapPin,
   Camera,
   Smartphone,
-  Palette,
-  Ruler,
-  Clock,
   Hash,
   EyeIcon,
   Mail,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 
 interface MetadataResult {
   filename: string;
@@ -145,20 +138,9 @@ export function EnhancedResultsDisplayV2({
 }: EnhancedResultsDisplayProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('summary');
-  const [expandedCategories, setExpandedCategories] = useState<
-    Record<string, boolean>
-  >({});
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>(
     {}
   );
-
-  // Toggle category expansion
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
-  };
 
   // Toggle field visibility
   const toggleFieldVisibility = (category: string, field: string) => {
@@ -170,35 +152,6 @@ export function EnhancedResultsDisplayV2({
   };
 
   // Filter metadata based on search term
-  const filteredMetadata = useMemo(() => {
-    if (!searchTerm) return result;
-
-    const filtered: any = { ...result };
-    const lowerSearch = searchTerm.toLowerCase();
-
-    // Filter each category
-    Object.entries(result).forEach(([key, value]) => {
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value)
-      ) {
-        const filteredValue: any = {};
-        Object.entries(value).forEach(([field, fieldValue]) => {
-          if (
-            field.toLowerCase().includes(lowerSearch) ||
-            String(fieldValue).toLowerCase().includes(lowerSearch)
-          ) {
-            filteredValue[field] = fieldValue;
-          }
-        });
-        filtered[key] = filteredValue;
-      }
-    });
-
-    return filtered;
-  }, [result, searchTerm]);
-
   // Get category icon
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
@@ -207,7 +160,7 @@ export function EnhancedResultsDisplayV2({
       case 'gps':
         return <MapPin className="w-4 h-4" />;
       case 'image':
-        return <Image className="w-4 h-4" />;
+        return <ImageIcon className="w-4 h-4" aria-hidden="true" />;
       case 'video':
         return <Video className="w-4 h-4" />;
       case 'audio':

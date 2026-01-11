@@ -6,10 +6,6 @@
  * Ready for ClamAV or Cloud-based scanning integration.
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 export interface ScanResult {
   isClean: boolean;
@@ -53,16 +49,8 @@ export async function scanBuffer(buffer: Buffer): Promise<ScanResult> {
  * @param filePath - Path to file
  * @returns ScanResult
  */
-export async function scanFile(filePath: string): Promise<ScanResult> {
+export async function scanFile(_filePath: string): Promise<ScanResult> {
   // Placeholder for `clamdscan <filePath>`
-  try {
-    // const { stdout } = await execAsync(`clamdscan "${filePath}"`);
-    // return parseClamOutput(stdout);
-    return { isClean: true };
-  } catch (error) {
-    console.error('Virus scan error:', error);
-    // Fail open or closed based on policy? 
-    // Usually fail-closed (assume unsafe) if scanner error, but for MVP fail-open
-    return { isClean: true, error: 'Scanner unavailable' };
-  }
+  // MVP: fail-open until a scanner is configured.
+  return { isClean: true };
 }

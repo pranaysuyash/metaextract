@@ -5,22 +5,6 @@
 
 import React from 'react';
 
-interface ExtractionProgress {
-  stage: string;
-  progress: number;
-  message: string;
-  estimatedTimeRemaining?: number;
-  currentOperation: string;
-  completedOperations: string[];
-  errors: string[];
-}
-
-interface ProgressTrackerProps {
-  extractionId: string;
-  onComplete: (result: any) => void;
-  onError: (error: string) => void;
-}
-
 /**
  * DEPRECATED: ExtractionProgressTracker
  *

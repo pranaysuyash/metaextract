@@ -11,33 +11,41 @@ const CONFIG = {
   // IP Rate Limits
   IP_DAILY_LIMIT: 10,
   IP_MINUTE_LIMIT: 2,
-  
+
   // Client Rate Limits
   CLIENT_MINUTE_LIMIT: 2,
-  
+
   // Cleanup intervals
   DAILY_RESET_HOUR: 0, // Midnight UTC
-  CLEANUP_INTERVAL_MS: 60 * 60 * 1000 // 1 hour
+  CLEANUP_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
 };
 
 /**
  * IP-based rate limiting middleware
  * Tracks requests per IP address
  */
-export async function ipRateLimitMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function ipRateLimitMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    
-    // Skip rate limiting for development/testing
-    if (process.env.NODE_ENV === 'development' && process.env.SKIP_RATE_LIMITS === 'true') {
+
+    // Skip rate limiting for development/testing ONLY
+    // SECURITY: This must NEVER be enabled in production
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      process.env.SKIP_RATE_LIMITS === 'true'
+    ) {
       next();
       return;
     }
-    
+
     // Get current counts
     const dailyCount = await getIPDailyCount(ip);
     const minuteCount = await getIPMinuteCount(ip);
-    
+
     // Check limits
     if (dailyCount >= CONFIG.IP_DAILY_LIMIT) {
       res.status(429).json({
@@ -46,11 +54,11 @@ export async function ipRateLimitMiddleware(req: Request, res: Response, next: N
         limit_type: 'daily',
         limit: CONFIG.IP_DAILY_LIMIT,
         current: dailyCount,
-        reset_time: getNextResetTime('daily')
+        reset_time: getNextResetTime('daily'),
       });
       return;
     }
-    
+
     if (minuteCount >= CONFIG.IP_MINUTE_LIMIT) {
       res.status(429).json({
         error: 'Rate limit exceeded',
@@ -58,17 +66,16 @@ export async function ipRateLimitMiddleware(req: Request, res: Response, next: N
         limit_type: 'minute',
         limit: CONFIG.IP_MINUTE_LIMIT,
         current: minuteCount,
-        reset_time: getNextResetTime('minute')
+        reset_time: getNextResetTime('minute'),
       });
       return;
     }
-    
+
     // Increment counters
     await incrementIPCounts(ip);
-    
+
     // Allow request
     next();
-    
   } catch (error) {
     console.error('Rate limiting error:', error);
     // Don't break the app - allow request but log error
@@ -80,22 +87,26 @@ export async function ipRateLimitMiddleware(req: Request, res: Response, next: N
  * Client-based rate limiting middleware
  * Tracks requests per client/device
  */
-export async function clientRateLimitMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function clientRateLimitMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     const clientToken = req.cookies?.metaextract_client;
     const decoded = verifyClientToken(clientToken);
-    
+
     if (!decoded) {
       // No valid client token - allow but don't count
       next();
       return;
     }
-    
+
     const clientId = decoded.clientId;
-    
+
     // Get current minute count
     const minuteCount = await getClientMinuteCount(clientId);
-    
+
     // Check limit
     if (minuteCount >= CONFIG.CLIENT_MINUTE_LIMIT) {
       res.status(429).json({
@@ -104,17 +115,16 @@ export async function clientRateLimitMiddleware(req: Request, res: Response, nex
         limit_type: 'client_minute',
         limit: CONFIG.CLIENT_MINUTE_LIMIT,
         current: minuteCount,
-        reset_time: getNextResetTime('minute')
+        reset_time: getNextResetTime('minute'),
       });
       return;
     }
-    
+
     // Increment counter
     await incrementClientCount(clientId);
-    
+
     // Allow request
     next();
-    
   } catch (error) {
     console.error('Client rate limiting error:', error);
     // Don't break the app - allow request but log error
@@ -175,7 +185,7 @@ async function incrementIPCounts(ip: string): Promise<void> {
     const dailyKey = `ip_daily:${ip}:${getCurrentDateKey()}`;
     await storage.incr(dailyKey);
     await storage.expire(dailyKey, 24 * 60 * 60); // 24 hours
-    
+
     // Minute count
     const minuteKey = `ip_minute:${ip}:${getCurrentMinuteKey()}`;
     await storage.incr(minuteKey);
@@ -219,7 +229,7 @@ function getCurrentMinuteKey(): string {
  */
 function getNextResetTime(limitType: 'daily' | 'minute'): string {
   const now = new Date();
-  
+
   if (limitType === 'daily') {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);

@@ -106,7 +106,11 @@ const passwordResetConfirmSchema = z.object({
   password: registerSchema.shape.password,
 });
 
-type ResetTokenRecord = { userId: string; tokenHash: string; expiresAt: number };
+type ResetTokenRecord = {
+  userId: string;
+  tokenHash: string;
+  expiresAt: number;
+};
 const inMemoryResetTokens = new Map<string, ResetTokenRecord>();
 
 function hashResetToken(token: string): string {
@@ -281,94 +285,116 @@ export function registerAuthRoutes(app: Express) {
   // Password Reset (dev-friendly)
   // -------------------------------------------------------------------------
   // This does not send email yet; in development we return the token so you can test.
-  app.post('/api/auth/password-reset/request', async (req: Request, res: Response) => {
-    try {
-      const validation = passwordResetRequestSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: validation.error.flatten().fieldErrors,
-        });
-      }
-
-      if (!db) {
-        return res.status(503).json({
-          error: 'Database not available',
-          message: 'Please configure DATABASE_URL',
-        });
-      }
-
-      const email = validation.data.email;
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-
-      // Always return a generic message to avoid email enumeration.
-      if (!user) {
-        return res.json({
-          message: 'If an account exists with this email, a reset link has been sent.',
-        });
-      }
-
-      const token = crypto.randomBytes(24).toString('hex');
-      const tokenHash = hashResetToken(token);
-      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
-
-      // Persist token if table exists; otherwise fall back to in-memory (dev/test).
+  app.post(
+    '/api/auth/password-reset/request',
+    async (req: Request, res: Response) => {
       try {
-        await db.execute(sql`
+        const validation = passwordResetRequestSchema.safeParse(req.body);
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Validation failed',
+            details: validation.error.flatten().fieldErrors,
+          });
+        }
+
+        if (!db) {
+          return res.status(503).json({
+            error: 'Database not available',
+            message: 'Please configure DATABASE_URL',
+          });
+        }
+
+        const email = validation.data.email;
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        // Always return a generic message to avoid email enumeration.
+        if (!user) {
+          return res.json({
+            message:
+              'If an account exists with this email, a reset link has been sent.',
+          });
+        }
+
+        const token = crypto.randomBytes(24).toString('hex');
+        const tokenHash = hashResetToken(token);
+        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+        // Persist token if table exists; otherwise fall back to in-memory (dev/test).
+        try {
+          await db.execute(sql`
           insert into password_reset_tokens
             (user_id, token_hash, expires_at, used_at, created_at)
           values
             (${user.id}, ${tokenHash}, to_timestamp(${expiresAt} / 1000.0), null, now())
         `);
-      } catch (e: any) {
-        // 42P01: undefined_table
-        if (e?.code === '42P01') {
-          inMemoryResetTokens.set(tokenHash, { userId: user.id, tokenHash, expiresAt });
-        } else {
-          throw e;
+        } catch (e: any) {
+          // 42P01: undefined_table
+          if (e?.code === '42P01') {
+            inMemoryResetTokens.set(tokenHash, {
+              userId: user.id,
+              tokenHash,
+              expiresAt,
+            });
+          } else {
+            throw e;
+          }
         }
-      }
 
-      const response: any = {
-        message: 'If an account exists with this email, a reset link has been sent.',
-      };
-      if (process.env.NODE_ENV === 'development') {
-        response.token = token;
+        const response: any = {
+          message:
+            'If an account exists with this email, a reset link has been sent.',
+        };
+        if (process.env.NODE_ENV === 'development') {
+          response.token = token;
+        }
+        return res.json(response);
+      } catch (error) {
+        console.error('Password reset request error:', error);
+        return res.status(500).json({ error: 'Password reset request failed' });
       }
-      return res.json(response);
-    } catch (error) {
-      console.error('Password reset request error:', error);
-      return res.status(500).json({ error: 'Password reset request failed' });
     }
-  });
+  );
 
-  app.post('/api/auth/password-reset/confirm', async (req: Request, res: Response) => {
-    try {
-      const validation = passwordResetConfirmSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: validation.error.flatten().fieldErrors,
-        });
-      }
-
-      if (!db) {
-        return res.status(503).json({
-          error: 'Database not available',
-          message: 'Please configure DATABASE_URL',
-        });
-      }
-
-      const { token, password } = validation.data;
-      const tokenHash = hashResetToken(token);
-
-      // Prefer DB-backed tokens, fall back to in-memory if table missing.
-      let userId: string | null = null;
-      let expiresAtMs: number | null = null;
-      let tokenRowId: string | null = null;
-
+  app.post(
+    '/api/auth/password-reset/confirm',
+    async (req: Request, res: Response) => {
       try {
-        const result = await db.execute(sql`
+        const validation = passwordResetConfirmSchema.safeParse(req.body);
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Validation failed',
+            details: validation.error.flatten().fieldErrors,
+          });
+        }
+
+        if (!db) {
+          return res.status(503).json({
+            error: 'Database not available',
+            message: 'Please configure DATABASE_URL',
+          });
+        }
+
+        const { token, password } = validation.data;
+        const tokenHash = hashResetToken(token);
+
+        // Prefer DB-backed tokens, fall back to in-memory if table missing.
+        let userId: string | null = null;
+        let expiresAtMs: number | null = null;
+        let tokenRowId: string | null = null;
+
+        // Security: Ensure token is a string and not empty
+        if (!token || typeof token !== 'string' || token.length < 10) {
+          return res
+            .status(400)
+            .json({ error: 'Invalid or expired reset token' });
+        }
+
+        try {
+          const result = await db.execute(sql`
           select
             id,
             user_id as "userId",
@@ -379,49 +405,55 @@ export function registerAuthRoutes(app: Express) {
           limit 1
         `);
 
-        const row: any = (result as any).rows?.[0] ?? null;
-        if (row && !row.usedAt) {
-          userId = row.userId;
-          expiresAtMs = Number(row.expiresAtMs);
-          tokenRowId = row.id;
-        }
-      } catch (e: any) {
-        if (e?.code === '42P01') {
-          const rec = inMemoryResetTokens.get(tokenHash);
-          if (rec) {
-            userId = rec.userId;
-            expiresAtMs = rec.expiresAt;
+          const row: any = (result as any).rows?.[0] ?? null;
+          if (row && !row.usedAt) {
+            userId = row.userId;
+            expiresAtMs = Number(row.expiresAtMs);
+            tokenRowId = row.id;
           }
-        } else {
-          throw e;
+        } catch (e: any) {
+          if (e?.code === '42P01') {
+            const rec = inMemoryResetTokens.get(tokenHash);
+            if (rec) {
+              userId = rec.userId;
+              expiresAtMs = rec.expiresAt;
+            }
+          } else {
+            throw e;
+          }
         }
-      }
 
-      if (!userId || !expiresAtMs || Date.now() > expiresAtMs) {
-        return res.status(400).json({ error: 'Invalid or expired reset token' });
-      }
+        if (!userId || !expiresAtMs || Date.now() > expiresAtMs) {
+          return res
+            .status(400)
+            .json({ error: 'Invalid or expired reset token' });
+        }
 
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-      await db.update(users).set({ password: hashedPassword, updatedAt: new Date() }).where(eq(users.id, userId));
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        await db
+          .update(users)
+          .set({ password: hashedPassword, updatedAt: new Date() })
+          .where(eq(users.id, userId));
 
-      if (tokenRowId) {
-        try {
-          await db.execute(sql`
+        if (tokenRowId) {
+          try {
+            await db.execute(sql`
             update password_reset_tokens set used_at = now() where id = ${tokenRowId}
           `);
-        } catch {
-          // ignore
+          } catch {
+            // ignore
+          }
+        } else {
+          inMemoryResetTokens.delete(tokenHash);
         }
-      } else {
-        inMemoryResetTokens.delete(tokenHash);
-      }
 
-      return res.json({ success: true });
-    } catch (error) {
-      console.error('Password reset confirm error:', error);
-      return res.status(500).json({ error: 'Password reset failed' });
+        return res.json({ success: true });
+      } catch (error) {
+        console.error('Password reset confirm error:', error);
+        return res.status(500).json({ error: 'Password reset failed' });
+      }
     }
-  });
+  );
 
   // -------------------------------------------------------------------------
   // Register
@@ -622,7 +654,8 @@ export function registerAuthRoutes(app: Express) {
         }
       }
 
-      // Optional tier override for testing - DISABLED IN PRODUCTION
+      // Tier override is DISABLED by default and requires explicit environment variable
+      // This should NEVER be enabled in production
       const allowTierOverride =
         process.env.ALLOW_TIER_OVERRIDE === 'true' &&
         process.env.NODE_ENV === 'development';
@@ -694,8 +727,14 @@ export function registerAuthRoutes(app: Express) {
   // -------------------------------------------------------------------------
   // Logout
   // -------------------------------------------------------------------------
-  app.post('/api/auth/logout', (req: Request, res: Response) => {
+  app.post('/api/auth/logout', async (req: Request, res: Response) => {
+    // Clear auth token cookie
     res.clearCookie('auth_token');
+
+    // Optional: Add token to blacklist if implemented
+    // This would prevent reuse of the token before its natural expiration
+    // Not currently implemented as tokens expire in 7 days
+
     res.json({ success: true, message: 'Logged out' });
   });
 

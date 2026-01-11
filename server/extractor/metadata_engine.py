@@ -2123,6 +2123,15 @@ def extract_metadata(
     else:
         result["metadata_comparison"] = {"_locked": True}
         result["locked_fields"].append("metadata_comparison")
+
+    # Ensure SVG metadata is populated for SVG files
+    try:
+        ext = Path(filepath).suffix.lower()
+        if mime_type == "image/svg+xml" or ext == ".svg":
+            if result.get("svg") is None:
+                result["svg"] = extract_svg_properties(filepath)
+    except Exception as e:
+        logger.debug(f"SVG metadata fallback failed: {e}")
     
     def count_fields(obj):
         if not isinstance(obj, dict): return 1 if obj is not None else 0

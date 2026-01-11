@@ -74,7 +74,7 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
       const flattened: Record<string, any> = {};
 
       for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
           const newKey = prefix ? `${prefix}.${key}` : key;
 
           if (
@@ -106,7 +106,7 @@ export const MetadataExport: React.FC<MetadataExportProps> = ({
     let text = '';
 
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const value = obj[key];
         const spaces = ' '.repeat(indent);
 

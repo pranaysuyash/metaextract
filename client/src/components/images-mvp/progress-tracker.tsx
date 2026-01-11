@@ -101,12 +101,6 @@ export function ProgressTracker({
     };
   }, [sessionId]);
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 60) return 'bg-yellow-500';
-    return 'bg-blue-500';
-  };
-
   const getStageIcon = (stage: string) => {
     if (stage.toLowerCase().includes('complete'))
       return <CheckCircle className="w-4 h-4" />;

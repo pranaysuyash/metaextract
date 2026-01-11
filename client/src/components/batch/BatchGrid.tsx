@@ -7,8 +7,6 @@ import {
   FileText, 
   CheckCircle, 
   XCircle, 
-  AlertTriangle, 
-  Camera, 
   FileImage,
   File,
   Database,
@@ -27,7 +25,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 

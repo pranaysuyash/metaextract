@@ -16,8 +16,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { db } from '../db';
-import { uiEvents, insertUiEvent, type InsertUiEvent } from '@shared/schema';
-import { uiEvents, insertUiEvent as insertUiEventSchema } from '@shared/schema';
+import { uiEvents } from '@shared/schema';
 import {
   EventName,
   UserIntentEvent,
@@ -416,7 +415,7 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
   app.get('/api/analytics/health', async (req: Request, res: Response) => {
     try {
       res.json({
-        status: 'ok',
+        pipelineStatus: 'ok',
         timestamp: new Date().toISOString(),
         metrics: {
           invalidEventRate: healthMetrics.invalidEventRate,

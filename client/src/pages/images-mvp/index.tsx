@@ -1,12 +1,14 @@
-
 import React, { useEffect } from "react";
 import { PublicLayout as Layout } from "@/components/public-layout";
 import { SimpleUploadZone } from "@/components/images-mvp/simple-upload";
 import { motion, useReducedMotion } from "framer-motion";
-import { ShieldCheck, Eye, Fingerprint, Zap, ArrowDown } from "lucide-react";
+import { ShieldCheck, Eye, Fingerprint, Zap } from "lucide-react";
 import { trackImagesMvpEvent } from "@/lib/images-mvp-analytics";
+import { useAuth } from "@/lib/auth";
 
 export default function ImagesMvpLanding() {
+    const { isAuthenticated, user } = useAuth();
+    
     useEffect(() => {
         trackImagesMvpEvent("images_landing_viewed", { location: "images_mvp" });
     }, []);
@@ -18,7 +20,7 @@ export default function ImagesMvpLanding() {
     }, []);
 
     return (
-        <Layout showHeader={true} showFooter={true}>
+        <Layout showHeader={true} showFooter={false}>
             <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black focus:top-0 focus:left-0 transition-all">
                 Skip to main content
             </a>
@@ -42,13 +44,29 @@ export default function ImagesMvpLanding() {
                         <div className="inline-block px-3 py-1 mb-6 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-primary">
                             BETA ACCESS // IMAGES_ONLY
                         </div>
-                        <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
-                            Metadata for <span className="text-primary">Humans.</span>
-                        </h1>
-                    <p className="text-lg text-slate-200 leading-relaxed">
-                        Check your photos for hidden location data, device serial numbers, and personal information before you share.
-                    </p>
-                </motion.div>
+                        
+                        {isAuthenticated && user ? (
+                            // Logged-in version
+                            <>
+                                <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+                                    Extract <span className="text-primary">Metadata</span>
+                                </h1>
+                                <p className="text-lg text-slate-200 leading-relaxed">
+                                    Welcome back, {user.username}. Upload your images to analyze hidden metadata.
+                                </p>
+                            </>
+                        ) : (
+                            // Logged-out version (marketing copy)
+                            <>
+                                <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+                                    Metadata for <span className="text-primary">Humans.</span>
+                                </h1>
+                                <p className="text-lg text-slate-200 leading-relaxed">
+                                    Check your photos for hidden location data, device serial numbers, and personal information before you share.
+                                </p>
+                            </>
+                        )}
+                    </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -74,41 +92,43 @@ export default function ImagesMvpLanding() {
                 </motion.div>
             </section>
 
-            {/* Features / "Why check?" Section */}
-            <section className="py-24 border-t border-white/5 bg-white/[0.02]" aria-labelledby="features-heading">
-                <div className="container mx-auto px-4 max-w-5xl">
-                    <h2 id="features-heading" className="sr-only">Key Features</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                        <div className="space-y-4">
-                            <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-primary">
-                                <Fingerprint className="w-6 h-6" aria-hidden="true" />
+            {/* Features / "Why check?" Section - Only show for logged-out users */}
+            {!isAuthenticated && (
+                <section className="py-24 border-t border-white/5 bg-white/[0.02]" aria-labelledby="features-heading">
+                    <div className="container mx-auto px-4 max-w-5xl">
+                        <h2 id="features-heading" className="sr-only">Key Features</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                            <div className="space-y-4">
+                                <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-primary">
+                                    <Fingerprint className="w-6 h-6" aria-hidden="true" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Device Fingerprints</h3>
+                                <p className="text-slate-200 leading-relaxed">
+                                    Photos contain unique serial numbers ("MakerNotes") that link images back to your specific camera or phone.
+                                </p>
                             </div>
-                            <h3 className="text-xl font-bold text-white">Device Fingerprints</h3>
-                            <p className="text-slate-200 leading-relaxed">
-                                Photos contain unique serial numbers ("MakerNotes") that link images back to your specific camera or phone.
-                            </p>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-purple-400">
-                                <Eye className="w-6 h-6" aria-hidden="true" />
+                            <div className="space-y-4">
+                                <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-purple-400">
+                                    <Eye className="w-6 h-6" aria-hidden="true" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Hidden Location</h3>
+                                <p className="text-slate-200 leading-relaxed">
+                                    GPS coordinates are often embedded by default. See exactly where a photo was taken before posting it online.
+                                </p>
                             </div>
-                            <h3 className="text-xl font-bold text-white">Hidden Location</h3>
-                            <p className="text-slate-200 leading-relaxed">
-                                GPS coordinates are often embedded by default. See exactly where a photo was taken before posting it online.
-                            </p>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-emerald-400">
-                                <ShieldCheck className="w-6 h-6" aria-hidden="true" />
+                            <div className="space-y-4">
+                                <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 text-emerald-400">
+                                    <ShieldCheck className="w-6 h-6" aria-hidden="true" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Safe Sharing</h3>
+                                <p className="text-slate-200 leading-relaxed">
+                                    Understand what you're revealing. We extract the hidden layer so you can decide what stays private.
+                                </p>
                             </div>
-                            <h3 className="text-xl font-bold text-white">Safe Sharing</h3>
-                            <p className="text-slate-200 leading-relaxed">
-                                Understand what you're revealing. We extract the hidden layer so you can decide what stays private.
-                            </p>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
         </div>
         </Layout>
     );

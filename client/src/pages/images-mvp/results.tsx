@@ -106,7 +106,12 @@ interface MvpMetadata {
     total_fields_extracted?: number;
     processing_time_ms?: number;
   };
-  access: { trial_granted: boolean; trial_email_present: boolean };
+  access: {
+    trial_granted: boolean;
+    trial_email_present: boolean;
+    credits_charged?: number;
+    credits_required?: number;
+  };
   _trial_limited?: boolean;
   client_last_modified_iso?: string;
   registry_summary?: Record<string, unknown>;
@@ -144,6 +149,23 @@ export default function ImagesMvpResults() {
   const paywallLogged = useRef(false);
   const resultsLogged = useRef(false);
 
+  const hasValue = (value: unknown): boolean => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return (
+        trimmed.length > 0 &&
+        trimmed.toLowerCase() !== 'n/a' &&
+        trimmed.toLowerCase() !== 'unknown'
+      );
+    }
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
+  };
+
   useEffect(() => {
     const stored = sessionStorage.getItem('currentMetadata');
     const status = sessionStorage.getItem('images_mvp_status');
@@ -175,13 +197,31 @@ export default function ImagesMvpResults() {
     try {
       const parsed = JSON.parse(stored) as MvpMetadata;
       setMetadata(parsed);
+      const countMeaningfulFields = (obj: unknown): number => {
+        if (obj === null || obj === undefined) return 0;
+        if (typeof obj !== 'object') return hasValue(obj) ? 1 : 0;
+        if (Array.isArray(obj)) return hasValue(obj) ? 1 : 0;
+        const record = obj as Record<string, unknown>;
+        let count = 0;
+        for (const key of Object.keys(record)) {
+          if (key.startsWith('_') || key === 'access') continue;
+          const value = record[key];
+          if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+            count += countMeaningfulFields(value);
+          } else if (hasValue(value)) {
+            count += 1;
+          }
+        }
+        return count;
+      };
+      const meaningfulCount = countMeaningfulFields(parsed);
       const fieldCount =
         typeof parsed.fields_extracted === 'number'
           ? parsed.fields_extracted
           : typeof parsed.processing_insights?.total_fields_extracted === 'number'
             ? parsed.processing_insights.total_fields_extracted
             : 0;
-      setViewState(fieldCount > 0 ? 'success' : 'empty');
+      setViewState(meaningfulCount > 0 ? 'success' : 'empty');
     } catch {
       setViewState('fail');
       setErrorInfo({ message: 'Failed to load results' });
@@ -458,6 +498,8 @@ export default function ImagesMvpResults() {
   const isTrialLimited =
     metadata._trial_limited || metadata.access?.trial_granted;
   const canExport = !isTrialLimited;
+  const creditsRequired = metadata.access?.credits_required ?? 0;
+  const creditsCharged = metadata.access?.credits_charged ?? 0;
 
   const handleDownloadJson = () => {
     if (!canExport) {
@@ -527,23 +569,6 @@ export default function ImagesMvpResults() {
     } catch {
       return dateStr;
     }
-  };
-
-  const hasValue = (value: unknown): boolean => {
-    if (value === null || value === undefined) return false;
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return Number.isFinite(value);
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      return (
-        trimmed.length > 0 &&
-        trimmed.toLowerCase() !== 'n/a' &&
-        trimmed.toLowerCase() !== 'unknown'
-      );
-    }
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object') return Object.keys(value).length > 0;
-    return true;
   };
 
   const getGpsCoords = (gps: Record<string, unknown> | null | undefined) => {
@@ -728,6 +753,11 @@ export default function ImagesMvpResults() {
     }
     return out;
   };
+
+  const fieldsFound = useMemo(() => {
+    if (!metadata) return 0;
+    return collectDetailEntries(metadata, '', 0, 4, [], 1000).length;
+  }, [metadata]);
 
   const scrollTo = (tab: typeof activeTab, anchorId: string) => {
     setActiveTab(tab);
@@ -1001,6 +1031,11 @@ export default function ImagesMvpResults() {
         .map(field => field.trim())
         .filter(field => field.length > 0)
     : [];
+  const showUnlock =
+    !canExport &&
+    lockedTotal > 0 &&
+    creditsRequired > 0 &&
+    creditsCharged === 0;
 
   const imageWidth = metadata.exif?.ImageWidth;
   const imageHeight = metadata.exif?.ImageHeight ?? metadata.exif?.ImageLength;
@@ -1325,7 +1360,7 @@ export default function ImagesMvpResults() {
               </CardContent>
             </Card>
           )}
-          {!canExport && lockedTotal > 0 && (
+          {showUnlock && (
             <Card className="mb-6 bg-[#121217] border-white/10">
               <CardHeader>
                 <CardTitle className="text-sm font-mono text-slate-200">
@@ -1409,12 +1444,14 @@ export default function ImagesMvpResults() {
                 Limitations: Metadata can be missing or stripped. Absence is not
                 proof.
               </div>
-              {(fieldsExtracted || processingMs) && (
+              {(fieldsExtracted || fieldsFound || processingMs) && (
                 <div className="pt-2 text-xs text-slate-500 font-mono">
                   {fieldsExtracted
-                    ? `${fieldsExtracted} fields extracted`
+                    ? `${fieldsExtracted} fields checked`
                     : null}
-                  {fieldsExtracted && processingMs ? ' • ' : null}
+                  {fieldsExtracted && (fieldsFound || processingMs) ? ' • ' : null}
+                  {fieldsFound ? `${fieldsFound} fields found` : null}
+                  {fieldsFound && processingMs ? ' • ' : null}
                   {processingMs ? `${Math.round(processingMs)} ms` : null}
                 </div>
               )}

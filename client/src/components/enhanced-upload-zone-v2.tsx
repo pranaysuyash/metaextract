@@ -1,15 +1,13 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Upload,
   File,
-  Image,
+  Image as ImageIcon,
   Video,
   Music,
   FileText,
@@ -19,7 +17,6 @@ import {
   Loader2,
   Zap,
   Clock,
-  Timer,
   Info,
   Sparkles,
   Trophy,
@@ -75,15 +72,11 @@ export function EnhancedUploadZoneV2({
 }: EnhancedUploadZoneProps) {
   const [files, setFiles] = useState<FileState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file drop
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: any[]) => {
-    setDragActive(false);
-    
     // Show toast for rejected files
     if (fileRejections.length > 0) {
       fileRejections.forEach(({ file, errors }) => {
@@ -220,7 +213,7 @@ export function EnhancedUploadZoneV2({
     const type = file.type.split('/')[0];
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    if (type === 'image') return <Image className="w-5 h-5" />;
+    if (type === 'image') return <ImageIcon className="w-5 h-5" aria-hidden="true" />;
     if (type === 'video') return <Video className="w-5 h-5" />;
     if (type === 'audio') return <Music className="w-5 h-5" />;
     if (ext === 'pdf') return <FileText className="w-5 h-5" />;
