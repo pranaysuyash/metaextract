@@ -1,15 +1,22 @@
 /**
  * Advanced Protection API Routes
- * 
+ *
  * Provides endpoints for browser fingerprinting and ML anomaly detection
  */
 
 import { Router, Request, Response } from 'express';
-import { generateFingerprint, analyzeFingerprint, trackFingerprint } from '../monitoring/browser-fingerprint';
+import {
+  generateFingerprint,
+  analyzeFingerprint,
+  trackFingerprint,
+} from '../monitoring/browser-fingerprint';
 import { mlAnomalyDetector } from '../monitoring/ml-anomaly-detection';
 import { securityEventLogger } from '../monitoring/security-events';
 import { securityAlertManager } from '../monitoring/security-alerts';
-import { getProtectionStats, getRiskLevel } from '../middleware/advanced-protection';
+import {
+  getProtectionStats,
+  getRiskLevel,
+} from '../middleware/advanced-protection';
 
 const router = Router();
 
@@ -21,10 +28,10 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
   try {
     const { fingerprint, sessionId } = req.body;
     const userId = (req as any).user?.id;
-    
+
     if (!fingerprint) {
       return res.status(400).json({
-        error: 'Fingerprint data is required'
+        error: 'Fingerprint data is required',
       });
     }
 
@@ -40,19 +47,19 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
         userId,
         details: {
           validationErrors: validationResult.errors,
-          receivedFingerprint: fingerprint
-        }
+          receivedFingerprint: fingerprint,
+        },
       });
 
       return res.status(400).json({
         error: 'Invalid fingerprint data',
-        details: validationResult.errors
+        details: validationResult.errors,
       });
     }
 
     // Analyze fingerprint for anomalies
     const analysis = await analyzeFingerprint(fingerprint);
-    
+
     // Track fingerprint across sessions
     const tracking = await trackFingerprint(fingerprint, userId);
 
@@ -76,9 +83,9 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
         tracking: {
           isNewDevice: tracking.isNewDevice,
           previousSessions: tracking.previousSessions,
-          riskLevel: tracking.riskLevel
-        }
-      }
+          riskLevel: tracking.riskLevel,
+        },
+      },
     });
 
     // Send alert for high-risk fingerprints
@@ -94,12 +101,12 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
           ipAddress: req.ip || req.connection.remoteAddress,
           userAgent: fingerprint.userAgent,
           anomalies: analysis.anomalies,
-          similarDevices: analysis.similarFingerprints.length
+          similarDevices: analysis.similarFingerprints.length,
         },
         metadata: {
           category: 'fingerprint_analysis',
-          tags: ['high_risk', 'fingerprint', 'suspicious']
-        }
+          tags: ['high_risk', 'fingerprint', 'suspicious'],
+        },
       });
     }
 
@@ -114,16 +121,15 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
         confidence: analysis.confidence,
         isUnique: analysis.isUnique,
         anomalies: analysis.anomalies,
-        recommendations: analysis.recommendations
+        recommendations: analysis.recommendations,
       },
       tracking: {
         isNewDevice: tracking.isNewDevice,
         previousSessions: tracking.previousSessions,
         riskLevel: tracking.riskLevel,
-        action: tracking.action
-      }
+        action: tracking.action,
+      },
     });
-
   } catch (error: unknown) {
     console.error('[FingerprintEndpoint] Error:', error);
     const errorDetails: { message?: string; stack?: string; raw?: string } = {};
@@ -131,7 +137,8 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
       errorDetails.message = error.message;
       errorDetails.stack = error.stack;
     } else {
-      errorDetails.raw = typeof error === 'string' ? error : JSON.stringify(error);
+      errorDetails.raw =
+        typeof error === 'string' ? error : JSON.stringify(error);
     }
 
     await securityEventLogger.logEvent({
@@ -141,12 +148,12 @@ router.post('/fingerprint', async (req: Request, res: Response) => {
       source: 'fingerprint_endpoint',
       ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
       userId: (req as any).user?.id,
-      details: errorDetails
+      details: errorDetails,
     });
 
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to process fingerprint data'
+      message: 'Failed to process fingerprint data',
     });
   }
 });
@@ -159,27 +166,27 @@ router.get('/fingerprint/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = (req as any).user?.id;
-    
+
     // Validate fingerprint ID format
     if (!isValidFingerprintId(id)) {
       return res.status(400).json({
-        error: 'Invalid fingerprint ID format'
+        error: 'Invalid fingerprint ID format',
       });
     }
 
     // Get fingerprint data from storage
     const fingerprintData = await getFingerprintById(id);
-    
+
     if (!fingerprintData) {
       return res.status(404).json({
-        error: 'Fingerprint not found'
+        error: 'Fingerprint not found',
       });
     }
 
     // Check authorization
     if (fingerprintData.userId && fingerprintData.userId !== userId) {
       return res.status(403).json({
-        error: 'Access denied'
+        error: 'Access denied',
       });
     }
 
@@ -198,20 +205,19 @@ router.get('/fingerprint/:id', async (req: Request, res: Response) => {
         isUnique: analysis.isUnique,
         anomalies: analysis.anomalies,
         recommendations: analysis.recommendations,
-        similarFingerprints: analysis.similarFingerprints
+        similarFingerprints: analysis.similarFingerprints,
       },
       metadata: {
         ipAddress: fingerprintData.ipAddress,
         userAgent: fingerprintData.fingerprintData.userAgent,
         confidence: fingerprintData.confidence,
-        anomalies: fingerprintData.anomalies
-      }
+        anomalies: fingerprintData.anomalies,
+      },
     });
-
   } catch (error) {
     console.error('[FingerprintGetEndpoint] Error:', error);
     res.status(500).json({
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   }
 });
@@ -236,12 +242,15 @@ router.post('/anomaly-detection', async (req: Request, res: Response) => {
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         timestamp: new Date(),
         confidence: 0.8,
-        anomalies: []
+        anomalies: [],
       };
     }
 
     // Run ML anomaly detection
-    const anomalyResult = await mlAnomalyDetector.detectUploadAnomaly(req, fingerprint);
+    const anomalyResult = await mlAnomalyDetector.detectUploadAnomaly(
+      req,
+      fingerprint
+    );
 
     // Log the detection
     await securityEventLogger.logEvent({
@@ -258,12 +267,15 @@ router.post('/anomaly-detection', async (req: Request, res: Response) => {
         riskLevel: anomalyResult.riskLevel,
         contributingFactors: anomalyResult.contributingFactors,
         modelVersion: anomalyResult.modelVersion,
-        context: context || {}
-      }
+        context: context || {},
+      },
     });
 
     // Send alert for high-risk detections
-    if (anomalyResult.riskLevel === 'high' || anomalyResult.riskLevel === 'critical') {
+    if (
+      anomalyResult.riskLevel === 'high' ||
+      anomalyResult.riskLevel === 'critical'
+    ) {
       await securityAlertManager.sendAlert({
         type: 'security',
         severity: 'high',
@@ -275,12 +287,12 @@ router.post('/anomaly-detection', async (req: Request, res: Response) => {
           contributingFactors: anomalyResult.contributingFactors,
           ipAddress: req.ip || req.connection.remoteAddress,
           userAgent: req.headers['user-agent'],
-          modelVersion: anomalyResult.modelVersion
+          modelVersion: anomalyResult.modelVersion,
         },
         metadata: {
           category: 'anomaly_detection',
-          tags: ['ml_detection', 'high_risk', 'suspicious_behavior']
-        }
+          tags: ['ml_detection', 'high_risk', 'suspicious_behavior'],
+        },
       });
     }
 
@@ -294,16 +306,15 @@ router.post('/anomaly-detection', async (req: Request, res: Response) => {
         contributingFactors: anomalyResult.contributingFactors,
         recommendations: anomalyResult.recommendations,
         modelVersion: anomalyResult.modelVersion,
-        timestamp: anomalyResult.timestamp
-      }
+        timestamp: anomalyResult.timestamp,
+      },
     });
-
   } catch (error) {
     console.error('[AnomalyDetectionEndpoint] Error:', error);
-    
+
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to run anomaly detection'
+      message: 'Failed to run anomaly detection',
     });
   }
 });
@@ -321,15 +332,14 @@ router.get('/stats', async (req: Request, res: Response) => {
       success: true,
       stats: {
         ...stats,
-        mlModel: modelStats
+        mlModel: modelStats,
       },
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-
   } catch (error) {
     console.error('[ProtectionStatsEndpoint] Error:', error);
     res.status(500).json({
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   }
 });
@@ -357,22 +367,21 @@ router.get('/model-info', async (req: Request, res: Response) => {
           anomalyThreshold: 0.8,
           featureWeights: {
             uploadFrequency: 0.25,
-            fileSize: 0.20,
+            fileSize: 0.2,
             ipStability: 0.15,
             deviceConsistency: 0.15,
-            timePattern: 0.10,
-            geolocation: 0.10,
-            fingerprint: 0.05
-          }
-        }
+            timePattern: 0.1,
+            geolocation: 0.1,
+            fingerprint: 0.05,
+          },
+        },
       },
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-
   } catch (error) {
     console.error('[ModelInfoEndpoint] Error:', error);
     res.status(500).json({
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   }
 });
@@ -388,7 +397,7 @@ router.post('/feedback', async (req: Request, res: Response) => {
 
     if (!fingerprintId || !decision) {
       return res.status(400).json({
-        error: 'Fingerprint ID and decision are required'
+        error: 'Fingerprint ID and decision are required',
       });
     }
 
@@ -405,25 +414,26 @@ router.post('/feedback', async (req: Request, res: Response) => {
         decision,
         wasCorrect,
         feedback: feedback || '',
-        context: context || {}
-      }
+        context: context || {},
+      },
     });
 
     // Process feedback for model improvement
     if (wasCorrect !== undefined) {
       // This would update the ML model with feedback
-      console.log(`[ProtectionFeedback] Processing feedback: decision=${decision}, wasCorrect=${wasCorrect}`);
+      console.log(
+        `[ProtectionFeedback] Processing feedback: decision=${decision}, wasCorrect=${wasCorrect}`
+      );
     }
 
     res.json({
       success: true,
-      message: 'Feedback submitted successfully'
+      message: 'Feedback submitted successfully',
     });
-
   } catch (error) {
     console.error('[ProtectionFeedbackEndpoint] Error:', error);
     res.status(500).json({
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   }
 });
@@ -432,7 +442,10 @@ router.post('/feedback', async (req: Request, res: Response) => {
  * Helper functions
  */
 
-function validateFingerprintData(fingerprint: any): { isValid: boolean; errors: string[] } {
+function validateFingerprintData(fingerprint: any): {
+  isValid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
 
   if (!fingerprint.hash) {
@@ -457,7 +470,7 @@ function validateFingerprintData(fingerprint: any): { isValid: boolean; errors: 
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -478,13 +491,14 @@ async function getFingerprintById(id: string): Promise<any> {
         fingerprintHash: id,
         deviceId: 'mock_device_123',
         sessionId: 'mock_session_456',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        timestamp: new Date()
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        timestamp: new Date(),
       },
       ipAddress: '192.168.1.1',
       timestamp: new Date(),
       confidence: 0.85,
-      anomalies: []
+      anomalies: [],
     };
   } catch (error) {
     console.error('[GetFingerprintById] Error:', error);

@@ -1,11 +1,15 @@
 /**
  * Enhanced Protection API Routes
- * 
+ *
  * API endpoints for advanced threat intelligence and behavioral analysis
  */
 
 import { Router, Request, Response } from 'express';
-import { enhancedProtectionMiddleware, verifyEnhancedChallengeResponse, getEnhancedProtectionStats } from '../middleware/enhanced-protection';
+import {
+  enhancedProtectionMiddleware,
+  verifyEnhancedChallengeResponse,
+  getEnhancedProtectionStats,
+} from '../middleware/enhanced-protection';
 import { threatIntelligenceService } from '../monitoring/production-validation';
 import { securityEventLogger } from '../monitoring/security-events';
 import { securityAlertManager } from '../monitoring/security-alerts';
@@ -17,59 +21,66 @@ const router = Router();
  * POST /api/enhanced-protection/check
  * Enhanced protection check endpoint
  */
-router.post('/check', enhancedProtectionMiddleware, async (req: Request, res: Response) => {
-  try {
-    const protectionResult = (req as any).enhancedProtectionResult;
-    
-    if (!protectionResult) {
-      return res.status(500).json({
-        error: 'Protection analysis failed',
-        message: 'Unable to perform enhanced protection analysis'
+router.post(
+  '/check',
+  enhancedProtectionMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const protectionResult = (req as any).enhancedProtectionResult;
+
+      if (!protectionResult) {
+        return res.status(500).json({
+          error: 'Protection analysis failed',
+          message: 'Unable to perform enhanced protection analysis',
+        });
+      }
+
+      res.json({
+        success: true,
+        protection: {
+          action: protectionResult.action,
+          confidence: protectionResult.confidence,
+          riskScore: protectionResult.riskScore,
+          riskLevel: protectionResult.riskLevel,
+          reasons: protectionResult.reasons,
+          recommendations: protectionResult.recommendations,
+          incidentId: protectionResult.incidentId,
+          requiresVerification: protectionResult.requiresVerification,
+        },
+        analysis: {
+          threatIntelligence: protectionResult.threatIntelligence,
+          behavioralAnalysis: protectionResult.behavioralAnalysis,
+          mlAnalysis: protectionResult.mlAnalysis,
+          deviceAnalysis: protectionResult.deviceAnalysis,
+        },
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      console.error('[EnhancedProtectionCheck] Error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to perform enhanced protection check',
       });
     }
-
-    res.json({
-      success: true,
-      protection: {
-        action: protectionResult.action,
-        confidence: protectionResult.confidence,
-        riskScore: protectionResult.riskScore,
-        riskLevel: protectionResult.riskLevel,
-        reasons: protectionResult.reasons,
-        recommendations: protectionResult.recommendations,
-        incidentId: protectionResult.incidentId,
-        requiresVerification: protectionResult.requiresVerification
-      },
-      analysis: {
-        threatIntelligence: protectionResult.threatIntelligence,
-        behavioralAnalysis: protectionResult.behavioralAnalysis,
-        mlAnalysis: protectionResult.mlAnalysis,
-        deviceAnalysis: protectionResult.deviceAnalysis
-      },
-      timestamp: new Date()
-    });
-
-  } catch (error) {
-    console.error('[EnhancedProtectionCheck] Error:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: 'Failed to perform enhanced protection check'
-    });
   }
-});
+);
 
 /**
  * POST /api/enhanced-protection/verify-challenge
  * Verify enhanced challenge response
  */
-router.post('/verify-challenge', verifyEnhancedChallengeResponse, (req: Request, res: Response) => {
-  // Challenge passed, continue with original request
-  res.json({
-    success: true,
-    message: 'Challenge verification successful',
-    incidentId: (req as any).incidentId
-  });
-});
+router.post(
+  '/verify-challenge',
+  verifyEnhancedChallengeResponse,
+  (req: Request, res: Response) => {
+    // Challenge passed, continue with original request
+    res.json({
+      success: true,
+      message: 'Challenge verification successful',
+      incidentId: (req as any).incidentId,
+    });
+  }
+);
 
 /**
  * POST /api/enhanced-protection/behavioral-data
@@ -79,10 +90,10 @@ router.post('/behavioral-data', async (req: Request, res: Response) => {
   try {
     const { behavioralData } = req.body;
     const userId = (req as any).user?.id;
-    
+
     if (!behavioralData) {
       return res.status(400).json({
-        error: 'Behavioral data is required'
+        error: 'Behavioral data is required',
       });
     }
 
@@ -91,7 +102,7 @@ router.post('/behavioral-data', async (req: Request, res: Response) => {
     if (!validationResult.isValid) {
       return res.status(400).json({
         error: 'Invalid behavioral data',
-        details: validationResult.errors
+        details: validationResult.errors,
       });
     }
 
@@ -108,14 +119,16 @@ router.post('/behavioral-data', async (req: Request, res: Response) => {
         isHuman: behavioralData.isHuman,
         confidence: behavioralData.confidence,
         dataPoints: behavioralData.dataPoints,
-        collectionTime: behavioralData.collectionTime
-      }
+        collectionTime: behavioralData.collectionTime,
+      },
     });
 
     // Process for ML model training if high confidence
     if (behavioralData.confidence > 0.8) {
       // This would feed into ML model for continuous improvement
-      console.log(`[BehavioralData] High confidence behavioral data received: human=${behavioralData.isHuman}, score=${behavioralData.behavioralScore}`);
+      console.log(
+        `[BehavioralData] High confidence behavioral data received: human=${behavioralData.isHuman}, score=${behavioralData.behavioralScore}`
+      );
     }
 
     // Alert for non-human behavior
@@ -129,12 +142,12 @@ router.post('/behavioral-data', async (req: Request, res: Response) => {
           behavioralScore: behavioralData.behavioralScore,
           confidence: behavioralData.confidence,
           dataPoints: behavioralData.dataPoints,
-          ipAddress: req.ip || req.connection.remoteAddress
+          ipAddress: req.ip || req.connection.remoteAddress,
         },
         metadata: {
           category: 'behavioral_analysis',
-          tags: ['non_human', 'automated_behavior', 'high_confidence']
-        }
+          tags: ['non_human', 'automated_behavior', 'high_confidence'],
+        },
       });
     }
 
@@ -144,15 +157,14 @@ router.post('/behavioral-data', async (req: Request, res: Response) => {
       analysis: {
         behavioralScore: behavioralData.behavioralScore,
         isHuman: behavioralData.isHuman,
-        confidence: behavioralData.confidence
-      }
+        confidence: behavioralData.confidence,
+      },
     });
-
   } catch (error) {
     console.error('[BehavioralDataEndpoint] Error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to process behavioral data'
+      message: 'Failed to process behavioral data',
     });
   }
 });
@@ -165,10 +177,10 @@ router.get('/threat-intel/:ip', async (req: Request, res: Response) => {
   try {
     const { ip } = req.params;
     const userId = (req as any).user?.id;
-    
+
     if (!isValidIP(ip)) {
       return res.status(400).json({
-        error: 'Invalid IP address format'
+        error: 'Invalid IP address format',
       });
     }
 
@@ -179,10 +191,11 @@ router.get('/threat-intel/:ip', async (req: Request, res: Response) => {
       headers: req.headers,
       body: {},
       path: req.path,
-      method: req.method
+      method: req.method,
     } as any;
 
-    const threatIntel = await threatIntelligenceService.checkThreatIntelligence(mockReq);
+    const threatIntel =
+      await threatIntelligenceService.checkThreatIntelligence(mockReq);
 
     // Log the lookup
     await securityEventLogger.logEvent({
@@ -196,21 +209,20 @@ router.get('/threat-intel/:ip', async (req: Request, res: Response) => {
         riskScore: threatIntel.riskScore,
         threatLevel: threatIntel.threatLevel,
         sources: threatIntel.sources,
-        recommendations: threatIntel.recommendations
-      }
+        recommendations: threatIntel.recommendations,
+      },
     });
 
     res.json({
       success: true,
       threatIntelligence: threatIntel,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-
   } catch (error) {
     console.error('[ThreatIntelEndpoint] Error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to retrieve threat intelligence'
+      message: 'Failed to retrieve threat intelligence',
     });
   }
 });
@@ -223,21 +235,25 @@ router.post('/report-threat', async (req: Request, res: Response) => {
   try {
     const { ipAddress, categories, comment } = req.body;
     const userId = (req as any).user?.id;
-    
+
     if (!ipAddress || !categories || !Array.isArray(categories)) {
       return res.status(400).json({
-        error: 'IP address and categories are required'
+        error: 'IP address and categories are required',
       });
     }
 
     if (!isValidIP(ipAddress)) {
       return res.status(400).json({
-        error: 'Invalid IP address format'
+        error: 'Invalid IP address format',
       });
     }
 
     // Report to threat intelligence services
-    await threatIntelligenceService.reportMaliciousIP(ipAddress, categories, comment);
+    await threatIntelligenceService.reportMaliciousIP(
+      ipAddress,
+      categories,
+      comment
+    );
 
     // Log the report
     await securityEventLogger.logEvent({
@@ -250,8 +266,8 @@ router.post('/report-threat', async (req: Request, res: Response) => {
       details: {
         reportedIP: ipAddress,
         categories,
-        comment
-      }
+        comment,
+      },
     });
 
     res.json({
@@ -259,14 +275,13 @@ router.post('/report-threat', async (req: Request, res: Response) => {
       message: 'Threat report submitted successfully',
       reportedIP: ipAddress,
       categories,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-
   } catch (error) {
     console.error('[ThreatReportEndpoint] Error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to submit threat report'
+      message: 'Failed to submit threat report',
     });
   }
 });
@@ -278,18 +293,17 @@ router.post('/report-threat', async (req: Request, res: Response) => {
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const stats = await getEnhancedProtectionStats();
-    
+
     res.json({
       success: true,
       stats,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-
   } catch (error) {
     console.error('[EnhancedProtectionStatsEndpoint] Error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to retrieve enhanced protection statistics'
+      message: 'Failed to retrieve enhanced protection statistics',
     });
   }
 });
@@ -305,25 +319,25 @@ router.get('/config', (req: Request, res: Response) => {
       threatIntelligence: ENHANCED_PROTECTION_CONFIG.THREAT_INTELLIGENCE,
       behavioralAnalysis: ENHANCED_PROTECTION_CONFIG.BEHAVIORAL_ANALYSIS,
       advancedML: ENHANCED_PROTECTION_CONFIG.ADVANCED_ML,
-      realTimeUpdates: ENHANCED_PROTECTION_CONFIG.REAL_TIME_UPDATES
+      realTimeUpdates: ENHANCED_PROTECTION_CONFIG.REAL_TIME_UPDATES,
     },
     thresholds: {
       critical: ENHANCED_PROTECTION_CONFIG.CRITICAL_RISK_THRESHOLD,
       high: ENHANCED_PROTECTION_CONFIG.HIGH_RISK_THRESHOLD,
       medium: ENHANCED_PROTECTION_CONFIG.MEDIUM_RISK_THRESHOLD,
-      low: ENHANCED_PROTECTION_CONFIG.LOW_RISK_THRESHOLD
+      low: ENHANCED_PROTECTION_CONFIG.LOW_RISK_THRESHOLD,
     },
     weights: ENHANCED_PROTECTION_CONFIG.WEIGHTS,
     challenges: {
       types: Object.values(ENHANCED_PROTECTION_CONFIG.CHALLENGES),
-      actions: Object.values(ENHANCED_PROTECTION_CONFIG.ACTIONS)
+      actions: Object.values(ENHANCED_PROTECTION_CONFIG.ACTIONS),
     },
-    timestamp: new Date()
+    timestamp: new Date(),
   };
 
   res.json({
     success: true,
-    config: safeConfig
+    config: safeConfig,
   });
 });
 
@@ -333,21 +347,21 @@ router.get('/config', (req: Request, res: Response) => {
  */
 router.post('/feedback', async (req: Request, res: Response) => {
   try {
-    const { 
-      incidentId, 
-      decision, 
-      wasCorrect, 
-      feedback, 
+    const {
+      incidentId,
+      decision,
+      wasCorrect,
+      feedback,
       context,
       expectedAction,
-      actualAction
+      actualAction,
     } = req.body;
-    
+
     const userId = (req as any).user?.id;
 
     if (!incidentId || decision === undefined || wasCorrect === undefined) {
       return res.status(400).json({
-        error: 'Incident ID, decision, and wasCorrect are required'
+        error: 'Incident ID, decision, and wasCorrect are required',
       });
     }
 
@@ -366,28 +380,29 @@ router.post('/feedback', async (req: Request, res: Response) => {
         feedback: feedback || '',
         context: context || {},
         expectedAction,
-        actualAction
-      }
+        actualAction,
+      },
     });
 
     // Process feedback for ML model improvement
     if (!wasCorrect) {
       // This would be used to retrain or adjust the ML models
-      console.log(`[EnhancedProtectionFeedback] Incorrect decision reported for incident ${incidentId}`);
+      console.log(
+        `[EnhancedProtectionFeedback] Incorrect decision reported for incident ${incidentId}`
+      );
     }
 
     res.json({
       success: true,
       message: 'Feedback submitted successfully',
       incidentId,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-
   } catch (error) {
     console.error('[EnhancedProtectionFeedbackEndpoint] Error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to submit feedback'
+      message: 'Failed to submit feedback',
     });
   }
 });
@@ -396,16 +411,18 @@ router.post('/feedback', async (req: Request, res: Response) => {
  * WebSocket endpoint for real-time behavioral analysis
  */
 router.ws('/behavioral-stream', (ws, req) => {
-  console.log('[EnhancedProtection] Behavioral analysis WebSocket connection established');
-  
-  ws.on('message', async (message) => {
+  console.log(
+    '[EnhancedProtection] Behavioral analysis WebSocket connection established'
+  );
+
+  ws.on('message', async message => {
     try {
       const data = JSON.parse(message.toString());
-      
+
       if (data.type === 'behavioral_data') {
         // Process real-time behavioral data
         const { behavioralData } = data;
-        
+
         if (behavioralData && behavioralData.confidence > 0.7) {
           // Real-time analysis and response
           const analysis = {
@@ -413,67 +430,86 @@ router.ws('/behavioral-stream', (ws, req) => {
             behavioralScore: behavioralData.behavioralScore,
             isHuman: behavioralData.isHuman,
             confidence: behavioralData.confidence,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
-          
+
           ws.send(JSON.stringify(analysis));
-          
+
           // Alert for immediate threats
           if (!behavioralData.isHuman && behavioralData.confidence > 0.8) {
-            ws.send(JSON.stringify({
-              type: 'immediate_threat',
-              message: 'Non-human behavior detected with high confidence',
-              action: 'immediate_verification_required'
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'immediate_threat',
+                message: 'Non-human behavior detected with high confidence',
+                action: 'immediate_verification_required',
+              })
+            );
           }
         }
       }
     } catch (error) {
       console.error('[BehavioralStream] Error processing message:', error);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Failed to process behavioral data'
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          message: 'Failed to process behavioral data',
+        })
+      );
     }
   });
-  
+
   ws.on('close', () => {
-    console.log('[EnhancedProtection] Behavioral analysis WebSocket connection closed');
+    console.log(
+      '[EnhancedProtection] Behavioral analysis WebSocket connection closed'
+    );
   });
 });
 
 /**
  * Helper functions
  */
-function validateBehavioralData(data: any): { isValid: boolean; errors: string[] } {
+function validateBehavioralData(data: any): {
+  isValid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
-  
-  if (typeof data.behavioralScore !== 'number' || data.behavioralScore < 0 || data.behavioralScore > 100) {
+
+  if (
+    typeof data.behavioralScore !== 'number' ||
+    data.behavioralScore < 0 ||
+    data.behavioralScore > 100
+  ) {
     errors.push('Behavioral score must be a number between 0 and 100');
   }
-  
+
   if (typeof data.isHuman !== 'boolean') {
     errors.push('isHuman must be a boolean');
   }
-  
-  if (typeof data.confidence !== 'number' || data.confidence < 0 || data.confidence > 1) {
+
+  if (
+    typeof data.confidence !== 'number' ||
+    data.confidence < 0 ||
+    data.confidence > 1
+  ) {
     errors.push('Confidence must be a number between 0 and 1');
   }
-  
+
   if (data.dataPoints && typeof data.dataPoints !== 'object') {
     errors.push('Data points must be an object');
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
 function isValidIP(ip: string): boolean {
-  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-  const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.)$/;
-  
+  const ipv4Regex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ipv6Regex =
+    /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.)$/;
+
   return ipv4Regex.test(ip) || ipv6Regex.test(ip);
 }
 

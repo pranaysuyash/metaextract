@@ -1,6 +1,6 @@
 /**
  * Security Logger - Centralized security event logging
- * 
+ *
  * Provides a unified interface for logging security events to the database
  * with proper indexing and audit trail capabilities.
  */
@@ -17,15 +17,18 @@ export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
     const completeEvent = {
       ...event,
       timestamp: event.timestamp || new Date(),
-      id: event.id || `sev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id:
+        event.id ||
+        `sev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
 
     // Log to database through storage system
     await storage.logSecurityEvent?.(completeEvent);
-    
+
     // Also log to console for immediate visibility
-    console.log(`[SecurityLogger] ${completeEvent.severity.toUpperCase()}: ${completeEvent.event} from ${completeEvent.ipAddress}`);
-    
+    console.log(
+      `[SecurityLogger] ${completeEvent.severity.toUpperCase()}: ${completeEvent.event} from ${completeEvent.ipAddress}`
+    );
   } catch (error) {
     console.error('[SecurityLogger] Failed to log security event:', error);
     // Don't throw - security logging should not break the application
@@ -62,8 +65,12 @@ export async function getSecurityEvents(
       return { events: [], totalCount: 0, hasMore: false };
     }
 
-    const result = raw as { events: SecurityEvent[]; totalCount: number; hasMore: boolean };
-    return result; 
+    const result = raw as {
+      events: SecurityEvent[];
+      totalCount: number;
+      hasMore: boolean;
+    };
+    return result;
   } catch (error) {
     console.error('[SecurityLogger] Failed to get security events:', error);
     return {
@@ -97,24 +104,28 @@ export async function getSecurityAnalytics(
   try {
     // This would aggregate data from the storage system
     // For now, return mock analytics
-    const hours = Math.ceil((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60));
-    
+    const hours = Math.ceil(
+      (timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60)
+    );
+
     return {
       totalEvents: hours * 25, // Mock: 25 events per hour
       eventsByType: {
-        'upload_rejected': hours * 15,
-        'rate_limit_exceeded': hours * 5,
-        'suspicious_access': hours * 3,
-        'temp_cleanup_performed': hours * 2,
+        upload_rejected: hours * 15,
+        rate_limit_exceeded: hours * 5,
+        suspicious_access: hours * 3,
+        temp_cleanup_performed: hours * 2,
       },
       eventsBySeverity: {
-        'low': hours * 15,
-        'medium': hours * 7,
-        'high': hours * 2,
-        'critical': 1,
+        low: hours * 15,
+        medium: hours * 7,
+        high: hours * 2,
+        critical: 1,
       },
       eventsByHour: Array.from({ length: Math.min(hours, 24) }, (_, i) => ({
-        hour: new Date(timeRange.start.getTime() + i * 60 * 60 * 1000).toISOString(),
+        hour: new Date(
+          timeRange.start.getTime() + i * 60 * 60 * 1000
+        ).toISOString(),
         count: 20 + Math.floor(Math.random() * 10),
       })),
       topIPs: [
@@ -143,13 +154,18 @@ export async function getSecurityAnalytics(
 /**
  * Get security event by ID
  */
-export async function getSecurityEventById(eventId: string): Promise<SecurityEvent | null> {
+export async function getSecurityEventById(
+  eventId: string
+): Promise<SecurityEvent | null> {
   try {
     const result = await getSecurityEvents({ limit: 1 });
     // This would query by ID - simplified for now
     return result.events[0] || null;
   } catch (error) {
-    console.error('[SecurityLogger] Failed to get security event by ID:', error);
+    console.error(
+      '[SecurityLogger] Failed to get security event by ID:',
+      error
+    );
     return null;
   }
 }
@@ -163,13 +179,18 @@ export async function cleanupOldSecurityEvents(
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-    
+
     // This would delete old events from the database
-    console.log(`[SecurityLogger] Cleaning up security events older than ${olderThanDays} days`);
-    
+    console.log(
+      `[SecurityLogger] Cleaning up security events older than ${olderThanDays} days`
+    );
+
     return { deletedCount: 0 }; // Mock implementation
   } catch (error) {
-    console.error('[SecurityLogger] Failed to cleanup old security events:', error);
+    console.error(
+      '[SecurityLogger] Failed to cleanup old security events:',
+      error
+    );
     return { deletedCount: 0 };
   }
 }
@@ -233,15 +254,15 @@ export async function isSecurityLoggingHealthy(): Promise<{
   try {
     const stats = await getSecurityStats();
     const errors: string[] = [];
-    
+
     if (stats.totalEvents === 0) {
       errors.push('No security events logged');
     }
-    
+
     if (stats.eventsToday === 0) {
       errors.push('No events logged today');
     }
-    
+
     return {
       healthy: errors.length === 0,
       lastEventTime: new Date(), // Mock

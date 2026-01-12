@@ -1,12 +1,16 @@
 /**
  * Advanced Protection Middleware
- * 
+ *
  * Combines browser fingerprinting and ML-based anomaly detection
  * for comprehensive abuse prevention
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { generateFingerprint, trackFingerprint, EnhancedFingerprint } from '../monitoring/browser-fingerprint';
+import {
+  generateFingerprint,
+  trackFingerprint,
+  EnhancedFingerprint,
+} from '../monitoring/browser-fingerprint';
 import { mlAnomalyDetector } from '../monitoring/ml-anomaly-detection';
 import { securityEventLogger } from '../monitoring/security-events';
 import { securityAlertManager } from '../monitoring/security-alerts';
@@ -17,27 +21,27 @@ const PROTECTION_CONFIG = {
   BROWSER_FINGERPRINTING: true,
   ML_ANOMALY_DETECTION: true,
   REAL_TIME_ANALYSIS: true,
-  
+
   // Thresholds (0-100 scale)
   BLOCK_THRESHOLD: 90,
   CHALLENGE_THRESHOLD: 70,
   MONITOR_THRESHOLD: 50,
-  
+
   // Response actions
   ACTIONS: {
     ALLOW: 'allow',
     CHALLENGE: 'challenge',
     BLOCK: 'block',
-    MONITOR: 'monitor'
+    MONITOR: 'monitor',
   },
-  
+
   // Challenge types
   CHALLENGES: {
     CAPTCHA: 'captcha',
     DELAY: 'delay',
     MFA: 'mfa',
-    RATE_LIMIT: 'rate_limit'
-  }
+    RATE_LIMIT: 'rate_limit',
+  },
 } as const;
 
 // Protection result
@@ -87,7 +91,10 @@ export async function advancedProtectionMiddleware(
     // Run ML anomaly detection
     let anomalyResult;
     if (PROTECTION_CONFIG.ML_ANOMALY_DETECTION) {
-      anomalyResult = await mlAnomalyDetector.detectUploadAnomaly(req, fingerprint);
+      anomalyResult = await mlAnomalyDetector.detectUploadAnomaly(
+        req,
+        fingerprint
+      );
     }
 
     // Track fingerprint across sessions
@@ -110,7 +117,6 @@ export async function advancedProtectionMiddleware(
 
     // Execute protection action
     await executeProtectionAction(req, res, next, protectionResult);
-
   } catch (error: unknown) {
     console.error('[AdvancedProtection] Error:', error);
 
@@ -121,12 +127,13 @@ export async function advancedProtectionMiddleware(
       errorDetails.stack = error.stack;
     } else {
       try {
-        errorDetails.raw = typeof error === 'string' ? error : JSON.stringify(error);
+        errorDetails.raw =
+          typeof error === 'string' ? error : JSON.stringify(error);
       } catch (e) {
         errorDetails.raw = String(error);
       }
     }
-    
+
     // On error, allow request but log the failure
     await securityEventLogger.logEvent({
       event: 'protection_error',
@@ -135,7 +142,7 @@ export async function advancedProtectionMiddleware(
       source: 'advanced_protection',
       ipAddress: req.ip || (req as any).connection?.remoteAddress || 'unknown',
       userId: (req as any).user?.id,
-      details: errorDetails
+      details: errorDetails,
     });
 
     // Allow request to continue on protection failure
@@ -148,12 +155,7 @@ export async function advancedProtectionMiddleware(
  */
 function shouldApplyProtection(req: Request): boolean {
   // Skip for health checks and monitoring endpoints
-  const skipPaths = [
-    '/health',
-    '/api/monitoring',
-    '/metrics',
-    '/favicon.ico'
-  ];
+  const skipPaths = ['/health', '/api/monitoring', '/metrics', '/favicon.ico'];
 
   return !skipPaths.some(path => req.path.startsWith(path));
 }
@@ -251,14 +253,16 @@ async function makeProtectionDecision(
     fingerprint,
     anomalyResult,
     challengeType,
-    challengeData
+    challengeData,
   };
 }
 
 /**
  * Calculate request-based risk factors
  */
-async function calculateRequestRisk(req: Request): Promise<{ score: number; reasons: string[] }> {
+async function calculateRequestRisk(
+  req: Request
+): Promise<{ score: number; reasons: string[] }> {
   let score = 0;
   const reasons: string[] = [];
 
@@ -301,12 +305,14 @@ async function calculateRequestRisk(req: Request): Promise<{ score: number; reas
 /**
  * Get risk level from score
  */
-export function getRiskLevel(riskScore: number): 'low' | 'medium' | 'high' | 'critical' {
+export function getRiskLevel(
+  riskScore: number
+): 'low' | 'medium' | 'high' | 'critical' {
   if (riskScore >= 90) return 'critical';
   if (riskScore >= 70) return 'high';
   if (riskScore >= 40) return 'medium';
   return 'low';
-} 
+}
 
 /**
  * Execute protection action
@@ -335,8 +341,8 @@ async function executeProtectionAction(
       reasons,
       fingerprintId: result.fingerprint?.fingerprintHash,
       anomalyScore: result.anomalyResult?.riskScore,
-      deviceId: result.fingerprint?.deviceId
-    }
+      deviceId: result.fingerprint?.deviceId,
+    },
   });
 
   // Execute based on action
@@ -368,9 +374,12 @@ async function executeProtectionAction(
 /**
  * Generate challenge for suspicious requests
  */
-async function generateChallenge(req: Request, riskLevel: string): Promise<ChallengeResponse> {
+async function generateChallenge(
+  req: Request,
+  riskLevel: string
+): Promise<ChallengeResponse> {
   const sessionId = `challenge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   let type: string;
   let difficulty: 'easy' | 'medium' | 'hard';
   let data: any;
@@ -380,21 +389,21 @@ async function generateChallenge(req: Request, riskLevel: string): Promise<Chall
     difficulty = 'hard';
     data = {
       siteKey: process.env.RECAPTCHA_SITE_KEY,
-      challengeType: 'invisible'
+      challengeType: 'invisible',
     };
   } else if (riskLevel === 'medium') {
     type = PROTECTION_CONFIG.CHALLENGES.DELAY;
     difficulty = 'medium';
     data = {
       delaySeconds: 5,
-      message: 'Please wait a moment before continuing...'
+      message: 'Please wait a moment before continuing...',
     };
   } else {
     type = PROTECTION_CONFIG.CHALLENGES.RATE_LIMIT;
     difficulty = 'easy';
     data = {
       maxRequests: 5,
-      windowMinutes: 1
+      windowMinutes: 1,
     };
   }
 
@@ -403,14 +412,18 @@ async function generateChallenge(req: Request, riskLevel: string): Promise<Chall
     difficulty,
     data,
     expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-    sessionId
+    sessionId,
   };
 }
 
 /**
  * Send challenge response to client
  */
-async function sendChallengeResponse(req: Request, res: Response, result: ProtectionResult): Promise<void> {
+async function sendChallengeResponse(
+  req: Request,
+  res: Response,
+  result: ProtectionResult
+): Promise<void> {
   const { challengeType, challengeData, riskScore, reasons } = result;
 
   res.status(403).json({
@@ -420,17 +433,21 @@ async function sendChallengeResponse(req: Request, res: Response, result: Protec
       data: challengeData,
       riskScore,
       reasons,
-      instructions: getChallengeInstructions(challengeType)
+      instructions: getChallengeInstructions(challengeType),
     },
-    retryAfter: 60 // seconds
+    retryAfter: 60, // seconds
   });
-  return; 
+  return;
 }
 
 /**
  * Send block response to client
  */
-async function sendBlockResponse(req: Request, res: Response, result: ProtectionResult): Promise<void> {
+async function sendBlockResponse(
+  req: Request,
+  res: Response,
+  result: ProtectionResult
+): Promise<void> {
   const { riskScore, reasons, recommendations } = result;
 
   // Send security alert for blocked request
@@ -444,12 +461,12 @@ async function sendBlockResponse(req: Request, res: Response, result: Protection
       recommendations,
       ipAddress: req.ip || req.connection.remoteAddress,
       userAgent: req.headers['user-agent'],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     },
     metadata: {
       category: 'abuse_prevention',
-      tags: ['blocked', 'high_risk', 'advanced_protection']
-    }
+      tags: ['blocked', 'high_risk', 'advanced_protection'],
+    },
   });
 
   res.status(403).json({
@@ -460,9 +477,9 @@ async function sendBlockResponse(req: Request, res: Response, result: Protection
     reasons: reasons.slice(0, 3), // Show top 3 reasons
     supportUrl: '/support/security',
     incidentId: `INC_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    retryAfter: 3600 // 1 hour
+    retryAfter: 3600, // 1 hour
   });
-  return; 
+  return;
 }
 
 /**
@@ -491,17 +508,20 @@ export async function verifyChallengeResponse(
 ): Promise<void> {
   try {
     const { challengeResponse, sessionId } = req.body;
-    
+
     if (!challengeResponse || !sessionId) {
       res.status(400).json({
-        error: 'Missing challenge response'
+        error: 'Missing challenge response',
       });
       return;
     }
 
     // Verify the challenge response
-    const isValid = await validateChallengeResponse(challengeResponse, sessionId);
-    
+    const isValid = await validateChallengeResponse(
+      challengeResponse,
+      sessionId
+    );
+
     if (isValid) {
       // Challenge passed, allow request
       (req as any).challengePassed = true;
@@ -517,20 +537,20 @@ export async function verifyChallengeResponse(
         userId: (req as any).user?.id,
         details: {
           sessionId,
-          challengeResponse
-        }
+          challengeResponse,
+        },
       });
 
       res.status(403).json({
         error: 'Challenge verification failed',
-        retryAfter: 300 // 5 minutes
+        retryAfter: 300, // 5 minutes
       });
       return;
     }
   } catch (error: unknown) {
     console.error('[ChallengeVerification] Error:', error);
     res.status(500).json({
-      error: 'Challenge verification error'
+      error: 'Challenge verification error',
     });
     return;
   }
@@ -539,12 +559,15 @@ export async function verifyChallengeResponse(
 /**
  * Validate challenge response
  */
-async function validateChallengeResponse(response: any, sessionId: string): Promise<boolean> {
+async function validateChallengeResponse(
+  response: any,
+  sessionId: string
+): Promise<boolean> {
   // This would validate the actual challenge response
   // For now, use simple validation
-  
+
   if (!response || !sessionId) return false;
-  
+
   // Basic validation logic
   if (response.type === 'captcha') {
     return response.token && response.token.length > 10;
@@ -553,7 +576,7 @@ async function validateChallengeResponse(response: any, sessionId: string): Prom
   } else if (response.type === 'rate_limit') {
     return response.acknowledged === true;
   }
-  
+
   return false;
 }
 
@@ -571,9 +594,9 @@ export async function getProtectionStats(): Promise<any> {
       averageRiskScore: 0,
       modelVersion: mlAnomalyDetector.getModelVersion(),
       isModelTrained: mlAnomalyDetector.isModelTrained(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     return stats;
   } catch (error: unknown) {
     console.error('[ProtectionStats] Error:', error);

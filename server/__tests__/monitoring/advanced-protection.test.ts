@@ -78,7 +78,9 @@ describe('Advanced Protection System', () => {
         anomalies: [],
       };
 
-      (generateFingerprint as jest.Mock).mockResolvedValue(mockFingerprint as any);
+      (generateFingerprint as jest.Mock).mockResolvedValue(
+        mockFingerprint as any
+      );
 
       const result = await generateFingerprint(mockReq as Request);
 
@@ -107,7 +109,9 @@ describe('Advanced Protection System', () => {
         anomalies: [],
       };
 
-      (generateFingerprint as jest.Mock).mockResolvedValue(mockFingerprint as any);
+      (generateFingerprint as jest.Mock).mockResolvedValue(
+        mockFingerprint as any
+      );
 
       const result = await generateFingerprint(mockReq as Request, clientData);
 

@@ -1,12 +1,15 @@
 /**
  * Browser Fingerprint Storage Layer
- * 
+ *
  * Manages persistent storage of browser fingerprints and related data
  * for advanced abuse detection and ML model training
  */
 
 import { Pool } from 'pg';
-import { EnhancedFingerprint, FingerprintAnalysis } from '../monitoring/browser-fingerprint';
+import {
+  EnhancedFingerprint,
+  FingerprintAnalysis,
+} from '../monitoring/browser-fingerprint';
 import { AnomalyResult } from '../monitoring/ml-anomaly-detection';
 
 // Database configuration
@@ -16,16 +19,16 @@ const FINGERPRINT_DB_CONFIG = {
   TABLE_SESSIONS: 'sessions',
   TABLE_ANOMALIES: 'fingerprint_anomalies',
   TABLE_FEEDBACK: 'protection_feedback',
-  
+
   // Retention policies
   FINGERPRINT_RETENTION_DAYS: 90,
   SESSION_RETENTION_DAYS: 30,
   ANOMALY_RETENTION_DAYS: 180,
-  
+
   // Storage limits
   MAX_FINGERPRINTS_PER_DEVICE: 100,
   MAX_SESSIONS_PER_DEVICE: 1000,
-  MAX_ANOMALIES_PER_FINGERPRINT: 50
+  MAX_ANOMALIES_PER_FINGERPRINT: 50,
 };
 
 // Stored fingerprint data
@@ -117,7 +120,7 @@ export class FingerprintStorage {
    */
   public async storeFingerprint(data: StoredFingerprint): Promise<void> {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -125,7 +128,8 @@ export class FingerprintStorage {
       await this.enforceStorageLimits(client, data.deviceId);
 
       // Store fingerprint
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO ${FINGERPRINT_DB_CONFIG.TABLE_FINGERPRINTS} (
           id, device_id, session_id, user_id, fingerprint_data, ip_address,
           user_agent, timestamp, confidence, anomalies
@@ -135,18 +139,20 @@ export class FingerprintStorage {
           timestamp = EXCLUDED.timestamp,
           confidence = EXCLUDED.confidence,
           anomalies = EXCLUDED.anomalies
-      `, [
-        data.id,
-        data.deviceId,
-        data.sessionId,
-        data.userId,
-        JSON.stringify(data.fingerprintData),
-        data.ipAddress,
-        data.userAgent,
-        data.timestamp,
-        data.confidence,
-        data.anomalies
-      ]);
+      `,
+        [
+          data.id,
+          data.deviceId,
+          data.sessionId,
+          data.userId,
+          JSON.stringify(data.fingerprintData),
+          data.ipAddress,
+          data.userAgent,
+          data.timestamp,
+          data.confidence,
+          data.anomalies,
+        ]
+      );
 
       // Update device tracking
       await this.updateDeviceTracking(client, {
@@ -164,7 +170,7 @@ export class FingerprintStorage {
           if (score >= 40) return 'medium';
           return 'low';
         })(),
-        isBlocked: false
+        isBlocked: false,
       });
 
       // Store anomalies if any
@@ -180,15 +186,16 @@ export class FingerprintStorage {
             description: anomaly,
             severity: this.getAnomalySeverity(anomaly),
             timestamp: data.timestamp,
-            confidence: data.confidence
+            confidence: data.confidence,
           });
         }
       }
 
       await client.query('COMMIT');
-      
-      console.log(`[FingerprintStorage] Stored fingerprint ${data.id} for device ${data.deviceId}`);
 
+      console.log(
+        `[FingerprintStorage] Stored fingerprint ${data.id} for device ${data.deviceId}`
+      );
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('[FingerprintStorage] Error storing fingerprint:', error);
@@ -201,12 +208,17 @@ export class FingerprintStorage {
   /**
    * Get fingerprint by ID
    */
-  public async getFingerprintById(id: string): Promise<StoredFingerprint | null> {
+  public async getFingerprintById(
+    id: string
+  ): Promise<StoredFingerprint | null> {
     try {
-      const result = await this.pool.query(`
+      const result = await this.pool.query(
+        `
         SELECT * FROM ${FINGERPRINT_DB_CONFIG.TABLE_FINGERPRINTS}
         WHERE id = $1
-      `, [id]);
+      `,
+        [id]
+      );
 
       if (result.rows.length === 0) {
         return null;
@@ -223,7 +235,7 @@ export class FingerprintStorage {
         userAgent: row.user_agent,
         timestamp: row.timestamp,
         confidence: row.confidence,
-        anomalies: row.anomalies
+        anomalies: row.anomalies,
       };
     } catch (error) {
       console.error('[FingerprintStorage] Error getting fingerprint:', error);
@@ -237,23 +249,28 @@ export class FingerprintStorage {
   public async findSimilarFingerprints(
     fingerprint: EnhancedFingerprint,
     threshold: number = 0.85
-  ): Promise<Array<{
-    fingerprintId: string;
-    similarity: number;
-    lastSeen: Date;
-  }>> {
+  ): Promise<
+    Array<{
+      fingerprintId: string;
+      similarity: number;
+      lastSeen: Date;
+    }>
+  > {
     try {
       // This is a simplified similarity search
       // In a real implementation, you'd use more sophisticated algorithms
-      
-      const result = await this.pool.query(`
+
+      const result = await this.pool.query(
+        `
         SELECT id, fingerprint_data, timestamp, confidence
         FROM ${FINGERPRINT_DB_CONFIG.TABLE_FINGERPRINTS}
         WHERE device_id != $1
         AND timestamp > NOW() - INTERVAL '30 days'
         ORDER BY timestamp DESC
         LIMIT 100
-      `, [fingerprint.deviceId]);
+      `,
+        [fingerprint.deviceId]
+      );
 
       const similar: Array<{
         fingerprintId: string;
@@ -263,13 +280,16 @@ export class FingerprintStorage {
 
       for (const row of result.rows) {
         const storedFingerprint = JSON.parse(row.fingerprint_data);
-        const similarity = this.calculateFingerprintSimilarity(fingerprint, storedFingerprint);
-        
+        const similarity = this.calculateFingerprintSimilarity(
+          fingerprint,
+          storedFingerprint
+        );
+
         if (similarity >= threshold) {
           similar.push({
             fingerprintId: row.id,
             similarity,
-            lastSeen: row.timestamp
+            lastSeen: row.timestamp,
           });
         }
       }
@@ -278,9 +298,11 @@ export class FingerprintStorage {
       similar.sort((a, b) => b.similarity - a.similarity);
 
       return similar.slice(0, 10); // Return top 10
-
     } catch (error) {
-      console.error('[FingerprintStorage] Error finding similar fingerprints:', error);
+      console.error(
+        '[FingerprintStorage] Error finding similar fingerprints:',
+        error
+      );
       return [];
     }
   }
@@ -290,10 +312,13 @@ export class FingerprintStorage {
    */
   public async getDeviceInfo(deviceId: string): Promise<DeviceData | null> {
     try {
-      const result = await this.pool.query(`
+      const result = await this.pool.query(
+        `
         SELECT * FROM ${FINGERPRINT_DB_CONFIG.TABLE_DEVICES}
         WHERE device_id = $1
-      `, [deviceId]);
+      `,
+        [deviceId]
+      );
 
       if (result.rows.length === 0) {
         return null;
@@ -311,7 +336,7 @@ export class FingerprintStorage {
         riskLevel: row.risk_level,
         isBlocked: row.is_blocked,
         blockReason: row.block_reason,
-        blockExpiresAt: row.block_expires_at
+        blockExpiresAt: row.block_expires_at,
       };
     } catch (error) {
       console.error('[FingerprintStorage] Error getting device info:', error);
@@ -324,11 +349,12 @@ export class FingerprintStorage {
    */
   public async storeSession(session: SessionData): Promise<void> {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO ${FINGERPRINT_DB_CONFIG.TABLE_SESSIONS} (
           session_id, device_id, user_id, ip_address, user_agent,
           started_at, last_activity, request_count, upload_count,
@@ -340,32 +366,36 @@ export class FingerprintStorage {
           upload_count = EXCLUDED.upload_count,
           anomaly_count = EXCLUDED.anomaly_count,
           is_active = EXCLUDED.is_active
-      `, [
-        session.sessionId,
-        session.deviceId,
-        session.userId,
-        session.ipAddress,
-        session.userAgent,
-        session.startedAt,
-        session.lastActivity,
-        session.requestCount,
-        session.uploadCount,
-        session.anomalyCount,
-        session.isActive
-      ]);
+      `,
+        [
+          session.sessionId,
+          session.deviceId,
+          session.userId,
+          session.ipAddress,
+          session.userAgent,
+          session.startedAt,
+          session.lastActivity,
+          session.requestCount,
+          session.uploadCount,
+          session.anomalyCount,
+          session.isActive,
+        ]
+      );
 
       // Update device session count
-      await client.query(`
+      await client.query(
+        `
         UPDATE ${FINGERPRINT_DB_CONFIG.TABLE_DEVICES}
         SET session_count = session_count + 1,
             last_seen = $1
         WHERE device_id = $2
-      `, [session.lastActivity, session.deviceId]);
+      `,
+        [session.lastActivity, session.deviceId]
+      );
 
       await client.query('COMMIT');
-      
-      console.log(`[FingerprintStorage] Stored session ${session.sessionId}`);
 
+      console.log(`[FingerprintStorage] Stored session ${session.sessionId}`);
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('[FingerprintStorage] Error storing session:', error);
@@ -383,28 +413,30 @@ export class FingerprintStorage {
     anomaly: AnomalyRecord
   ): Promise<void> {
     try {
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO ${FINGERPRINT_DB_CONFIG.TABLE_ANOMALIES} (
           id, fingerprint_id, session_id, device_id, user_id,
           anomaly_type, description, severity, timestamp,
           confidence, metadata
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      `, [
-        anomaly.id,
-        anomaly.fingerprintId,
-        anomaly.sessionId,
-        anomaly.deviceId,
-        anomaly.userId,
-        anomaly.anomalyType,
-        anomaly.description,
-        anomaly.severity,
-        anomaly.timestamp,
-        anomaly.confidence,
-        JSON.stringify(anomaly.metadata || {})
-      ]);
+      `,
+        [
+          anomaly.id,
+          anomaly.fingerprintId,
+          anomaly.sessionId,
+          anomaly.deviceId,
+          anomaly.userId,
+          anomaly.anomalyType,
+          anomaly.description,
+          anomaly.severity,
+          anomaly.timestamp,
+          anomaly.confidence,
+          JSON.stringify(anomaly.metadata || {}),
+        ]
+      );
 
       console.log(`[FingerprintStorage] Stored anomaly ${anomaly.id}`);
-
     } catch (error) {
       console.error('[FingerprintStorage] Error storing anomaly:', error);
       throw error;
@@ -416,26 +448,28 @@ export class FingerprintStorage {
    */
   public async storeFeedback(feedback: ProtectionFeedback): Promise<void> {
     try {
-      await this.pool.query(`
+      await this.pool.query(
+        `
         INSERT INTO ${FINGERPRINT_DB_CONFIG.TABLE_FEEDBACK} (
           id, fingerprint_id, session_id, decision, was_correct,
           feedback, context, timestamp, user_id, ip_address
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `, [
-        feedback.id,
-        feedback.fingerprintId,
-        feedback.sessionId,
-        feedback.decision,
-        feedback.wasCorrect,
-        feedback.feedback,
-        JSON.stringify(feedback.context || {}),
-        feedback.timestamp,
-        feedback.userId,
-        feedback.ipAddress
-      ]);
+      `,
+        [
+          feedback.id,
+          feedback.fingerprintId,
+          feedback.sessionId,
+          feedback.decision,
+          feedback.wasCorrect,
+          feedback.feedback,
+          JSON.stringify(feedback.context || {}),
+          feedback.timestamp,
+          feedback.userId,
+          feedback.ipAddress,
+        ]
+      );
 
       console.log(`[FingerprintStorage] Stored feedback ${feedback.id}`);
-
     } catch (error) {
       console.error('[FingerprintStorage] Error storing feedback:', error);
       throw error;
@@ -450,12 +484,15 @@ export class FingerprintStorage {
     limit: number = 10
   ): Promise<SessionData[]> {
     try {
-      const result = await this.pool.query(`
+      const result = await this.pool.query(
+        `
         SELECT * FROM ${FINGERPRINT_DB_CONFIG.TABLE_SESSIONS}
         WHERE device_id = $1
         ORDER BY last_activity DESC
         LIMIT $2
-      `, [deviceId, limit]);
+      `,
+        [deviceId, limit]
+      );
 
       return result.rows.map(row => ({
         sessionId: row.session_id,
@@ -468,10 +505,13 @@ export class FingerprintStorage {
         requestCount: row.request_count,
         uploadCount: row.upload_count,
         anomalyCount: row.anomaly_count,
-        isActive: row.is_active
+        isActive: row.is_active,
       }));
     } catch (error) {
-      console.error('[FingerprintStorage] Error getting device sessions:', error);
+      console.error(
+        '[FingerprintStorage] Error getting device sessions:',
+        error
+      );
       return [];
     }
   }
@@ -484,12 +524,15 @@ export class FingerprintStorage {
     limit: number = 20
   ): Promise<AnomalyRecord[]> {
     try {
-      const result = await this.pool.query(`
+      const result = await this.pool.query(
+        `
         SELECT * FROM ${FINGERPRINT_DB_CONFIG.TABLE_ANOMALIES}
         WHERE device_id = $1
         ORDER BY timestamp DESC
         LIMIT $2
-      `, [deviceId, limit]);
+      `,
+        [deviceId, limit]
+      );
 
       return result.rows.map(row => ({
         id: row.id,
@@ -502,10 +545,13 @@ export class FingerprintStorage {
         severity: row.severity,
         timestamp: row.timestamp,
         confidence: row.confidence,
-        metadata: JSON.parse(row.metadata || '{}')
+        metadata: JSON.parse(row.metadata || '{}'),
       }));
     } catch (error) {
-      console.error('[FingerprintStorage] Error getting device anomalies:', error);
+      console.error(
+        '[FingerprintStorage] Error getting device anomalies:',
+        error
+      );
       return [];
     }
   }
@@ -513,16 +559,17 @@ export class FingerprintStorage {
   /**
    * Get statistics for ML model training
    */
-  public async getTrainingData(
-    limit: number = 1000
-  ): Promise<Array<{
-    features: any;
-    label: 'normal' | 'anomalous';
-    confidence: number;
-  }>> {
+  public async getTrainingData(limit: number = 1000): Promise<
+    Array<{
+      features: any;
+      label: 'normal' | 'anomalous';
+      confidence: number;
+    }>
+  > {
     try {
       // Get recent fingerprints with feedback
-      const result = await this.pool.query(`
+      const result = await this.pool.query(
+        `
         SELECT 
           f.fingerprint_data,
           f.confidence,
@@ -536,11 +583,13 @@ export class FingerprintStorage {
         GROUP BY f.id, f.fingerprint_data, f.confidence, fb.decision, fb.was_correct
         ORDER BY f.timestamp DESC
         LIMIT $1
-      `, [limit]);
+      `,
+        [limit]
+      );
 
       return result.rows.map(row => {
         const fingerprintData = JSON.parse(row.fingerprint_data);
-        
+
         // Determine label based on feedback and anomalies
         let label: 'normal' | 'anomalous' = 'normal';
         let confidence = row.confidence;
@@ -555,7 +604,7 @@ export class FingerprintStorage {
         return {
           features: this.extractFeatures(fingerprintData),
           label,
-          confidence
+          confidence,
         };
       });
     } catch (error) {
@@ -574,7 +623,7 @@ export class FingerprintStorage {
     feedbackRemoved: number;
   }> {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -612,12 +661,11 @@ export class FingerprintStorage {
         fingerprintsRemoved: fingerprintsResult.rows.length,
         sessionsRemoved: sessionsResult.rows.length,
         anomaliesRemoved: anomaliesResult.rows.length,
-        feedbackRemoved: feedbackResult.rows.length
+        feedbackRemoved: feedbackResult.rows.length,
       };
 
       console.log('[FingerprintStorage] Cleanup completed:', stats);
       return stats;
-
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('[FingerprintStorage] Error during cleanup:', error);
@@ -631,17 +679,27 @@ export class FingerprintStorage {
    * Helper methods
    */
 
-  private async enforceStorageLimits(client: any, deviceId: string): Promise<void> {
+  private async enforceStorageLimits(
+    client: any,
+    deviceId: string
+  ): Promise<void> {
     // Enforce fingerprint limit
-    const fingerprintCount = await client.query(`
+    const fingerprintCount = await client.query(
+      `
       SELECT COUNT(*) as count
       FROM ${FINGERPRINT_DB_CONFIG.TABLE_FINGERPRINTS}
       WHERE device_id = $1
-    `, [deviceId]);
+    `,
+      [deviceId]
+    );
 
-    if (parseInt(fingerprintCount.rows[0].count) >= FINGERPRINT_DB_CONFIG.MAX_FINGERPRINTS_PER_DEVICE) {
+    if (
+      parseInt(fingerprintCount.rows[0].count) >=
+      FINGERPRINT_DB_CONFIG.MAX_FINGERPRINTS_PER_DEVICE
+    ) {
       // Remove oldest fingerprints
-      await client.query(`
+      await client.query(
+        `
         DELETE FROM ${FINGERPRINT_DB_CONFIG.TABLE_FINGERPRINTS}
         WHERE device_id = $1
         AND id IN (
@@ -650,12 +708,18 @@ export class FingerprintStorage {
           ORDER BY timestamp ASC
           LIMIT 10
         )
-      `, [deviceId]);
+      `,
+        [deviceId]
+      );
     }
   }
 
-  private async updateDeviceTracking(client: any, device: DeviceData): Promise<void> {
-    await client.query(`
+  private async updateDeviceTracking(
+    client: any,
+    device: DeviceData
+  ): Promise<void> {
+    await client.query(
+      `
       INSERT INTO ${FINGERPRINT_DB_CONFIG.TABLE_DEVICES} (
         device_id, user_id, first_seen, last_seen, fingerprint_count,
         session_count, risk_score, risk_level, is_blocked, block_reason, block_expires_at
@@ -670,22 +734,27 @@ export class FingerprintStorage {
         is_blocked = EXCLUDED.is_blocked,
         block_reason = EXCLUDED.block_reason,
         block_expires_at = EXCLUDED.block_expires_at
-    `, [
-      device.deviceId,
-      device.userId,
-      device.firstSeen,
-      device.lastSeen,
-      device.fingerprintCount,
-      device.sessionCount,
-      device.riskScore,
-      device.riskLevel,
-      device.isBlocked,
-      device.blockReason,
-      device.blockExpiresAt
-    ]);
+    `,
+      [
+        device.deviceId,
+        device.userId,
+        device.firstSeen,
+        device.lastSeen,
+        device.fingerprintCount,
+        device.sessionCount,
+        device.riskScore,
+        device.riskLevel,
+        device.isBlocked,
+        device.blockReason,
+        device.blockExpiresAt,
+      ]
+    );
   }
 
-  private calculateFingerprintSimilarity(fp1: EnhancedFingerprint, fp2: EnhancedFingerprint): number {
+  private calculateFingerprintSimilarity(
+    fp1: EnhancedFingerprint,
+    fp2: EnhancedFingerprint
+  ): number {
     let similarity = 0;
     let factors = 0;
 
@@ -717,7 +786,9 @@ export class FingerprintStorage {
     return factors > 0 ? similarity / factors : 0;
   }
 
-  private getAnomalySeverity(anomaly: string): 'low' | 'medium' | 'high' | 'critical' {
+  private getAnomalySeverity(
+    anomaly: string
+  ): 'low' | 'medium' | 'high' | 'critical' {
     if (anomaly.includes('Headless browser')) return 'high';
     if (anomaly.includes('Minimal browser fingerprint')) return 'medium';
     if (anomaly.includes('Mobile UA but no touch')) return 'low';
@@ -740,7 +811,7 @@ export class FingerprintStorage {
       userAgent: fingerprintData.userAgent,
       touchSupport: fingerprintData.touch?.touchEvent,
       deviceMemory: fingerprintData.hardware?.deviceMemory,
-      hardwareConcurrency: fingerprintData.hardware?.hardwareConcurrency
+      hardwareConcurrency: fingerprintData.hardware?.hardwareConcurrency,
     };
   }
 }

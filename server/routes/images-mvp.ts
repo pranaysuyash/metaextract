@@ -1713,8 +1713,84 @@ export function registerImagesMvpRoutes(app: Express) {
                 error: 'Rate limit exceeded',
                 message: 'Please try again later',
                 code: 'SUSPICIOUS_DEVICE',
-                retryAfter: 300 // 5 minutes
+                retryAfter: 300, // 5 minutes
               });
+            }
+
+            // Enhanced fingerprint analysis (Phase 1 integration)
+            const clientFingerprintHash =
+              (req.headers['x-fingerprint-hash'] as string) || '';
+            const clientSessionId =
+              (req.headers['x-session-id'] as string) || '';
+
+            if (clientFingerprintHash && clientSessionId) {
+              try {
+                // Import fingerprint analysis functions
+                const { generateFingerprint, analyzeFingerprint } =
+                  await import('../monitoring/browser-fingerprint.js');
+                const { securityEventLogger } =
+                  await import('../monitoring/security-events.js');
+
+                // Generate enhanced fingerprint from request data
+                const enhancedFingerprint = await generateFingerprint(req, {});
+
+                // Override the client-provided hash for comparison
+                (enhancedFingerprint as any).clientHash = clientFingerprintHash;
+
+                // Analyze fingerprint for anomalies
+                const analysis = await analyzeFingerprint(enhancedFingerprint);
+
+                // Log the fingerprint analysis for monitoring
+                await securityEventLogger.logEvent({
+                  event: 'fingerprint_analysis',
+                  severity: analysis.riskScore > 50 ? 'medium' : 'low',
+                  timestamp: new Date(),
+                  source: 'extraction_endpoint',
+                  ipAddress: ip,
+                  details: {
+                    fingerprintId: enhancedFingerprint.fingerprintHash,
+                    riskScore: analysis.riskScore,
+                    confidence: analysis.confidence,
+                    anomalies: analysis.anomalies,
+                    similarDevices: analysis.similarFingerprints.length,
+                    sessionId: clientSessionId,
+                  },
+                });
+
+                // Use analysis results in access control
+                if (analysis.riskScore > 80) {
+                  await securityEventLogger.logEvent({
+                    event: 'high_risk_fingerprint_blocked',
+                    severity: 'high',
+                    timestamp: new Date(),
+                    source: 'extraction_endpoint',
+                    ipAddress: ip,
+                    details: {
+                      fingerprintId: enhancedFingerprint.fingerprintHash,
+                      riskScore: analysis.riskScore,
+                      anomalies: analysis.anomalies,
+                      similarDevices: analysis.similarFingerprints.length,
+                      sessionId: clientSessionId,
+                    },
+                  });
+
+                  return res.status(403).json({
+                    error: 'Suspicious activity detected',
+                    message: 'Please contact support if this is an error',
+                    code: 'HIGH_RISK_FINGERPRINT',
+                  });
+                }
+
+                // Log moderate risk for monitoring (don't block)
+                if (analysis.riskScore > 50) {
+                  console.warn(
+                    `[Security] Moderate risk fingerprint: ${analysis.riskScore}/100 for ${enhancedFingerprint.fingerprintHash}`
+                  );
+                }
+              } catch (error) {
+                // Don't block extraction on fingerprint errors, just log
+                console.error('[FingerprintAnalysis] Error:', error);
+              }
             }
 
             // Check circuit breaker for free tier load shedding

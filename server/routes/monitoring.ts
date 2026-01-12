@@ -1,11 +1,14 @@
 /**
  * Monitoring Routes
- * 
+ *
  * Security monitoring dashboard and analytics endpoints
  */
 
 import type { Express, Request, Response } from 'express';
-import { securityEventLogger, SecurityEventType } from '../monitoring/security-events';
+import {
+  securityEventLogger,
+  SecurityEventType,
+} from '../monitoring/security-events';
 import { securityAlertManager } from '../monitoring/security-alerts';
 import { checkTempHealth } from '../startup-cleanup';
 import os from 'os';
@@ -14,7 +17,6 @@ import os from 'os';
  * Register monitoring routes
  */
 export function registerMonitoringRoutes(app: Express): void {
-  
   /**
    * Security Dashboard - Main overview
    */
@@ -22,14 +24,16 @@ export function registerMonitoringRoutes(app: Express): void {
     try {
       // Get temp directory health
       const tempHealth = await checkTempHealth();
-      
+
       // Get system metrics
       const systemMetrics = {
         memory: {
           total: os.totalmem(),
           free: os.freemem(),
           used: os.totalmem() - os.freemem(),
-          usagePercent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+          usagePercent: Math.round(
+            ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
+          ),
         },
         loadAverage: os.loadavg(),
         uptime: os.uptime(),
@@ -54,7 +58,8 @@ export function registerMonitoringRoutes(app: Express): void {
         timestamp: new Date().toISOString(),
         overview: {
           totalEvents: analytics.totalEvents,
-          criticalAlerts: recentAlerts.filter(a => a.severity === 'critical').length,
+          criticalAlerts: recentAlerts.filter(a => a.severity === 'critical')
+            .length,
           highSeverityEvents: analytics.eventsBySeverity.high || 0,
           tempFiles: tempHealth.fileCount,
           tempSizeMB: Math.round(tempHealth.totalSize / (1024 * 1024)),
@@ -62,7 +67,10 @@ export function registerMonitoringRoutes(app: Express): void {
         systemHealth: {
           tempDirectories: tempHealth,
           systemMetrics,
-          status: tempHealth.healthy && systemMetrics.memory.usagePercent < 90 ? 'healthy' : 'warning',
+          status:
+            tempHealth.healthy && systemMetrics.memory.usagePercent < 90
+              ? 'healthy'
+              : 'warning',
         },
         securityMetrics: {
           eventsByType: analytics.eventsByType,
@@ -72,7 +80,11 @@ export function registerMonitoringRoutes(app: Express): void {
         },
         recentAlerts,
         abuseDetection,
-        recommendations: generateRecommendations(tempHealth, analytics, abuseDetection),
+        recommendations: generateRecommendations(
+          tempHealth,
+          analytics,
+          abuseDetection
+        ),
       };
 
       res.json(dashboard);
@@ -149,14 +161,16 @@ export function registerMonitoringRoutes(app: Express): void {
   app.get('/api/monitoring/alerts', (req: Request, res: Response) => {
     try {
       const { limit = 50, severity, type } = req.query;
-      
-      let alerts = securityAlertManager.getAlertHistory(parseInt(limit as string));
-      
+
+      let alerts = securityAlertManager.getAlertHistory(
+        parseInt(limit as string)
+      );
+
       // Apply filters if specified
       if (severity) {
         alerts = alerts.filter(a => a.severity === severity);
       }
-      
+
       if (type) {
         alerts = alerts.filter(a => a.type === type);
       }
@@ -182,29 +196,32 @@ export function registerMonitoringRoutes(app: Express): void {
   /**
    * Abuse Detection - Pattern analysis
    */
-  app.get('/api/monitoring/abuse-detection', async (req: Request, res: Response) => {
-    try {
-      const { hoursBack = 24 } = req.query;
-      
-      const detection = await securityEventLogger.detectAbusePatterns(
-        parseInt(hoursBack as string)
-      );
+  app.get(
+    '/api/monitoring/abuse-detection',
+    async (req: Request, res: Response) => {
+      try {
+        const { hoursBack = 24 } = req.query;
 
-      res.json({
-        patterns: detection.patterns,
-        riskScore: detection.riskScore,
-        riskLevel: getRiskLevel(detection.riskScore),
-        analysisTime: new Date().toISOString(),
-        timeWindow: `${hoursBack} hours`,
-      });
-    } catch (error) {
-      console.error('[Monitoring] Abuse detection error:', error);
-      res.status(500).json({
-        error: 'Abuse detection failed',
-        message: 'Unable to analyze abuse patterns',
-      });
+        const detection = await securityEventLogger.detectAbusePatterns(
+          parseInt(hoursBack as string)
+        );
+
+        res.json({
+          patterns: detection.patterns,
+          riskScore: detection.riskScore,
+          riskLevel: getRiskLevel(detection.riskScore),
+          analysisTime: new Date().toISOString(),
+          timeWindow: `${hoursBack} hours`,
+        });
+      } catch (error) {
+        console.error('[Monitoring] Abuse detection error:', error);
+        res.status(500).json({
+          error: 'Abuse detection failed',
+          message: 'Unable to analyze abuse patterns',
+        });
+      }
     }
-  });
+  );
 
   /**
    * Real-time Metrics - Live security metrics
@@ -212,7 +229,7 @@ export function registerMonitoringRoutes(app: Express): void {
   app.get('/api/monitoring/metrics', async (req: Request, res: Response) => {
     try {
       const tempHealth = await checkTempHealth();
-      
+
       const metrics = {
         timestamp: new Date().toISOString(),
         tempDirectory: {
@@ -221,14 +238,16 @@ export function registerMonitoringRoutes(app: Express): void {
           healthy: tempHealth.healthy,
         },
         system: {
-          memoryUsagePercent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+          memoryUsagePercent: Math.round(
+            ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
+          ),
           loadAverage: os.loadavg(),
           uptime: os.uptime(),
         },
         security: {
           eventsLastMinute: Math.floor(Math.random() * 50), // Mock data
-          rateLimitHits: Math.floor(Math.random() * 20),    // Mock data
-          suspiciousIPs: 2,                                   // Mock data
+          rateLimitHits: Math.floor(Math.random() * 20), // Mock data
+          suspiciousIPs: 2, // Mock data
         },
       };
 
@@ -258,7 +277,7 @@ export function registerMonitoringRoutes(app: Express): void {
       const analytics = await securityEventLogger.getSecurityAnalytics(
         new Date(startTime as string),
         new Date(endTime as string),
-        eventTypes ? (eventTypes as string).split(',') as any : undefined
+        eventTypes ? ((eventTypes as string).split(',') as any) : undefined
       );
 
       const exportData = {
@@ -285,7 +304,10 @@ export function registerMonitoringRoutes(app: Express): void {
         // Convert to CSV format
         const csv = convertToCSV(analytics);
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="security-export.csv"');
+        res.setHeader(
+          'Content-Disposition',
+          'attachment; filename="security-export.csv"'
+        );
         res.send(csv);
       } else {
         // Default JSON format
@@ -315,23 +337,31 @@ function generateRecommendations(
   if (!tempHealth.healthy) {
     recommendations.push('Run manual cleanup via /api/health/cleanup endpoint');
   }
-  
+
   if (tempHealth.fileCount > 100) {
-    recommendations.push('Consider increasing cleanup frequency due to high temp file count');
+    recommendations.push(
+      'Consider increasing cleanup frequency due to high temp file count'
+    );
   }
 
   // Analytics-based recommendations
   if ((analytics.eventsBySeverity.high || 0) > 20) {
-    recommendations.push('High number of security events detected - review access patterns');
+    recommendations.push(
+      'High number of security events detected - review access patterns'
+    );
   }
 
   if ((analytics.eventsByType.rate_limit_exceeded || 0) > 50) {
-    recommendations.push('High rate limit activity - consider adjusting limits or investigating abuse');
+    recommendations.push(
+      'High rate limit activity - consider adjusting limits or investigating abuse'
+    );
   }
 
   // Abuse detection recommendations
   if (abuseDetection.riskScore > 70) {
-    recommendations.push('High abuse risk detected - consider IP blocking or stricter rate limits');
+    recommendations.push(
+      'High abuse risk detected - consider IP blocking or stricter rate limits'
+    );
   }
 
   return recommendations;
@@ -371,12 +401,16 @@ function generateMockEvents(params: {
 
   for (let i = 0; i < params.limit; i++) {
     const timestamp = new Date(
-      params.startTime.getTime() + 
-      Math.random() * (params.endTime.getTime() - params.startTime.getTime())
+      params.startTime.getTime() +
+        Math.random() * (params.endTime.getTime() - params.startTime.getTime())
     );
 
-    const eventType = params.eventType || eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    const severity = params.severity || ['low', 'medium', 'high'][Math.floor(Math.random() * 3)];
+    const eventType =
+      params.eventType ||
+      eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    const severity =
+      params.severity ||
+      ['low', 'medium', 'high'][Math.floor(Math.random() * 3)];
 
     events.push({
       id: `evt_${Date.now()}_${i}`,
@@ -384,7 +418,8 @@ function generateMockEvents(params: {
       severity,
       timestamp: timestamp.toISOString(),
       source: 'security_system',
-      ipAddress: params.ipAddress || `192.168.1.${Math.floor(Math.random() * 255)}`,
+      ipAddress:
+        params.ipAddress || `192.168.1.${Math.floor(Math.random() * 255)}`,
       userAgent: 'Mozilla/5.0 (Test Browser)',
       details: {
         reason: 'Mock security event',
@@ -393,14 +428,22 @@ function generateMockEvents(params: {
     });
   }
 
-  return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return events.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 }
 
 /**
  * Convert analytics data to CSV format
  */
 function convertToCSV(analytics: any): string {
-  const headers = ['timestamp', 'event_type', 'severity', 'count', 'description'];
+  const headers = [
+    'timestamp',
+    'event_type',
+    'severity',
+    'count',
+    'description',
+  ];
   const rows = [];
 
   // Add header row
@@ -409,13 +452,15 @@ function convertToCSV(analytics: any): string {
   // Add data rows
   Object.entries(analytics.eventsByType).forEach(([type, count]) => {
     const numericCount = Number(count) || 0;
-    rows.push([
-      new Date().toISOString(),
-      type,
-      'mixed',
-      numericCount,
-      `Total ${type} events`,
-    ].join(','));
+    rows.push(
+      [
+        new Date().toISOString(),
+        type,
+        'mixed',
+        numericCount,
+        `Total ${type} events`,
+      ].join(',')
+    );
   });
 
   return rows.join('\n');

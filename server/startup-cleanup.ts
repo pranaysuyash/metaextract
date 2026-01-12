@@ -112,9 +112,7 @@ async function cleanupDirectory(dirPath: string): Promise<CleanupResult> {
                 result.errors.push(
                   `File ${filePath} was locked; renamed to ${quarantined} for later cleanup`
                 );
-                console.warn(
-                  `[Cleanup] Renamed locked file to ${quarantined}`
-                );
+                console.warn(`[Cleanup] Renamed locked file to ${quarantined}`);
               } catch (renameErr) {
                 const errorMsg = `Failed to unlink or rename ${filePath}: ${renameErr}`;
                 result.errors.push(errorMsg);
@@ -200,7 +198,9 @@ export async function ensureTempDirsCreated(): Promise<void> {
         // Attempt to set restrictive permissions; may be noop on some OSes
         await fs.chmod(dir, 0o700);
       } catch (chmodErr) {
-        console.warn(`[Cleanup] Could not set permissions on ${dir}: ${chmodErr}`);
+        console.warn(
+          `[Cleanup] Could not set permissions on ${dir}: ${chmodErr}`
+        );
       }
     } catch (err) {
       console.warn(`[Cleanup] Could not ensure directory ${dir}: ${err}`);

@@ -21,7 +21,11 @@ import {
   sanitizeErrorMessage,
 } from './security-utils';
 import { pythonExecutable } from './utils/extraction-helpers';
-import { cleanupOrphanedTempFiles, startPeriodicCleanup, cleanupOnExit } from './startup-cleanup';
+import {
+  cleanupOrphanedTempFiles,
+  startPeriodicCleanup,
+  cleanupOnExit,
+} from './startup-cleanup';
 import { registerHealthRoutes } from './routes/health';
 import { registerMonitoringRoutes } from './routes/monitoring';
 import { securityAlertManager } from './monitoring/security-alerts';
@@ -182,19 +186,23 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     try {
       // Run cleanup on startup
       const startupResult = await cleanupOrphanedTempFiles();
-      log(`Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`);
-      
+      log(
+        `Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`
+      );
+
       // Start periodic cleanup (hourly)
       const cleanupInterval = startPeriodicCleanup(60 * 60 * 1000);
       log('Periodic cleanup scheduled every hour');
-      
+
       // Initialize security monitoring
       log('Initializing security monitoring system...');
       try {
         // Start periodic security monitoring (every 5 minutes)
-        const monitoringInterval = securityAlertManager.startPeriodicMonitoring(5 * 60 * 1000);
+        const monitoringInterval = securityAlertManager.startPeriodicMonitoring(
+          5 * 60 * 1000
+        );
         log('Security monitoring active - checking every 5 minutes');
-        
+
         // Cleanup monitoring on exit
         process.on('exit', () => {
           securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
@@ -206,7 +214,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
             // ignore
           }
         });
-        
+
         process.on('SIGINT', async () => {
           securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
           try {
@@ -215,7 +223,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
             // ignore
           }
         });
-        
+
         process.on('SIGTERM', async () => {
           securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
           try {
@@ -224,17 +232,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
             // ignore
           }
         });
-        
       } catch (error) {
-        log(`Warning: Security monitoring initialization failed: ${error}`, 'startup');
+        log(
+          `Warning: Security monitoring initialization failed: ${error}`,
+          'startup'
+        );
       }
-      
+
       // Cleanup on process exit
       process.on('exit', async () => {
         clearInterval(cleanupInterval);
         await cleanupOnExit();
       });
-      
+
       // Handle graceful shutdown
       process.on('SIGINT', async () => {
         log('Received SIGINT, cleaning up...');
@@ -242,16 +252,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         await cleanupOnExit();
         process.exit(0);
       });
-      
+
       process.on('SIGTERM', async () => {
         log('Received SIGTERM, cleaning up...');
         clearInterval(cleanupInterval);
         await cleanupOnExit();
         process.exit(0);
       });
-      
     } catch (error) {
-      log(`Warning: Temp cleanup system initialization failed: ${error}`, 'startup');
+      log(
+        `Warning: Temp cleanup system initialization failed: ${error}`,
+        'startup'
+      );
       // Continue startup even if cleanup fails
     }
   } else {

@@ -125,7 +125,9 @@ export const uploadRateLimit = rateLimit({
       max_requests: isAuthenticated
         ? UPLOAD_LIMITS.SESSION_MAX_REQUESTS
         : UPLOAD_LIMITS.IP_MAX_REQUESTS,
-      retry_after_seconds: Math.round(((req as any).rateLimit?.resetTime ?? 0) / 1000),
+      retry_after_seconds: Math.round(
+        ((req as any).rateLimit?.resetTime ?? 0) / 1000
+      ),
       suggestions: [
         'Wait a few minutes before trying again',
         'Consider creating an account for higher limits',
@@ -174,7 +176,9 @@ export const burstRateLimit = rateLimit({
       limit_type: 'burst',
       window_seconds: Math.round(UPLOAD_LIMITS.BURST_WINDOW_MS / 1000),
       max_requests: UPLOAD_LIMITS.BURST_MAX_REQUESTS,
-      retry_after_seconds: Math.round(((req as any).rateLimit?.resetTime ?? 0) / 1000),
+      retry_after_seconds: Math.round(
+        ((req as any).rateLimit?.resetTime ?? 0) / 1000
+      ),
     });
   },
 

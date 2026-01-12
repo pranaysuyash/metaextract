@@ -18,6 +18,11 @@ import {
   type ImagesMvpQuoteResponse,
 } from '@/lib/images-mvp-quote';
 import { useAuth } from '@/lib/auth';
+import {
+  generateBrowserFingerprint,
+  generateFingerprintHash,
+  getSessionId,
+} from '@/lib/browser-fingerprint';
 
 export function SimpleUploadZone() {
   const { isAuthenticated } = useAuth();
@@ -321,7 +326,8 @@ export function SimpleUploadZone() {
         setPendingFile(files[0]);
         setPendingFileId(entries[0].id);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to get quote';
+        const message =
+          err instanceof Error ? err.message : 'Failed to get quote';
         setQuoteError(message);
         setQuoteData(null);
       } finally {
@@ -462,6 +468,36 @@ export function SimpleUploadZone() {
       has_trial_email: false,
     });
 
+    // Generate browser fingerprint for security
+    let fingerprintData: any = null;
+    try {
+      const fingerprint = await generateBrowserFingerprint();
+      const fingerprintHash = generateFingerprintHash(fingerprint);
+      const sessionId = getSessionId();
+
+      fingerprintData = {
+        ...fingerprint,
+        hash: fingerprintHash,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Submit fingerprint to backend for analysis
+      await fetch('/api/protection/fingerprint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fingerprint: fingerprintData,
+          sessionId,
+        }),
+      }).catch(err => {
+        // Don't block upload if fingerprint submission fails
+        console.warn('[Fingerprint] Submission failed:', err);
+      });
+    } catch (error) {
+      // Don't block upload if fingerprint generation fails
+      console.warn('[Fingerprint] Generation failed:', error);
+    }
+
     try {
       const data = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -505,6 +541,13 @@ export function SimpleUploadZone() {
         xhr.onerror = () => reject({ message: 'Network error' });
 
         xhr.open('POST', '/api/images_mvp/extract');
+
+        // Add fingerprint headers first
+        if (fingerprintData) {
+          xhr.setRequestHeader('X-Fingerprint-Hash', fingerprintData.hash);
+          xhr.setRequestHeader('X-Session-ID', getSessionId());
+        }
+
         // Add authentication headers and credentials
         const authToken = localStorage.getItem('auth_token');
         if (authToken) {
@@ -845,7 +888,9 @@ export function SimpleUploadZone() {
                 </Button>
 
                 <div className="mt-2 text-xs text-slate-400">
-                  <span className="block">Files are processed securely and deleted within 1 hour.</span>
+                  <span className="block">
+                    Files are processed securely and deleted within 1 hour.
+                  </span>
                 </div>
               </>
             )}
@@ -884,7 +929,10 @@ export function SimpleUploadZone() {
                   setResumeRequested(true);
                   await checkCreditsAndMaybeResume();
                   setResumeRequested(false);
-                  toast({ title: 'Checked for credits', description: 'Refreshed credit balance.' });
+                  toast({
+                    title: 'Checked for credits',
+                    description: 'Refreshed credit balance.',
+                  });
                 }}
                 className="ml-2"
               >

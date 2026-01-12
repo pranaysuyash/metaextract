@@ -248,7 +248,8 @@ export function setupUserCaching(router: Router): void {
         const preferences = await getUserPreferences(userId);
         res.json(preferences);
       } catch (error: unknown) {
-        const errMessage = error instanceof Error ? error.message : String(error);
+        const errMessage =
+          error instanceof Error ? error.message : String(error);
         res.status(401).json({ error: errMessage });
       }
     }

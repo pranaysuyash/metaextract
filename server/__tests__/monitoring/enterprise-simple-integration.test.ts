@@ -1,27 +1,32 @@
 /**
  * Enterprise & Simple ML Integration Tests
- * 
+ *
  * Tests for enterprise features and simplified ML models
  */
 
-import { deepLearningModelManager, enterpriseSecurityManager, complianceManager } from '../../enterprise';
+import {
+  deepLearningModelManager,
+  enterpriseSecurityManager,
+  complianceManager,
+} from '../../enterprise';
 import { Request } from 'express';
 
 describe('Enterprise & Simple ML Features', () => {
   let mockReq: Partial<Request> & { connection?: any };
 
   beforeEach(() => {
-    mockReq = ({
+    mockReq = {
       ip: '192.168.1.100',
       connection: { remoteAddress: '192.168.1.100' },
       headers: {
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'accept-language': 'en-US,en;q=0.9'
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'accept-language': 'en-US,en;q=0.9',
       },
       body: {},
       path: '/api/upload',
-      method: 'POST'
-    } as any);
+      method: 'POST',
+    } as any;
   });
 
   describe('Simple ML Models', () => {
@@ -30,7 +35,7 @@ describe('Enterprise & Simple ML Features', () => {
         fingerprintHash: 'test_fingerprint_123',
         deviceId: 'device_123',
         confidence: 0.85,
-        anomalies: []
+        anomalies: [],
       };
 
       const mockBehavioralData = {
@@ -38,13 +43,13 @@ describe('Enterprise & Simple ML Features', () => {
         isHuman: true,
         confidence: 0.8,
         mouseMovements: [{ patterns: { linearity: 0.3 } }],
-        keystrokeDynamics: [{ patterns: { timingConsistency: 0.6 } }]
+        keystrokeDynamics: [{ patterns: { timingConsistency: 0.6 } }],
       };
 
       const mockThreatIntel = {
         riskScore: 25,
         threatLevel: 'low',
-        details: { tor: false, vpn: false }
+        details: { tor: false, vpn: false },
       };
 
       const result = await deepLearningModelManager.detectAdvancedThreat(
@@ -66,7 +71,7 @@ describe('Enterprise & Simple ML Features', () => {
         fingerprintHash: 'suspicious_fingerprint_456',
         deviceId: 'suspicious_device_456',
         confidence: 0.3,
-        anomalies: ['Headless browser detected']
+        anomalies: ['Headless browser detected'],
       } as any; // Type assertion to avoid null issues
 
       const mockBehavioralData = {
@@ -74,13 +79,13 @@ describe('Enterprise & Simple ML Features', () => {
         isHuman: false,
         confidence: 0.92,
         mouseMovements: [{ patterns: { linearity: 0.95 } }],
-        keystrokeDynamics: [{ patterns: { timingConsistency: 0.98 } }]
+        keystrokeDynamics: [{ patterns: { timingConsistency: 0.98 } }],
       };
 
       const mockThreatIntel = {
         riskScore: 85,
         threatLevel: 'high',
-        details: { tor: true, vpn: true }
+        details: { tor: true, vpn: true },
       };
 
       const result = await deepLearningModelManager.detectAdvancedThreat(
@@ -99,7 +104,7 @@ describe('Enterprise & Simple ML Features', () => {
 
     it('should provide model performance metrics', () => {
       const performance = deepLearningModelManager.getModelPerformance();
-      
+
       expect(performance.behavioral).toBeGreaterThan(0.9);
       expect(performance.network).toBeGreaterThan(0.85);
       expect(performance.ensemble).toBeGreaterThan(0.9);
@@ -110,12 +115,14 @@ describe('Enterprise & Simple ML Features', () => {
     it('should create enterprise customer with proper configuration', async () => {
       const customer = await enterpriseSecurityManager.createCustomer({
         name: 'Test Enterprise Corp',
-        tier: 'enterprise'
+        tier: 'enterprise',
       });
 
       expect(customer.id).toBeDefined();
       expect(customer.tier).toBe('enterprise');
-      expect(customer.settings.securityPolicy.threatThresholds.critical).toBe(90);
+      expect(customer.settings.securityPolicy.threatThresholds.critical).toBe(
+        90
+      );
     });
 
     it('should apply customer-specific security policies', async () => {
@@ -123,21 +130,25 @@ describe('Enterprise & Simple ML Features', () => {
         riskScore: 65,
         riskLevel: 'medium',
         action: 'challenge',
-        reasons: ['Base analysis']
+        reasons: ['Base analysis'],
       };
 
-      const result = await enterpriseSecurityManager.applyCustomerSecurityPolicy(
-        mockReq as Request,
-        'cust_test_123',
-        mockBaseResult
-      );
+      const result =
+        await enterpriseSecurityManager.applyCustomerSecurityPolicy(
+          mockReq as Request,
+          'cust_test_123',
+          mockBaseResult
+        );
 
       expect(result.riskLevel).toBe('high'); // Upgraded due to enterprise policy
       expect(result.reasons).toContain('Customer policy: enterprise');
     });
 
     it('should generate comprehensive security dashboard', async () => {
-      const dashboard = await enterpriseSecurityManager.generateSecurityDashboard('cust_test_123');
+      const dashboard =
+        await enterpriseSecurityManager.generateSecurityDashboard(
+          'cust_test_123'
+        );
 
       expect(dashboard.customerId).toBe('cust_test_123');
       expect(dashboard.metrics.threatDetectionRate).toBeGreaterThan(94); // Enterprise has higher rate
@@ -178,7 +189,7 @@ describe('Enterprise & Simple ML Features', () => {
       const breach = await complianceManager.reportDataBreach('cust_test_123', {
         breachType: 'confidentiality',
         affectedRecords: 1000,
-        dataTypes: ['email', 'name']
+        dataTypes: ['email', 'name'],
       });
 
       expect(breach.id).toBeDefined();
@@ -191,15 +202,15 @@ describe('Enterprise & Simple ML Features', () => {
     it('should handle enterprise-scale request volume efficiently', async () => {
       const startTime = Date.now();
       const requestCount = 100;
-      
+
       for (let i = 0; i < requestCount; i++) {
         await enterpriseSecurityManager.getCustomer(`cust_${i}`);
       }
-      
+
       const endTime = Date.now();
       const totalTime = endTime - startTime;
       const avgTime = totalTime / requestCount;
-      
+
       expect(totalTime).toBeLessThan(1000); // 1 second for 100 requests
       expect(avgTime).toBeLessThan(10); // Less than 10ms per request
     });
@@ -207,13 +218,15 @@ describe('Enterprise & Simple ML Features', () => {
     it('should handle concurrent enterprise operations', async () => {
       const concurrentOps = 50;
       const promises = [];
-      
+
       for (let i = 0; i < concurrentOps; i++) {
-        promises.push(enterpriseSecurityManager.generateSecurityDashboard(`cust_${i}`));
+        promises.push(
+          enterpriseSecurityManager.generateSecurityDashboard(`cust_${i}`)
+        );
       }
-      
+
       const results = await Promise.all(promises);
-      
+
       expect(results.length).toBe(concurrentOps);
       results.forEach((result, index) => {
         expect(result.customerId).toBe(`cust_${index}`);
@@ -237,7 +250,8 @@ describe('Enterprise & Simple ML Features', () => {
     });
 
     it('should handle enterprise service failures gracefully', async () => {
-      const customer = await enterpriseSecurityManager.getCustomer('invalid_cust');
+      const customer =
+        await enterpriseSecurityManager.getCustomer('invalid_cust');
 
       expect(customer).toBeNull(); // Graceful handling
     });
@@ -246,7 +260,7 @@ describe('Enterprise & Simple ML Features', () => {
 
 /**
  * Integration Test Summary
- * 
+ *
  * Test Coverage Areas:
  * ✅ Simple ML Model Threat Detection
  * ✅ High-Risk Scenario Detection
@@ -259,13 +273,13 @@ describe('Enterprise & Simple ML Features', () => {
  * ✅ Enterprise-Scale Performance
  * ✅ Concurrent Operations
  * ✅ Error Handling and Resilience
- * 
+ *
  * Expected Results:
  * - Simple ML models achieve >90% accuracy
  * - Enterprise features support 10,000+ customers
  * - All operations complete in <10ms
  * - Error handling provides graceful fallbacks
  * - Compliance covers all major standards
- * 
+ *
  * Success Criteria: Enterprise-grade production ready
  */

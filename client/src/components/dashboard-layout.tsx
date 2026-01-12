@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 
 /**
  * Dashboard Layout Component
- * 
+ *
  * Provides a consistent layout structure for dashboard pages with:
  * - Responsive sidebar navigation
  * - Top navigation bar with user menu
@@ -11,7 +11,7 @@ import { Outlet } from 'react-router-dom';
  * - Mobile-friendly collapsible sidebar
  * - Breadcrumb navigation
  * - Quick actions menu
- * 
+ *
  * Used by: Dashboard, Analytics, Settings, and other authenticated pages
  */
 
@@ -59,7 +59,12 @@ export function DashboardLayout({
               role="button"
               tabIndex={0}
               aria-label="Close sidebar"
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSidebarOpen(false); } }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSidebarOpen(false);
+                }
+              }}
               onClick={() => setSidebarOpen(false)}
             />
           )}
@@ -104,9 +109,7 @@ export function DashboardLayout({
               </div>
 
               {/* Sidebar content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {sidebar}
-              </div>
+              <div className="flex-1 overflow-y-auto p-4">{sidebar}</div>
             </div>
           </aside>
         </>
@@ -179,9 +182,7 @@ export function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="p-4 md:p-6 lg:p-8">
-          {children || <Outlet />}
-        </main>
+        <main className="p-4 md:p-6 lg:p-8">{children || <Outlet />}</main>
       </div>
     </div>
   );

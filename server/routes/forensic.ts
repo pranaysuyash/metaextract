@@ -70,9 +70,12 @@ const upload = multer({
     // Allow common image types only. Defer strict tier-based validation to route logic.
     const allowed =
       (file && file.mimetype && file.mimetype.startsWith('image/')) ||
-      ['image/heic', 'image/heif', 'image/x-canon-cr2', 'image/x-nikon-nef'].includes(
-        (file && file.mimetype) || ''
-      );
+      [
+        'image/heic',
+        'image/heif',
+        'image/x-canon-cr2',
+        'image/x-nikon-nef',
+      ].includes((file && file.mimetype) || '');
     if (!allowed) {
       // Reject files that are not common images
       return cb(null, false);

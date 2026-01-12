@@ -1,6 +1,6 @@
 /**
  * Enterprise Features Index
- * 
+ *
  * Centralized export for all enterprise-grade features
  */
 
@@ -19,9 +19,9 @@ export class MockEnterpriseSecurityManager {
       tier: 'enterprise',
       settings: {
         securityPolicy: {
-          threatThresholds: { critical: 90, high: 75, medium: 55, low: 35 }
-        }
-      }
+          threatThresholds: { critical: 90, high: 75, medium: 55, low: 35 },
+        },
+      },
     });
   }
 
@@ -32,11 +32,13 @@ export class MockEnterpriseSecurityManager {
       tier: customerData.tier || 'basic',
       settings: {
         securityPolicy: {
-          threatThresholds: this.getThresholdsForTier(customerData.tier || 'basic')
-        }
-      }
+          threatThresholds: this.getThresholdsForTier(
+            customerData.tier || 'basic'
+          ),
+        },
+      },
     };
-    
+
     this.customers.set(customer.id, customer);
     return customer;
   }
@@ -45,21 +47,28 @@ export class MockEnterpriseSecurityManager {
     return this.customers.get(customerId) || null;
   }
 
-  async applyCustomerSecurityPolicy(req: any, customerId: string, baseResult: any) {
+  async applyCustomerSecurityPolicy(
+    req: any,
+    customerId: string,
+    baseResult: any
+  ) {
     const customer = this.customers.get(customerId);
     if (!customer) return baseResult;
-    
+
     // Apply enterprise policy logic
     const adjustedResult = { ...baseResult };
-    
+
     if (customer.tier === 'enterprise') {
       // Enterprise tier upgrades medium to high
       if (baseResult.riskScore >= 65 && baseResult.riskLevel === 'medium') {
         adjustedResult.riskLevel = 'high';
       }
-      adjustedResult.reasons = [...baseResult.reasons, `Customer policy: ${customer.tier}`];
+      adjustedResult.reasons = [
+        ...baseResult.reasons,
+        `Customer policy: ${customer.tier}`,
+      ];
     }
-    
+
     return adjustedResult;
   }
 
@@ -70,7 +79,7 @@ export class MockEnterpriseSecurityManager {
         customerId,
         metrics: { threatDetectionRate: 0, blockedRequests: 0 },
         alerts: [],
-        recommendations: []
+        recommendations: [],
       };
     }
 
@@ -80,7 +89,7 @@ export class MockEnterpriseSecurityManager {
         totalRequests: 12547,
         blockedRequests: 892,
         threatDetectionRate: customer.tier === 'enterprise' ? 97.5 : 94.2,
-        falsePositiveRate: customer.tier === 'enterprise' ? 1.5 : 2.1
+        falsePositiveRate: customer.tier === 'enterprise' ? 1.5 : 2.1,
       },
       alerts: [
         {
@@ -89,27 +98,36 @@ export class MockEnterpriseSecurityManager {
           title: 'Suspicious Activity Detected',
           description: 'Multiple requests from TOR network detected',
           timestamp: new Date(Date.now() - 3600000),
-          status: 'active'
-        }
+          status: 'active',
+        },
       ],
       recommendations: [
         {
           id: 'rec_001',
           priority: 'medium',
-          title: customer.tier === 'basic' ? 'Upgrade to Professional Tier' : 'Review Custom Security Rules',
-          estimatedImpact: '50% improvement in threat detection accuracy'
-        }
-      ]
+          title:
+            customer.tier === 'basic'
+              ? 'Upgrade to Professional Tier'
+              : 'Review Custom Security Rules',
+          estimatedImpact: '50% improvement in threat detection accuracy',
+        },
+      ],
     };
   }
 
-  async exportForSIEM(customerId: string, platform: string, format: string, startDate: Date, endDate: Date) {
+  async exportForSIEM(
+    customerId: string,
+    platform: string,
+    format: string,
+    startDate: Date,
+    endDate: Date
+  ) {
     return {
       customerId,
       platform,
       format,
       data: [{ event: 'security_incident', timestamp: new Date() }],
-      eventCount: 1
+      eventCount: 1,
     };
   }
 
@@ -126,22 +144,33 @@ export class MockEnterpriseSecurityManager {
 }
 
 export class MockComplianceManager {
-  async scheduleComplianceAudit(customerId: string, complianceType: string, startDate: Date, endDate: Date, auditor: string) {
+  async scheduleComplianceAudit(
+    customerId: string,
+    complianceType: string,
+    startDate: Date,
+    endDate: Date,
+    auditor: string
+  ) {
     return {
       id: `audit_${Date.now()}`,
       customerId,
       complianceType,
       status: 'planned',
-      auditor
+      auditor,
     };
   }
 
-  async handleDataSubjectAccessRequest(customerId: string, requestType: string, userId: string, requestDetails: any) {
+  async handleDataSubjectAccessRequest(
+    customerId: string,
+    requestType: string,
+    userId: string,
+    requestDetails: any
+  ) {
     return {
       data: 'user_data',
       userId,
       requestType,
-      completed: true
+      completed: true,
     };
   }
 
@@ -152,7 +181,7 @@ export class MockComplianceManager {
       breachType: breachDetails.breachType,
       affectedRecords: breachDetails.affectedRecords,
       dataTypes: breachDetails.dataTypes || ['email', 'name'], // Ensure dataTypes is set
-      status: 'discovered'
+      status: 'discovered',
     };
   }
 
@@ -161,7 +190,7 @@ export class MockComplianceManager {
       type: reportType,
       customerId,
       generated: new Date(),
-      findings: []
+      findings: [],
     };
   }
 }
@@ -172,7 +201,9 @@ export const complianceManager = new MockComplianceManager();
 
 // Initialize enterprise features
 export function initializeEnterpriseFeatures(): void {
-  console.log('[Enterprise] Enterprise features initialized with enhanced mock implementations');
+  console.log(
+    '[Enterprise] Enterprise features initialized with enhanced mock implementations'
+  );
 }
 
 // Export simple ML manager as primary ML solution

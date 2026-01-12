@@ -842,7 +842,8 @@ export default function ImagesMvpResults() {
       text: `Capture time found (${captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'from filename' : 'from EXIF'}).`,
       intent: 'Photography',
       impact: 'Workflow',
-      confidence: captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'Medium' : 'High',
+      confidence:
+        captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'Medium' : 'High',
       icon: highlightIcon('Photography'),
       accentClass: highlightAccent('Photography'),
       target: { tab: 'privacy', anchorId: 'section-timestamps' },
@@ -1776,9 +1777,7 @@ export default function ImagesMvpResults() {
                             <Button
                               variant="outline"
                               className="border-white/10 hover:bg-white/5 w-full"
-                              onClick={() =>
-                                navigate('/images_mvp?ocr=1')
-                              }
+                              onClick={() => navigate('/images_mvp?ocr=1')}
                             >
                               Re-run with text scan (+6 credits if text found)
                             </Button>
@@ -2778,8 +2777,7 @@ export default function ImagesMvpResults() {
                     {typeof enabledEnginesCount === 'number' ? (
                       <div>
                         Specialized engines enabled:{' '}
-                        {enabledEnginesCount.toLocaleString()} (not data
-                        found)
+                        {enabledEnginesCount.toLocaleString()} (not data found)
                       </div>
                     ) : null}
                     {!metadata.quality_metrics?.confidence_score &&

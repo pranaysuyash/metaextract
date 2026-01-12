@@ -1,6 +1,6 @@
 /**
  * Security Alerting System
- * 
+ *
  * Monitors security metrics and sends alerts when thresholds are exceeded.
  * Integrates with multiple alerting channels: email, webhooks, logs.
  */
@@ -12,25 +12,25 @@ import os from 'os';
 // Alert Configuration
 const ALERT_THRESHOLDS = {
   // Temp Directory Alerts
-  TEMP_FILE_COUNT: 500,        // Alert at 500 temp files
-  TEMP_DIR_SIZE_GB: 5,         // Alert at 5GB temp usage
-  TEMP_FILE_AGE_HOURS: 2,      // Alert if files older than 2 hours
-  
+  TEMP_FILE_COUNT: 500, // Alert at 500 temp files
+  TEMP_DIR_SIZE_GB: 5, // Alert at 5GB temp usage
+  TEMP_FILE_AGE_HOURS: 2, // Alert if files older than 2 hours
+
   // Rate Limiting Alerts
-  RATE_LIMIT_HITS_PER_MINUTE: 20,  // Alert at 20 rate limit hits/minute
+  RATE_LIMIT_HITS_PER_MINUTE: 20, // Alert at 20 rate limit hits/minute
   BURST_LIMIT_HITS_PER_MINUTE: 50, // Alert at 50 burst limit hits/minute
-  
+
   // System Resource Alerts
-  MEMORY_USAGE_PERCENT: 85,    // Alert at 85% memory usage
-  DISK_USAGE_PERCENT: 90,      // Alert at 90% disk usage
-  
+  MEMORY_USAGE_PERCENT: 85, // Alert at 85% memory usage
+  DISK_USAGE_PERCENT: 90, // Alert at 90% disk usage
+
   // Security Event Alerts
-  FAILED_UPLOADS_PER_MINUTE: 100,  // Alert at 100 failed uploads/minute
-  SUSPICIOUS_IPS_THRESHOLD: 10,    // Alert at 10 suspicious IPs
-  
+  FAILED_UPLOADS_PER_MINUTE: 100, // Alert at 100 failed uploads/minute
+  SUSPICIOUS_IPS_THRESHOLD: 10, // Alert at 10 suspicious IPs
+
   // Abuse Pattern Alerts
-  COOKIE_RESETS_PER_HOUR: 50,      // Alert at 50 cookie resets/hour
-  MULTIPLE_SESSIONS_PER_IP: 20,    // Alert at 20 sessions per IP
+  COOKIE_RESETS_PER_HOUR: 50, // Alert at 50 cookie resets/hour
+  MULTIPLE_SESSIONS_PER_IP: 20, // Alert at 20 sessions per IP
 };
 
 // Alert Channels
@@ -66,11 +66,11 @@ class EmailAlertChannel implements AlertChannel {
     try {
       // Implementation would integrate with email service
       console.log(`[SecurityAlert] Email alert sent: ${alert.title}`);
-      
+
       // Log the email that would be sent
       const emailContent = this.formatEmail(alert);
       console.log('[SecurityAlert] Email content:', emailContent);
-      
+
       // Store alert in database for audit trail
       await this.storeAlert(alert);
     } catch (error) {
@@ -139,7 +139,10 @@ class WebhookAlertChannel implements AlertChannel {
       };
 
       console.log(`[SecurityAlert] Webhook alert sent: ${alert.title}`);
-      console.log('[SecurityAlert] Webhook payload:', JSON.stringify(payload, null, 2));
+      console.log(
+        '[SecurityAlert] Webhook payload:',
+        JSON.stringify(payload, null, 2)
+      );
 
       // In production, this would make actual HTTP request
       // await fetch(this.webhookUrl, {
@@ -147,7 +150,6 @@ class WebhookAlertChannel implements AlertChannel {
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(payload),
       // });
-
     } catch (error) {
       console.error('[SecurityAlert] Failed to send webhook alert:', error);
     }
@@ -163,7 +165,7 @@ class LogAlertChannel implements AlertChannel {
 
   async send(alert: SecurityAlert): Promise<void> {
     const logMessage = `[SECURITY_ALERT] ${alert.severity.toUpperCase()}: ${alert.title} - ${alert.message}`;
-    
+
     switch (alert.severity) {
       case 'critical':
         console.error(logMessage, alert.details);
@@ -217,19 +219,21 @@ export class SecurityAlertManager {
     try {
       // Check temp directory health
       await this.checkTempDirectoryHealth();
-      
+
       // Check system resources
       await this.checkSystemResources();
-      
+
       // Check rate limiting metrics
       await this.checkRateLimitingMetrics();
-      
+
       // Check for abuse patterns
       await this.checkAbusePatterns();
-      
     } catch (error) {
-      console.error('[SecurityAlert] Error during security metrics check:', error);
-      
+      console.error(
+        '[SecurityAlert] Error during security metrics check:',
+        error
+      );
+
       // Send critical alert about monitoring failure
       await this.sendAlert({
         id: `monitoring_failure_${Date.now()}`,
@@ -237,7 +241,9 @@ export class SecurityAlertManager {
         severity: 'critical',
         title: 'Security Monitoring Failure',
         message: 'The security monitoring system encountered an error',
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+        },
         timestamp: new Date(),
         source: 'SecurityAlertManager',
         recommendation: 'Check system logs and restart monitoring services',
@@ -250,7 +256,7 @@ export class SecurityAlertManager {
    */
   private async checkTempDirectoryHealth(): Promise<void> {
     const health = await checkTempHealth();
-    
+
     if (!health.healthy) {
       await this.sendAlert({
         id: `temp_health_${Date.now()}`,
@@ -338,7 +344,8 @@ export class SecurityAlertManager {
 
     // Check disk usage (simplified - would need proper disk stats in production)
     const loadAvg = os.loadavg();
-    if (loadAvg[0] > 2.0) { // High load average
+    if (loadAvg[0] > 2.0) {
+      // High load average
       await this.sendAlert({
         id: `high_load_${Date.now()}`,
         type: 'performance',
@@ -351,7 +358,8 @@ export class SecurityAlertManager {
         },
         timestamp: new Date(),
         source: 'LoadCheck',
-        recommendation: 'Monitor system performance and check for resource-intensive processes',
+        recommendation:
+          'Monitor system performance and check for resource-intensive processes',
       });
     }
   }
@@ -363,7 +371,7 @@ export class SecurityAlertManager {
     // This would check Redis/memory for rate limit counters
     // For now, we'll simulate the check
     const rateLimitHits = await this.getRateLimitHits('last_minute');
-    
+
     if (rateLimitHits > ALERT_THRESHOLDS.RATE_LIMIT_HITS_PER_MINUTE) {
       await this.sendAlert({
         id: `rate_limit_hits_${Date.now()}`,
@@ -389,7 +397,7 @@ export class SecurityAlertManager {
   private async checkAbusePatterns(): Promise<void> {
     // Check for suspicious IP patterns
     const suspiciousIPs = await this.getSuspiciousIPs();
-    
+
     if (suspiciousIPs.length > ALERT_THRESHOLDS.SUSPICIOUS_IPS_THRESHOLD) {
       await this.sendAlert({
         id: `suspicious_ips_${Date.now()}`,
@@ -414,18 +422,22 @@ export class SecurityAlertManager {
    */
   public async sendAlert(alert: SecurityAlert): Promise<void> {
     // Ensure required defaults exist
-    alert.id = alert.id || `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    alert.id =
+      alert.id ||
+      `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     alert.timestamp = alert.timestamp || new Date();
     alert.source = alert.source || 'SecurityAlertManager';
 
     // Check cooldown to prevent alert spam
     const cooldownKey = `${alert.type}_${alert.severity}_${alert.source}`;
     const now = Date.now();
-    
+
     if (this.alertCooldowns.has(cooldownKey)) {
       const cooldownUntil = this.alertCooldowns.get(cooldownKey)!;
       if (now < cooldownUntil) {
-        console.log(`[SecurityAlert] Alert suppressed due to cooldown: ${alert.title}`);
+        console.log(
+          `[SecurityAlert] Alert suppressed due to cooldown: ${alert.title}`
+        );
         return;
       }
     }
@@ -435,7 +447,7 @@ export class SecurityAlertManager {
 
     // Store in history
     this.alertHistory.push(alert);
-    
+
     // Keep only last 1000 alerts in memory
     if (this.alertHistory.length > 1000) {
       this.alertHistory = this.alertHistory.slice(-1000);
@@ -443,7 +455,7 @@ export class SecurityAlertManager {
 
     // Send through all channels
     const results = await Promise.allSettled(
-      this.channels.map(channel => 
+      this.channels.map(channel =>
         channel.enabled ? channel.send(alert) : Promise.resolve()
       )
     );
@@ -451,11 +463,16 @@ export class SecurityAlertManager {
     // Log any failures
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
-        console.error(`[SecurityAlert] Failed to send alert via ${this.channels[index].name}:`, result.reason);
+        console.error(
+          `[SecurityAlert] Failed to send alert via ${this.channels[index].name}:`,
+          result.reason
+        );
       }
     });
 
-    console.log(`[SecurityAlert] Alert sent: ${alert.title} (${alert.severity})`);
+    console.log(
+      `[SecurityAlert] Alert sent: ${alert.title} (${alert.severity})`
+    );
   }
 
   /**
@@ -487,13 +504,18 @@ export class SecurityAlertManager {
    * Start periodic security monitoring
    */
   startPeriodicMonitoring(intervalMs = 60 * 1000): NodeJS.Timeout {
-    console.log(`[SecurityAlert] Starting periodic security monitoring every ${intervalMs / 1000} seconds`);
-    
+    console.log(
+      `[SecurityAlert] Starting periodic security monitoring every ${intervalMs / 1000} seconds`
+    );
+
     return setInterval(async () => {
       try {
         await this.checkSecurityMetrics();
       } catch (error) {
-        console.error('[SecurityAlert] Error during periodic monitoring:', error);
+        console.error(
+          '[SecurityAlert] Error during periodic monitoring:',
+          error
+        );
       }
     }, intervalMs);
   }
