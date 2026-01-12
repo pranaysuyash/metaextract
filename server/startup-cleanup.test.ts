@@ -50,13 +50,23 @@ describe('Temp File Cleanup System', () => {
       const oldFile = path.join(testDir, 'old-file.txt');
       await fs.writeFile(oldFile, 'old content');
       const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
-      await fs.utimes(oldFile, twoHoursAgo, twoHoursAgo);
+      console.log(`Setting old file time: ${new Date(twoHoursAgo).toISOString()}`);
+      // fs.utimes expects timestamps in seconds, not milliseconds
+      await fs.utimes(oldFile, new Date(twoHoursAgo), new Date(twoHoursAgo));
       
       // Create recent file (30 minutes ago)
       const recentFile = path.join(testDir, 'recent-file.txt');
       await fs.writeFile(recentFile, 'recent content');
       const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
-      await fs.utimes(recentFile, thirtyMinutesAgo, thirtyMinutesAgo);
+      console.log(`Setting recent file time: ${new Date(thirtyMinutesAgo).toISOString()}`);
+      // fs.utimes expects timestamps in seconds, not milliseconds
+      await fs.utimes(recentFile, new Date(thirtyMinutesAgo), new Date(thirtyMinutesAgo));
+      
+      // Verify file times were set correctly
+      const oldStats = await fs.stat(oldFile);
+      const recentStats = await fs.stat(recentFile);
+      console.log(`Old file mtime: ${new Date(oldStats.mtimeMs).toISOString()}`);
+      console.log(`Recent file mtime: ${new Date(recentStats.mtimeMs).toISOString()}`);
       
       // Run cleanup
       const result = await cleanupOrphanedTempFiles();
@@ -142,11 +152,14 @@ describe('Temp File Cleanup System', () => {
         await fs.writeFile(file, largeContent);
         // Make them old to ensure cleanup
         const oldTime = Date.now() - 2 * 60 * 60 * 1000;
-        await fs.utimes(file, oldTime, oldTime);
+        await fs.utimes(file, new Date(oldTime), new Date(oldTime));
       }
       
+      // Lower threshold for test speed - 1 byte will make totalSize > threshold
+      process.env.CLEANUP_MAX_TOTAL_SIZE_BYTES = '1';
       const needsCleanup = await checkEmergencyCleanup();
       expect(needsCleanup).toBe(true);
+      delete process.env.CLEANUP_MAX_TOTAL_SIZE_BYTES;
       
       console.log(`✅ Emergency cleanup correctly detected`);
     });
@@ -188,7 +201,7 @@ describe('Temp File Cleanup System', () => {
       const oldFile = path.join(testDir, 'old-file.txt');
       await fs.writeFile(oldFile, 'old content');
       const oldTime = Date.now() - 2 * 60 * 60 * 1000;
-      await fs.utimes(oldFile, oldTime, oldTime);
+      await fs.utimes(oldFile, new Date(oldTime), new Date(oldTime));
       
       const result = await cleanupOrphanedTempFiles();
       

@@ -23,6 +23,10 @@ import {
 import { pythonExecutable } from './utils/extraction-helpers';
 import { cleanupOrphanedTempFiles, startPeriodicCleanup, cleanupOnExit } from './startup-cleanup';
 import { registerHealthRoutes } from './routes/health';
+import { registerMonitoringRoutes } from './routes/monitoring';
+import { securityAlertManager } from './monitoring/security-alerts';
+import { securityEventLogger } from './monitoring/security-events';
+import { applyUploadRateLimiting } from './middleware/upload-rate-limit';
 
 const app = express();
 const httpServer = createServer(app);
@@ -160,6 +164,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   registerHealthRoutes(app);
   log('Registered health check routes');
 
+  // Register monitoring routes
+  registerMonitoringRoutes(app);
+  log('Registered monitoring routes');
+
+  // Apply upload rate limiting (skip in test environment)
+  if (process.env.NODE_ENV !== 'test') {
+    applyUploadRateLimiting(app);
+    log('Applied upload rate limiting');
+  } else {
+    log('Skipping rate limiting in test environment');
+  }
+
   // Initialize temp file cleanup system (skip in test environment)
   if (process.env.NODE_ENV !== 'test') {
     log('Initializing temp file cleanup system...');
@@ -171,6 +187,30 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       // Start periodic cleanup (hourly)
       const cleanupInterval = startPeriodicCleanup(60 * 60 * 1000);
       log('Periodic cleanup scheduled every hour');
+      
+      // Initialize security monitoring
+      log('Initializing security monitoring system...');
+      try {
+        // Start periodic security monitoring (every 5 minutes)
+        const monitoringInterval = securityAlertManager.startPeriodicMonitoring(5 * 60 * 1000);
+        log('Security monitoring active - checking every 5 minutes');
+        
+        // Cleanup monitoring on exit
+        process.on('exit', () => {
+          securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+        });
+        
+        process.on('SIGINT', async () => {
+          securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+        });
+        
+        process.on('SIGTERM', async () => {
+          securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+        });
+        
+      } catch (error) {
+        log(`Warning: Security monitoring initialization failed: ${error}`, 'startup');
+      }
       
       // Cleanup on process exit
       process.on('exit', async () => {

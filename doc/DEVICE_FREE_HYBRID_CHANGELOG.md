@@ -5,7 +5,7 @@ Summary:
 - Implemented hybrid redaction for `device_free`: high-value fields (EXIF, calculated, hashes, thumbnails presence, perceptual hashes, metadata_comparison) are shown; sensitive identifiers (exact GPS, owner fields, extended attribute values, burned OCR text and precise parsed locations) are redacted or coarsened.
 - `trial_limited` retains heavy redaction behavior.
 - Frontend: lock UI now checks `access.mode` instead of credit heuristics; device_free shows a banner explaining what is hidden and free usage count.
-- Tests: backend + frontend unit tests added for acceptance criteria.
+- Tests: backend + frontend unit tests added for acceptance criteria, and an integration test `server/routes/images-mvp.integration.test.ts` verifies real redaction at route level. Debug fixtures updated to set `access.mode` correctly and remove `_trial_limited` from device_free/paid samples.
 
 Implementation details & developer notes:
 - Backend: added `applyAccessModeRedaction()` in `server/utils/extraction-helpers.ts` and applied redaction in `server/routes/images-mvp.ts` after transformation.

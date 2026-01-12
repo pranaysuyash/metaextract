@@ -77,7 +77,6 @@ def extract_scientific_dicom_fits_ultimate_advanced_extension_xcviii(file_path: 
     return metadata
 
 
-def 
 def _extract_generic_scientific_data(file_handle) -> Dict[str, Any]:
     """Extract generic scientific data structure."""
     return {{

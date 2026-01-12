@@ -25,6 +25,19 @@ const MAX_FILE_AGE_MS = 60 * 60 * 1000; // 1 hour
 const MAX_TOTAL_SIZE_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
 const MAX_FILE_COUNT = 1000;
 
+// Runtime getters to allow test-time overrides via env
+export function getMaxTotalSizeBytes(): number {
+  return process.env.CLEANUP_MAX_TOTAL_SIZE_BYTES
+    ? parseInt(process.env.CLEANUP_MAX_TOTAL_SIZE_BYTES, 10)
+    : MAX_TOTAL_SIZE_BYTES;
+}
+
+export function getMaxFileCount(): number {
+  return process.env.CLEANUP_MAX_FILE_COUNT
+    ? parseInt(process.env.CLEANUP_MAX_FILE_COUNT, 10)
+    : MAX_FILE_COUNT;
+}
+
 export interface CleanupResult {
   directory: string;
   filesRemoved: number;
@@ -124,10 +137,12 @@ export async function checkEmergencyCleanup(): Promise<boolean> {
       }
     }
 
-    const needsEmergency = totalSize > MAX_TOTAL_SIZE_BYTES || totalFiles > MAX_FILE_COUNT;
+    const thresholdSize = getMaxTotalSizeBytes();
+    const thresholdFiles = getMaxFileCount();
+    const needsEmergency = totalSize > thresholdSize || totalFiles > thresholdFiles;
     
     if (needsEmergency) {
-      console.warn(`[Cleanup] Emergency cleanup needed: ${totalFiles} files, ${Math.round(totalSize / (1024 * 1024))}MB`);
+      console.warn(`[Cleanup] Emergency cleanup needed: ${totalFiles} files, ${Math.round(totalSize / (1024 * 1024))}MB (threshold: ${Math.round(thresholdSize / (1024 * 1024))}MB / ${thresholdFiles} files)`);
     }
 
     return needsEmergency;

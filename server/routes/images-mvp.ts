@@ -26,6 +26,7 @@ import {
   sendInternalServerError,
 } from '../utils/error-response';
 import { freeQuotaMiddleware } from '../middleware/free-quota';
+import { securityEventLogger } from '../monitoring/security-events';
 import {
   generateClientToken,
   verifyClientToken,
@@ -1453,10 +1454,18 @@ export function registerImagesMvpRoutes(app: Express) {
     rateLimitExtraction(), // Rate limit: per-IP/user throttling
     upload.single('file'),
     // Multer error handling middleware
-    (err: any, req: Request, res: Response, next: Function) => {
+    async (err: any, req: Request, res: Response, next: Function) => {
       if (err) {
         // Handle multer-specific errors
         if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+          // Log security event for file type rejection
+          await securityEventLogger.logUploadRejection(req, err.message, {
+            filename: req.file?.originalname || 'unknown',
+            mimetype: req.file?.mimetype || 'unknown',
+            size: req.file?.size || 0,
+            extension: path.extname(req.file?.originalname || '').toLowerCase() || 'unknown',
+          });
+          
           return res.status(403).json({
             error: 'Unsupported file type',
             message: err.message,

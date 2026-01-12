@@ -1,0 +1,139 @@
+# Railway Monitoring Configuration
+# This file contains monitoring and alerting settings for Railway deployment
+
+[monitoring]
+# Enable comprehensive monitoring
+enabled = true
+
+# Health check configuration
+[monitoring.health]
+path = "/api/health"
+interval = "30s"
+timeout = "10s"
+healthy_status_codes = [200, 201]
+
+# Metrics collection
+[monitoring.metrics]
+enabled = true
+path = "/api/monitoring/metrics"
+interval = "60s"
+retention = "7d"
+
+# Alerting configuration
+[monitoring.alerts]
+# Email notifications
+email_enabled = true
+email_recipients = ["security@metaextract.com", "ops@metaextract.com"]
+
+# Webhook notifications  
+webhook_enabled = true
+webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# Alert thresholds
+[monitoring.alerts.thresholds]
+# Memory usage
+memory_usage_percent = 85
+memory_usage_critical = 95
+
+# Disk usage  
+disk_usage_percent = 90
+disk_usage_critical = 95
+
+# Request rate
+requests_per_minute = 1000
+requests_per_minute_critical = 2000
+
+# Error rate
+error_rate_percent = 5
+error_rate_percent_critical = 10
+
+# Response time
+response_time_ms = 2000
+response_time_ms_critical = 5000
+
+# Custom security thresholds
+[monitoring.alerts.security]
+# Temp directory alerts
+temp_file_count = 500
+temp_dir_size_gb = 5
+
+# Rate limiting alerts
+rate_limit_hits_per_minute = 20
+burst_limit_hits_per_minute = 50
+
+# Security event alerts
+security_events_per_minute = 100
+failed_uploads_per_minute = 50
+
+# Suspicious activity
+suspicious_ips_threshold = 10
+multiple_sessions_per_ip = 20
+
+# Log aggregation
+[monitoring.logs]
+enabled = true
+level = "info"
+retention = "30d"
+include_security_events = true
+include_performance_metrics = true
+
+# Custom metrics
+[monitoring.custom_metrics]
+# Security metrics
+security_events_total = "sum(rate(security_events_total[5m]))"
+rate_limit_violations = "sum(rate(rate_limit_violations_total[5m]))"
+temp_files_total = "temp_directory_files"
+temp_directory_size = "temp_directory_size_bytes"
+
+# Performance metrics
+upload_duration = "histogram_quantile(0.95, rate(upload_duration_seconds_bucket[5m]))"
+metadata_extraction_duration = "histogram_quantile(0.95, rate(metadata_extraction_duration_seconds_bucket[5m]))"
+
+# Uptime monitoring
+[monitoring.uptime]
+enabled = true
+interval = "1m"
+expected_status_codes = [200, 201, 202]
+expected_response_time_ms = 2000
+
+# Geographic monitoring
+[monitoring.geographic]
+enabled = true
+blocked_countries = ["CN", "RU", "KP", "IR"]  # Example blocked countries
+allowed_countries = ["US", "CA", "GB", "AU", "DE", "FR", "JP"]
+
+# IP reputation monitoring
+[monitoring.ip_reputation]
+enabled = true
+api_key = "${IP_REPUTATION_API_KEY}"
+service = "abuseipdb"  # or "virustotal", "shodan"
+
+# Performance monitoring
+[monitoring.performance]
+enabled = true
+apm_enabled = true
+apm_service_name = "metaextract-security"
+sample_rate = 0.1  # 10% sampling rate
+
+# Incident response
+[monitoring.incident_response]
+enabled = true
+auto_scale = true
+restart_on_failure = true
+escalation_contacts = ["security@metaextract.com", "ops@metaextract.com"]
+
+# Environment-specific overrides
+[monitoring.environments.production]
+alerting_enabled = true
+email_recipients = ["security@metaextract.com", "ops@metaextract.com", "oncall@metaextract.com"]
+webhook_url = "https://hooks.slack.com/services/PRODUCTION/SLACK/WEBHOOK"
+
+[monitoring.environments.staging]
+alerting_enabled = true
+email_recipients = ["dev@metaextract.com"]
+webhook_url = "https://hooks.slack.com/services/STAGING/SLACK/WEBHOOK"
+
+[monitoring.environments.development]
+alerting_enabled = false
+email_recipients = ["dev@metaextract.com"]
+webhook_url = "https://hooks.slack.com/services/DEV/SLACK/WEBHOOK"

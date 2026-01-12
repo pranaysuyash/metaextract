@@ -1,0 +1,267 @@
+# Security Alert Rules for Prometheus
+# These rules monitor for security threats and anomalies
+
+groups:
+  - name: security_threats
+    interval: 30s
+    rules:
+      # High temp file count - potential disk exhaustion attack
+      - alert: HighTempFileCount
+        expr: temp_directory_files > 500
+        for: 5m
+        labels:
+          severity: high
+          type: security
+          team: security
+        annotations:
+          summary: "High number of temp files detected"
+          description: "Temp directory contains {{ $value }} files (threshold: 500). Potential disk exhaustion attack."
+          runbook_url: "https://wiki.metaextract.com/runbooks/high-temp-files"
+          action: "Run cleanup via /api/health/cleanup"
+
+      # Large temp directory size - potential disk exhaustion
+      - alert: LargeTempDirectorySize
+        expr: temp_directory_size_bytes > 5368709120  # 5GB
+        for: 5m
+        labels:
+          severity: high
+          type: security
+          team: security
+        annotations:
+          summary: "Large temp directory size detected"
+          description: "Temp directory size is {{ $value | humanize1024 }}B (threshold: 5GB)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/large-temp-dir"
+          action: "Investigate large files and run cleanup"
+
+      # High rate limit violations - potential abuse
+      - alert: HighRateLimitViolations
+        expr: rate(rate_limit_violations_total[5m]) > 0.33  # 20 per minute
+        for: 2m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "High rate of rate limit violations"
+          description: "{{ $value | humanize }} rate limit violations per second detected."
+          runbook_url: "https://wiki.metaextract.com/runbooks/rate-limit-abuse"
+          action: "Monitor IP addresses and consider blocking"
+
+      # High burst limit violations - potential flooding
+      - alert: HighBurstLimitViolations
+        expr: rate(burst_limit_violations_total[5m]) > 0.83  # 50 per minute
+        for: 1m
+        labels:
+          severity: high
+          type: security
+          team: security
+        annotations:
+          summary: "High burst rate limit violations"
+          description: "{{ $value | humanize }} burst limit violations per second detected."
+          runbook_url: "https://wiki.metaextract.com/runbooks/burst-limit-abuse"
+          action: "Immediate IP investigation required"
+
+      # High upload rejection rate - potential attack
+      - alert: HighUploadRejections
+        expr: rate(upload_rejections_total[5m]) > 1.67  # 100 per minute
+        for: 3m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "High upload rejection rate"
+          description: "{{ $value | humanize }} upload rejections per second detected."
+          runbook_url: "https://wiki.metaextract.com/runbooks/upload-rejection-attack"
+          action: "Check file types and sources"
+
+      # Suspicious access patterns detected
+      - alert: SuspiciousAccessPatterns
+        expr: rate(suspicious_access_total[5m]) > 0.17  # 10 per minute
+        for: 2m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "Suspicious access patterns detected"
+          description: "{{ $value | humanize }} suspicious access events per second."
+          runbook_url: "https://wiki.metaextract.com/runbooks/suspicious-access"
+          action: "Review access logs and IP reputation"
+
+      # Multiple sessions from same IP - potential session hijacking
+      - alert: MultipleSessionsPerIP
+        expr: multiple_sessions_per_ip > 15
+        for: 5m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "Multiple sessions detected from same IP"
+          description: "{{ $value }} sessions from same IP address (threshold: 15)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/multiple-sessions"
+          action: "Investigate session pattern and consider rate limiting"
+
+      # High cookie reset rate - potential quota circumvention
+      - alert: HighCookieResetRate
+        expr: rate(cookie_resets_total[5m]) > 0.83  # 50 per hour
+        for: 10m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "High cookie reset rate detected"
+          description: "{{ $value | humanize }} cookie resets per second (threshold: 50/hour)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/cookie-reset-abuse"
+          action: "Implement stricter session management"
+
+      # Memory usage critical
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: high
+          type: performance
+          team: infrastructure
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}% (threshold: 85%)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/high-memory"
+          action: "Check for memory leaks and consider scaling"
+
+      # Disk usage critical
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          type: performance
+          team: infrastructure
+        annotations:
+          summary: "Critical disk usage detected"
+          description: "Disk usage is {{ $value }}% (threshold: 90%)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/critical-disk"
+          action: "IMMEDIATE: Free up disk space or scale storage"
+
+      # Health check failures
+      - alert: HealthCheckFailures
+        expr: rate(health_check_failures_total[5m]) > 0.1  # 6 per minute
+        for: 2m
+        labels:
+          severity: medium
+          type: availability
+          team: operations
+        annotations:
+          summary: "Health check failures detected"
+          description: "{{ $value | humanize }} health check failures per second."
+          runbook_url: "https://wiki.metaextract.com/runbooks/health-check-failures"
+          action: "Check service status and logs"
+
+      # Response time degradation
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: medium
+          type: performance
+          team: operations
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s (threshold: 2s)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/high-response-time"
+          action: "Check for performance bottlenecks"
+
+  - name: geographic_anomalies
+    interval: 60s
+    rules:
+      # Impossible travel time
+      - alert: ImpossibleTravelTime
+        expr: impossible_travel_time_minutes > 30
+        for: 1m
+        labels:
+          severity: high
+          type: security
+          team: security
+        annotations:
+          summary: "Impossible travel time detected"
+          description: "Geographic location change implies {{ $value }} minute travel time."
+          runbook_url: "https://wiki.metaextract.com/runbooks/impossible-travel"
+          action: "Verify user identity and consider session termination"
+
+      # Multiple countries per IP
+      - alert: MultipleCountriesPerIP
+        expr: countries_per_ip_per_day > 5
+        for: 10m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "Multiple countries accessed from same IP"
+          description: "{{ $value }} countries accessed from same IP in 24 hours."
+          runbook_url: "https://wiki.metaextract.com/runbooks/multiple-countries"
+          action: "Check for VPN/TOR usage or account compromise"
+
+  - name: file_security
+    interval: 30s
+    rules:
+      # Large file upload attempts
+      - alert: LargeFileUploadAttempt
+        expr: large_file_upload_size_mb > 50
+        for: 1m
+        labels:
+          severity: low
+          type: security
+          team: security
+        annotations:
+          summary: "Large file upload detected"
+          description: "File upload of {{ $value }}MB detected (threshold: 50MB)."
+          runbook_url: "https://wiki.metaextract.com/runbooks/large-file-upload"
+          action: "Monitor for continued large uploads"
+
+      # Suspicious file extensions
+      - alert: SuspiciousFileExtension
+        expr: suspicious_file_extension_total > 0
+        for: 0m
+        labels:
+          severity: high
+          type: security
+          team: security
+        annotations:
+          summary: "Suspicious file extension detected"
+          description: "File with suspicious extension uploaded."
+          runbook_url: "https://wiki.metaextract.com/runbooks/suspicious-extension"
+          action: "Immediate investigation required"
+
+  - name: authentication_security
+    interval: 60s
+    rules:
+      # Authentication failures
+      - alert: AuthenticationFailures
+        expr: rate(authentication_failures_total[5m]) > 0.17  # 10 per minute
+        for: 2m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value | humanize }} authentication failures per second."
+          runbook_url: "https://wiki.metaextract.com/runbooks/auth-failures"
+          action: "Check for brute force attack"
+
+      # Authorization failures
+      - alert: AuthorizationFailures
+        expr: rate(authorization_failures_total[5m]) > 0.17  # 10 per minute
+        for: 2m
+        labels:
+          severity: medium
+          type: security
+          team: security
+        annotations:
+          summary: "High authorization failure rate"
+          description: "{{ $value | humanize }} authorization failures per second."
+          runbook_url: "https://wiki.metaextract.com/runbooks/authz-failures"
+          action: "Check permissions and access patterns"
