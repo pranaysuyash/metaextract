@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/lib/auth';
 import Results from '@/pages/images-mvp/results';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 describe('ImagesMvpResults hook-order safety', () => {
   test('renders with basic metadata from sessionStorage without throwing hook-order errors', () => {
@@ -27,16 +28,22 @@ describe('ImagesMvpResults hook-order safety', () => {
     }
 
     // Render inside a Router + AuthProvider because Results uses useNavigate and auth context
-    expect(() => render(
-      <AuthProvider>
-        <MemoryRouter>
-          <Results />
-        </MemoryRouter>
-      </AuthProvider>
-    )).not.toThrow();
+    expect(() =>
+      render(
+        <AuthProvider>
+          <TooltipProvider>
+            <MemoryRouter>
+              <Results />
+            </MemoryRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      )
+    ).not.toThrow();
 
     // Basic smoke: key pieces should be present
     expect(screen.getByText('test.jpg')).toBeInTheDocument();
-    expect(screen.getByTestId('key-field-mime-type')).toHaveTextContent('image/jpeg');
+    expect(screen.getByTestId('key-field-mime-type')).toHaveTextContent(
+      'image/jpeg'
+    );
   });
 });

@@ -193,7 +193,7 @@ function transformNewResultToOldFormat(
   return {
     extraction_info: {
       timestamp: new Date().toISOString(),
-      tier: tier,
+      tier,
       engine_version: extractionInfo.engine_version || '4.1.0-refactored',
       libraries: extractionInfo.libraries || {},
       fields_extracted: totalFields,

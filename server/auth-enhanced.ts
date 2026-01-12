@@ -627,9 +627,9 @@ export async function verifyTwoFactorSetup(req: AuthRequest, res: Response): Pro
 
     // Verify the token against the secret
     const verified = speakeasy.totp.verify({
-      secret: secret,
+      secret,
       encoding: 'base32',
-      token: token,
+      token,
       window: 2,
     });
 

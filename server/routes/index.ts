@@ -24,6 +24,7 @@ import { registerLegalComplianceRoutes } from './legal-compliance';
 import { registerBatchRoutes } from './batch';
 import { rateLimitManager } from '../rateLimitRedis';
 import { rateLimitAPI } from '../rateLimitMiddleware';
+import advancedProtectionRouter from './advanced-protection';
 
 /**
  * Register all API routes on the Express app.
@@ -60,6 +61,9 @@ export async function registerRoutes(
   registerOnboardingRoutes(app);
   registerLegalComplianceRoutes(app);
   registerBatchRoutes(app);
+
+  // Advanced protection routes (Phase 1 integration)
+  app.use('/api/protection', advancedProtectionRouter);
 
   return httpServer;
 }

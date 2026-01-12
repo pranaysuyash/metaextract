@@ -1,6 +1,6 @@
 /**
  * Tests for fileFilter security in Images MVP route
- * 
+ *
  * Verifies that:
  * 1. Valid image files are accepted
  * 2. Invalid/malicious files are rejected BEFORE disk write
@@ -23,7 +23,7 @@ describe('Images MVP FileFilter Security', () => {
     app = express();
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    
+
     // Register only the Images MVP routes for isolated testing
     registerImagesMvpRoutes(app);
 
@@ -31,13 +31,18 @@ describe('Images MVP FileFilter Security', () => {
     try {
       const helpers = require('../utils/extraction-helpers');
       if (helpers && typeof helpers.extractMetadataWithPython === 'function') {
-        helpers.extractMetadataWithPython = async () => ({ extraction_info: { fields_extracted: 0 } });
+        helpers.extractMetadataWithPython = async () => ({
+          extraction_info: { fields_extracted: 0 },
+        });
       }
     } catch (err) {
       // If patching fails, continue; tests will surface issues
-      console.debug('Could not stub extractMetadataWithPython for filefilter tests:', err);
+      console.debug(
+        'Could not stub extractMetadataWithPython for filefilter tests:',
+        err
+      );
     }
-    
+
     // Ensure upload directory exists and is empty
     try {
       await fs.mkdir(uploadDir, { recursive: true });
@@ -69,7 +74,7 @@ describe('Images MVP FileFilter Security', () => {
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('fake jpeg content'), 'test.jpg')
         .set('Content-Type', 'image/jpeg');
-      
+
       // Should not be rejected by fileFilter (may fail later in processing)
       expect(response.status).not.toBe(403);
       expect(response.status).not.toBe(400);
@@ -81,7 +86,7 @@ describe('Images MVP FileFilter Security', () => {
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('fake png content'), 'test.png')
         .set('Content-Type', 'image/png');
-      
+
       expect(response.status).not.toBe(403);
       expect(response.status).not.toBe(400);
       console.log(`✅ PNG file accepted: ${response.status}`);
@@ -89,13 +94,13 @@ describe('Images MVP FileFilter Security', () => {
 
     test('should accept supported RAW formats', async () => {
       const rawFormats = ['.cr2', '.nef', '.arw', '.dng'];
-      
+
       for (const ext of rawFormats) {
         const response = await request(app)
           .post('/api/images_mvp/extract')
           .attach('file', Buffer.from('fake raw content'), `test${ext}`)
           .set('Content-Type', 'image/x-raw');
-        
+
         expect(response.status).not.toBe(403);
         expect(response.status).not.toBe(400);
         console.log(`✅ ${ext} file accepted: ${response.status}`);
@@ -116,11 +121,11 @@ describe('Images MVP FileFilter Security', () => {
           .post('/api/images_mvp/extract')
           .attach('file', Buffer.from('malicious content'), file.name)
           .set('Content-Type', file.mime);
-        
+
         expect(response.status).toBe(403);
         expect(response.body).toMatchObject({
           error: 'Unsupported file type',
-          code: 'UNSUPPORTED_FILE_TYPE'
+          code: 'UNSUPPORTED_FILE_TYPE',
         });
         console.log(`✅ ${file.name} rejected: ${response.status}`);
       }
@@ -139,7 +144,7 @@ describe('Images MVP FileFilter Security', () => {
           .post('/api/images_mvp/extract')
           .attach('file', Buffer.from('malicious script'), file.name)
           .set('Content-Type', file.mime);
-        
+
         expect(response.status).toBe(403);
         console.log(`✅ ${file.name} rejected: ${response.status}`);
       }
@@ -148,7 +153,10 @@ describe('Images MVP FileFilter Security', () => {
     test('should reject document files', async () => {
       const docFiles = [
         { name: 'malware.pdf', mime: 'application/pdf' },
-        { name: 'virus.docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+        {
+          name: 'virus.docx',
+          mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        },
         { name: 'exploit.xls', mime: 'application/vnd.ms-excel' },
       ];
 
@@ -157,7 +165,7 @@ describe('Images MVP FileFilter Security', () => {
           .post('/api/images_mvp/extract')
           .attach('file', Buffer.from('fake document'), file.name)
           .set('Content-Type', file.mime);
-        
+
         expect(response.status).toBe(403);
         console.log(`✅ ${file.name} rejected: ${response.status}`);
       }
@@ -175,7 +183,7 @@ describe('Images MVP FileFilter Security', () => {
           .post('/api/images_mvp/extract')
           .attach('file', Buffer.from('fake content'), file.name)
           .set('Content-Type', file.mime);
-        
+
         expect(response.status).toBe(403);
         console.log(`✅ ${file.name} rejected: ${response.status}`);
       }
@@ -186,16 +194,16 @@ describe('Images MVP FileFilter Security', () => {
     test('should reject files exceeding size limit', async () => {
       // Create a buffer larger than the 100MB limit
       const largeBuffer = Buffer.alloc(101 * 1024 * 1024); // 101MB
-      
+
       const response = await request(app)
         .post('/api/images_mvp/extract')
         .attach('file', largeBuffer, 'huge.jpg')
         .set('Content-Type', 'image/jpeg');
-      
+
       expect(response.status).toBe(413);
       expect(response.body).toMatchObject({
         error: 'File too large',
-        code: 'FILE_TOO_LARGE'
+        code: 'FILE_TOO_LARGE',
       });
       console.log(`✅ Large file rejected: ${response.status}`);
     });
@@ -205,21 +213,23 @@ describe('Images MVP FileFilter Security', () => {
     test('should not create temp files for rejected uploads', async () => {
       // Count files before test
       const filesBefore = await fs.readdir(uploadDir).catch(() => []);
-      
+
       // Attempt to upload malicious file
       const response = await request(app)
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('malware content'), 'virus.exe')
         .set('Content-Type', 'application/x-msdownload');
-      
+
       expect(response.status).toBe(403);
-      
+
       // Count files after test
       const filesAfter = await fs.readdir(uploadDir).catch(() => []);
-      
+
       // No new files should have been created
       expect(filesAfter.length).toBe(filesBefore.length);
-      console.log(`✅ No disk write for rejected file: ${filesBefore.length} -> ${filesAfter.length} files`);
+      console.log(
+        `✅ No disk write for rejected file: ${filesBefore.length} -> ${filesAfter.length} files`
+      );
     });
   });
 
@@ -229,14 +239,14 @@ describe('Images MVP FileFilter Security', () => {
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('malware'), 'virus.exe')
         .set('Content-Type', 'application/x-msdownload');
-      
+
       expect(response.status).toBe(403);
       expect(response.body).toMatchObject({
         error: 'Unsupported file type',
         message: expect.stringContaining('File type not permitted'),
-        code: 'UNSUPPORTED_FILE_TYPE'
+        code: 'UNSUPPORTED_FILE_TYPE',
       });
-      
+
       console.log(`✅ Clear error message provided: ${response.body.message}`);
     });
   });

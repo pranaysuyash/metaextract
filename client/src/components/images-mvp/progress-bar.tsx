@@ -13,6 +13,7 @@ export function ProgressBar({
   tone = 'auto',
 }: ProgressBarProps) {
   const pct = Math.min(100, Math.max(0, percentage));
+  const isIdle = pct <= 0;
   const getColor = (p: number) => {
     if (tone === 'emerald') return 'bg-emerald-500';
     if (tone === 'blue') return 'bg-blue-500';
@@ -30,9 +31,16 @@ export function ProgressBar({
       <motion.div
         data-testid="progress-bar-fill"
         className={`absolute left-0 top-0 h-full ${getColor(pct)}`}
-        initial={{ width: 0 }}
-        animate={{ width: `${pct}%` }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
+        initial={{ width: 0, opacity: 0.7 }}
+        animate={{
+          width: `${isIdle ? 6 : pct}%`,
+          opacity: isIdle ? [0.4, 0.9, 0.4] : 1,
+        }}
+        transition={{
+          duration: isIdle ? 1.4 : 0.5,
+          ease: 'easeOut',
+          repeat: isIdle ? Infinity : 0,
+        }}
       />
 
       {pct > 0 && pct < 100 && (

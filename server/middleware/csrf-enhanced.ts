@@ -217,7 +217,7 @@ export function enhancedCSRFProtection(
  * CORS configuration for CSRF protection
  */
 export const csrfCorsConfig = {
-  origin: function (origin: string, callback: Function) {
+  origin (origin: string, callback: Function) {
     // Allow same-origin requests
     if (!origin) return callback(null, true);
 

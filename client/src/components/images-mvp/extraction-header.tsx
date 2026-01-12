@@ -20,13 +20,19 @@ export function ExtractionHeader({
   const pct = Math.min(100, Math.max(0, percentage));
 
   return (
-    <div className={`w-full rounded-lg border border-white/10 p-3 bg-[#11121a] ${compact ? 'mb-3' : 'mb-4'}`}>
+    <div
+      className={`w-full rounded-lg border border-white/10 p-3 bg-[#11121a] ${compact ? 'mb-3' : 'mb-4'}`}
+    >
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-medium text-slate-200">Extracting Metadata...</div>
+          <div className="text-sm font-medium text-slate-200">
+            Extracting Metadata...
+          </div>
           <div className="text-xs text-slate-400 font-mono mt-1">{stage}</div>
         </div>
-        <div className="text-sm font-mono text-slate-200">{pct.toFixed(0)}%</div>
+        <div className="text-sm font-mono text-slate-200">
+          {pct.toFixed(0)}%
+        </div>
       </div>
 
       <div className="mt-3">

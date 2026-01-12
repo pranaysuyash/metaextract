@@ -113,7 +113,11 @@ export interface IStorage {
   getUserByEmail?(email: string): Promise<User | undefined>;
   updateUserPassword?(userId: string, newPassword: string): Promise<void>;
   updateUserProfile?(userId: string, profile: Partial<User>): Promise<User>;
-  setPasswordResetToken?(userId: string, token: string, expiresAt: Date): Promise<void>;
+  setPasswordResetToken?(
+    userId: string,
+    token: string,
+    expiresAt: Date
+  ): Promise<void>;
   getUserByResetToken?(token: string): Promise<User | undefined>;
   resetFailedLoginAttempts?(userId: string): Promise<void>;
   enableTwoFactor?(userId: string, secret: string): Promise<void>;
@@ -129,6 +133,13 @@ export interface IStorage {
     since?: Date;
     limit?: number;
   }): Promise<UiEvent[]>;
+
+  // Security / monitoring helpers
+  logSecurityEvent?(event: any): Promise<void>;
+  getSecurityEvents?(filters?: Record<string, any>): Promise<any[]>;
+
+  // Fingerprint storage helpers
+  storeFingerprint?(fingerprint: any): Promise<void>;
 
   // Credits system
   getOrCreateCreditBalance(
@@ -193,7 +204,10 @@ export interface IStorage {
   setTwoFactorSecret?(userId: string, secret: string): Promise<void>;
   clearTwoFactorSecret?(userId: string): Promise<void>;
   getExtractionHistoryByFile?(fileId: string): Promise<any[]>;
-  getExtractionHistoryByDateRange?(startDate: Date, endDate: Date): Promise<any[]>;
+  getExtractionHistoryByDateRange?(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
   getExtractionHistoryByTier?(tier: string): Promise<any[]>;
   getExtractionHistoryByFileType?(fileType: string): Promise<any[]>;
   updatePassword?(userId: string, hashedPassword: string): Promise<void>;
@@ -210,69 +224,226 @@ export interface IStorage {
   // Additional storage methods that may be referenced
   getUserById?(id: string): Promise<User | undefined>;
   getUserByCustomerId?(customerId: string): Promise<User | undefined>;
-  updateUserSubscription?(userId: string, subscriptionId: string, status: string): Promise<void>;
+  updateUserSubscription?(
+    userId: string,
+    subscriptionId: string,
+    status: string
+  ): Promise<void>;
   updateUserTier?(userId: string, tier: string): Promise<void>;
   getExtractionHistoryByUser?(userId: string, limit?: number): Promise<any[]>;
   getExtractionHistoryByFileId?(fileId: string): Promise<any[]>;
-  getExtractionHistoryByDateRange?(startDate: Date, endDate: Date): Promise<any[]>;
+  getExtractionHistoryByDateRange?(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
   getExtractionHistoryBySuccess?(success: boolean): Promise<any[]>;
-  getExtractionHistoryByProcessingTime?(minTime: number, maxTime: number): Promise<any[]>;
-  getExtractionHistoryByFileSize?(minSize: number, maxSize: number): Promise<any[]>;
-  getExtractionHistoryByFieldsExtracted?(minFields: number, maxFields: number): Promise<any[]>;
+  getExtractionHistoryByProcessingTime?(
+    minTime: number,
+    maxTime: number
+  ): Promise<any[]>;
+  getExtractionHistoryByFileSize?(
+    minSize: number,
+    maxSize: number
+  ): Promise<any[]>;
+  getExtractionHistoryByFieldsExtracted?(
+    minFields: number,
+    maxFields: number
+  ): Promise<any[]>;
   getExtractionHistoryByFailureReason?(reason: string): Promise<any[]>;
   getExtractionHistoryByIpAddress?(ipAddress: string): Promise<any[]>;
   getExtractionHistoryByUserAgentString?(userAgent: string): Promise<any[]>;
   getExtractionHistoryByRequestedAt?(date: Date): Promise<any[]>;
   getExtractionHistoryByCreatedAt?(date: Date): Promise<any[]>;
   getExtractionHistoryByUpdatedAt?(date: Date): Promise<any[]>;
-  getExtractionHistoryByTierAndDateRange?(tier: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByFileTypeAndDateRange?(fileType: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryBySuccessAndDateRange?(success: boolean, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByProcessingTimeRange?(minTime: number, maxTime: number, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByFileSizeRange?(minSize: number, maxSize: number, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByFieldsExtractedRange?(minFields: number, maxFields: number, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByFailureReasonAndDateRange?(reason: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByIpAddressAndDateRange?(ipAddress: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByUserAgentStringAndDateRange?(userAgent: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByRequestedAtRange?(startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByCreatedAtRange?(startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByUpdatedAtRange?(startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByUserIdAndDateRange?(userId: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByFileIdAndDateRange?(fileId: string, startDate: Date, endDate: Date): Promise<any[]>;
-  getExtractionHistoryByTierAndUser?(tier: string, userId: string): Promise<any[]>;
-  getExtractionHistoryByFileTypeAndUser?(fileType: string, userId: string): Promise<any[]>;
-  getExtractionHistoryBySuccessAndUser?(success: boolean, userId: string): Promise<any[]>;
-  getExtractionHistoryByProcessingTimeAndUser?(minTime: number, maxTime: number, userId: string): Promise<any[]>;
-  getExtractionHistoryByFileSizeAndUser?(minSize: number, maxSize: number, userId: string): Promise<any[]>;
-  getExtractionHistoryByFieldsExtractedAndUser?(minFields: number, maxFields: number, userId: string): Promise<any[]>;
-  getExtractionHistoryByFailureReasonAndUser?(reason: string, userId: string): Promise<any[]>;
-  getExtractionHistoryByIpAddressAndUser?(ipAddress: string, userId: string): Promise<any[]>;
-  getExtractionHistoryByUserAgentStringAndUser?(userAgent: string, userId: string): Promise<any[]>;
-  getExtractionHistoryByRequestedAtAndUser?(date: Date, userId: string): Promise<any[]>;
-  getExtractionHistoryByCreatedAtAndUser?(date: Date, userId: string): Promise<any[]>;
-  getExtractionHistoryByUpdatedAtAndUser?(date: Date, userId: string): Promise<any[]>;
-  getExtractionHistoryByTierAndFile?(tier: string, fileId: string): Promise<any[]>;
-  getExtractionHistoryByFileTypeAndFile?(fileType: string, fileId: string): Promise<any[]>;
-  getExtractionHistoryBySuccessAndFile?(success: boolean, fileId: string): Promise<any[]>;
-  getExtractionHistoryByProcessingTimeAndFile?(minTime: number, maxTime: number, fileId: string): Promise<any[]>;
-  getExtractionHistoryByFileSizeAndFile?(minSize: number, maxSize: number, fileId: string): Promise<any[]>;
-  getExtractionHistoryByFieldsExtractedAndFile?(minFields: number, maxFields: number, fileId: string): Promise<any[]>;
-  getExtractionHistoryByFailureReasonAndFile?(reason: string, fileId: string): Promise<any[]>;
-  getExtractionHistoryByIpAddressAndFile?(ipAddress: string, fileId: string): Promise<any[]>;
-  getExtractionHistoryByUserAgentStringAndFile?(userAgent: string, fileId: string): Promise<any[]>;
-  getExtractionHistoryByRequestedAtAndFile?(date: Date, fileId: string): Promise<any[]>;
-  getExtractionHistoryByCreatedAtAndFile?(date: Date, fileId: string): Promise<any[]>;
-  getExtractionHistoryByUpdatedAtAndFile?(date: Date, fileId: string): Promise<any[]>;
+  getExtractionHistoryByTierAndDateRange?(
+    tier: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByFileTypeAndDateRange?(
+    fileType: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryBySuccessAndDateRange?(
+    success: boolean,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByProcessingTimeRange?(
+    minTime: number,
+    maxTime: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByFileSizeRange?(
+    minSize: number,
+    maxSize: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByFieldsExtractedRange?(
+    minFields: number,
+    maxFields: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByFailureReasonAndDateRange?(
+    reason: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByIpAddressAndDateRange?(
+    ipAddress: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByUserAgentStringAndDateRange?(
+    userAgent: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByRequestedAtRange?(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByCreatedAtRange?(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByUpdatedAtRange?(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByUserIdAndDateRange?(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByFileIdAndDateRange?(
+    fileId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]>;
+  getExtractionHistoryByTierAndUser?(
+    tier: string,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFileTypeAndUser?(
+    fileType: string,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryBySuccessAndUser?(
+    success: boolean,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByProcessingTimeAndUser?(
+    minTime: number,
+    maxTime: number,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFileSizeAndUser?(
+    minSize: number,
+    maxSize: number,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFieldsExtractedAndUser?(
+    minFields: number,
+    maxFields: number,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFailureReasonAndUser?(
+    reason: string,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByIpAddressAndUser?(
+    ipAddress: string,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByUserAgentStringAndUser?(
+    userAgent: string,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByRequestedAtAndUser?(
+    date: Date,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByCreatedAtAndUser?(
+    date: Date,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByUpdatedAtAndUser?(
+    date: Date,
+    userId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByTierAndFile?(
+    tier: string,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFileTypeAndFile?(
+    fileType: string,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryBySuccessAndFile?(
+    success: boolean,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByProcessingTimeAndFile?(
+    minTime: number,
+    maxTime: number,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFileSizeAndFile?(
+    minSize: number,
+    maxSize: number,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFieldsExtractedAndFile?(
+    minFields: number,
+    maxFields: number,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByFailureReasonAndFile?(
+    reason: string,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByIpAddressAndFile?(
+    ipAddress: string,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByUserAgentStringAndFile?(
+    userAgent: string,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByRequestedAtAndFile?(
+    date: Date,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByCreatedAtAndFile?(
+    date: Date,
+    fileId: string
+  ): Promise<any[]>;
+  getExtractionHistoryByUpdatedAtAndFile?(
+    date: Date,
+    fileId: string
+  ): Promise<any[]>;
 
   // Batch processing system
   getBatchJobs(userId: string): Promise<BatchJob[]>;
   getBatchJob(jobId: string): Promise<BatchJob | undefined>;
-  createBatchJob(job: Omit<BatchJob, 'id' | 'createdAt' | 'updatedAt'>): Promise<BatchJob>;
+  createBatchJob(
+    job: Omit<BatchJob, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<BatchJob>;
   updateBatchJob(jobId: string, updates: Partial<BatchJob>): Promise<void>;
   getBatchResults(batchId: string): Promise<BatchResult[]>;
   getBatchResult(resultId: string): Promise<BatchResult | undefined>;
-  createBatchResult(result: Omit<BatchResult, 'id' | 'createdAt'>): Promise<BatchResult>;
-  updateBatchResult(resultId: string, updates: Partial<BatchResult>): Promise<void>;
+  createBatchResult(
+    result: Omit<BatchResult, 'id' | 'createdAt'>
+  ): Promise<BatchResult>;
+  updateBatchResult(
+    resultId: string,
+    updates: Partial<BatchResult>
+  ): Promise<void>;
   deleteBatchJob(jobId: string): Promise<void>;
   deleteBatchResults(batchId: string): Promise<void>;
 }
@@ -325,7 +496,6 @@ export interface AnalyticsSummary {
   totalBytesProcessed: number;
   successRate: number;
 }
-
 
 export interface SaveMetadataInput {
   userId?: string;

@@ -1,6 +1,6 @@
 /**
  * Security Tests for Extraction Routes
- * 
+ *
  * Tests the security fixes implemented for the extraction endpoints:
  * - Legacy route disablement
  * - MVP route security hardening
@@ -24,14 +24,14 @@ describe('Extraction Route Security', () => {
     app = express();
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    
+
     httpServer = createServer(app);
     await registerRoutes(httpServer, app);
   });
 
   afterAll(async () => {
     if (httpServer) {
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         httpServer.close(() => resolve());
       });
     }
@@ -40,38 +40,40 @@ describe('Extraction Route Security', () => {
   describe('Legacy Route Security', () => {
     test('should disable legacy /api/extract route (memory exhaustion fix)', async () => {
       const testFile = Buffer.from('test content');
-      
+
       const response = await request(app)
         .post('/api/extract')
         .attach('file', testFile, 'test.jpg');
-      
+
       // Should return 404 since route is disabled
       expect(response.status).toBe(404);
-      
+
       // The key security fix: route is not accessible
       // Response format may vary (HTML or JSON) but 404 confirms it's disabled
-      console.log(`✅ Legacy route disabled: ${response.status} ${response.text ?? ''}`);
+      console.log(
+        `✅ Legacy route disabled: ${response.status} ${response.text ?? ''}`
+      );
     });
 
     test('should disable legacy batch extraction route', async () => {
       const testFile = Buffer.from('test content');
-      
+
       const response = await request(app)
         .post('/api/extract/batch')
         .attach('files', testFile, 'test1.jpg')
         .attach('files', testFile, 'test2.jpg');
-      
+
       expect(response.status).toBe(404);
       console.log(`✅ Batch route disabled: ${response.status}`);
     });
 
     test('should disable legacy advanced extraction route', async () => {
       const testFile = Buffer.from('test content');
-      
+
       const response = await request(app)
         .post('/api/extract/advanced')
         .attach('file', testFile, 'test.jpg');
-      
+
       // We saw it returns 401 in the test, which means it's hitting auth middleware
       // That's also acceptable - the route is not accessible
       expect([404, 401]).toContain(response.status);
@@ -84,7 +86,10 @@ describe('Extraction Route Security', () => {
       // Verify the extraction route is registered on the app without performing a full extraction request
       // This avoids executing heavy extraction logic while confirming route presence
       const stack = (app as any)._router?.stack || [];
-      const found = stack.some((layer: any) => layer && layer.route && layer.route.path === '/api/images_mvp/extract');
+      const found = stack.some(
+        (layer: any) =>
+          layer && layer.route && layer.route.path === '/api/images_mvp/extract'
+      );
       expect(found).toBe(true);
     });
   });
@@ -94,7 +99,7 @@ describe('Extraction Route Security', () => {
       const response = await request(app)
         .post('/api/extract')
         .attach('file', Buffer.from('test'), 'test.jpg');
-      
+
       expect(response.status).toBe(404);
       // Security headers should be applied - check for rate limiting headers at minimum
       expect(response.headers).toHaveProperty('x-ratelimit-limit');
@@ -109,7 +114,7 @@ describe('Extraction Route Security', () => {
       const response = await request(app)
         .get('/api/extract/health') // This should also be disabled
         .set('X-Test-Security', 'true');
-      
+
       expect(response.status).toBe(404);
     });
   });
@@ -118,12 +123,12 @@ describe('Extraction Route Security', () => {
 describe('Temp Directory Security', () => {
   test('should create temp directories with proper permissions', async () => {
     const tempDirs = ['/tmp/metaextract', '/tmp/metaextract-uploads'];
-    
+
     for (const dir of tempDirs) {
       try {
         await fs.mkdir(dir, { recursive: true });
         const stats = await fs.stat(dir);
-        
+
         // Directory should be writable
         expect(stats.mode & 0o200).toBeTruthy(); // Owner write permission
       } catch (error) {
@@ -137,10 +142,10 @@ describe('Temp Directory Security', () => {
 describe('Security Documentation', () => {
   test('should have security fixes documented', async () => {
     const securityDocPath = path.join(__dirname, '../../SECURITY_FIXES.md');
-    
+
     try {
       const content = await fs.readFile(securityDocPath, 'utf-8');
-      
+
       expect(content).toContain('Legacy Route Disable');
       expect(content).toContain('memory exhaustion vulnerability');
       expect(content).toContain('Critical');

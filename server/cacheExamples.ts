@@ -247,9 +247,10 @@ export function setupUserCaching(router: Router): void {
         const userId = extractUserId(req);
         const preferences = await getUserPreferences(userId);
         res.json(preferences);
-      } catch (error) {
-        const err = error as Error;
-        res.status(401).json({ error: err.message });
+      } catch (error: unknown) {
+        const errMessage =
+          error instanceof Error ? error.message : String(error);
+        res.status(401).json({ error: errMessage });
       }
     }
   );
@@ -353,11 +354,11 @@ export function setupCacheInvalidation(router: Router): void {
         invalidated,
         method,
       });
-    } catch (error) {
-      const err = error as Error;
+    } catch (error: unknown) {
+      const errMessage = error instanceof Error ? error.message : String(error);
       res.status(500).json({
         success: false,
-        error: err.message,
+        error: errMessage,
       });
     }
   });
@@ -396,11 +397,11 @@ export function setupCacheInvalidation(router: Router): void {
         warmed,
         total: keysToWarm.length,
       });
-    } catch (error) {
-      const err = error as Error;
+    } catch (error: unknown) {
+      const errMessage = error instanceof Error ? error.message : String(error);
       res.status(500).json({
         success: false,
-        error: err.message,
+        error: errMessage,
       });
     }
   });

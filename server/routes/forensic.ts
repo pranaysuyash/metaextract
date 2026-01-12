@@ -29,13 +29,58 @@ import {
 } from './extraction';
 
 // ============================================================================
-// Multer Configuration
+// Multer Configuration (secure disk storage)
 // ============================================================================
 
+const TEMP_DIR = process.env.FORENSIC_TEMP_DIR || '/tmp/metaextract';
+const MAX_FORENSIC_FILE_SIZE = parseInt(
+  process.env.FORENSIC_MAX_FILE_SIZE_BYTES || String(50 * 1024 * 1024),
+  10
+); // default 50MB per file
+
+// Ensure the temp dir exists with restricted permissions (owner rwx)
+try {
+  // Use sync variant to ensure dir exists before multer initializes
+  const { mkdirSync, chmodSync } = require('fs');
+  mkdirSync(TEMP_DIR, { recursive: true, mode: 0o700 });
+  // In case the dir already existed, enforce perms
+  try {
+    chmodSync(TEMP_DIR, 0o700);
+  } catch (e) {
+    // ignore if not permitted
+  }
+} catch (e) {
+  console.warn('Could not ensure forensic temp dir exists:', e);
+}
+
+const forensicStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, TEMP_DIR),
+  filename: (req, file, cb) => {
+    const safeName = `${Date.now()}-${crypto.randomUUID()}-${path.basename(
+      file.originalname
+    )}`;
+    cb(null, safeName);
+  },
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 2000 * 1024 * 1024, // 2GB max
+  storage: forensicStorage,
+  limits: { fileSize: MAX_FORENSIC_FILE_SIZE },
+  fileFilter: (req, file, cb) => {
+    // Allow common image types only. Defer strict tier-based validation to route logic.
+    const allowed =
+      (file && file.mimetype && file.mimetype.startsWith('image/')) ||
+      [
+        'image/heic',
+        'image/heif',
+        'image/x-canon-cr2',
+        'image/x-nikon-nef',
+      ].includes((file && file.mimetype) || '');
+    if (!allowed) {
+      // Reject files that are not common images
+      return cb(null, false);
+    }
+    cb(null, true);
   },
 });
 
@@ -225,17 +270,15 @@ export function registerForensicRoutes(app: Express): void {
           }
         }
 
-        // Write files to temp locations
-        const tempDir = '/tmp/metaextract';
-        await fs.mkdir(tempDir, { recursive: true });
-
+        // Files are stored by multer on disk; use file.path
         const fileInfos = [];
         for (const file of req.files) {
-          const tempPath = path.join(
-            tempDir,
-            `${Date.now()}-${crypto.randomUUID()}-${file.originalname}`
-          );
-          await fs.writeFile(tempPath, file.buffer);
+          // multer stores the path as file.path when using diskStorage
+          const tempPath = (file as any).path;
+          if (!tempPath) {
+            // unexpected - skip this file
+            continue;
+          }
           tempPaths.push(tempPath);
           fileInfos.push({
             tempPath,
@@ -387,18 +430,12 @@ export function registerForensicRoutes(app: Express): void {
           });
         }
 
-        // Write files to temp locations
-        const tempDir = '/tmp/metaextract';
-        await fs.mkdir(tempDir, { recursive: true });
-
+        // Files are stored by multer on disk; use file.path
         const allEvents: any[] = [];
 
         for (const file of req.files) {
-          const tempPath = path.join(
-            tempDir,
-            `${Date.now()}-${crypto.randomUUID()}-${file.originalname}`
-          );
-          await fs.writeFile(tempPath, file.buffer);
+          const tempPath = (file as any).path;
+          if (!tempPath) continue; // skip if not stored
           tempPaths.push(tempPath);
 
           const rawMetadata = await extractMetadataWithPython(
@@ -543,18 +580,12 @@ export function registerForensicRoutes(app: Express): void {
           });
         }
 
-        // Process files and generate report
-        const tempDir = '/tmp/metaextract';
-        await fs.mkdir(tempDir, { recursive: true });
-
+        // Files are stored by multer on disk; use file.path
         const fileAnalyses: any[] = [];
 
         for (const file of req.files) {
-          const tempPath = path.join(
-            tempDir,
-            `${Date.now()}-${crypto.randomUUID()}-${file.originalname}`
-          );
-          await fs.writeFile(tempPath, file.buffer);
+          const tempPath = (file as any).path;
+          if (!tempPath) continue; // skip if not stored
           tempPaths.push(tempPath);
 
           try {

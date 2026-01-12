@@ -7,7 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Device-free end-to-end smoke test: banner appears and locked preview is NOT shown
-test('device_free flow shows banner and no locked preview', async ({ page }) => {
+test('device_free flow shows banner and no locked preview', async ({
+  page,
+}) => {
   await page.goto('/images_mvp');
   await page.waitForLoadState('networkidle');
 
@@ -41,13 +43,19 @@ test('device_free flow shows banner and no locked preview', async ({ page }) => 
   await input.setInputFiles(filePath);
 
   // Wait for filename and click Analyze
-  await expect(page.getByText(/iphone_exif.jpg/)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText(/iphone_exif.jpg/)).toBeVisible({
+    timeout: 20000,
+  });
   const analyzeButton = page.getByRole('button', { name: 'Analyze' });
   await expect(analyzeButton).toBeEnabled({ timeout: 60000 });
   await analyzeButton.click();
 
   // Wait for response and results nav
-  await page.waitForResponse(resp => resp.url().includes('/api/images_mvp/extract') && resp.status() === 200, { timeout: 60000 });
+  await page.waitForResponse(
+    resp =>
+      resp.url().includes('/api/images_mvp/extract') && resp.status() === 200,
+    { timeout: 60000 }
+  );
   await expect(page).toHaveURL(/\/images_mvp\/results/);
 
   // Assert banner is visible

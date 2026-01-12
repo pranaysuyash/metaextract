@@ -146,11 +146,15 @@ export default function ImagesMvpResults() {
   const [rawSearch, setRawSearch] = useState('');
   const [showOverlayText, setShowOverlayText] = useState(false);
   const [showAllExif, setShowAllExif] = useState(false);
+  const [showEmptyRaw, setShowEmptyRaw] = useState(false);
   const [purpose, setPurpose] = useState<PurposeValue | null>(null);
   const [showPurposeModal, setShowPurposeModal] = useState(false);
   const [densityMode, setDensityMode] = useState<DensityMode>('normal');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
+  const ocrSelected =
+    typeof window !== 'undefined' &&
+    sessionStorage.getItem('images_mvp_ocr') === 'true';
   const navigate = useNavigate();
   const { toast } = useToast();
   const purposePromptLogged = useRef(false);
@@ -745,16 +749,26 @@ export default function ImagesMvpResults() {
     (metadata.exif?.DateTimeOriginal as string | null | undefined) ||
       (metadata.exif?.CreateDate as string | null | undefined)
   );
+  const captureDateFromCalculated = parseExifDate(
+    (metadata.calculated?.capture_date as string | null | undefined) || null
+  );
+  const hasCalculatedCapture = !!captureDateFromCalculated;
   const captureDateLabel = captureDateFromExif
-    ? 'CAPTURE DATE'
+    ? 'CAPTURE DATE (EXIF)'
     : filenameDate
-      ? 'FILENAME DATE'
-      : 'CAPTURE DATE';
+      ? 'CAPTURE DATE (FILENAME)'
+      : hasCalculatedCapture && !isLimitedReport
+        ? 'CAPTURE DATE (INFERRED)'
+        : 'CAPTURE DATE';
   const captureDateValue = captureDateFromExif
     ? captureDateFromExif.toISOString()
     : filenameDate
       ? filenameDate.toISOString()
-      : null;
+      : hasCalculatedCapture && !isLimitedReport
+        ? captureDateFromCalculated?.toISOString() || null
+        : null;
+  const filesystemTimestamp =
+    metadata.filesystem?.created || metadata.filesystem?.modified || null;
   const localModifiedValue = metadata.client_last_modified_iso || null;
 
   const embeddedGpsState = hasGps
@@ -764,19 +778,29 @@ export default function ImagesMvpResults() {
       : 'none';
   const burnedTimestamp =
     metadata.burned_metadata?.parsed_data?.timestamp || null;
+  const filenameSuggestsMap = /gps|map|location|coords|coordinate|geotag/i.test(
+    metadata.filename || ''
+  );
   const hashSha256 =
     metadata.hashes?.sha256 || metadata.file_integrity?.sha256 || null;
   const hashMd5 = metadata.hashes?.md5 || metadata.file_integrity?.md5 || null;
   const fieldsExtracted = metadata.fields_extracted ?? null;
   const processingMs = metadata.processing_ms ?? null;
   const software = (metadata.exif?.Software as string | undefined) || null;
+  const extractionInfo = metadata.extraction_info as
+    | {
+        dynamic_modules_enabled?: boolean;
+        specialized_engines?: Record<string, boolean>;
+      }
+    | undefined;
+  const enabledEnginesCount = extractionInfo?.specialized_engines
+    ? Object.values(extractionInfo.specialized_engines).filter(Boolean).length
+    : null;
   const formatHint = getFormatHint(metadata.mime_type, metadata.filename);
   const formatToneClass =
     formatHint?.tone === 'emerald'
       ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-100'
       : 'border-amber-500/20 bg-amber-500/5 text-amber-100';
-
-
 
   const scrollTo = (tab: typeof activeTab, anchorId: string) => {
     setActiveTab(tab);
@@ -815,17 +839,38 @@ export default function ImagesMvpResults() {
   }> = [];
   if (captureDateValue) {
     highlights.push({
-      text: `Capture time found (${captureDateLabel === 'FILENAME DATE' ? 'from filename' : 'from EXIF'}).`,
+      text: `Capture time found (${captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'from filename' : 'from EXIF'}).`,
       intent: 'Photography',
       impact: 'Workflow',
-      confidence: captureDateLabel === 'FILENAME DATE' ? 'Medium' : 'High',
+      confidence:
+        captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'Medium' : 'High',
+      icon: highlightIcon('Photography'),
+      accentClass: highlightAccent('Photography'),
+      target: { tab: 'privacy', anchorId: 'section-timestamps' },
+    });
+  } else if (isLimitedReport && hasCalculatedCapture) {
+    highlights.push({
+      text: 'Capture time is available in the full report.',
+      intent: 'Photography',
+      impact: 'Workflow',
+      confidence: 'Medium',
+      icon: highlightIcon('Photography'),
+      accentClass: highlightAccent('Photography'),
+      target: { tab: 'privacy', anchorId: 'section-timestamps' },
+    });
+  } else if (filesystemTimestamp) {
+    highlights.push({
+      text: 'Capture time not in metadata; file timestamps are available (upload time).',
+      intent: 'Photography',
+      impact: 'Workflow',
+      confidence: 'Low',
       icon: highlightIcon('Photography'),
       accentClass: highlightAccent('Photography'),
       target: { tab: 'privacy', anchorId: 'section-timestamps' },
     });
   } else {
     highlights.push({
-      text: 'Capture time not present in this file (common after sharing apps).',
+      text: 'Capture time not present in metadata (common after sharing apps).',
       intent: 'Photography',
       impact: 'Workflow',
       confidence: 'Medium',
@@ -855,11 +900,16 @@ export default function ImagesMvpResults() {
       target: { tab: 'privacy', anchorId: 'section-location' },
     });
   } else {
+    const locationCopy = !ocrSelected
+      ? 'No GPS in metadata. Text scan was off, so stamped locations were not checked.'
+      : isLimitedReport
+        ? 'No GPS in metadata. Text scan results are limited in this free report.'
+        : 'No GPS in metadata or overlay text.';
     highlights.push({
-      text: 'Location not present in this file.',
+      text: locationCopy,
       intent: 'Privacy',
       impact: 'Privacy',
-      confidence: 'High',
+      confidence: ocrSelected && !isLimitedReport ? 'Medium' : 'High',
       icon: highlightIcon('Privacy'),
       accentClass: highlightAccent('Privacy'),
       target: { tab: 'privacy', anchorId: 'section-location' },
@@ -1077,7 +1127,8 @@ export default function ImagesMvpResults() {
     obj: unknown,
     prefix = '',
     depth = 0,
-    out: DetailEntry[] = []
+    out: DetailEntry[] = [],
+    includeEmpty = false
   ): DetailEntry[] => {
     if (out.length >= 500) return out;
     if (depth > 5) return out;
@@ -1108,7 +1159,7 @@ export default function ImagesMvpResults() {
         typeof value === 'object' &&
         !Array.isArray(value)
       ) {
-        collectPaths(value, next, depth + 1, out);
+        collectPaths(value, next, depth + 1, out, includeEmpty);
       } else if (Array.isArray(value)) {
         const preview = previewValue(value.slice(0, 5));
         out.push({
@@ -1117,7 +1168,7 @@ export default function ImagesMvpResults() {
           value,
         });
       } else {
-        if (!hasValue(value)) continue;
+        if (!includeEmpty && !hasValue(value)) continue;
         out.push({
           path: next,
           valuePreview: previewValue(value).slice(0, 140),
@@ -1129,7 +1180,7 @@ export default function ImagesMvpResults() {
     return out;
   };
 
-  const allRawPaths = collectPaths(metadata);
+  const allRawPaths = collectPaths(metadata, '', 0, [], showEmptyRaw);
   const q = rawSearch.trim().toLowerCase();
   const rawMatches = q
     ? allRawPaths
@@ -1321,10 +1372,13 @@ export default function ImagesMvpResults() {
               <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-primary text-sm mb-1">
-                  Free check used ({metadata.access?.free_used ?? 1}/2). Credits not used yet.
+                  Free check used ({metadata.access?.free_used ?? 1}/2). Credits
+                  not used yet.
                 </h4>
                 <p className="text-slate-200 text-xs leading-relaxed">
-                  Sensitive identifiers hidden: exact GPS, device IDs, owner/contact fields, and OCR-extracted address text. Credits are charged after 2 free checks.
+                  Sensitive identifiers hidden: exact GPS, device IDs,
+                  owner/contact fields, and OCR-extracted address text. Credits
+                  are charged after 2 free checks.
                 </p>
               </div>
             </motion.div>
@@ -1708,11 +1762,43 @@ export default function ImagesMvpResults() {
                       <div className="py-8 text-center">
                         <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-20" />
                         <p className="text-emerald-500 font-bold">
-                          Location not present
+                          Location not found
                         </p>
                         <p className="text-slate-500 text-xs mt-1">
-                          No GPS coordinates were found in this file.
+                          No GPS coordinates are embedded in the metadata.
                         </p>
+                        {!ocrSelected && (
+                          <div className="mt-3 space-y-2 text-xs text-slate-300">
+                            <div>
+                              Text scan was off, so stamped map/location text
+                              wasn’t checked. Enable text scan to look for
+                              overlays (+6 credits if text found).
+                            </div>
+                            <Button
+                              variant="outline"
+                              className="border-white/10 hover:bg-white/5 w-full"
+                              onClick={() => navigate('/images_mvp?ocr=1')}
+                            >
+                              Re-run with text scan (+6 credits if text found)
+                            </Button>
+                          </div>
+                        )}
+                        {ocrSelected && isLimitedReport && (
+                          <div className="mt-3 text-xs text-slate-300">
+                            Text scan results are limited in the free report.
+                            Use credits to view full overlay findings.
+                          </div>
+                        )}
+                        {ocrSelected && !isLimitedReport && (
+                          <div className="mt-3 text-xs text-slate-300">
+                            Text scan ran and found no stamped location text.
+                          </div>
+                        )}
+                        {filenameSuggestsMap && !ocrSelected && (
+                          <div className="mt-2 text-[11px] text-slate-400">
+                            Filename suggests a map/GPS overlay.
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -1788,13 +1874,29 @@ export default function ImagesMvpResults() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                       <div className="pb-3 border-b border-white/5">
-                        <span className="text-slate-500 block text-xs font-mono mb-1">
-                          {captureDateLabel}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-slate-500 inline-flex items-center gap-1 text-xs font-mono mb-1">
+                              {captureDateLabel}
+                              <Info className="w-3 h-3 text-slate-600" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-xs">
+                            {captureDateFromExif
+                              ? 'From camera EXIF metadata (original capture time).'
+                              : filenameDate
+                                ? 'Parsed from filename; may be approximate.'
+                                : hasCalculatedCapture && !isLimitedReport
+                                  ? 'Inferred from available metadata.'
+                                  : 'No capture timestamp found in metadata.'}
+                          </TooltipContent>
+                        </Tooltip>
                         <span className="text-white font-medium">
                           {captureDateValue
                             ? formatDate(captureDateValue)
-                            : 'Not present in this file'}
+                            : isLimitedReport && hasCalculatedCapture
+                              ? 'Available in full report'
+                              : 'Not present in metadata'}
                         </span>
                       </div>
                       {hasValue(burnedTimestamp) && (
@@ -1808,9 +1910,18 @@ export default function ImagesMvpResults() {
                         </div>
                       )}
                       <div>
-                        <span className="text-slate-500 block text-xs font-mono mb-1">
-                          LOCAL FILE MODIFIED
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-slate-500 inline-flex items-center gap-1 text-xs font-mono mb-1">
+                              ORIGINAL FILE MODIFIED (BROWSER)
+                              <Info className="w-3 h-3 text-slate-600" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-xs">
+                            From your device/browser (file last modified). This
+                            is not the capture time.
+                          </TooltipContent>
+                        </Tooltip>
                         <span className="text-white font-medium">
                           {formatDate(
                             localModifiedValue || undefined,
@@ -1818,6 +1929,31 @@ export default function ImagesMvpResults() {
                           )}
                         </span>
                       </div>
+                      {filesystemTimestamp && (
+                        <div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-slate-500 inline-flex items-center gap-1 text-xs font-mono mb-1">
+                                SERVER FILE TIMESTAMP
+                                <Info className="w-3 h-3 text-slate-600" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-xs">
+                              Timestamp from server-side processing/storage. Not
+                              the camera capture time.
+                            </TooltipContent>
+                          </Tooltip>
+                          <span className="text-white font-medium">
+                            {formatDate(filesystemTimestamp)}
+                          </span>
+                        </div>
+                      )}
+                      {!captureDateValue && filesystemTimestamp && (
+                        <div className="text-xs text-slate-400">
+                          File system dates reflect upload/server time, not when
+                          the photo was captured.
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -2503,6 +2639,10 @@ export default function ImagesMvpResults() {
                     <CardTitle className="text-sm font-mono text-slate-200">
                       {canExport ? 'RAW JSON' : 'RAW JSON (PREVIEW)'}
                     </CardTitle>
+                    <p className="text-xs text-slate-500">
+                      Engine flags indicate enabled modules, not that data was
+                      found. Toggle empty fields to see nulls/absent values.
+                    </p>
                   </CardHeader>
                   <CardContent>
                     {!canExport && (
@@ -2511,14 +2651,23 @@ export default function ImagesMvpResults() {
                         preview and search a subset of extracted fields here.
                       </div>
                     )}
-                    <div className="mb-3 flex items-center gap-2">
-                      <Search className="w-4 h-4 text-slate-500" />
-                      <Input
-                        value={rawSearch}
-                        onChange={e => setRawSearch(e.target.value)}
-                        placeholder="Search keys/values..."
-                        className="bg-black/30 border-white/10 text-slate-200 placeholder:text-slate-600"
-                      />
+                    <div className="mb-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="flex-1 flex items-center gap-2">
+                        <Search className="w-4 h-4 text-slate-500" />
+                        <Input
+                          value={rawSearch}
+                          onChange={e => setRawSearch(e.target.value)}
+                          placeholder="Search keys/values..."
+                          className="bg-black/30 border-white/10 text-slate-200 placeholder:text-slate-600"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="border-white/10 hover:bg-white/5"
+                        onClick={() => setShowEmptyRaw(v => !v)}
+                      >
+                        {showEmptyRaw ? 'Hide empty' : 'Show empty'}
+                      </Button>
                     </div>
                     <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
                       {(canExport ? rawMatches : rawMatches.slice(0, 20)).map(
@@ -2615,11 +2764,30 @@ export default function ImagesMvpResults() {
                         )}
                       </div>
                     ) : null}
+                    {typeof extractionInfo?.dynamic_modules_enabled ===
+                    'boolean' ? (
+                      <div>
+                        Engine mode:{' '}
+                        {extractionInfo.dynamic_modules_enabled
+                          ? 'dynamic selection'
+                          : 'fixed engine set'}{' '}
+                        (capability flags only)
+                      </div>
+                    ) : null}
+                    {typeof enabledEnginesCount === 'number' ? (
+                      <div>
+                        Specialized engines enabled:{' '}
+                        {enabledEnginesCount.toLocaleString()} (not data found)
+                      </div>
+                    ) : null}
                     {!metadata.quality_metrics?.confidence_score &&
                     !metadata.quality_metrics?.extraction_completeness &&
                     !metadata.processing_insights?.total_fields_extracted &&
                     !metadata.processing_insights?.processing_time_ms &&
-                    !metadata.quality_metrics?.format_support_level ? (
+                    !metadata.quality_metrics?.format_support_level &&
+                    typeof extractionInfo?.dynamic_modules_enabled !==
+                      'boolean' &&
+                    typeof enabledEnginesCount !== 'number' ? (
                       <div>Quality data not reported for this file.</div>
                     ) : null}
                   </div>

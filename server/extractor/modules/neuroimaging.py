@@ -387,8 +387,33 @@ def get_scientific_dicom_fits_ultimate_advanced_extension_iii_description() -> s
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
-        result = extract_scientific_dicom_fits_ultimate_advanced_extension_iii(sys.argv[1])
+        result = extract_neuroimaging(sys.argv[1])
         print(__import__('json').dumps(result, indent=2, default=str))
     else:
-        print("Usage: python scientific_dicom_fits_ultimate_advanced_extension_iii.py <dicom_file>")
-        print(f"Field count: {get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count()}")
+        print("Usage: python neuroimaging.py <dicom_file>")
+        print(f"Field count: {get_neuroimaging_field_count()}")
+
+# New aliases for smoke test compatibility
+def extract_neuroimaging(file_path: str) -> Dict[str, Any]:
+    """Alias for extract_scientific_dicom_fits_ultimate_advanced_extension_iii."""
+    return extract_scientific_dicom_fits_ultimate_advanced_extension_iii(file_path)
+
+def get_neuroimaging_field_count() -> int:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count()
+
+def get_neuroimaging_supported_formats() -> List[str]:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_iii_supported_formats."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_iii_supported_formats()
+
+def get_neuroimaging_modalities() -> List[str]:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_iii_modalities."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_iii_modalities()
+
+def get_neuroimaging_version() -> str:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_iii_version."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_iii_version()
+
+def get_neuroimaging_description() -> str:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_iii_description."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_iii_description()

@@ -6,7 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Visual-ish: assert the consolidated extraction header appears during upload
-test('shows consolidated extraction header while uploading', async ({ page }) => {
+test('shows consolidated extraction header while uploading', async ({
+  page,
+}) => {
   await page.goto('/images_mvp');
   await page.waitForLoadState('networkidle');
 

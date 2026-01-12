@@ -121,7 +121,7 @@ async function testDatabaseConnection(db: DatabaseInstance): Promise<void> {
     // Simple test query to verify connection
     await db.pool.query('SELECT 1');
     db.isConnected = true;
-  } catch (error) {
+  } catch (error: unknown) {
     throw new Error(
       `Failed to connect to database: ${error instanceof Error ? error.message : String(error)}`
     );
@@ -161,7 +161,7 @@ try {
         .then(() => {
           console.log('✅ Database connection verified');
         })
-        .catch(error => {
+        .catch((error: unknown) => {
           initError = error as Error;
           console.error(
             `❌ Failed to verify database connection: ${initError.message}`
@@ -229,7 +229,7 @@ export async function closeDatabase(): Promise<void> {
     try {
       await dbInstance.pool.end();
       console.log('✅ Database connection closed');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(
         `❌ Error closing database: ${error instanceof Error ? error.message : String(error)}`
       );

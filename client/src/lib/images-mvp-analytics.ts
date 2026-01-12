@@ -51,9 +51,10 @@ export function trackImagesMvpEvent(
   });
   // In some test environments fetch may be undefined or non-promise; guard against that
   try {
-    if (res && typeof (res as any).catch === 'function') (res as any).catch(() => {
-      // Best-effort analytics.
-    });
+    if (res && typeof (res as any).catch === 'function')
+      (res as any).catch(() => {
+        // Best-effort analytics.
+      });
   } catch (e) {
     // swallow any synchronous errors
   }

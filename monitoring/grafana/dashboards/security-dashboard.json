@@ -1,0 +1,77 @@
+{
+  "dashboard": {
+    "title": "MetaExtract Security Dashboard",
+    "tags": ["security"],
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "Security Events Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(security_events_total[5m])) by (severity)",
+            "legendFormat": "{{severity}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/sec",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "title": "Temp Directory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "temp_directory_files",
+            "legendFormat": "File Count"
+          },
+          {
+            "expr": "temp_directory_size_bytes / 1024 / 1024",
+            "legendFormat": "Size (MB)"
+          }
+        ]
+      },
+      {
+        "title": "Rate Limit Violations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(rate_limit_violations_total[5m])",
+            "legendFormat": "Rate Limit"
+          },
+          {
+            "expr": "rate(burst_limit_violations_total[5m])",
+            "legendFormat": "Burst Limit"
+          }
+        ]
+      },
+      {
+        "title": "Upload Rejections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(upload_rejections_total[5m])",
+            "legendFormat": "Rejections/sec"
+          }
+        ]
+      },
+      {
+        "title": "System Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+            "legendFormat": "Memory Usage %"
+          },
+          {
+            "expr": "node_load1",
+            "legendFormat": "Load Average"
+          }
+        ]
+      }
+    ]
+  }
+}

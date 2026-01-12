@@ -99,7 +99,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username
+      user => user.username === username
     );
   }
 
@@ -208,7 +208,7 @@ export class MemStorage implements IStorage {
     userId?: string
   ): Promise<CreditBalance> {
     const existing = Array.from(this.creditBalancesMap.values()).find(
-      (b) => b.sessionId === sessionId
+      b => b.sessionId === sessionId
     );
     if (existing) return existing;
 
@@ -289,7 +289,7 @@ export class MemStorage implements IStorage {
     limit: number = 50
   ): Promise<CreditTransaction[]> {
     return this.creditTransactionsList
-      .filter((t) => t.balanceId === balanceId)
+      .filter(t => t.balanceId === balanceId)
       .slice(-limit)
       .reverse();
   }
@@ -298,7 +298,7 @@ export class MemStorage implements IStorage {
     userId: string
   ): Promise<OnboardingSession | undefined> {
     return Array.from(this.onboardingSessionsMap.values())
-      .filter((s) => s.userId === userId)
+      .filter(s => s.userId === userId)
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
   }
 

@@ -376,6 +376,15 @@ class PersonaInterpreter:
         """Answer: "Where was I when I took this?" """
         gps_coords = self._get_gps_coordinates()
 
+        # Prefer embedded GPS, otherwise fall back to burned-overlay parsed GPS if present
+        used_burned_overlay = False
+        if not gps_coords:
+            burned = self.metadata.get("burned_metadata") or {}
+            parsed_gps = burned.get("parsed_data", {}).get("gps") if isinstance(burned.get("parsed_data"), dict) else None
+            if parsed_gps and parsed_gps.get("latitude") is not None and parsed_gps.get("longitude") is not None:
+                gps_coords = {"latitude": parsed_gps["latitude"], "longitude": parsed_gps["longitude"]}
+                used_burned_overlay = True
+
         if gps_coords and gps_coords.get("latitude") and gps_coords.get("longitude"):
             lat = gps_coords["latitude"]
             lon = gps_coords["longitude"]
@@ -392,6 +401,10 @@ class PersonaInterpreter:
             else:
                 readable_answer = formatted_address
 
+            details_msg = f"GPS coordinates found: {lat:.6f}, {lon:.6f}"
+            if used_burned_overlay:
+                details_msg = "GPS found in burned-in overlay (not embedded EXIF)"
+
             self.interpretation["plain_english_answers"]["location"] = {
                 "coordinates": {
                     "latitude": lat,
@@ -400,7 +413,7 @@ class PersonaInterpreter:
                 },
                 "has_location": True,
                 "answer": readable_answer,
-                "details": f"GPS coordinates found: {lat:.6f}, {lon:.6f}",
+                "details": details_msg,
                 "confidence": "high",
                 "address": {
                     "formatted": formatted_address,
@@ -1126,19 +1139,20 @@ class PhotographerPeterInterpreter:
             return "unknown"
 
     def _format_exposure_mode(self, value) -> str:
-        modes = {
-            0: "Auto",
+        # Map EXIF ExposureProgram values to human-friendly names
+        programs = {
+            0: "Not Defined",
             1: "Manual",
-            2: "Auto bracket",
-            3: "Aperture priority",
-            4: "Shutter priority",
-            5: "Program",
-            6: "Aperture priority",
-            7: "Portrait mode",
-            8: "Landscape mode"
+            2: "Normal Program",
+            3: "Aperture Priority",
+            4: "Shutter Priority",
+            5: "Creative Program",
+            6: "Action Program",
+            7: "Portrait Mode",
+            8: "Landscape Mode",
         }
         if isinstance(value, int):
-            return modes.get(value, "unknown")
+            return programs.get(value, f"Unknown ({value})")
         return str(value) if value else "unknown"
 
     def _format_exposure_compensation(self, value) -> str:

@@ -1086,7 +1086,7 @@ export default function Results() {
                     <Button
                       onClick={() =>
                         navigate('/results-v2', {
-                          state: { metadata: metadata },
+                          state: { metadata },
                         })
                       }
                       variant="outline"
@@ -1641,72 +1641,162 @@ export default function Results() {
                             </section>
 
                             {/* Forensic Analysis Components */}
-                            {((metadata?.steganography_analysis || metadata?.manipulation_detection || metadata?.ai_detection) && 
-                              (metadata?.tier === 'forensic' || metadata?.tier === 'enterprise' || metadata?.tier === 'professional' || import.meta.env.DEV)) && (
-                              <section>
-                                <SectionHeader
-                                  icon={ShieldCheck}
-                                  title="Advanced Forensic Analysis"
-                                  color="text-red-400"
-                                />
-                                <div className="space-y-6">
-                                  {metadata?.advanced_analysis?.forensic_score !== undefined && (
-                                    <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg border border-white/10">
-                                      <div className="flex items-center gap-3">
-                                        <ShieldCheck className="w-5 h-5 text-primary" />
-                                        <div>
-                                          <h4 className="text-sm font-medium text-white">Overall Authenticity Score</h4>
-                                          <p className="text-xs text-slate-400">Based on forensic analysis</p>
-                                        </div>
-                                      </div>
-                                      <AuthenticityBadge 
-                                        score={metadata.advanced_analysis.forensic_score} 
-                                        variant="detailed"
-                                        showConfidence={true}
-                                      />
-                                    </div>
-                                  )}
-                                  
-                                  <ForensicAnalysis
-                                    steganography={metadata?.steganography_analysis ? {
-                                      detected: metadata.steganography_analysis.suspicious_score > 0.3,
-                                      confidence: Math.round((metadata.steganography_analysis.suspicious_score || 0) * 100),
-                                      methodsChecked: metadata.steganography_analysis.methods_checked || ['LSB Analysis', 'FFT Analysis'],
-                                      findings: metadata.steganography_analysis.findings || [],
-                                      details: metadata.steganography_analysis.analysis_details,
-                                    } : undefined}
-                                    manipulation={metadata?.manipulation_detection ? {
-                                      detected: metadata.manipulation_detection.manipulation_probability > 0.5,
-                                      confidence: Math.round((metadata.manipulation_detection.manipulation_probability || 0) * 100),
-                                      indicators: metadata.manipulation_detection.indicators?.map((indicator: any) => ({
-                                        type: indicator.type || 'Manipulation',
-                                        severity: indicator.severity || (indicator.confidence > 0.7 ? 'high' : indicator.confidence > 0.4 ? 'medium' : 'low'),
-                                        description: indicator.description || 'Manipulation detected',
-                                        confidence: Math.round((indicator.confidence || 0) * 100),
-                                      })) || [],
-                                      originalityScore: metadata.manipulation_detection.originality_score ? Math.round(metadata.manipulation_detection.originality_score * 100) : undefined,
-                                    } : undefined}
-                                    aiDetection={metadata?.ai_detection ? {
-                                      aiGenerated: metadata.ai_detection.ai_probability > 0.7,
-                                      confidence: Math.round((metadata.ai_detection.ai_probability || 0) * 100),
-                                      modelHints: metadata.ai_detection.model_hints || [],
-                                      detectionMethods: metadata.ai_detection.detection_methods || ['Neural Network Analysis'],
-                                    } : undefined}
-                                    authenticityScore={metadata?.advanced_analysis?.forensic_score || 100}
-                                    className="bg-black/20 border border-white/10"
+                            {(metadata?.steganography_analysis ||
+                              metadata?.manipulation_detection ||
+                              metadata?.ai_detection) &&
+                              (metadata?.tier === 'forensic' ||
+                                metadata?.tier === 'enterprise' ||
+                                metadata?.tier === 'professional' ||
+                                import.meta.env.DEV) && (
+                                <section>
+                                  <SectionHeader
+                                    icon={ShieldCheck}
+                                    title="Advanced Forensic Analysis"
+                                    color="text-red-400"
                                   />
-                                </div>
-                              </section>
-                            )}
-                            
+                                  <div className="space-y-6">
+                                    {metadata?.advanced_analysis
+                                      ?.forensic_score !== undefined && (
+                                      <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg border border-white/10">
+                                        <div className="flex items-center gap-3">
+                                          <ShieldCheck className="w-5 h-5 text-primary" />
+                                          <div>
+                                            <h4 className="text-sm font-medium text-white">
+                                              Overall Authenticity Score
+                                            </h4>
+                                            <p className="text-xs text-slate-400">
+                                              Based on forensic analysis
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <AuthenticityBadge
+                                          score={
+                                            metadata.advanced_analysis
+                                              .forensic_score
+                                          }
+                                          variant="detailed"
+                                          showConfidence={true}
+                                        />
+                                      </div>
+                                    )}
+
+                                    <ForensicAnalysis
+                                      steganography={
+                                        metadata?.steganography_analysis
+                                          ? {
+                                              detected:
+                                                metadata.steganography_analysis
+                                                  .suspicious_score > 0.3,
+                                              confidence: Math.round(
+                                                (metadata.steganography_analysis
+                                                  .suspicious_score || 0) * 100
+                                              ),
+                                              methodsChecked: metadata
+                                                .steganography_analysis
+                                                .methods_checked || [
+                                                'LSB Analysis',
+                                                'FFT Analysis',
+                                              ],
+                                              findings:
+                                                metadata.steganography_analysis
+                                                  .findings || [],
+                                              details:
+                                                metadata.steganography_analysis
+                                                  .analysis_details,
+                                            }
+                                          : undefined
+                                      }
+                                      manipulation={
+                                        metadata?.manipulation_detection
+                                          ? {
+                                              detected:
+                                                metadata.manipulation_detection
+                                                  .manipulation_probability >
+                                                0.5,
+                                              confidence: Math.round(
+                                                (metadata.manipulation_detection
+                                                  .manipulation_probability ||
+                                                  0) * 100
+                                              ),
+                                              indicators:
+                                                metadata.manipulation_detection.indicators?.map(
+                                                  (indicator: any) => ({
+                                                    type:
+                                                      indicator.type ||
+                                                      'Manipulation',
+                                                    severity:
+                                                      indicator.severity ||
+                                                      (indicator.confidence >
+                                                      0.7
+                                                        ? 'high'
+                                                        : indicator.confidence >
+                                                            0.4
+                                                          ? 'medium'
+                                                          : 'low'),
+                                                    description:
+                                                      indicator.description ||
+                                                      'Manipulation detected',
+                                                    confidence: Math.round(
+                                                      (indicator.confidence ||
+                                                        0) * 100
+                                                    ),
+                                                  })
+                                                ) || [],
+                                              originalityScore: metadata
+                                                .manipulation_detection
+                                                .originality_score
+                                                ? Math.round(
+                                                    metadata
+                                                      .manipulation_detection
+                                                      .originality_score * 100
+                                                  )
+                                                : undefined,
+                                            }
+                                          : undefined
+                                      }
+                                      aiDetection={
+                                        metadata?.ai_detection
+                                          ? {
+                                              aiGenerated:
+                                                metadata.ai_detection
+                                                  .ai_probability > 0.7,
+                                              confidence: Math.round(
+                                                (metadata.ai_detection
+                                                  .ai_probability || 0) * 100
+                                              ),
+                                              modelHints:
+                                                metadata.ai_detection
+                                                  .model_hints || [],
+                                              detectionMethods: metadata
+                                                .ai_detection
+                                                .detection_methods || [
+                                                'Neural Network Analysis',
+                                              ],
+                                            }
+                                          : undefined
+                                      }
+                                      authenticityScore={
+                                        metadata?.advanced_analysis
+                                          ?.forensic_score || 100
+                                      }
+                                      className="bg-black/20 border border-white/10"
+                                    />
+                                  </div>
+                                </section>
+                              )}
+
                             {/* Forensic Analysis Upgrade Message */}
-                            {(metadata?.tier === 'free' || metadata?.tier === 'basic') && (
+                            {(metadata?.tier === 'free' ||
+                              metadata?.tier === 'basic') && (
                               <section>
                                 <div className="p-6 text-center bg-black/20 rounded-lg border border-white/10">
                                   <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-slate-500" />
-                                  <h4 className="text-lg font-semibold text-white mb-2">Advanced Forensic Analysis</h4>
+                                  <h4 className="text-lg font-semibold text-white mb-2">
+                                    Advanced Forensic Analysis
+                                  </h4>
                                   <p className="text-slate-300 mb-4">
-                                    Unlock steganography detection, manipulation analysis, and AI content detection
+                                    Unlock steganography detection, manipulation
+                                    analysis, and AI content detection
                                   </p>
                                   <Button
                                     variant="outline"

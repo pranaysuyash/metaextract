@@ -3,8 +3,11 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/lib/auth';
 import Results from '@/pages/images-mvp/results';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-jest.mock('@/lib/images-mvp-analytics', () => ({ trackImagesMvpEvent: jest.fn() }));
+jest.mock('@/lib/images-mvp-analytics', () => ({
+  trackImagesMvpEvent: jest.fn(),
+}));
 
 describe('Images MVP Results - device_free banner and unlock behavior', () => {
   beforeEach(() => {
@@ -21,7 +24,11 @@ describe('Images MVP Results - device_free banner and unlock behavior', () => {
       calculated: { aspect_ratio: '3:4' },
       metadata_comparison: { summary: {} },
       file_integrity: { md5: 'a' },
-      burned_metadata: { has_burned_metadata: true, extracted_text: null, confidence: 0.9 },
+      burned_metadata: {
+        has_burned_metadata: true,
+        extracted_text: null,
+        confidence: 0.9,
+      },
       gps: null,
     };
     sessionStorage.setItem('currentMetadata', JSON.stringify(metadata));
@@ -30,7 +37,9 @@ describe('Images MVP Results - device_free banner and unlock behavior', () => {
     render(
       <MemoryRouter>
         <AuthProvider>
-          <Results />
+          <TooltipProvider>
+            <Results />
+          </TooltipProvider>
         </AuthProvider>
       </MemoryRouter>
     );

@@ -21,8 +21,16 @@ import {
   sanitizeErrorMessage,
 } from './security-utils';
 import { pythonExecutable } from './utils/extraction-helpers';
-import { cleanupOrphanedTempFiles, startPeriodicCleanup, cleanupOnExit } from './startup-cleanup';
+import {
+  cleanupOrphanedTempFiles,
+  startPeriodicCleanup,
+  cleanupOnExit,
+} from './startup-cleanup';
 import { registerHealthRoutes } from './routes/health';
+import { registerMonitoringRoutes } from './routes/monitoring';
+import { securityAlertManager } from './monitoring/security-alerts';
+import { securityEventLogger } from './monitoring/security-events';
+import { applyUploadRateLimiting } from './middleware/upload-rate-limit';
 
 const app = express();
 const httpServer = createServer(app);
@@ -160,24 +168,83 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   registerHealthRoutes(app);
   log('Registered health check routes');
 
+  // Register monitoring routes
+  registerMonitoringRoutes(app);
+  log('Registered monitoring routes');
+
+  // Apply upload rate limiting (skip in test environment)
+  if (process.env.NODE_ENV !== 'test') {
+    applyUploadRateLimiting(app);
+    log('Applied upload rate limiting');
+  } else {
+    log('Skipping rate limiting in test environment');
+  }
+
   // Initialize temp file cleanup system (skip in test environment)
   if (process.env.NODE_ENV !== 'test') {
     log('Initializing temp file cleanup system...');
     try {
       // Run cleanup on startup
       const startupResult = await cleanupOrphanedTempFiles();
-      log(`Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`);
-      
+      log(
+        `Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`
+      );
+
       // Start periodic cleanup (hourly)
       const cleanupInterval = startPeriodicCleanup(60 * 60 * 1000);
       log('Periodic cleanup scheduled every hour');
-      
+
+      // Initialize security monitoring
+      log('Initializing security monitoring system...');
+      try {
+        // Start periodic security monitoring (every 5 minutes)
+        const monitoringInterval = securityAlertManager.startPeriodicMonitoring(
+          5 * 60 * 1000
+        );
+        log('Security monitoring active - checking every 5 minutes');
+
+        // Cleanup monitoring on exit
+        process.on('exit', () => {
+          securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+          // Stop periodic security event flush if running
+          try {
+            // securityEventLogger is a singleton that may have a running timer
+            (securityEventLogger as any)?.stopPeriodicFlush?.();
+          } catch (e) {
+            // ignore
+          }
+        });
+
+        process.on('SIGINT', async () => {
+          securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+          try {
+            (securityEventLogger as any)?.stopPeriodicFlush?.();
+          } catch (e) {
+            // ignore
+          }
+        });
+
+        process.on('SIGTERM', async () => {
+          securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+          try {
+            (securityEventLogger as any)?.stopPeriodicFlush?.();
+          } catch (e) {
+            // ignore
+          }
+        });
+      } catch (error) {
+        log(
+          `Warning: Security monitoring initialization failed: ${error}`,
+          'startup'
+        );
+      }
+
       // Cleanup on process exit
       process.on('exit', async () => {
         clearInterval(cleanupInterval);
         await cleanupOnExit();
       });
-      
+
       // Handle graceful shutdown
       process.on('SIGINT', async () => {
         log('Received SIGINT, cleaning up...');
@@ -185,16 +252,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         await cleanupOnExit();
         process.exit(0);
       });
-      
+
       process.on('SIGTERM', async () => {
         log('Received SIGTERM, cleaning up...');
         clearInterval(cleanupInterval);
         await cleanupOnExit();
         process.exit(0);
       });
-      
     } catch (error) {
-      log(`Warning: Temp cleanup system initialization failed: ${error}`, 'startup');
+      log(
+        `Warning: Temp cleanup system initialization failed: ${error}`,
+        'startup'
+      );
       // Continue startup even if cleanup fails
     }
   } else {
@@ -229,7 +298,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
       res.status(status).json({
         error: status >= 500 ? 'Internal Server Error' : message,
-        requestId: requestId,
+        requestId,
       });
     } catch (handlerError) {
       // If the error handler itself fails, log and return a safe response
