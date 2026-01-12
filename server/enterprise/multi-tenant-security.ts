@@ -92,6 +92,7 @@ interface SecurityPolicy {
     medium: number;
     low: number;
   };
+  name?: string;
   enabledFeatures: string[];
   customRules: CustomRule[];
   geoRestrictions: string[];

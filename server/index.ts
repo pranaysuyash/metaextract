@@ -198,14 +198,31 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         // Cleanup monitoring on exit
         process.on('exit', () => {
           securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+          // Stop periodic security event flush if running
+          try {
+            // securityEventLogger is a singleton that may have a running timer
+            (securityEventLogger as any)?.stopPeriodicFlush?.();
+          } catch (e) {
+            // ignore
+          }
         });
         
         process.on('SIGINT', async () => {
           securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+          try {
+            (securityEventLogger as any)?.stopPeriodicFlush?.();
+          } catch (e) {
+            // ignore
+          }
         });
         
         process.on('SIGTERM', async () => {
           securityAlertManager.stopPeriodicMonitoring(monitoringInterval);
+          try {
+            (securityEventLogger as any)?.stopPeriodicFlush?.();
+          } catch (e) {
+            // ignore
+          }
         });
         
       } catch (error) {

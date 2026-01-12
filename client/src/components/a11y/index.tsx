@@ -428,7 +428,7 @@ export const AccessibleTable: React.FC<AccessibleTableProps> = ({
                   key={cellIndex}
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"
                 >
-                  {cell}
+                  {String(cell)}
                 </td>
               ))}
             </tr>

@@ -42,7 +42,7 @@ interface AlertChannel {
 
 interface SecurityAlert {
   id?: string;
-  type: 'security' | 'performance' | 'abuse';
+  type: 'security' | 'performance' | 'abuse' | string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   message: string;

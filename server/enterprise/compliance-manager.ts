@@ -222,8 +222,8 @@ interface BreachNotification {
   discoveryDate: Date;
   containmentDate?: Date;
   notificationDate?: Date;
-  regulatoryNotifications: RegulatoryNotification[];
-  affectedIndividuals: number;
+  regulatoryNotifications?: RegulatoryNotification[];
+  affectedIndividuals?: number;
   description: string;
   rootCause: string;
   containmentActions: string[];
@@ -282,8 +282,9 @@ export class ComplianceManager {
       findings: [],
       remediationPlan: [],
       evidence: [],
-      auditor
-    };
+      auditor,
+      createdAt: new Date()
+    }; 
 
     const client = await this.pool.connect();
     
@@ -377,7 +378,7 @@ export class ComplianceManager {
 
       console.log(`[Compliance] Completed ${audit.complianceType} audit: ${auditId}`);
       
-      return await this.getAuditById(auditId);
+      return (await this.getAuditById(auditId))!; 
       
     } catch (error) {
       console.error('[Compliance] Audit failed:', error);
@@ -406,7 +407,7 @@ export class ComplianceManager {
       await this.monitorPCIRequirements(customerId);
       
       // Generate compliance report
-      await this.generateComplianceReport(customerId);
+      await this.generateComplianceReport(customerId, 'comprehensive');
       
       console.log(`[Compliance] Continuous monitoring completed for customer: ${customerId}`);
       

@@ -101,15 +101,10 @@ interface DeepLearningResult {
   isThreat: boolean;
   confidence: number;
   threatScore: number;
-  modelPredictions: {
-    lstm: number;
-    cnn: number;
-    autoencoder: number;
-    ensemble: number;
-  };
+  modelPredictions: Record<string, number>;
   featureImportance: Record<string, number>;
   explanation: string;
-  recommendedAction: 'allow' | 'challenge' | 'block';
+  recommendedAction: 'allow' | 'challenge' | 'block' | 'monitor';
   timestamp: Date;
 }
 
@@ -720,7 +715,8 @@ export class DeepLearningModelManager {
       imageData[pixelIndex] = featureArray[i] / 100; // Normalize
     }
     
-    return tf.tensor4d([imageData.reshape([28, 28, 1])]);
+    const imgTensor = tf.tensor(imageData as any).reshape([28, 28, 1]);
+    return (imgTensor as any).expandDims(0) as tf.Tensor4D;
   }
 
   private calculateVariance(values: number[]): number {
@@ -860,22 +856,23 @@ export class DeepLearningModelManager {
       batchSize: DL_CONFIG.LSTM.BATCH_SIZE,
       epochs: DL_CONFIG.LSTM.EPOCHS,
       validationSplit: DL_CONFIG.TRAINING.VALIDATION_SPLIT,
-      callbacks: {
-        onEpochEnd: (epoch, logs) => {
-          if (epoch % 10 === 0) {
-            console.log(`[DeepLearning] ${modelName} - Epoch ${epoch}: loss=${logs?.loss?.toFixed(4)}, accuracy=${logs?.accuracy?.toFixed(4)}`);
-          }
-        },
-        earlyStopping: {
-          patience: DL_CONFIG.TRAINING.EARLY_STOPPING_PATIENCE,
+      callbacks: [
+        tf.callbacks.earlyStopping({
           monitor: 'val_loss',
-          mode: 'min'
+          patience: DL_CONFIG.TRAINING.EARLY_STOPPING_PATIENCE
+        }),
+        {
+          onEpochEnd: async (epoch: number, logs: any) => {
+            if (epoch % 10 === 0) {
+              console.log(`[DeepLearning] ${modelName} - Epoch ${epoch}: loss=${logs?.loss?.toFixed(4)}, accuracy=${logs?.accuracy?.toFixed(4)}`);
+            }
+          }
         }
-      }
+      ]
     });
 
     // Store model performance
-    const finalAccuracy = history.history.accuracy?.[history.history.accuracy.length - 1] || 0;
+    const finalAccuracy = Number(history.history.accuracy?.[history.history.accuracy.length - 1] || 0);
     this.modelPerformance.set(modelName, finalAccuracy);
     
     console.log(`[DeepLearning] ${modelName} final accuracy: ${(finalAccuracy * 100).toFixed(2)}%`);
@@ -941,11 +938,10 @@ export class DeepLearningModelManager {
       if (this.models.has('ensemble')) {
         const ensembleModel = this.models.get('ensemble')!;
         await ensembleModel.fit(inputTensor, labelTensor, {
-          epochs: 1,
-          learningRate: learningRate
+          epochs: 1
         });
       }
-      
+
       inputTensor.dispose();
       labelTensor.dispose();
       

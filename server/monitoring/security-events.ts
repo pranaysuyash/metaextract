@@ -53,7 +53,8 @@ export type SecurityEventType =
   | 'behavioral_analysis_received' // Behavioral analysis data received
   | 'threat_intelligence_lookup' // Threat intelligence lookup performed
   | 'threat_report_submitted' // Threat report submitted
-  | 'security_incident'; // Security incident recorded
+  | 'security_incident' // Security incident recorded
+  | string;
 
 export interface SecurityEvent {
   id?: string;
@@ -63,7 +64,8 @@ export interface SecurityEvent {
   source: string;
   userId?: string;
   sessionId?: string;
-  ipAddress: string;
+  ipAddress?: string;
+  customerId?: string;
   userAgent?: string;
   message?: string;
   details: Record<string, any>;
@@ -109,9 +111,14 @@ export class SecurityEventLogger {
   private readonly BUFFER_SIZE = 1000;
   private readonly FLUSH_INTERVAL = 30 * 1000; // 30 seconds
 
+  private flushTimer: NodeJS.Timeout | null = null;
+
   constructor() {
-    // Start periodic buffer flush
-    this.startPeriodicFlush();
+    // Start periodic buffer flush (skip in test environment to avoid
+    // background timers interfering with Jest global teardown and flakiness)
+    if (process.env.NODE_ENV !== 'test') {
+      this.startPeriodicFlush();
+    }
   }
 
   /**
@@ -338,11 +345,23 @@ export class SecurityEventLogger {
    * Start periodic buffer flush
    */
   private startPeriodicFlush(): void {
-    setInterval(async () => {
+    // Store timer so it can be cleared in tests or on shutdown
+    this.flushTimer = setInterval(async () => {
       if (this.eventBuffer.length > 0) {
         await this.flushBuffer();
       }
     }, this.FLUSH_INTERVAL);
+  }
+
+  /**
+   * Stop periodic buffer flush
+   */
+  public stopPeriodicFlush(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+      console.log('[SecurityEvent] Periodic flush stopped');
+    }
   }
 
   /**
