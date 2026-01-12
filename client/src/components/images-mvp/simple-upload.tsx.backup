@@ -12,7 +12,6 @@ import {
   getImagesMvpSessionId,
   trackImagesMvpEvent,
 } from '@/lib/images-mvp-analytics';
-import { ExtractionHeader } from '@/components/images-mvp/extraction-header';
 import {
   createDefaultQuoteOps,
   fetchImagesMvpQuote,
@@ -39,8 +38,6 @@ export function SimpleUploadZone() {
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
-  const [trackerConnected, setTrackerConnected] = useState(false);
-  const [trackerHasUpdate, setTrackerHasUpdate] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [quoteOps, setQuoteOps] = useState<ImagesMvpQuoteOps>(
     createDefaultQuoteOps()
@@ -72,21 +69,20 @@ export function SimpleUploadZone() {
   ): Promise<{ width: number; height: number } | null> => {
     try {
       const objectUrl = URL.createObjectURL(file);
-      const result = await new Promise<{
-        width: number;
-        height: number;
-      } | null>(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          resolve({ width: img.width, height: img.height });
-          URL.revokeObjectURL(objectUrl);
-        };
-        img.onerror = () => {
-          resolve(null);
-          URL.revokeObjectURL(objectUrl);
-        };
-        img.src = objectUrl;
-      });
+      const result = await new Promise<{ width: number; height: number } | null>(
+        resolve => {
+          const img = new Image();
+          img.onload = () => {
+            resolve({ width: img.width, height: img.height });
+            URL.revokeObjectURL(objectUrl);
+          };
+          img.onerror = () => {
+            resolve(null);
+            URL.revokeObjectURL(objectUrl);
+          };
+          img.src = objectUrl;
+        }
+      );
       return result;
     } catch {
       return null;
@@ -207,8 +203,7 @@ export function SimpleUploadZone() {
 
   useEffect(() => {
     if (openedFromQueryRef.current) return;
-    const pricingFlag =
-      searchParams.get('pricing') || searchParams.get('credits');
+    const pricingFlag = searchParams.get('pricing') || searchParams.get('credits');
     if (!pricingFlag) return;
     openedFromQueryRef.current = true;
     setShowPricingModal(true);
@@ -252,8 +247,7 @@ export function SimpleUploadZone() {
   }, []);
 
   const activeQuoteEntry =
-    quoteData?.quote?.perFile?.find(entry => entry.id === pendingFileId) ??
-    null;
+    quoteData?.quote?.perFile?.find(entry => entry.id === pendingFileId) ?? null;
 
   const handleOpsToggle = (key: keyof ImagesMvpQuoteOps) => {
     const nextOps = { ...quoteOps, [key]: !quoteOps[key] };
@@ -271,6 +265,7 @@ export function SimpleUploadZone() {
   };
 
   const handleFile = async (file: File) => {
+    console.log('handleFile called with file:', file.name);
     const ext = getExtension(file.name);
     const mimeType = file.type || 'application/octet-stream';
     const sizeBucket = getFileSizeBucket(file.size);
@@ -284,6 +279,7 @@ export function SimpleUploadZone() {
     });
 
     const fileId = crypto.randomUUID();
+    console.log('setting pendingFile to', file.name);
     setPendingFile(file);
     setPendingFileId(fileId);
     setPendingDimensions(null);
@@ -357,9 +353,6 @@ export function SimpleUploadZone() {
       getImagesMvpSessionId() ||
       `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setCurrentSessionId(sessionId);
-    // reset tracker flags and start tracker
-    setTrackerConnected(false);
-    setTrackerHasUpdate(false);
     setShowProgressTracker(true);
     const formData = new FormData();
     sessionStorage.setItem('images_mvp_status', 'processing');
@@ -431,12 +424,6 @@ export function SimpleUploadZone() {
         xhr.onerror = () => reject({ message: 'Network error' });
 
         xhr.open('POST', '/api/images_mvp/extract');
-        // Add authentication headers and credentials
-        const authToken = localStorage.getItem('auth_token');
-        if (authToken) {
-          xhr.setRequestHeader('Authorization', 'Bearer ' + authToken);
-        }
-        xhr.withCredentials = true;
         xhr.send(formData);
       });
 
@@ -562,8 +549,7 @@ export function SimpleUploadZone() {
       if (status === 415) {
         toast({
           title: 'Unsupported file type',
-          description:
-            'Unsupported file type. Please upload a supported image.',
+          description: 'Unsupported file type. Please upload a supported image.',
           variant: 'destructive',
         });
         return;
@@ -585,9 +571,6 @@ export function SimpleUploadZone() {
       });
     } finally {
       setIsUploading(false);
-      // reset tracker flags
-      setTrackerConnected(false);
-      setTrackerHasUpdate(false);
     }
   };
 
@@ -607,10 +590,6 @@ export function SimpleUploadZone() {
           <ProgressTracker
             sessionId={currentSessionId}
             uploadComplete={uploadProgress >= 100}
-            onConnected={() => setTrackerConnected(true)}
-            onProgressUpdate={(hasUpdate: boolean) =>
-              setTrackerHasUpdate(hasUpdate)
-            }
           />
         </div>
       )}
@@ -675,28 +654,28 @@ export function SimpleUploadZone() {
             ? 'Tap to select image'
             : 'Upload image drop zone. Drag and drop a file here or click to browse.'
         }
-        className={cn(
-          'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
-          isUploading
-            ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
-            : isDragActive
-              ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
-              : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
-        )}
+          className={cn(
+            'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
+            isUploading
+              ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
+              : isDragActive
+                ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
+                : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
+          )}
+
       >
         <input
           id="mvp-upload"
           ref={inputRef}
           type="file"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className=""
           accept="image/*"
           onChange={handleFileSelect}
           title="Upload image"
           data-testid="image-upload-input"
-          aria-hidden={false}
         />
 
-        {isUploading && !(trackerConnected && trackerHasUpdate) ? (
+        {isUploading ? (
           <>
             {/* Progress bar background */}
             <div className="absolute inset-0 bg-black/20 rounded-lg sm:rounded-xl" />
@@ -711,11 +690,8 @@ export function SimpleUploadZone() {
               animate={{ width: `${uploadProgress}%` }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
             />
-            {/* Content overlay (hidden when the WebSocket-based ProgressTracker is active) */}
-            <div
-              className="relative flex flex-col items-center justify-center gap-3 sm:gap-4 w-full h-full"
-              aria-live="polite"
-            >
+            {/* Content overlay */}
+            <div className="relative flex flex-col items-center justify-center gap-3 sm:gap-4 w-full h-full">
               <p className="text-white font-mono text-xs sm:text-sm">
                 {uploadError
                   ? 'Upload Failed'
@@ -740,11 +716,9 @@ export function SimpleUploadZone() {
                 />
               </div>
             </div>
-
             <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
               {isMobile ? 'Tap to select a photo' : 'Drop your image here'}
             </h3>
-
             <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
               {isMobile ? (
                 <>
@@ -754,8 +728,8 @@ export function SimpleUploadZone() {
                     : ''}
                   {!isAuthenticated && (
                     <span className="text-primary text-xs font-mono mt-1 block">
-                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />
-                      2 free checks (no signup)
+                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
+                      free checks (no signup)
                     </span>
                   )}
                 </>
@@ -764,18 +738,18 @@ export function SimpleUploadZone() {
                   Supports JPG, PNG, HEIC, WebP
                   {maxBytesDisplay
                     ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
-                    : ''}{' '}
+                    : ''}
+                  {' '}
                   <br className="hidden sm:block" />
                   {!isAuthenticated && (
                     <span className="text-primary text-xs font-mono mt-1 block">
-                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />
-                      2 free checks (no signup)
+                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
+                      free checks (no signup)
                     </span>
                   )}
                 </>
               )}
             </p>
-
             <Button
               variant="outline"
               size="default"
@@ -783,28 +757,15 @@ export function SimpleUploadZone() {
             >
               Browse Files
             </Button>
-
-            {/* When uploading but tracker not connected, show consolidated extraction header */}
-            {isUploading && !(trackerConnected && trackerHasUpdate) && (
-              <div className="mt-4">
-                <ExtractionHeader
-                  percentage={Math.round(uploadProgress)}
-                  stage={uploadError ? 'Upload Error' : uploadProgress < 100 ? 'Uploading' : 'Extracting Metadata...'}
-                />
-              </div>
-            )}
           </>
         )}
       </label>
 
       {pendingFile && (
         <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <div
-                className="text-sm font-semibold text-white truncate"
-                title={pendingFile.name}
-              >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-white truncate" title={pendingFile.name}>
                 {pendingFile.name}
               </div>
               <div className="text-[11px] text-slate-400">
@@ -814,7 +775,7 @@ export function SimpleUploadZone() {
                   : ' • dimensions pending'}
               </div>
             </div>
-            <div className="text-xs text-slate-300 shrink-0 flex items-center">
+            <div className="text-xs text-slate-300 shrink-0">
               {quoteLoading
                 ? 'Calculating quote...'
                 : activeQuoteEntry?.accepted
@@ -830,36 +791,31 @@ export function SimpleUploadZone() {
           {activeQuoteEntry?.accepted && activeQuoteEntry.breakdown && (
             <div className="mt-3 space-y-2 text-xs text-slate-300">
               {/* Size badge - only show if not standard */}
-              {activeQuoteEntry.mpBucket &&
-                activeQuoteEntry.mpBucket !== 'standard' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
-                      {activeQuoteEntry.mpBucket === 'large'
-                        ? 'Large image'
-                        : activeQuoteEntry.mpBucket}
+              {activeQuoteEntry.mpBucket && activeQuoteEntry.mpBucket !== 'standard' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
+                    {activeQuoteEntry.mpBucket === 'large' ? 'Large image' : activeQuoteEntry.mpBucket}
+                  </span>
+                  {activeQuoteEntry.warnings?.map(warning => (
+                    <span
+                      key={warning}
+                      className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
+                    >
+                      {warning}
                     </span>
-                    {activeQuoteEntry.warnings?.map(warning => (
-                      <span
-                        key={warning}
-                        className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
-                      >
-                        {warning}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
+                  ))}
+                </div>
+              )}
+              
               {/* User-friendly breakdown */}
               <div className="grid gap-1.5 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-300">Base scan</span>
                   <span className="text-white font-semibold">
-                    {activeQuoteEntry.breakdown.base +
-                      activeQuoteEntry.breakdown.embedding}{' '}
-                    credits
+                    {activeQuoteEntry.breakdown.base + activeQuoteEntry.breakdown.embedding} credits
                   </span>
                 </div>
-
+                
                 {activeQuoteEntry.breakdown.ocr > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Text scan</span>
@@ -868,7 +824,7 @@ export function SimpleUploadZone() {
                     </span>
                   </div>
                 )}
-
+                
                 {activeQuoteEntry.breakdown.mp > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Large image fee</span>
@@ -877,9 +833,9 @@ export function SimpleUploadZone() {
                     </span>
                   </div>
                 )}
-
+                
                 <div className="h-px bg-white/10 my-1"></div>
-
+                
                 <div className="flex justify-between items-center">
                   <span className="text-white font-medium">Total</span>
                   <span className="text-white font-bold text-base">

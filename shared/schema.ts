@@ -23,6 +23,7 @@ export const users = pgTable('users', {
   subscriptionId: text('subscription_id'),
   subscriptionStatus: text('subscription_status').default('none'),
   customerId: text('customer_id'),
+  emailVerified: boolean('email_verified').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -132,6 +133,35 @@ export const creditBalances = pgTable('credit_balances', {
   credits: integer('credits').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const emailVerificationTokens = pgTable('email_verification_tokens', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar('user_id')
+    .notNull()
+    .references(() => users.id),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const userSessions = pgTable('user_sessions', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar('user_id')
+    .notNull()
+    .references(() => users.id),
+  sessionId: text('session_id').notNull().unique(),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  userAgent: text('user_agent'),
+  ipAddress: text('ip_address'),
+  revokedAt: timestamp('revoked_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 // Credit grants ("lots") for safe refunding and FIFO consumption
@@ -255,7 +285,9 @@ export const extractionJobs = pgTable('extraction_jobs', {
   completedAt: timestamp('completed_at'),
 });
 
-export const insertExtractionJobSchema = createInsertSchema(extractionJobs).omit({
+export const insertExtractionJobSchema = createInsertSchema(
+  extractionJobs
+).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -419,7 +451,9 @@ export const clientActivity = pgTable('client_activity', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-export const insertClientActivitySchema = createInsertSchema(clientActivity).omit({
+export const insertClientActivitySchema = createInsertSchema(
+  clientActivity
+).omit({
   id: true,
   createdAt: true,
 });
@@ -486,7 +520,9 @@ export const quotaAnalytics = pgTable('quota_analytics', {
   id: varchar('id')
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  date: timestamp('date').notNull().default(sql`CURRENT_DATE`),
+  date: timestamp('date')
+    .notNull()
+    .default(sql`CURRENT_DATE`),
   totalRequests: integer('total_requests').notNull().default(0),
   freeRequests: integer('free_requests').notNull().default(0),
   paidRequests: integer('paid_requests').notNull().default(0),
@@ -497,7 +533,9 @@ export const quotaAnalytics = pgTable('quota_analytics', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-export const insertQuotaAnalyticsSchema = createInsertSchema(quotaAnalytics).omit({
+export const insertQuotaAnalyticsSchema = createInsertSchema(
+  quotaAnalytics
+).omit({
   id: true,
   createdAt: true,
 });
@@ -546,7 +584,9 @@ export const batchResults = pgTable('batch_results', {
   fileSize: bigint('file_size', { mode: 'number' }).notNull(),
   fileType: text('file_type').notNull(),
   authenticityScore: integer('authenticity_score'),
-  metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+  metadata: jsonb('metadata')
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   processingTime: integer('processing_time'),
   errorMessage: text('error_message'),
   createdAt: timestamp('created_at').notNull().defaultNow(),

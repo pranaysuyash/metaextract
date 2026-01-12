@@ -43,12 +43,18 @@ export function trackImagesMvpEvent(
     return;
   }
 
-  fetch('/api/images_mvp/analytics/track', {
+  const res = fetch('/api/images_mvp/analytics/track', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: payload,
     keepalive: true,
-  }).catch(() => {
-    // Best-effort analytics.
   });
+  // In some test environments fetch may be undefined or non-promise; guard against that
+  try {
+    if (res && typeof (res as any).catch === 'function') (res as any).catch(() => {
+      // Best-effort analytics.
+    });
+  } catch (e) {
+    // swallow any synchronous errors
+  }
 }

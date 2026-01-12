@@ -86,7 +86,8 @@ export function csrfProtection(
 ): void {
   // Skip CSRF for GET, HEAD, OPTIONS requests
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    return next();
+    next();
+    return;
   }
 
   // Check for CSRF token in header
@@ -169,7 +170,8 @@ export function enhancedCSRFProtection(
 ): void {
   // Skip CSRF for safe methods
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    return next();
+    next();
+    return;
   }
 
   const userId = (req as any).user?.id;

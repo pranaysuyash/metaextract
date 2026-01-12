@@ -24,6 +24,7 @@ import {
   sendInvalidRequestError,
   sendInternalServerError,
 } from '../utils/error-response';
+import { freeQuotaMiddleware } from '../middleware/free-quota';
 import {
   generateClientToken,
   verifyClientToken,
@@ -40,7 +41,7 @@ import { getClientIP, sanitizeFilename } from '../security-utils';
 import { rateLimitExtraction } from '../rateLimitMiddleware';
 // Utility available for future "Safe Export" feature (stripping metadata for privacy)
 import { processImageBuffer } from '../utils/exif-stripper';
-import { type AuthRequest as ServerAuthRequest } from '../auth';
+import { type AuthRequest as ServerAuthRequest, requireAuth } from '../auth';
 import { getOrSetSessionId } from '../utils/session-id';
 
 // WebSocket progress tracking
@@ -60,8 +61,8 @@ type ProgressBusMessage = {
 
 const PROGRESS_CHANNEL = 'images_mvp:progress';
 const PROGRESS_INSTANCE_ID = crypto.randomUUID();
-let progressPublisher: RedisClientType | null = null;
-let progressSubscriber: RedisClientType | null = null;
+let progressPublisher: any = null;
+let progressSubscriber: any = null;
 let progressBusReady = false;
 let progressBusInit: Promise<void> | null = null;
 
@@ -155,7 +156,7 @@ function publishProgressPayload(
 
   progressPublisher
     .publish(PROGRESS_CHANNEL, JSON.stringify(message))
-    .catch(error => {
+    .catch((error: any) => {
       console.error('Failed to publish progress event:', error);
     });
 }
@@ -314,7 +315,10 @@ function getExtensionFromName(name: string): string | null {
   return name.slice(idx).toLowerCase();
 }
 
-function computeMp(width?: number | null, height?: number | null): number | null {
+function computeMp(
+  width?: number | null,
+  height?: number | null
+): number | null {
   if (!width || !height || width <= 0 || height <= 0) return null;
   const mp = (width * height) / 1_000_000;
   return Number.isFinite(mp) ? Math.round(mp * 10) / 10 : null;
@@ -354,7 +358,10 @@ function resolveMpBucket(mp: number | null): {
 }
 
 function buildQuoteSignature(payload: unknown): string {
-  return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify(payload))
+    .digest('hex');
 }
 
 function getStoredQuote(quoteId: string) {
@@ -445,7 +452,6 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.srw',
   '.rw2',
 ]);
-
 
 function getBaseUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {
@@ -957,8 +963,7 @@ export function registerImagesMvpRoutes(app: Express) {
           typeof req.body?.ops?.embedding === 'boolean'
             ? req.body.ops.embedding
             : true,
-        ocr:
-          typeof req.body?.ops?.ocr === 'boolean' ? req.body.ops.ocr : false,
+        ocr: typeof req.body?.ops?.ocr === 'boolean' ? req.body.ops.ocr : false,
         forensics:
           typeof req.body?.ops?.forensics === 'boolean'
             ? req.body.ops.forensics
@@ -997,7 +1002,7 @@ export function registerImagesMvpRoutes(app: Express) {
                 ? Number(file.height)
                 : null,
         }))
-        .filter(file => file.id && file.name);
+        .filter((file: any) => file.id && file.name);
 
       if (files.length === 0) {
         return res.status(400).json({ error: 'Invalid file metadata' });
@@ -1222,6 +1227,7 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/credits/claim',
+    requireAuth,
     async (req: Request, res: Response) => {
       try {
         const authReq = req as AuthRequest;
@@ -1317,6 +1323,7 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/credits/purchase',
+    requireAuth,
     async (req: Request, res: Response) => {
       try {
         const dodoClient = getDodoClient();
@@ -1411,8 +1418,10 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   // Extraction Endpoint
   // ---------------------------------------------------------------------------
+  // Allow unauthenticated free extractions — quota enforcement handles anonymous limits
   app.post(
     '/api/images_mvp/extract',
+    freeQuotaMiddleware,
     rateLimitExtraction(), // Rate limit: per-IP/user throttling
     upload.single('file'),
     async (req: Request, res: Response) => {
@@ -1608,7 +1617,9 @@ export function registerImagesMvpRoutes(app: Express) {
             // Check for suspicious device behavior
             const isSuspicious = await checkDeviceSuspicious(req, deviceId);
             if (isSuspicious) {
-              console.warn(`[Security] Suspicious device detected: ${deviceId} from IP ${ip}`);
+              console.warn(
+                `[Security] Suspicious device detected: ${deviceId} from IP ${ip}`
+              );
               // For now, just log - in future, could require CAPTCHA
             }
 
@@ -1632,7 +1643,7 @@ export function registerImagesMvpRoutes(app: Express) {
               await incrementUsage(deviceId, ip);
               useTrial = true; // Use filtered trial view for free device extractions
               chargeCredits = false;
-              
+
               // Record success for circuit breaker recovery
               circuitBreaker.recordSuccess();
             } else {
@@ -1682,7 +1693,7 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Extract with enhanced features
-        const pythonTier = 'super';
+        const engineTier = useTrial ? 'free' : 'super';
 
         // Send progress update before extraction
         if (sessionId) {
@@ -1696,7 +1707,7 @@ export function registerImagesMvpRoutes(app: Express) {
 
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
-          pythonTier,
+          engineTier,
           true, // performance
           true, // advanced (needed for authenticity signals)
           req.query.store === 'true',
@@ -1722,6 +1733,7 @@ export function registerImagesMvpRoutes(app: Express) {
         // Add enhanced processing insights
         rawMetadata.extraction_info = {
           ...rawMetadata.extraction_info,
+          tier: engineTier,
           enhanced_extraction: true,
           total_fields_extracted:
             rawMetadata.extraction_info?.fields_extracted || 0,
@@ -1732,8 +1744,15 @@ export function registerImagesMvpRoutes(app: Express) {
         const metadata = transformMetadataForFrontend(
           rawMetadata,
           req.file.originalname,
-          useTrial ? 'free' : 'professional'
+          engineTier
         );
+        delete (metadata as any).tier;
+        if (process.env.NODE_ENV !== 'production') {
+          metadata.debug = {
+            ...(metadata.debug || {}),
+            engine_tier: engineTier,
+          };
+        }
 
         const clientLastModifiedRaw = req.body?.client_last_modified;
         const clientLastModifiedMs = clientLastModifiedRaw
@@ -1805,7 +1824,7 @@ export function registerImagesMvpRoutes(app: Express) {
         // 1. Log extraction analytics (generic) - fire-and-forget is OK for analytics
         storage
           .logExtractionUsage({
-            tier: useTrial ? 'free' : 'professional',
+            tier: useTrial ? 'free' : 'enterprise',
             fileExtension,
             mimeType,
             fileSizeBytes: req.file.size,

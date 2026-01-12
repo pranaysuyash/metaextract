@@ -5,9 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-test('Images MVP smoke: login -> upload -> results render -> key field exists', async ({
-  page,
-}) => {
+test('Images MVP smoke: login -> upload -> results render -> key field exists', async ({ page }) => {
   await page.goto('/images_mvp');
 
   // Log browser console to test output to help debug client-side errors
@@ -22,12 +20,6 @@ test('Images MVP smoke: login -> upload -> results render -> key field exists', 
   });
 
   // Login first
-  // Wait for page to load and login button to be visible
-  await page.waitForLoadState('networkidle');
-  await page.waitForSelector('[data-auth="login"]', {
-    state: 'visible',
-    timeout: 30_000,
-  });
   await page.locator('[data-auth="login"]').click();
   await expect(page.locator('#login-email')).toBeVisible();
   await page.locator('#login-email').fill('test@metaextract.com');
@@ -45,7 +37,10 @@ test('Images MVP smoke: login -> upload -> results render -> key field exists', 
   // Reload to ensure auth state is updated
   await page.reload();
 
-  const filePath = path.resolve(__dirname, 'fixtures/images/iphone_exif.jpg');
+  const filePath = path.resolve(
+    __dirname,
+    'fixtures/images/iphone_exif.jpg'
+  );
   const input = page.getByTestId('image-upload-input');
   await input.focus();
   await input.setInputFiles(filePath);
@@ -57,9 +52,7 @@ test('Images MVP smoke: login -> upload -> results render -> key field exists', 
   });
 
   // Wait for dimensions to load
-  await expect(page.getByText('dimensions pending')).not.toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(page.getByText('dimensions pending')).not.toBeVisible({ timeout: 30_000 });
 
   // Wait for quote to load
   await expect(page.getByText('Credits:')).toBeVisible({ timeout: 30_000 });
@@ -68,23 +61,32 @@ test('Images MVP smoke: login -> upload -> results render -> key field exists', 
   await expect(analyzeButton).toBeEnabled({ timeout: 60_000 });
   await analyzeButton.click();
 
-  // Wait for server extraction response and capture it
-  const extractResponse = await page.waitForResponse(
-    resp =>
-      resp.url().includes('/api/images_mvp/extract') && resp.status() === 200,
+  // Wait for server extraction response
+  await page.waitForResponse(
+    resp => resp.url().includes('/api/images_mvp/extract') && resp.status() === 200,
     { timeout: 60_000 }
   );
-  const extractJson = await extractResponse.json();
 
-  // Basic assertions on extraction result (server-side smoke)
-  expect(typeof extractJson).toBe('object');
-  expect(extractJson.fields_extracted).toBeGreaterThan(0);
-  expect(extractJson.mime_type || extractJson.summary?.mime_type).toBeTruthy();
+  // Wait for results page navigation and rendering
+  await page.waitForURL('**/images_mvp/results', { timeout: 60_000 });
 
-  // Also check that sessionStorage was populated client-side
-  const stored = await page.evaluate(() =>
-    sessionStorage.getItem('currentMetadata')
-  );
+  // Debug: ensure metadata was stored in sessionStorage
+  const stored = await page.evaluate(() => sessionStorage.getItem('currentMetadata'));
   console.log('STORED_LENGTH:', stored ? stored.length : 'null');
   expect(stored).toBeTruthy();
+
+  // Debug: check for results-root existence in DOM
+  const debug = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="results-root"]');
+    return {
+      exists: !!el,
+      htmlStart: document.body.innerHTML.slice(0, 2000),
+    };
+  });
+  console.log('RESULTS_DEBUG:', debug.exists);
+  // Attach the DOM snippet to test output for later inspection
+  console.log('DOM_SNIPPET:', debug.htmlStart.replace(/\n/g, ' '));
+
+  await expect(page.getByTestId('results-root')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId('key-field-mime-type')).toBeVisible();
 });

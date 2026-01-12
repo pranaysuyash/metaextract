@@ -36,6 +36,7 @@ import {
   getCreditCost,
 } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
+import { requireAuth } from '../auth';
 import {
   sendFileTooLargeError,
   sendInvalidFileTypeError,
@@ -876,18 +877,29 @@ export function registerExtractionRoutes(app: Express): void {
   });
 
   // Retrieve saved extraction result
-  app.get('/api/extract/results/:id', async (req: AuthRequest, res) => {
-    try {
-      const result = await storage.getMetadata(req.params.id);
-      if (!result) {
-        return res.status(404).json({ error: 'Result not found' });
+  app.get(
+    '/api/extract/results/:id',
+    requireAuth,
+    async (req: AuthRequest, res) => {
+      try {
+        // Verify user owns this result
+        const result = await storage.getMetadata(req.params.id);
+        if (!result) {
+          return res.status(404).json({ error: 'Result not found' });
+        }
+
+        // Check if user owns this result
+        if (result.userId !== req.user?.id) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
+
+        res.json(result.metadata);
+      } catch (error) {
+        console.error('Failed to retrieve metadata:', error);
+        res.status(500).json({ error: 'Internal server error' });
       }
-      res.json(result.metadata);
-    } catch (error) {
-      console.error('Failed to retrieve metadata:', error);
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 }
 
 export { extractMetadataWithPython, transformMetadataForFrontend };

@@ -9,6 +9,8 @@
  */
 
 import type { Express } from 'express';
+import type { AuthRequest } from '../auth';
+import { requireAuth } from '../auth';
 import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
@@ -64,10 +66,12 @@ export function registerForensicRoutes(app: Express): void {
 
     const capabilities = {
       tier: normalizedTier,
-      advanced_analysis_available: process.env.NODE_ENV === 'development' || normalizedTier !== 'free',
+      advanced_analysis_available:
+        process.env.NODE_ENV === 'development' || normalizedTier !== 'free',
       modules: {
         steganography_detection: {
-          available: process.env.NODE_ENV === 'development' || 
+          available:
+            process.env.NODE_ENV === 'development' ||
             normalizedTier === 'professional' ||
             normalizedTier === 'forensic' ||
             normalizedTier === 'enterprise',
@@ -81,7 +85,8 @@ export function registerForensicRoutes(app: Express): void {
           ],
         },
         manipulation_detection: {
-          available: process.env.NODE_ENV === 'development' ||
+          available:
+            process.env.NODE_ENV === 'development' ||
             normalizedTier === 'professional' ||
             normalizedTier === 'forensic' ||
             normalizedTier === 'enterprise',
@@ -95,7 +100,8 @@ export function registerForensicRoutes(app: Express): void {
           ],
         },
         ai_content_detection: {
-          available: process.env.NODE_ENV === 'development' ||
+          available:
+            process.env.NODE_ENV === 'development' ||
             normalizedTier === 'professional' ||
             normalizedTier === 'forensic' ||
             normalizedTier === 'enterprise',
@@ -107,7 +113,8 @@ export function registerForensicRoutes(app: Express): void {
           ],
         },
         metadata_comparison: {
-          available: process.env.NODE_ENV === 'development' ||
+          available:
+            process.env.NODE_ENV === 'development' ||
             normalizedTier === 'professional' ||
             normalizedTier === 'forensic' ||
             normalizedTier === 'enterprise',
@@ -120,33 +127,50 @@ export function registerForensicRoutes(app: Express): void {
           ],
         },
         timeline_reconstruction: {
-          available: process.env.NODE_ENV === 'development' ||
+          available:
+            process.env.NODE_ENV === 'development' ||
             normalizedTier === 'professional' ||
             normalizedTier === 'forensic' ||
             normalizedTier === 'enterprise',
           description: 'Reconstruct chronological timeline from multiple files',
-          methods: ['Timestamp Correlation', 'Gap Analysis', 'Chain of Custody'],
+          methods: [
+            'Timestamp Correlation',
+            'Gap Analysis',
+            'Chain of Custody',
+          ],
         },
         batch_processing: {
-          available: process.env.NODE_ENV === 'development' || tierConfig.features.batchUpload,
+          available:
+            process.env.NODE_ENV === 'development' ||
+            tierConfig.features.batchUpload,
           description: 'Process multiple files simultaneously',
-          max_files: process.env.NODE_ENV === 'development' ? 100 :
-            normalizedTier === 'enterprise'
+          max_files:
+            process.env.NODE_ENV === 'development'
               ? 100
-              : normalizedTier === 'forensic'
-              ? 50
-              : normalizedTier === 'professional'
-              ? 25
-              : 0,
+              : normalizedTier === 'enterprise'
+                ? 100
+                : normalizedTier === 'forensic'
+                  ? 50
+                  : normalizedTier === 'professional'
+                    ? 25
+                    : 0,
         },
       },
       reporting: {
-        pdf_reports: process.env.NODE_ENV === 'development' || normalizedTier === 'enterprise',
-        forensic_reports: process.env.NODE_ENV === 'development' || normalizedTier === 'enterprise',
-        expert_witness_format: process.env.NODE_ENV === 'development' || normalizedTier === 'enterprise',
+        pdf_reports:
+          process.env.NODE_ENV === 'development' ||
+          normalizedTier === 'enterprise',
+        forensic_reports:
+          process.env.NODE_ENV === 'development' ||
+          normalizedTier === 'enterprise',
+        expert_witness_format:
+          process.env.NODE_ENV === 'development' ||
+          normalizedTier === 'enterprise',
       },
       api_access: {
-        available: process.env.NODE_ENV === 'development' || normalizedTier === 'enterprise',
+        available:
+          process.env.NODE_ENV === 'development' ||
+          normalizedTier === 'enterprise',
         rate_limits: getRateLimits(normalizedTier),
       },
     };
@@ -155,173 +179,182 @@ export function registerForensicRoutes(app: Express): void {
   });
 
   // Batch metadata comparison endpoint
-  app.post('/api/compare/batch', upload.array('files', 50), async (req, res) => {
-    const startTime = Date.now();
-    const tempPaths: string[] = [];
+  app.post(
+    '/api/compare/batch',
+    upload.array('files', 50),
+    async (req, res) => {
+      const startTime = Date.now();
+      const tempPaths: string[] = [];
 
-    try {
-      if (!req.files || !Array.isArray(req.files) || req.files.length < 2) {
-        return res.status(400).json({
-          error: 'At least 2 files required for comparison',
-        });
-      }
-
-      const requestedTier = (req.query.tier as string) || 'enterprise';
-      const normalizedTier = normalizeTier(requestedTier);
-      const pythonTier = toPythonTier(normalizedTier);
-
-      // Comparison requires Professional+ tier (disabled in dev)
-      if (process.env.NODE_ENV !== 'development' && normalizedTier === 'free') {
-        return res.status(403).json({
-          error: 'Batch comparison not available for your plan',
-          current_tier: normalizedTier,
-          required_tier: 'professional',
-        });
-      }
-
-      // Validate all files
-      for (const file of req.files) {
-        const mimeType = file.mimetype || 'application/octet-stream';
-        if (!isFileTypeAllowed(normalizedTier, mimeType)) {
-          return res.status(403).json({
-            error: `File type not allowed: ${file.originalname}`,
-            file_type: mimeType,
+      try {
+        if (!req.files || !Array.isArray(req.files) || req.files.length < 2) {
+          return res.status(400).json({
+            error: 'At least 2 files required for comparison',
           });
         }
-        if (!isFileSizeAllowed(normalizedTier, file.size)) {
+
+        const requestedTier = (req.query.tier as string) || 'enterprise';
+        const normalizedTier = normalizeTier(requestedTier);
+        const pythonTier = toPythonTier(normalizedTier);
+
+        // Comparison requires Professional+ tier (disabled in dev)
+        if (
+          process.env.NODE_ENV !== 'development' &&
+          normalizedTier === 'free'
+        ) {
           return res.status(403).json({
-            error: `File size exceeds limit: ${file.originalname}`,
+            error: 'Batch comparison not available for your plan',
+            current_tier: normalizedTier,
+            required_tier: 'professional',
           });
         }
-      }
 
-      // Write files to temp locations
-      const tempDir = '/tmp/metaextract';
-      await fs.mkdir(tempDir, { recursive: true });
-
-      const fileInfos = [];
-      for (const file of req.files) {
-        const tempPath = path.join(
-          tempDir,
-          `${Date.now()}-${crypto.randomUUID()}-${file.originalname}`
-        );
-        await fs.writeFile(tempPath, file.buffer);
-        tempPaths.push(tempPath);
-        fileInfos.push({
-          tempPath,
-          originalName: file.originalname,
-          size: file.size,
-        });
-      }
-
-      // Extract metadata for all files
-      const metadataResults: Record<string, any> = {};
-      for (const fileInfo of fileInfos) {
-        const rawMetadata = await extractMetadataWithPython(
-          fileInfo.tempPath,
-          pythonTier,
-          false,
-          false,
-          false
-        );
-        metadataResults[fileInfo.originalName] = transformMetadataForFrontend(
-          rawMetadata,
-          fileInfo.originalName,
-          normalizedTier
-        );
-      }
-
-      // Compare metadata between files
-      const fileNames = Object.keys(metadataResults);
-      const comparisons: any[] = [];
-
-      for (let i = 0; i < fileNames.length; i++) {
-        for (let j = i + 1; j < fileNames.length; j++) {
-          const file1 = fileNames[i];
-          const file2 = fileNames[j];
-          const meta1 = metadataResults[file1];
-          const meta2 = metadataResults[file2];
-
-          const differences: any[] = [];
-          const allKeys = new Set([
-            ...Object.keys(meta1.exif || {}),
-            ...Object.keys(meta2.exif || {}),
-          ]);
-
-          let matchCount = 0;
-          let diffCount = 0;
-
-          for (const key of allKeys) {
-            const val1 = meta1.exif?.[key];
-            const val2 = meta2.exif?.[key];
-
-            if (val1 === val2) {
-              matchCount++;
-              differences.push({
-                field: key,
-                file1_value: val1,
-                file2_value: val2,
-                status: 'match',
-              });
-            } else if (val1 === undefined) {
-              diffCount++;
-              differences.push({
-                field: key,
-                file1_value: null,
-                file2_value: val2,
-                status: 'only_in_file2',
-              });
-            } else if (val2 === undefined) {
-              diffCount++;
-              differences.push({
-                field: key,
-                file1_value: val1,
-                file2_value: null,
-                status: 'only_in_file1',
-              });
-            } else {
-              diffCount++;
-              differences.push({
-                field: key,
-                file1_value: val1,
-                file2_value: val2,
-                status: 'different',
-              });
-            }
+        // Validate all files
+        for (const file of req.files) {
+          const mimeType = file.mimetype || 'application/octet-stream';
+          if (!isFileTypeAllowed(normalizedTier, mimeType)) {
+            return res.status(403).json({
+              error: `File type not allowed: ${file.originalname}`,
+              file_type: mimeType,
+            });
           }
+          if (!isFileSizeAllowed(normalizedTier, file.size)) {
+            return res.status(403).json({
+              error: `File size exceeds limit: ${file.originalname}`,
+            });
+          }
+        }
 
-          const totalFields = matchCount + diffCount;
-          const similarityScore =
-            totalFields > 0 ? Math.round((matchCount / totalFields) * 100) : 0;
+        // Write files to temp locations
+        const tempDir = '/tmp/metaextract';
+        await fs.mkdir(tempDir, { recursive: true });
 
-          comparisons.push({
-            file1,
-            file2,
-            similarity_score: similarityScore,
-            matching_fields: matchCount,
-            different_fields: diffCount,
-            differences: differences.slice(0, 100), // Limit to prevent huge responses
+        const fileInfos = [];
+        for (const file of req.files) {
+          const tempPath = path.join(
+            tempDir,
+            `${Date.now()}-${crypto.randomUUID()}-${file.originalname}`
+          );
+          await fs.writeFile(tempPath, file.buffer);
+          tempPaths.push(tempPath);
+          fileInfos.push({
+            tempPath,
+            originalName: file.originalname,
+            size: file.size,
           });
         }
-      }
 
-      res.json({
-        success: true,
-        comparison_id: crypto.randomUUID(),
-        files_compared: fileNames.length,
-        comparisons,
-        processing_time_ms: Date.now() - startTime,
-      });
-    } catch (error) {
-      console.error('Comparison error:', error);
-      res.status(500).json({
-        error: 'Comparison failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      });
-    } finally {
-      await cleanupTempFiles(tempPaths);
+        // Extract metadata for all files
+        const metadataResults: Record<string, any> = {};
+        for (const fileInfo of fileInfos) {
+          const rawMetadata = await extractMetadataWithPython(
+            fileInfo.tempPath,
+            pythonTier,
+            false,
+            false,
+            false
+          );
+          metadataResults[fileInfo.originalName] = transformMetadataForFrontend(
+            rawMetadata,
+            fileInfo.originalName,
+            normalizedTier
+          );
+        }
+
+        // Compare metadata between files
+        const fileNames = Object.keys(metadataResults);
+        const comparisons: any[] = [];
+
+        for (let i = 0; i < fileNames.length; i++) {
+          for (let j = i + 1; j < fileNames.length; j++) {
+            const file1 = fileNames[i];
+            const file2 = fileNames[j];
+            const meta1 = metadataResults[file1];
+            const meta2 = metadataResults[file2];
+
+            const differences: any[] = [];
+            const allKeys = new Set([
+              ...Object.keys(meta1.exif || {}),
+              ...Object.keys(meta2.exif || {}),
+            ]);
+
+            let matchCount = 0;
+            let diffCount = 0;
+
+            for (const key of allKeys) {
+              const val1 = meta1.exif?.[key];
+              const val2 = meta2.exif?.[key];
+
+              if (val1 === val2) {
+                matchCount++;
+                differences.push({
+                  field: key,
+                  file1_value: val1,
+                  file2_value: val2,
+                  status: 'match',
+                });
+              } else if (val1 === undefined) {
+                diffCount++;
+                differences.push({
+                  field: key,
+                  file1_value: null,
+                  file2_value: val2,
+                  status: 'only_in_file2',
+                });
+              } else if (val2 === undefined) {
+                diffCount++;
+                differences.push({
+                  field: key,
+                  file1_value: val1,
+                  file2_value: null,
+                  status: 'only_in_file1',
+                });
+              } else {
+                diffCount++;
+                differences.push({
+                  field: key,
+                  file1_value: val1,
+                  file2_value: val2,
+                  status: 'different',
+                });
+              }
+            }
+
+            const totalFields = matchCount + diffCount;
+            const similarityScore =
+              totalFields > 0
+                ? Math.round((matchCount / totalFields) * 100)
+                : 0;
+
+            comparisons.push({
+              file1,
+              file2,
+              similarity_score: similarityScore,
+              matching_fields: matchCount,
+              different_fields: diffCount,
+              differences: differences.slice(0, 100), // Limit to prevent huge responses
+            });
+          }
+        }
+
+        res.json({
+          success: true,
+          comparison_id: crypto.randomUUID(),
+          files_compared: fileNames.length,
+          comparisons,
+          processing_time_ms: Date.now() - startTime,
+        });
+      } catch (error) {
+        console.error('Comparison error:', error);
+        res.status(500).json({
+          error: 'Comparison failed',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+      } finally {
+        await cleanupTempFiles(tempPaths);
+      }
     }
-  });
+  );
 
   // Timeline reconstruction endpoint
   app.post(
@@ -332,11 +365,7 @@ export function registerForensicRoutes(app: Express): void {
       const tempPaths: string[] = [];
 
       try {
-        if (
-          !req.files ||
-          !Array.isArray(req.files) ||
-          req.files.length === 0
-        ) {
+        if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
           return res.status(400).json({
             error: 'No files uploaded for timeline reconstruction',
           });
@@ -347,7 +376,10 @@ export function registerForensicRoutes(app: Express): void {
         const pythonTier = toPythonTier(normalizedTier);
 
         // Timeline reconstruction requires Professional+ tier (disabled in dev)
-        if (process.env.NODE_ENV !== 'development' && normalizedTier === 'free') {
+        if (
+          process.env.NODE_ENV !== 'development' &&
+          normalizedTier === 'free'
+        ) {
           return res.status(403).json({
             error: 'Timeline reconstruction not available for your plan',
             current_tier: normalizedTier,
@@ -461,7 +493,7 @@ export function registerForensicRoutes(app: Express): void {
           events: allEvents,
           gaps,
           chain_of_custody_complete:
-            gaps.filter((g) => g.suspicious).length === 0,
+            gaps.filter(g => g.suspicious).length === 0,
           first_event: allEvents[0] || null,
           last_event: allEvents[allEvents.length - 1] || null,
           processing_time_ms: Date.now() - startTime,
@@ -487,11 +519,7 @@ export function registerForensicRoutes(app: Express): void {
       const tempPaths: string[] = [];
 
       try {
-        if (
-          !req.files ||
-          !Array.isArray(req.files) ||
-          req.files.length === 0
-        ) {
+        if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
           return res.status(400).json({
             error: 'No files uploaded for forensic analysis',
           });
@@ -502,7 +530,10 @@ export function registerForensicRoutes(app: Express): void {
         const pythonTier = toPythonTier(normalizedTier);
 
         // Forensic reports require Enterprise tier (disabled in dev)
-        if (process.env.NODE_ENV !== 'development' && normalizedTier !== 'enterprise') {
+        if (
+          process.env.NODE_ENV !== 'development' &&
+          normalizedTier !== 'enterprise'
+        ) {
           return res.status(403).json({
             error: 'Forensic reports not available for your plan',
             current_tier: normalizedTier,
@@ -594,11 +625,9 @@ export function registerForensicRoutes(app: Express): void {
         }
 
         // Generate conclusions
-        const highRiskFiles = fileAnalyses.filter(
-          (f) => f.risk_level === 'high'
-        );
+        const highRiskFiles = fileAnalyses.filter(f => f.risk_level === 'high');
         const mediumRiskFiles = fileAnalyses.filter(
-          (f) => f.risk_level === 'medium'
+          f => f.risk_level === 'medium'
         );
 
         const recommendations: string[] = [];
@@ -622,7 +651,7 @@ export function registerForensicRoutes(app: Express): void {
           analyst: 'MetaExtract Forensic Engine v4.0',
           case_summary: {
             total_files: req.files.length,
-            file_names: fileAnalyses.map((f) => f.file_name),
+            file_names: fileAnalyses.map(f => f.file_name),
             analysis_scope: 'Comprehensive forensic metadata analysis',
           },
           files: fileAnalyses,
@@ -630,8 +659,8 @@ export function registerForensicRoutes(app: Express): void {
             overall_assessment: highRiskFiles.length
               ? 'high'
               : mediumRiskFiles.length
-              ? 'medium'
-              : 'low',
+                ? 'medium'
+                : 'low',
             files_analyzed: fileAnalyses.length,
             high_risk_files: highRiskFiles.length,
             medium_risk_files: mediumRiskFiles.length,
@@ -663,100 +692,109 @@ export function registerForensicRoutes(app: Express): void {
   );
 
   // Advanced single file extraction with forensic analysis
-  app.post('/api/extract/advanced', upload.single('file'), async (req, res) => {
-    const startTime = Date.now();
-    let tempPath: string | null = null;
+  app.post(
+    '/api/extract/advanced',
+    requireAuth,
+    upload.single('file'),
+    async (req: AuthRequest, res) => {
+      const startTime = Date.now();
+      let tempPath: string | null = null;
 
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: 'No file uploaded' });
+        }
 
-      const requestedTier = (req.query.tier as string) || 'enterprise';
-      const normalizedTier = normalizeTier(requestedTier);
-      const pythonTier = toPythonTier(normalizedTier);
-      const mimeType = req.file.mimetype || 'application/octet-stream';
+        const requestedTier = (req.query.tier as string) || 'enterprise';
+        const normalizedTier = normalizeTier(requestedTier);
+        const pythonTier = toPythonTier(normalizedTier);
+        const mimeType = req.file.mimetype || 'application/octet-stream';
 
-      // Advanced extraction requires Professional+ tier (disabled in dev)
-      if (process.env.NODE_ENV !== 'development' && normalizedTier === 'free') {
-        return res.status(403).json({
-          error: 'Advanced extraction not available for your plan',
-          current_tier: normalizedTier,
-          required_tier: 'professional',
+        // Advanced extraction requires Professional+ tier (disabled in dev)
+        if (
+          process.env.NODE_ENV !== 'development' &&
+          normalizedTier === 'free'
+        ) {
+          return res.status(403).json({
+            error: 'Advanced extraction not available for your plan',
+            current_tier: normalizedTier,
+            required_tier: 'professional',
+          });
+        }
+
+        // Validate file type for tier
+        if (!isFileTypeAllowed(normalizedTier, mimeType)) {
+          return res.status(403).json({
+            error: `File type not allowed: ${req.file.originalname}`,
+            file_type: mimeType,
+          });
+        }
+
+        // Validate file size for tier
+        if (!isFileSizeAllowed(normalizedTier, req.file.size)) {
+          return res.status(403).json({
+            error: `File size exceeds limit: ${req.file.originalname}`,
+          });
+        }
+
+        // Write file to temp location
+        const tempDir = '/tmp/metaextract';
+        await fs.mkdir(tempDir, { recursive: true });
+        tempPath = path.join(
+          tempDir,
+          `${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`
+        );
+        await fs.writeFile(tempPath, req.file.buffer);
+
+        // Extract metadata with advanced analysis enabled
+        const rawMetadata = await extractMetadataWithPython(
+          tempPath,
+          pythonTier,
+          false, // includePerformanceMetrics
+          true // enableAdvancedAnalysis
+        );
+
+        const metadata = transformMetadataForFrontend(
+          rawMetadata,
+          req.file.originalname,
+          normalizedTier
+        );
+
+        // Add advanced analysis summary
+        const advancedAnalysis = rawMetadata.advanced_analysis;
+        metadata.advanced_analysis = {
+          enabled: true,
+          processing_time_ms: advancedAnalysis?.processing_time_ms || 0,
+          modules_run: advancedAnalysis?.modules_run || [],
+          forensic_score: advancedAnalysis?.forensic_score || 0,
+          authenticity_assessment:
+            advancedAnalysis?.authenticity_assessment || 'Unknown',
+        };
+
+        const processingMs = Date.now() - startTime;
+
+        res.json({
+          ...metadata,
+          advanced_enabled: true,
+          processing_time_ms: processingMs,
         });
-      }
-
-      // Validate file type for tier
-      if (!isFileTypeAllowed(normalizedTier, mimeType)) {
-        return res.status(403).json({
-          error: `File type not allowed: ${req.file.originalname}`,
-          file_type: mimeType,
+      } catch (error) {
+        const processingMs = Date.now() - startTime;
+        console.error('Advanced extraction error:', error);
+        res.status(500).json({
+          error: 'Advanced extraction failed',
+          details: error instanceof Error ? error.message : 'Unknown error',
+          processing_time_ms: processingMs,
         });
-      }
-
-      // Validate file size for tier
-      if (!isFileSizeAllowed(normalizedTier, req.file.size)) {
-        return res.status(403).json({
-          error: `File size exceeds limit: ${req.file.originalname}`,
-        });
-      }
-
-      // Write file to temp location
-      const tempDir = '/tmp/metaextract';
-      await fs.mkdir(tempDir, { recursive: true });
-      tempPath = path.join(
-        tempDir,
-        `${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`
-      );
-      await fs.writeFile(tempPath, req.file.buffer);
-
-      // Extract metadata with advanced analysis enabled
-      const rawMetadata = await extractMetadataWithPython(
-        tempPath,
-        pythonTier,
-        false, // includePerformanceMetrics
-        true   // enableAdvancedAnalysis
-      );
-
-      const metadata = transformMetadataForFrontend(
-        rawMetadata,
-        req.file.originalname,
-        normalizedTier
-      );
-
-      // Add advanced analysis summary
-      const advancedAnalysis = rawMetadata.advanced_analysis;
-      metadata.advanced_analysis = {
-        enabled: true,
-        processing_time_ms: advancedAnalysis?.processing_time_ms || 0,
-        modules_run: advancedAnalysis?.modules_run || [],
-        forensic_score: advancedAnalysis?.forensic_score || 0,
-        authenticity_assessment: advancedAnalysis?.authenticity_assessment || 'Unknown',
-      };
-
-      const processingMs = Date.now() - startTime;
-
-      res.json({
-        ...metadata,
-        advanced_enabled: true,
-        processing_time_ms: processingMs,
-      });
-    } catch (error) {
-      const processingMs = Date.now() - startTime;
-      console.error('Advanced extraction error:', error);
-      res.status(500).json({
-        error: 'Advanced extraction failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        processing_time_ms: processingMs,
-      });
-    } finally {
-      if (tempPath) {
-        try {
-          await fs.unlink(tempPath);
-        } catch (error) {
-          console.error('Failed to delete temp file:', tempPath, error);
+      } finally {
+        if (tempPath) {
+          try {
+            await fs.unlink(tempPath);
+          } catch (error) {
+            console.error('Failed to delete temp file:', tempPath, error);
+          }
         }
       }
     }
-  });
+  );
 }

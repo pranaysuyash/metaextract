@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Zap, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProgressBar } from './progress-bar';
+import { ExtractionHeader } from './extraction-header';
 
 interface ProgressData {
   percentage: number;
@@ -18,12 +19,16 @@ interface ProgressTrackerProps {
   sessionId: string;
   className?: string;
   uploadComplete?: boolean;
+  onConnected?: () => void;
+  onProgressUpdate?: (hasUpdate: boolean) => void;
 }
 
 export function ProgressTracker({
   sessionId,
   className,
   uploadComplete = false,
+  onConnected,
+  onProgressUpdate,
 }: ProgressTrackerProps) {
   const shouldReduceMotion = useReducedMotion();
   const [progress, setProgress] = useState<ProgressData>({
@@ -38,66 +43,96 @@ export function ProgressTracker({
     // WebSocket connection for real-time progress updates
     // Uses Vite proxy with ws: true, no need for hardcoded port
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(
+    // Try Vite proxy first (uses same host), if it closes before connecting try backend directly (port 3000)
+    let attemptedFallback = false;
+    let ws = new WebSocket(
       `${wsProtocol}//${window.location.host}/api/images_mvp/progress/${sessionId}`
     );
 
-    ws.onopen = () => {
-      console.log('Progress tracker connected');
-      setWsConnected(true);
-    };
+    const setupHandlers = (sock: WebSocket) => {
+      sock.onopen = () => {
+        console.log('Progress tracker connected');
+        setWsConnected(true);
+        if (typeof onConnected === 'function') onConnected();
+      };
 
-    ws.onmessage = event => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'progress') {
-          setHasProgressUpdate(true);
-          setProgress({
-            percentage: data.percentage ?? 0,
-            stage: data.stage,
-            eta: data.estimated_time_remaining,
-            quality_metrics: data.quality_metrics,
-          });
+      sock.onmessage = event => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'progress') {
+            setHasProgressUpdate(true);
+            if (typeof onProgressUpdate === 'function') onProgressUpdate(true);
+            setProgress({
+              percentage: data.percentage ?? 0,
+              stage: data.stage,
+              eta: data.estimated_time_remaining,
+              quality_metrics: data.quality_metrics,
+            });
 
-          // Check if extraction is complete
-          if ((data.percentage ?? 0) >= 100) {
+            // Check if extraction is complete
+            if ((data.percentage ?? 0) >= 100) {
+              setIsComplete(true);
+              setTimeout(() => {
+                sock.close();
+              }, 1000);
+            }
+          } else if (data.type === 'complete') {
+            setHasProgressUpdate(true);
+            if (typeof onProgressUpdate === 'function') onProgressUpdate(true);
             setIsComplete(true);
-            setTimeout(() => {
-              ws.close();
-            }, 1000);
+            setProgress(prev => ({
+              ...prev,
+              percentage: 100,
+              stage: 'Processing complete',
+            }));
+          } else if (data.type === 'error') {
+            setHasProgressUpdate(true);
+            if (typeof onProgressUpdate === 'function') onProgressUpdate(true);
+            setProgress(prev => ({
+              ...prev,
+              stage: data.error || 'Extraction failed',
+            }));
           }
-        } else if (data.type === 'complete') {
-          setHasProgressUpdate(true);
-          setIsComplete(true);
-          setProgress(prev => ({
-            ...prev,
-            percentage: 100,
-            stage: 'Processing complete',
-          }));
-        } else if (data.type === 'error') {
-          setHasProgressUpdate(true);
-          setProgress(prev => ({
-            ...prev,
-            stage: data.error || 'Extraction failed',
-          }));
+        } catch (error) {
+          console.error('Error parsing progress update:', error);
         }
-      } catch (error) {
-        console.error('Error parsing progress update:', error);
-      }
+      };
+
+      sock.onerror = error => {
+        console.error('WebSocket error:', error);
+        setWsConnected(false);
+        if (typeof onProgressUpdate === 'function') onProgressUpdate(false);
+      };
+
+      sock.onclose = ev => {
+        console.log('Progress tracker disconnected', ev);
+        setWsConnected(false);
+        if (typeof onProgressUpdate === 'function') onProgressUpdate(false);
+
+        // If the socket closed before opening and we haven't tried fallback, try backend host directly
+        if (!attemptedFallback && ev && ev.code === 1006) {
+          attemptedFallback = true;
+          try {
+            const backendHost = `${wsProtocol}//${window.location.hostname}:3000`;
+            console.log('Attempting fallback WebSocket to', backendHost);
+            ws = new WebSocket(`${backendHost}/api/images_mvp/progress/${sessionId}`);
+            setupHandlers(ws);
+          } catch (err) {
+            console.error('Fallback WebSocket failed:', err);
+          }
+        }
+      };
     };
 
-    ws.onerror = error => {
-      console.error('WebSocket error:', error);
-      setWsConnected(false);
-    };
+    setupHandlers(ws);
 
-    ws.onclose = () => {
-      console.log('Progress tracker disconnected');
-      setWsConnected(false);
-    };
-
+    // Cleanup on unmount
     return () => {
-      ws.close();
+      try {
+        ws.close();
+      } catch (e) {
+        // ignore
+      }
     };
   }, [sessionId]);
 
@@ -113,14 +148,24 @@ export function ProgressTracker({
   const showConnecting = !wsConnected && !isComplete && !showFinalizing;
 
   return (
-    <div
-      className={cn(
-        'w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10',
-        className
-      )}
-      role="status"
-      aria-live="polite"
-    >
+    <div>
+      {/* Header with summary + progress bar */}
+      <div className="mb-3">
+        <ExtractionHeader
+          percentage={progress.percentage ?? 0}
+          stage={progress.stage}
+          qualityMetrics={progress.quality_metrics}
+        />
+      </div>
+
+      <div
+        className={cn(
+          'w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10',
+          className
+        )}
+        role="status"
+        aria-live="polite"
+      >
       {/* Progress Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -206,5 +251,6 @@ export function ProgressTracker({
         </motion.div>
       )}
     </div>
+  </div>
   );
 }

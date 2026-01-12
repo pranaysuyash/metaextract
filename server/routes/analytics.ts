@@ -14,6 +14,7 @@
 
 import type { Request, Response } from 'express';
 import { z } from 'zod';
+import type { InsertUiEvent } from '@shared/analytics-events';
 import crypto from 'crypto';
 import { db } from '../db';
 import { uiEvents } from '@shared/schema';
@@ -26,7 +27,7 @@ import {
   type ComprehensionEventProperties,
   buildDedupeKey,
   validateEventPayload,
-  type FileSizeBucket,
+  FileSizeBucket,
   UserTier,
   AuthState,
   SourceEntryPoint,
@@ -292,9 +293,8 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
           const validatedEvent = baseAnalyticsSchema.parse(event);
 
           // Validate against prohibited fields
-          const prohibitedCheck = validateProhibitedFields(
-            validatedEvent.properties
-          );
+          const props = validatedEvent.properties as Record<string, any>;
+          const prohibitedCheck = validateProhibitedFields(props);
           if (!prohibitedCheck.valid) {
             errors.push(
               `Event "${validatedEvent.eventName}" contains prohibited fields: ${prohibitedCheck.errors.join(', ')}`
@@ -306,8 +306,8 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
           const dedupeKey = buildDedupeKey(
             validatedEvent.sessionId,
             validatedEvent.eventFamily === 'comprehension' &&
-              validatedEvent.properties.fact
-              ? `${validatedEvent.sessionId}:${validatedEvent.eventName}:${validatedEvent.properties.fact}`
+              props.fact
+              ? `${validatedEvent.sessionId}:${validatedEvent.eventName}:${props.fact}`
               : validatedEvent.eventName
           );
 
@@ -323,10 +323,10 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
             product: validatedEvent.properties.product || 'core',
             eventName: validatedEvent.eventName,
             sessionId: validatedEvent.sessionId,
-            userId: validatedEvent.properties.userId || null,
-            properties: JSON.stringify(validateEvent.properties),
-            ipAddress: validatedEvent.properties.ipPrefixHash || null,
-            userAgent: validatedEvent.properties.uaHash || null,
+            userId: props.userId || null,
+            properties: JSON.stringify(props),
+            ipAddress: props.ipPrefixHash || null,
+            userAgent: props.uaHash || null,
 
             // Coarse dimensions (shared by all events)
             userTier: validatedEvent.userTier || UserTier.ANON,
@@ -466,33 +466,20 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
       res.json({
         version: '1.0.0',
         supportedEventFamilies: ['lifecycle', 'user_intent', 'comprehension'],
-        lifecycleEvents: Object.values(require('@shared/analytics-events'))
-          .LifecycleEvent,
-        userIntentEvents: Object.values(require('@shared/analytics-events'))
-          .UserIntentEvent,
-        comprehensionEvents: Object.values(require('@shared/analytics-events'))
-          .ComprehensionEvent,
-        eventNames: Object.values(require('@shared/analytics-events'))
-          .EventName,
-        keyFactTypes: Object.values(require('@shared/analytics-events'))
-          .KeyFactType,
-        factRevealTriggers: Object.values(require('@shared/analytics-events'))
-          .FactRevealTrigger,
-        prohibitedProperties: require('@shared/analytics-events')
-          .PROHIBITED_PROPERTIES,
+        lifecycleEvents: require('@shared/analytics-events').LifecycleEvent,
+        userIntentEvents: require('@shared/analytics-events').UserIntentEvent,
+        comprehensionEvents: require('@shared/analytics-events').ComprehensionEvent,
+        eventNames: require('@shared/analytics-events').EventName,
+        keyFactTypes: require('@shared/analytics-events').KeyFactType,
+        factRevealTriggers: require('@shared/analytics-events').FactRevealTrigger,
+        prohibitedProperties: require('@shared/analytics-events').PROHIBITED_PROPERTIES,
         coarseDimensions: {
-          fileSizeBuckets: Object.values(require('@shared/analytics-events'))
-            .FileSizeBucket,
-          userTiers: Object.values(require('@shared/analytics-events'))
-            .UserTier,
-          authStates: Object.values(require('@shared/analytics-events'))
-            .AuthState,
-          sourceEntryPoints: Object.values(require('@shared/analytics-events'))
-            .SourceEntryPoint,
-          resultDensities: Object.values(require('@shared/analytics-events'))
-            .ResultDensity,
-          clientTypes: Object.values(require('@shared/analytics-events'))
-            .ClientType,
+          fileSizeBuckets: require('@shared/analytics-events').FileSizeBucket,
+          userTiers: require('@shared/analytics-events').UserTier,
+          authStates: require('@shared/analytics-events').AuthState,
+          sourceEntryPoints: require('@shared/analytics-events').SourceEntryPoint,
+          resultDensities: require('@shared/analytics-events').ResultDensity,
+          clientTypes: require('@shared/analytics-events').ClientType,
         },
       });
     } catch (error) {

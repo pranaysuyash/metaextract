@@ -21,10 +21,67 @@ import {
   isLockedOut,
   recordFailedAttempt,
   clearFailedAttempts,
+  generateUserCSRFToken,
+  validateUserCSRFToken,
 } from './security-utils';
+import {
+  handleEmailVerification,
+  handleResendVerification,
+} from './utils/email-verification';
+import {
+  handleLogoutWithRevocation,
+  handleRevokeAllSessions,
+} from './utils/session-revocation';
 
 // ============================================================================
-// Configuration
+// CSRF Protection Middleware
+// ============================================================================
+
+/**
+ * Simple CSRF protection middleware for auth routes
+ * Validates CSRF token from header against user-specific token
+ */
+function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+  // Skip CSRF for GET, HEAD, OPTIONS requests
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    next();
+    return;
+  }
+
+  // Check for CSRF token in header
+  const csrfToken = req.headers['x-csrf-token'] as string;
+  if (!csrfToken) {
+    res.status(403).json({
+      error: 'CSRF token required',
+      message: 'Please include X-CSRF-Token header',
+    });
+    return;
+  }
+
+  // Get user ID from authenticated request
+  const userId = (req as AuthRequest).user?.id;
+  if (!userId) {
+    res.status(401).json({
+      error: 'Authentication required',
+      message: 'Please authenticate before performing this action',
+    });
+    return;
+  }
+
+  // Validate CSRF token
+  if (!validateUserCSRFToken(csrfToken, userId)) {
+    res.status(403).json({
+      error: 'Invalid CSRF token',
+      message: 'Please refresh the page and try again',
+    });
+    return;
+  }
+
+  next();
+}
+
+// ============================================================================
+// Route Registration
 // ============================================================================
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -361,6 +418,7 @@ export function registerAuthRoutes(app: Express) {
 
   app.post(
     '/api/auth/password-reset/confirm',
+    csrfProtection, // Add CSRF protection for password reset
     async (req: Request, res: Response) => {
       try {
         const validation = passwordResetConfirmSchema.safeParse(req.body);
@@ -728,15 +786,81 @@ export function registerAuthRoutes(app: Express) {
   // Logout
   // -------------------------------------------------------------------------
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
-    // Clear auth token cookie
-    res.clearCookie('auth_token');
-
-    // Optional: Add token to blacklist if implemented
-    // This would prevent reuse of the token before its natural expiration
-    // Not currently implemented as tokens expire in 7 days
-
-    res.json({ success: true, message: 'Logged out' });
+    await handleLogoutWithRevocation(req, res);
   });
+
+  // -------------------------------------------------------------------------
+  // CSRF Token Generation
+  // -------------------------------------------------------------------------
+  app.get(
+    '/api/auth/csrf-token',
+    authMiddleware,
+    async (req: AuthRequest, res: Response) => {
+      try {
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const token = generateUserCSRFToken(req.user.id);
+
+        // Set CSRF token in cookie for client-side access
+        res.cookie('csrf_token', token, {
+          httpOnly: false, // Allow client-side JavaScript to read for AJAX requests
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 60 * 60 * 1000, // 1 hour
+        });
+
+        res.json({
+          token,
+          expiresAt: Date.now() + 60 * 60 * 1000,
+        });
+      } catch (error) {
+        console.error('CSRF token generation error:', error);
+        res.status(500).json({
+          error: 'Failed to generate CSRF token',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // CSRF Token Generation
+  // -------------------------------------------------------------------------
+  app.get(
+    '/api/auth/csrf-token',
+    authMiddleware,
+    async (req: AuthRequest, res: Response) => {
+      try {
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Generate user-specific CSRF token
+        const token = generateUserCSRFToken(req.user.id);
+
+        // Set CSRF token in cookie for client-side access
+        res.cookie('csrf_token', token, {
+          httpOnly: false, // Allow client-side JavaScript to read for AJAX requests
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 60 * 60 * 1000, // 1 hour
+        });
+
+        res.json({
+          token,
+          expiresAt: Date.now() + 60 * 60 * 1000,
+        });
+      } catch (error) {
+        console.error('CSRF token generation error:', error);
+        res.status(500).json({
+          error: 'Failed to generate CSRF token',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
 
   // -------------------------------------------------------------------------
   // Get Current User (Session Validation)
@@ -911,4 +1035,34 @@ export function registerAuthRoutes(app: Express) {
       }
     }
   );
+
+  // -------------------------------------------------------------------------
+  // Email Verification
+  // -------------------------------------------------------------------------
+  app.post('/api/auth/verify-email', async (req: Request, res: Response) => {
+    await handleEmailVerification(req, res);
+  });
+
+  app.post(
+    '/api/auth/resend-verification',
+    requireAuth,
+    async (req: AuthRequest, res: Response) => {
+      await handleResendVerification(req, res);
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // Session Revocation
+  // -------------------------------------------------------------------------
+  app.post(
+    '/api/auth/logout-all',
+    requireAuth,
+    async (req: AuthRequest, res: Response) => {
+      await handleRevokeAllSessions(req, res);
+    }
+  );
+
+  app.post('/api/auth/logout', async (req: Request, res: Response) => {
+    await handleLogoutWithRevocation(req, res);
+  });
 }

@@ -11,6 +11,7 @@
 import type { Express, Response } from 'express';
 import { storage } from '../storage/index';
 import type { AuthRequest } from '../auth';
+import { requireAuth } from '../auth';
 import {
   sendInvalidRequestError,
   sendInternalServerError,
@@ -361,13 +362,13 @@ function getStatusDistribution(results: BatchResult[]): Record<string, number> {
 // ============================================================================
 
 export function registerBatchRoutes(app: Express) {
-  // Batch job management
-  app.get('/api/batch/jobs', getBatchJobs);
-  app.get('/api/batch/jobs/:jobId/results', getBatchResults);
+  // Batch job management - require authentication
+  app.get('/api/batch/jobs', requireAuth, getBatchJobs);
+  app.get('/api/batch/jobs/:jobId/results', requireAuth, getBatchResults);
 
-  // Batch operations
-  app.post('/api/batch/reprocess', reprocessFiles);
-  app.post('/api/batch/export', exportBatchResults);
+  // Batch operations - require authentication
+  app.post('/api/batch/reprocess', requireAuth, reprocessFiles);
+  app.post('/api/batch/export', requireAuth, exportBatchResults);
 
   console.log('✅ Batch routes registered');
 }

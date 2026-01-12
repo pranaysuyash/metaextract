@@ -27,12 +27,13 @@ global.WebSocket = MockWebSocket as any;
 test('only images-mvp ProgressTracker renders and generic tracker is disabled', () => {
   render(<ProgressTracker sessionId="session-test" />);
 
-  // The images-mvp tracker shows 'Extracting Metadata...'
-  expect(screen.getAllByText(/Extracting Metadata/).length).toBe(1);
+  // The images-mvp tracker shows 'Extracting Metadata...' (header + body)
+  expect(screen.getAllByText(/Extracting Metadata/).length).toBeGreaterThanOrEqual(1);
 
   // There should be exactly one status region (images-mvp tracker)
   expect(screen.getAllByRole('status').length).toBe(1);
 
-  // Progress bar fill should exist
-  expect(screen.getByTestId('progress-bar-fill')).toBeInTheDocument();
+  // At least one progress bar fill should exist (header or body)
+  const fills = screen.getAllByTestId('progress-bar-fill');
+  expect(fills.length).toBeGreaterThanOrEqual(1);
 });

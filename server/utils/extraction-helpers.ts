@@ -541,7 +541,7 @@ export function transformMetadataForFrontend(
     gaming_entertainment: raw.gaming_entertainment ?? null,
 
     // Email and Communication metadata
-    email: raw.email?._locked ? { _locked: true } : (raw.email ?? null),
+    email: raw.email?._locked ? { _locked: true, available: false } : (raw.email ?? null),
 
     // Persona interpretation (if available from Python backend)
     persona_interpretation: (raw as any).persona_interpretation ?? undefined,

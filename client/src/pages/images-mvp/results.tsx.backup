@@ -39,13 +39,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -136,10 +130,9 @@ const DENSITY_STORAGE_KEY = 'images_mvp_density';
 export default function ImagesMvpResults() {
   const [metadata, setMetadata] = useState<MvpMetadata | null>(null);
   const [viewState, setViewState] = useState<ResultsViewState>('processing');
-  const [errorInfo, setErrorInfo] = useState<{
-    status?: number;
-    message?: string;
-  } | null>(null);
+  const [errorInfo, setErrorInfo] = useState<{ status?: number; message?: string } | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useState<TabValue>('privacy');
   const [rawSearch, setRawSearch] = useState('');
   const [showOverlayText, setShowOverlayText] = useState(false);
@@ -155,12 +148,6 @@ export default function ImagesMvpResults() {
   const formatHintLogged = useRef(false);
   const paywallLogged = useRef(false);
   const resultsLogged = useRef(false);
-
-  // Calculate limited report status (must be declared before any useEffect)
-  const isLimitedReport =
-    (metadata?.access?.credits_required ?? 0) > 0 &&
-    (metadata?.access?.credits_charged ?? 0) === 0;
-  const canExport = !isLimitedReport;
 
   const hasValue = (value: unknown): boolean => {
     if (value === null || value === undefined) return false;
@@ -219,11 +206,7 @@ export default function ImagesMvpResults() {
         for (const key of Object.keys(record)) {
           if (key.startsWith('_') || key === 'access') continue;
           const value = record[key];
-          if (
-            value !== null &&
-            typeof value === 'object' &&
-            !Array.isArray(value)
-          ) {
+          if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
             count += countMeaningfulFields(value);
           } else if (hasValue(value)) {
             count += 1;
@@ -235,8 +218,7 @@ export default function ImagesMvpResults() {
       const fieldCount =
         typeof parsed.fields_extracted === 'number'
           ? parsed.fields_extracted
-          : typeof parsed.processing_insights?.total_fields_extracted ===
-              'number'
+          : typeof parsed.processing_insights?.total_fields_extracted === 'number'
             ? parsed.processing_insights.total_fields_extracted
             : 0;
       setViewState(meaningfulCount > 0 ? 'success' : 'empty');
@@ -380,7 +362,7 @@ export default function ImagesMvpResults() {
       });
       paywallLogged.current = true;
     }
-  }, [metadata, trackEvent]);
+  }, [metadata, trackEvent, isLimitedReport]);
 
   useEffect(() => {
     if (metadata?.filename) {
@@ -389,83 +371,6 @@ export default function ImagesMvpResults() {
       document.title = 'MetaExtract | Analysis Results';
     }
   }, [metadata?.filename]);
-
-  type DetailEntry = { path: string; valuePreview: string; value: unknown };
-
-  const previewValue = (value: unknown): string => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string')
-      return value.length > 180 ? `${value.slice(0, 180)}…` : value;
-    if (typeof value === 'number' || typeof value === 'boolean')
-      return String(value);
-
-    try {
-      const text = JSON.stringify(value);
-      return text.length > 180 ? `${text.slice(0, 180)}…` : text;
-    } catch {
-      return String(value);
-    }
-  };
-
-  const collectDetailEntries = (
-    obj: unknown,
-    prefix = '',
-    depth = 0,
-    maxDepth = 4,
-    out: DetailEntry[] = [],
-    maxEntries = 200
-  ): DetailEntry[] => {
-    if (out.length >= maxEntries) return out;
-    if (depth > maxDepth) return out;
-    if (obj === null || obj === undefined) return out;
-    if (typeof obj !== 'object') {
-      if (!hasValue(obj)) return out;
-      out.push({
-        path: prefix || '(root)',
-        valuePreview: previewValue(obj),
-        value: obj,
-      });
-      return out;
-    }
-    if (Array.isArray(obj)) {
-      if (!hasValue(obj)) return out;
-      out.push({
-        path: prefix || '(root)',
-        valuePreview: previewValue(obj),
-        value: obj,
-      });
-      return out;
-    }
-    const record = obj as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
-      if (key.startsWith('_')) continue;
-      if (key === 'access') continue;
-      if (key === 'extracted_text') continue;
-      const next = prefix ? `${prefix}.${key}` : key;
-      const value = record[key];
-      if (
-        value !== null &&
-        typeof value === 'object' &&
-        !Array.isArray(value)
-      ) {
-        collectDetailEntries(value, next, depth + 1, maxDepth, out, maxEntries);
-      } else {
-        if (!hasValue(value)) continue;
-        out.push({
-          path: next,
-          valuePreview: previewValue(value),
-          value,
-        });
-      }
-      if (out.length >= maxEntries) break;
-    }
-    return out;
-  };
-
-  const fieldsFound = useMemo(() => {
-    if (!metadata) return 0;
-    return collectDetailEntries(metadata, '', 0, 4, [], 1000).length;
-  }, [metadata]);
 
   if (viewState === 'processing') {
     return (
@@ -570,8 +475,8 @@ export default function ImagesMvpResults() {
                   No metadata found
                 </CardTitle>
                 <CardDescription className="text-slate-200">
-                  We didn’t detect metadata in this file. Try another image or a
-                  different format.
+                  We didn’t detect metadata in this file. Try another image or
+                  a different format.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -591,6 +496,8 @@ export default function ImagesMvpResults() {
   }
   const creditsRequired = metadata.access?.credits_required ?? 0;
   const creditsCharged = metadata.access?.credits_charged ?? 0;
+  const isLimitedReport = creditsRequired > 0 && creditsCharged === 0;
+  const canExport = !isLimitedReport;
 
   const handleDownloadJson = () => {
     if (!canExport) {
@@ -775,7 +682,80 @@ export default function ImagesMvpResults() {
       ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-100'
       : 'border-amber-500/20 bg-amber-500/5 text-amber-100';
 
+  type DetailEntry = { path: string; valuePreview: string; value: unknown };
+  const previewValue = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string')
+      return value.length > 180 ? `${value.slice(0, 180)}…` : value;
+    if (typeof value === 'number' || typeof value === 'boolean')
+      return String(value);
+    try {
+      const text = JSON.stringify(value);
+      return text.length > 180 ? `${text.slice(0, 180)}…` : text;
+    } catch {
+      return String(value);
+    }
+  };
 
+  const collectDetailEntries = (
+    obj: unknown,
+    prefix = '',
+    depth = 0,
+    maxDepth = 4,
+    out: DetailEntry[] = [],
+    maxEntries = 200
+  ): DetailEntry[] => {
+    if (out.length >= maxEntries) return out;
+    if (depth > maxDepth) return out;
+    if (obj === null || obj === undefined) return out;
+    if (typeof obj !== 'object') {
+      if (!hasValue(obj)) return out;
+      out.push({
+        path: prefix || '(root)',
+        valuePreview: previewValue(obj),
+        value: obj,
+      });
+      return out;
+    }
+    if (Array.isArray(obj)) {
+      if (!hasValue(obj)) return out;
+      out.push({
+        path: prefix || '(root)',
+        valuePreview: previewValue(obj),
+        value: obj,
+      });
+      return out;
+    }
+    const record = obj as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      if (key.startsWith('_')) continue;
+      if (key === 'access') continue;
+      if (key === 'extracted_text') continue;
+      const next = prefix ? `${prefix}.${key}` : key;
+      const value = record[key];
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      ) {
+        collectDetailEntries(value, next, depth + 1, maxDepth, out, maxEntries);
+      } else {
+        if (!hasValue(value)) continue;
+        out.push({
+          path: next,
+          valuePreview: previewValue(value),
+          value,
+        });
+      }
+      if (out.length >= maxEntries) break;
+    }
+    return out;
+  };
+
+  const fieldsFound = useMemo(() => {
+    if (!metadata) return 0;
+    return collectDetailEntries(metadata, '', 0, 4, [], 1000).length;
+  }, [metadata]);
 
   const scrollTo = (tab: typeof activeTab, anchorId: string) => {
     setActiveTab(tab);
@@ -1306,8 +1286,8 @@ export default function ImagesMvpResults() {
           </div>
           {!canExport && (
             <p className="text-xs text-slate-500 mb-6">
-              JSON export is available after credits are applied. Summary export
-              stays available.
+              JSON export is available after credits are applied. Summary
+              export stays available.
             </p>
           )}
 
@@ -1337,8 +1317,8 @@ export default function ImagesMvpResults() {
                   LOCKED FIELDS PREVIEW
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-400">
-                  Field names are visible, values are hidden.{' '}
-                  {lockedFields.length} total locked fields.
+                  Field names are visible, values are hidden. {lockedFields.length} total locked
+                  fields.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -1348,9 +1328,7 @@ export default function ImagesMvpResults() {
                       key={field}
                       className="flex items-center justify-between border border-white/5 rounded px-3 py-2 bg-white/5"
                     >
-                      <span className="text-slate-200 truncate pr-2">
-                        {field}
-                      </span>
+                      <span className="text-slate-200 truncate pr-2">{field}</span>
                       <span className="text-slate-500">•••</span>
                     </div>
                   ))}
@@ -1465,10 +1443,10 @@ export default function ImagesMvpResults() {
               </div>
               {(fieldsExtracted || fieldsFound || processingMs) && (
                 <div className="pt-2 text-xs text-slate-500 font-mono">
-                  {fieldsExtracted ? `${fieldsExtracted} fields checked` : null}
-                  {fieldsExtracted && (fieldsFound || processingMs)
-                    ? ' • '
+                  {fieldsExtracted
+                    ? `${fieldsExtracted} fields checked`
                     : null}
+                  {fieldsExtracted && (fieldsFound || processingMs) ? ' • ' : null}
                   {fieldsFound ? `${fieldsFound} fields found` : null}
                   {fieldsFound && processingMs ? ' • ' : null}
                   {processingMs ? `${Math.round(processingMs)} ms` : null}
@@ -1480,9 +1458,7 @@ export default function ImagesMvpResults() {
           <div className="mb-4 flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 font-mono">
-                <span className="whitespace-nowrap">
-                  Focus: {typeof purposeLabel === 'string' ? purposeLabel : ''}
-                </span>
+                <span className="whitespace-nowrap">Focus: {typeof purposeLabel === 'string' ? purposeLabel : ''}</span>
                 <Button
                   variant="ghost"
                   size="sm"

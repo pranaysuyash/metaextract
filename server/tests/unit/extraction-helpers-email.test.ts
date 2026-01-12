@@ -253,7 +253,8 @@ describe('Email Metadata Extraction', () => {
         'professional'
       );
 
-      expect(result.email).toEqual({ _locked: true });
+      // Locked email responses should be normalized to a minimal locked marker
+      expect(result.email).toEqual({ _locked: true, available: false });
     });
   });
 

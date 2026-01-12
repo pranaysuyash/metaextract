@@ -82,7 +82,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Auth middleware - attaches user to request if authenticated
 // Use mock auth if database is not available
-const isDatabaseAvailable = !!db;
+const isDatabaseAvailable = !!process.env.DATABASE_URL;
 if (isDatabaseAvailable) {
   app.use(authMiddleware);
   log('Using database authentication system');
@@ -141,7 +141,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 (async () => {
   // Register auth routes - use mock auth if database is not available
-  const isDatabaseAvailable = !!db;
+  const isDatabaseAvailable = !!process.env.DATABASE_URL;
   if (isDatabaseAvailable) {
     registerAuthRoutes(app);
     log('Registered database authentication routes');
@@ -168,7 +168,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const context =
       process.env.NODE_ENV === 'production' ? 'production' : 'development';
-    
+
     try {
       const message = sanitizeErrorMessage(err.message, context);
       const requestId = (_req as any).requestId || 'unknown';

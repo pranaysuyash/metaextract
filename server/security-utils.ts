@@ -89,8 +89,49 @@ export function sanitizeString(
   maxLength: number = 1000
 ): string {
   // Remove null bytes and control characters
-  // eslint-disable-next-line no-control-regex
-  let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  // Use a safer approach with individual character replacements
+  let sanitized = input;
+
+  // Remove common control characters
+  const controlChars = [
+    '\x00',
+    '\x01',
+    '\x02',
+    '\x03',
+    '\x04',
+    '\x05',
+    '\x06',
+    '\x07',
+    '\x08',
+  ];
+  const otherControlChars = [
+    '\x0B',
+    '\x0C',
+    '\x0E',
+    '\x0F',
+    '\x10',
+    '\x11',
+    '\x12',
+    '\x13',
+    '\x14',
+    '\x15',
+    '\x16',
+    '\x17',
+    '\x18',
+    '\x19',
+    '\x1A',
+    '\x1B',
+    '\x1C',
+    '\x1D',
+    '\x1E',
+    '\x1F',
+    '\x7F',
+  ];
+  const allControlChars = [...controlChars, ...otherControlChars];
+
+  for (const char of allControlChars) {
+    sanitized = sanitized.split(char).join('');
+  }
 
   // Limit length
   if (sanitized.length > maxLength) {
@@ -105,9 +146,43 @@ export function sanitizeString(
  */
 export function sanitizeFilename(filename: string): string {
   // Remove path separators and dangerous characters
-  // eslint-disable-next-line no-control-regex
-  const dangerous = /[<>:"/\\|?*\x00-\x1f]/g;
-  let sanitized = filename.replace(dangerous, '_');
+  const dangerousChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+  const controlChars = [
+    '\x00',
+    '\x01',
+    '\x02',
+    '\x03',
+    '\x04',
+    '\x05',
+    '\x06',
+    '\x07',
+    '\x08',
+    '\x0B',
+    '\x0C',
+    '\x0E',
+    '\x0F',
+    '\x10',
+    '\x11',
+    '\x12',
+    '\x13',
+    '\x14',
+    '\x15',
+    '\x16',
+    '\x17',
+    '\x18',
+    '\x19',
+    '\x1A',
+    '\x1B',
+    '\x1C',
+    '\x1D',
+    '\x1E',
+    '\x1F',
+  ];
+  let sanitized = filename;
+
+  for (const char of [...dangerousChars, ...controlChars]) {
+    sanitized = sanitized.split(char).join('_');
+  }
 
   // Remove leading/trailing dots and spaces
   sanitized = sanitized.trim().replace(/^\.+|\.+$/g, '');
@@ -270,7 +345,10 @@ export const SECURITY_HEADERS = {
 /**
  * Apply security headers to response
  */
-export function applySecurityHeaders(res: Response, req?: { headers?: any }): void {
+export function applySecurityHeaders(
+  res: Response,
+  req?: { headers?: any }
+): void {
   for (const [header, value] of Object.entries(SECURITY_HEADERS)) {
     res.setHeader(header, value);
   }
@@ -301,12 +379,28 @@ interface CSRFEntry {
 }
 
 /**
- * Generate a CSRF token for a user session
+ * Generate a CSRF token for a user session (enhanced version)
  */
 export function generateCSRFToken(): string {
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + CSRF_TOKEN_EXPIRY_MS;
   return `${token}.${expiresAt}`;
+}
+
+/**
+ * Generate a CSRF token for a specific user (enhanced security)
+ */
+export function generateUserCSRFToken(userId: string): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + CSRF_TOKEN_EXPIRY_MS;
+
+  // Create HMAC signature with user ID
+  const hmac = crypto.createHmac('sha256', CSRF_SECRET);
+  const dataToSign = [token, userId, expiresAt.toString()].join('.');
+  hmac.update(dataToSign);
+  const signature = hmac.digest('hex');
+
+  return [token, userId, expiresAt.toString(), signature].join('.');
 }
 
 /**
@@ -322,6 +416,42 @@ export function validateCSRFToken(token: string): boolean {
 
     // Token format validation
     if (tokenValue.length !== 64) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate a user-specific CSRF token
+ */
+export function validateUserCSRFToken(token: string, userId: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 4) return false;
+
+    const tokenValue = parts[0];
+    const tokenUserId = parts[1];
+    const expiresAt = parts[2];
+    const signature = parts[3];
+
+    if (!tokenValue || !tokenUserId || !expiresAt || !signature) return false;
+
+    // Verify user ID matches
+    if (tokenUserId !== userId) return false;
+
+    // Check expiry
+    const expiry = parseInt(expiresAt, 10);
+    if (isNaN(expiry) || Date.now() > expiry) return false;
+
+    // Verify HMAC signature
+    const hmac = crypto.createHmac('sha256', CSRF_SECRET);
+    const dataToVerify = tokenValue + '.' + userId + '.' + expiresAt;
+    hmac.update(dataToVerify);
+    const expectedSignature = hmac.digest('hex');
+
+    if (signature !== expectedSignature) return false;
 
     return true;
   } catch {
@@ -452,6 +582,10 @@ export function recordFailedAttempt(
 export function clearFailedAttempts(identifier: string): void {
   bruteForceStore.delete(identifier);
 }
+
+// ============================================================================
+// Enhanced CSRF Protection
+// ============================================================================
 
 // ============================================================================
 // PII Redaction for Logging

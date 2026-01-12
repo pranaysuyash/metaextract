@@ -112,6 +112,7 @@ export class MemStorage implements IStorage {
       subscriptionId: null,
       subscriptionStatus: null,
       customerId: null,
+      emailVerified: false,
       createdAt: new Date(),
     };
     this.users.set(id, user);

@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Ensure all files are staged
+git add -A
+
+# Run precommit checks (smart based on staged diff size)
+node scripts/precommit-check.cjs

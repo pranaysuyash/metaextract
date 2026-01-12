@@ -190,6 +190,23 @@ describe('Images MVP API Tests', () => {
         'user_1'
       );
     });
+
+    it('POST /api/images_mvp/extract sets metaextract_client cookie for anonymous users', async () => {
+      // multipart/form-data upload using supertest attach
+      (storage.getOrCreateCreditBalance as jest.Mock).mockResolvedValue({ id: 'bal_anon', credits: 0 });
+
+      const response = await request(app)
+        .post('/api/images_mvp/extract')
+        .attach('file', Buffer.from('fake'), 'test.jpg')
+        .expect(200);
+
+      // Should set cookie containing metaextract_client or server-side device token
+      const setCookies = response.headers['set-cookie'] || [];
+      const cookies = Array.isArray(setCookies) ? setCookies.join(';') : String(setCookies);
+      // Historically we set a client token cookie; newer flow may set a server-side device cookie instead.
+      const clientOrDevicePresent = /metaextract_client=/.test(cookies) || /metaextract_device=/.test(cookies);
+      expect(clientOrDevicePresent).toBe(true);
+    });
   });
 
   describe('POST /api/images_mvp/credits/claim', () => {

@@ -63,36 +63,57 @@ async function ensureBalance(
 ) {
   const { userId, sessionId, creditsToAdd } = params;
 
-  const [existing] = await db
-    .select()
-    .from(creditBalances)
-    .where(eq(creditBalances.sessionId, sessionId))
-    .limit(1);
+  console.log(
+    'ensureBalance: userId=%s sessionId=%s creditsToAdd=%d',
+    userId,
+    sessionId,
+    creditsToAdd
+  );
 
-  if (!existing) {
-    const [created] = await db
-      .insert(creditBalances)
-      .values({ userId, sessionId, credits: 0 })
-      .returning();
+  try {
+    const [existing] = await db
+      .select()
+      .from(creditBalances)
+      .where(eq(creditBalances.sessionId, sessionId))
+      .limit(1);
+
+    if (!existing) {
+      console.log(
+        'ensureBalance: creating credit balance row for sessionId=%s',
+        sessionId
+      );
+      const [created] = await db
+        .insert(creditBalances)
+        .values({ userId, sessionId, credits: 0 })
+        .returning();
+
+      if (creditsToAdd > 0) {
+        await db
+          .update(creditBalances)
+          .set({ credits: creditsToAdd, updatedAt: new Date() })
+          .where(eq(creditBalances.id, created.id));
+      }
+
+      return;
+    }
 
     if (creditsToAdd > 0) {
       await db
         .update(creditBalances)
-        .set({ credits: creditsToAdd, updatedAt: new Date() })
-        .where(eq(creditBalances.id, created.id));
+        .set({
+          credits: existing.credits + creditsToAdd,
+          updatedAt: new Date(),
+        })
+        .where(eq(creditBalances.id, existing.id));
     }
-
-    return;
-  }
-
-  if (creditsToAdd > 0) {
-    await db
-      .update(creditBalances)
-      .set({
-        credits: existing.credits + creditsToAdd,
-        updatedAt: new Date(),
-      })
-      .where(eq(creditBalances.id, existing.id));
+  } catch (err) {
+    console.error('ensureBalance: DB operation failed', {
+      userId,
+      sessionId,
+      creditsToAdd,
+      err,
+    });
+    throw err;
   }
 }
 
@@ -166,4 +187,3 @@ main()
   .finally(async () => {
     await closeDatabase().catch(() => {});
   });
-

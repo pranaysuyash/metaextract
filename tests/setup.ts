@@ -11,6 +11,7 @@ process.env.DATABASE_URL =
   'postgresql://test:test@localhost:5432/metaextract_test';
 process.env.SESSION_SECRET = 'test-session-secret-for-testing';
 process.env.TOKEN_SECRET = 'test-token-secret-for-testing';
+process.env.JWT_SECRET = 'test-jwt-secret-for-testing';
 
 // Mock fetch globally
 global.fetch = jest.fn();

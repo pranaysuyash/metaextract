@@ -11,6 +11,8 @@
 import { spawn } from 'child_process';
 
 import type { Express } from 'express';
+import type { AuthRequest } from '../auth';
+import { requireAuth } from '../auth';
 import path from 'path';
 
 // Get the routes directory - compatible with both ESM and CommonJS
@@ -32,7 +34,13 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
 
     // Prefer a configured Python executable (e.g., project's venv) when available
     const configuredPython = process.env.PYTHON_EXECUTABLE;
-    const venvPython = path.join(currentDirPath, '..', '.venv', 'bin', 'python');
+    const venvPython = path.join(
+      currentDirPath,
+      '..',
+      '.venv',
+      'bin',
+      'python'
+    );
     const pythonExec =
       configuredPython ||
       (require('fs').existsSync(venvPython) ? venvPython : 'python3');
@@ -42,15 +50,15 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
     let stdout = '';
     let stderr = '';
 
-    python.stdout.on('data', (data) => {
+    python.stdout.on('data', data => {
       stdout += data.toString();
     });
 
-    python.stderr.on('data', (data) => {
+    python.stderr.on('data', data => {
       stderr += data.toString();
     });
 
-    python.on('close', (code) => {
+    python.on('close', code => {
       if (code !== 0) {
         console.error('metadata_db_cli stderr:', stderr);
         reject(new Error(stderr || 'metadata db cli failed'));
@@ -64,7 +72,7 @@ async function runMetadataDbCli(args: string[]): Promise<any> {
       }
     });
 
-    python.on('error', (err) => {
+    python.on('error', err => {
       reject(new Error(`failed to start metadata db cli: ${err.message}`));
     });
 
@@ -105,25 +113,51 @@ export function registerMetadataRoutes(app: Express): void {
   });
 
   // History endpoint
-  app.get('/api/metadata/history', async (req, res) => {
-    try {
-      const fileId = req.query.file_id as string | undefined;
-      const filePath = req.query.file_path as string | undefined;
-      if (!fileId && !filePath) {
-        return res.status(400).json({ error: 'file_id or file_path required' });
+  app.get(
+    '/api/metadata/history',
+    requireAuth,
+    async (req: AuthRequest, res) => {
+      try {
+        // Verify user is authenticated and get their ID
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Use Python script to get metadata history for this user
+        const pythonProcess = spawn('python3', [
+          path.join(currentDirPath, 'metadata-history.py'),
+          '--user-id',
+          req.user.id,
+          '--limit',
+          '50',
+        ]);
+
+        let data = '';
+        pythonProcess.stdout.on('data', chunk => {
+          data += chunk.toString();
+        });
+
+        pythonProcess.on('close', code => {
+          if (code !== 0) {
+            return res
+              .status(500)
+              .json({ error: 'Failed to get metadata history' });
+          }
+
+          try {
+            const history = JSON.parse(data);
+            res.json({ history });
+          } catch (error) {
+            console.error('Failed to parse metadata history:', error);
+            res.status(500).json({ error: 'Failed to parse metadata history' });
+          }
+        });
+      } catch (error) {
+        console.error('Error getting metadata history:', error);
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const args = ['history'];
-      if (fileId) {
-        args.push('--file-id', fileId);
-      } else if (filePath) {
-        args.push('--file-path', filePath);
-      }
-      const history = await runMetadataDbCli(args);
-      res.json(history);
-    } catch (_error) {
-      res.status(500).json({ error: 'history lookup failed' });
     }
-  });
+  );
 
   // Stats endpoint
   app.get('/api/metadata/stats', async (req, res) => {
@@ -136,37 +170,106 @@ export function registerMetadataRoutes(app: Express): void {
   });
 
   // Favorites list endpoint
-  app.get('/api/metadata/favorites', async (req, res) => {
-    try {
-      const favorites = await runMetadataDbCli(['favorites', '--list']);
-      res.json(favorites);
-    } catch (_error) {
-      res.status(500).json({ error: 'favorites lookup failed' });
+  app.get(
+    '/api/metadata/favorites',
+    requireAuth,
+    async (req: AuthRequest, res) => {
+      try {
+        // Verify user is authenticated and get their ID
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Use Python script to get favorites for this user
+        const pythonProcess = spawn('python3', [
+          path.join(currentDirPath, 'metadata-favorites.py'),
+          '--user-id',
+          req.user.id,
+          '--action',
+          'list',
+        ]);
+
+        let data = '';
+        pythonProcess.stdout.on('data', chunk => {
+          data += chunk.toString();
+        });
+
+        pythonProcess.on('close', code => {
+          if (code !== 0) {
+            return res.status(500).json({ error: 'Failed to get favorites' });
+          }
+
+          try {
+            const favorites = JSON.parse(data);
+            res.json({ favorites });
+          } catch (error) {
+            console.error('Failed to parse favorites:', error);
+            res.status(500).json({ error: 'Failed to parse favorites' });
+          }
+        });
+      } catch (error) {
+        console.error('Error getting favorites:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // Favorites toggle endpoint
-  app.post('/api/metadata/favorites', async (req, res) => {
-    try {
-      const { file_id, notes, tags } = req.body || {};
-      if (!file_id) {
-        return res.status(400).json({ error: 'file_id required' });
+  app.post(
+    '/api/metadata/favorites',
+    requireAuth,
+    async (req: AuthRequest, res) => {
+      try {
+        // Verify user is authenticated and get their ID
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const { fileId, action } = req.body;
+
+        if (!fileId || !action) {
+          return res
+            .status(400)
+            .json({ error: 'fileId and action are required' });
+        }
+
+        // Use Python script to manage favorites for this user
+        const pythonProcess = spawn('python3', [
+          path.join(currentDirPath, 'metadata-favorites.py'),
+          '--user-id',
+          req.user.id,
+          '--action',
+          action,
+          '--file-id',
+          fileId,
+        ]);
+
+        let data = '';
+        pythonProcess.stdout.on('data', chunk => {
+          data += chunk.toString();
+        });
+
+        pythonProcess.on('close', code => {
+          if (code !== 0) {
+            return res
+              .status(500)
+              .json({ error: 'Failed to manage favorites' });
+          }
+
+          try {
+            const result = JSON.parse(data);
+            res.json(result);
+          } catch (error) {
+            console.error('Failed to parse result:', error);
+            res.status(500).json({ error: 'Failed to parse result' });
+          }
+        });
+      } catch (error) {
+        console.error('Error managing favorites:', error);
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const args = ['favorites', '--toggle', '--file-id', String(file_id)];
-      if (notes) {
-        args.push('--notes', String(notes));
-      }
-      if (tags && Array.isArray(tags)) {
-        args.push('--tags', tags.join(','));
-      } else if (typeof tags === 'string') {
-        args.push('--tags', tags);
-      }
-      const result = await runMetadataDbCli(args);
-      res.json(result);
-    } catch (_error) {
-      res.status(500).json({ error: 'favorites toggle failed' });
     }
-  });
+  );
 
   // Similar files endpoint
   app.get('/api/metadata/similar', async (req, res) => {
