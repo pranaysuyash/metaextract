@@ -1,0 +1,17 @@
+Priority,Filename,Lines,Current_Status,Suggested_Action,New_Name
+HIGH,makernotes_ultimate_advanced_extension_ii.py,579,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,camera_makernotes_advanced.py
+HIGH,emerging_technology_ultimate_advanced_extension_ii.py,579,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+HIGH,id3_audio_ultimate_advanced_extension_ii.py,354,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_ii.py,473,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+HIGH,video_professional_ultimate_advanced_extension_iii.py,354,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+HIGH,forensic_security_ultimate_advanced_extension_iii.py,390,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_iii.py,395,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xc.py,271,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,medical_astronomical.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xvii.py,219,HIGH PRIORITY - Real Implementation,IMPLEMENT + RENAME,cardiac_imaging.py
+MEDIUM,pdf_office_ultimate_advanced_extension_ii.py,60,MEDIUM PRIORITY - Some Implementation,REVIEW CONTENT,
+MEDIUM,forensic_security_ultimate_advanced_extension_ii.py,60,MEDIUM PRIORITY - Some Implementation,REVIEW CONTENT,
+MEDIUM,makernotes_ultimate_advanced_extension_iii.py,60,MEDIUM PRIORITY - Some Implementation,REVIEW CONTENT,
+MEDIUM,emerging_technology_ultimate_advanced_extension_iii.py,60,MEDIUM PRIORITY - Some Implementation,REVIEW CONTENT,
+LOW,video_professional_ultimate_advanced_extension_ii.py,40,LOW PRIORITY - Placeholder/Minimal,KEEP/IMPLEMENT LATER,
+LOW,id3_audio_ultimate_advanced_extension_iii.py,27,LOW PRIORITY - Placeholder/Minimal,KEEP/IMPLEMENT LATER,
+LOW,pdf_office_ultimate_advanced_extension_iii.py,27,LOW PRIORITY - Placeholder/Minimal,KEEP/IMPLEMENT LATER,

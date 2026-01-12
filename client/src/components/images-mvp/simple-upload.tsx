@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Upload, Zap } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +11,6 @@ import {
   getImagesMvpSessionId,
   trackImagesMvpEvent,
 } from '@/lib/images-mvp-analytics';
-import { ExtractionHeader } from '@/components/images-mvp/extraction-header';
 import {
   createDefaultQuoteOps,
   fetchImagesMvpQuote,
@@ -39,8 +37,6 @@ export function SimpleUploadZone() {
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const [resumeRequested, setResumeRequested] = useState(false);
-  const [trackerConnected, setTrackerConnected] = useState(false);
-  const [trackerHasUpdate, setTrackerHasUpdate] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [quoteOps, setQuoteOps] = useState<ImagesMvpQuoteOps>(
     createDefaultQuoteOps()
@@ -55,7 +51,6 @@ export function SimpleUploadZone() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const shouldReduceMotion = useReducedMotion();
   const maxBytesDisplay =
     typeof quoteData?.limits?.maxBytes === 'number'
       ? quoteData.limits.maxBytes
@@ -357,9 +352,6 @@ export function SimpleUploadZone() {
       getImagesMvpSessionId() ||
       `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setCurrentSessionId(sessionId);
-    // reset tracker flags and start tracker
-    setTrackerConnected(false);
-    setTrackerHasUpdate(false);
     setShowProgressTracker(true);
     const formData = new FormData();
     sessionStorage.setItem('images_mvp_status', 'processing');
@@ -585,9 +577,6 @@ export function SimpleUploadZone() {
       });
     } finally {
       setIsUploading(false);
-      // reset tracker flags
-      setTrackerConnected(false);
-      setTrackerHasUpdate(false);
     }
   };
 
@@ -600,20 +589,6 @@ export function SimpleUploadZone() {
           setPricingDismissed(true);
         }}
       />
-
-      {/* Real-time Progress Tracker */}
-      {showProgressTracker && currentSessionId && (
-        <div className="mb-4 sm:mb-6">
-          <ProgressTracker
-            sessionId={currentSessionId}
-            uploadComplete={uploadProgress >= 100}
-            onConnected={() => setTrackerConnected(true)}
-            onProgressUpdate={(hasUpdate: boolean) =>
-              setTrackerHasUpdate(hasUpdate)
-            }
-          />
-        </div>
-      )}
 
       {resumeRequested && pendingFile && (
         <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-left">
@@ -661,141 +636,135 @@ export function SimpleUploadZone() {
         </div>
       )}
 
-      <label
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onKeyDown={onKeyDown}
-        htmlFor="mvp-upload"
-        role="button"
-        tabIndex={0}
-        data-testid="image-dropzone"
-        aria-label={
-          isMobile
-            ? 'Tap to select image'
-            : 'Upload image drop zone. Drag and drop a file here or click to browse.'
-        }
-        className={cn(
-          'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
-          isUploading
-            ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
-            : isDragActive
-              ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
-              : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
-        )}
-      >
-        <input
-          id="mvp-upload"
-          ref={inputRef}
-          type="file"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          accept="image/*"
-          onChange={handleFileSelect}
-          title="Upload image"
-          data-testid="image-upload-input"
-          aria-hidden={false}
-        />
-
-        {isUploading && !(trackerConnected && trackerHasUpdate) ? (
-          <>
-            {/* Progress bar background */}
-            <div className="absolute inset-0 bg-black/20 rounded-lg sm:rounded-xl" />
-            {/* Progress bar fill */}
-            <motion.div
-              className={`absolute left-0 top-0 h-full rounded-lg sm:rounded-xl ${
-                uploadError
-                  ? 'bg-gradient-to-r from-red-500/40 to-red-500/20'
-                  : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'
-              }`}
-              initial={{ width: '0%' }}
-              animate={{ width: `${uploadProgress}%` }}
-              transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
-            />
-            {/* Content overlay (hidden when the WebSocket-based ProgressTracker is active) */}
-            <div
-              className="relative flex flex-col items-center justify-center gap-3 sm:gap-4 w-full h-full"
-              aria-live="polite"
-            >
-              <p className="text-white font-mono text-xs sm:text-sm">
-                {uploadError
-                  ? 'Upload Failed'
-                  : uploadProgress < 100
-                    ? 'Uploading...'
-                    : 'Extracting Metadata...'}
-              </p>
-              <span
-                className={`text-xs font-mono ${uploadError ? 'text-red-300' : 'text-emerald-300'}`}
-              >
-                {uploadError ? 'Error' : `${Math.round(uploadProgress)}%`}
-              </span>
-            </div>
-          </>
+      <div className="mb-4 sm:mb-6">
+        {isUploading && showProgressTracker && currentSessionId ? (
+          <ProgressTracker
+            sessionId={currentSessionId}
+            uploadComplete={uploadProgress >= 100}
+            fallbackPercentage={uploadProgress}
+            fallbackStage={
+              uploadProgress < 100
+                ? 'Uploading file to analysis engine'
+                : 'Preparing extraction'
+            }
+          />
         ) : (
-          <>
-            <div className="mb-3 sm:mb-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <Upload
-                  className="w-6 h-6 sm:w-8 sm:h-8 text-primary"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
-              {isMobile ? 'Tap to select a photo' : 'Drop your image here'}
-            </h3>
-
-            <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
-              {isMobile ? (
-                <>
-                  JPG, PNG, HEIC, WebP
-                  {maxBytesDisplay
-                    ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
-                    : ''}
-                  {!isAuthenticated && (
-                    <span className="text-primary text-xs font-mono mt-1 block">
-                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />
-                      2 free checks (no signup)
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  Supports JPG, PNG, HEIC, WebP
-                  {maxBytesDisplay
-                    ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
-                    : ''}{' '}
-                  <br className="hidden sm:block" />
-                  {!isAuthenticated && (
-                    <span className="text-primary text-xs font-mono mt-1 block">
-                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />
-                      2 free checks (no signup)
-                    </span>
-                  )}
-                </>
-              )}
-            </p>
-
-            <Button
-              variant="outline"
-              size="default"
-              className="border-white/10 hover:bg-white/5 hover:text-white w-full sm:w-auto"
-            >
-              Browse Files
-            </Button>
-
-            {/* When uploading but tracker not connected, show consolidated extraction header */}
-            {isUploading && !(trackerConnected && trackerHasUpdate) && (
-              <div className="mt-4">
-                <ExtractionHeader
-                  percentage={Math.round(uploadProgress)}
-                  stage={uploadError ? 'Upload Error' : uploadProgress < 100 ? 'Uploading' : 'Extracting Metadata...'}
-                />
-              </div>
+          <label
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onKeyDown={onKeyDown}
+            htmlFor="mvp-upload"
+            role="button"
+            tabIndex={0}
+            data-testid="image-dropzone"
+            aria-label={
+              isMobile
+                ? 'Tap to select image'
+                : 'Upload image drop zone. Drag and drop a file here or click to browse.'
+            }
+            className={cn(
+              'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
+              isUploading
+                ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
+                : isDragActive
+                  ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
+                  : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
             )}
-          </>
+          >
+            <input
+              id="mvp-upload"
+              ref={inputRef}
+              type="file"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              accept="image/*"
+              disabled={isUploading}
+              onChange={handleFileSelect}
+              title="Upload image"
+              data-testid="image-upload-input"
+              aria-hidden={false}
+            />
+
+            {isUploading ? (
+              <div
+                className="relative flex flex-col items-center justify-center gap-2 sm:gap-3 w-full h-full"
+                aria-live="polite"
+              >
+                <p className="text-white font-mono text-xs sm:text-sm">
+                  {uploadError ? 'Upload Failed' : 'Processing current upload'}
+                </p>
+                {!showProgressTracker && (
+                  <span
+                    className={`text-[11px] font-mono ${uploadError ? 'text-red-300' : 'text-emerald-300'}`}
+                  >
+                    {uploadError ? 'Error' : 'Uploading...'}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="mb-3 sm:mb-4">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                    <Upload
+                      className="w-6 h-6 sm:w-8 sm:h-8 text-primary"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
+                  {isMobile ? 'Tap to select a photo' : 'Drop your image here'}
+                </h3>
+
+                <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
+                  {isMobile ? (
+                    <>
+                      JPG, PNG, HEIC, WebP
+                      {maxBytesDisplay
+                        ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
+                        : ''}
+                      {!isAuthenticated && (
+                        <span className="text-primary text-xs font-mono mt-1 block">
+                          <Zap
+                            className="w-3 h-3 inline mr-1"
+                            aria-hidden="true"
+                          />
+                          2 free checks (no signup)
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      Supports JPG, PNG, HEIC, WebP
+                      {maxBytesDisplay
+                        ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
+                        : ''}{' '}
+                      <br className="hidden sm:block" />
+                      {!isAuthenticated && (
+                        <span className="text-primary text-xs font-mono mt-1 block">
+                          <Zap
+                            className="w-3 h-3 inline mr-1"
+                            aria-hidden="true"
+                          />
+                          2 free checks (no signup)
+                        </span>
+                      )}
+                    </>
+                  )}
+                </p>
+
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="border-white/10 hover:bg-white/5 hover:text-white w-full sm:w-auto"
+                >
+                  Browse Files
+                </Button>
+              </>
+            )}
+          </label>
         )}
-      </label>
+      </div>
 
       {pendingFile && (
         <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left overflow-hidden">

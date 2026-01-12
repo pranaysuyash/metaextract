@@ -24,6 +24,12 @@ jest.mock('../storage/index', () => ({
     transferCredits: jest.fn().mockResolvedValue(undefined),
     recordTrialUsage: jest.fn().mockResolvedValue(undefined),
     getTrialUsageByEmail: jest.fn().mockResolvedValue(undefined),
+    // lrange/get/set used by free-quota implementation
+    lrange: jest.fn().mockResolvedValue([]),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    // optional storage fallback methods
+    setJSON: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -76,6 +82,46 @@ jest.mock('../utils/extraction-helpers', () => ({
     access: {},
     fields_extracted: 10,
     tier: 'professional', // default return
+  }),
+  applyAccessModeRedaction: jest.fn((metadata, mode) => {
+    // Minimal mock redaction for tests - perform same limited operations the real function does
+    if (mode === 'trial_limited') {
+      metadata.iptc = null;
+      metadata.xmp = null;
+      metadata.exif = {};
+      metadata.iptc_raw = null;
+      metadata.xmp_raw = null;
+      metadata._trial_limited = true;
+    } else if (mode === 'device_free') {
+      if (metadata.burned_metadata) {
+        metadata.burned_metadata.extracted_text = null;
+        if (metadata.burned_metadata.parsed_data) {
+          delete metadata.burned_metadata.parsed_data.gps;
+          delete metadata.burned_metadata.parsed_data.plus_code;
+          if (metadata.burned_metadata.parsed_data.location) {
+            const loc = metadata.burned_metadata.parsed_data.location;
+            metadata.burned_metadata.parsed_data.location = {
+              city: loc.city ?? null,
+              state: loc.state ?? null,
+              country: loc.country ?? null,
+            };
+          }
+        }
+      }
+      if (metadata.gps) {
+        if (typeof metadata.gps.latitude === 'number')
+          metadata.gps.latitude = Math.round(metadata.gps.latitude * 100) / 100;
+        if (typeof metadata.gps.longitude === 'number')
+          metadata.gps.longitude = Math.round(metadata.gps.longitude * 100) / 100;
+        delete (metadata.gps as any).google_maps_url;
+      }
+      if (metadata.filesystem) {
+        delete (metadata.filesystem as any).owner;
+        delete (metadata.filesystem as any).owner_uid;
+        delete (metadata.filesystem as any).group;
+        delete (metadata.filesystem as any).group_gid;
+      }
+    }
   }),
   normalizeEmail: jest.fn(email => (email ? email.trim().toLowerCase() : null)),
   getSessionId: jest.fn(
@@ -206,6 +252,56 @@ describe('Images MVP API Tests', () => {
       // Historically we set a client token cookie; newer flow may set a server-side device cookie instead.
       const clientOrDevicePresent = /metaextract_client=/.test(cookies) || /metaextract_device=/.test(cookies);
       expect(clientOrDevicePresent).toBe(true);
+    });
+
+    it('device_free returns hybrid view and access.mode set', async () => {
+      // Simulate device usage below free limit so server will choose device_free mode
+      const freeQuota = require('../utils/free-quota-enforcement');
+      jest.spyOn(freeQuota, 'getClientUsage').mockResolvedValue({ freeUsed: 0 });
+      jest.spyOn(freeQuota, 'incrementUsage').mockResolvedValue(undefined);
+
+      // Mock a rich metadata payload so we can validate redaction
+      (transformMetadataForFrontend as jest.Mock).mockReturnValue({
+        filename: 'test.jpg',
+        access: {},
+        fields_extracted: 100,
+        tier: 'super',
+        exif: { Model: 'X' },
+        calculated: { aspect_ratio: '3:4' },
+        metadata_comparison: { summary: {} },
+        file_integrity: { md5: 'a', sha1: 'b', sha256: 'c', crc32: 'd' },
+        thumbnail: { has_embedded: true, width: 120, height: 160, extra: 'remove' },
+        perceptual_hashes: { phash: 'p', dhash: 'd', ahash: 'a', whash: 'w' },
+        burned_metadata: {
+          has_burned_metadata: true,
+          extracted_text: 'secret',
+          confidence: 0.9,
+          parsed_data: {
+            gps: { latitude: 12.345678, longitude: 98.765432 },
+            plus_code: 'XYZ',
+            location: { street: '1 st', city: 'Town', state: 'ST', country: 'CT' },
+          },
+        },
+        gps: { latitude: 12.345678, longitude: 98.765432, google_maps_url: 'https://maps' },
+        filesystem: { size_bytes: 1234, owner: 'pranay', owner_uid: 501, group: 'wheel' },
+      });
+
+      const response = await request(app)
+        .post('/api/images_mvp/extract')
+        .attach('file', Buffer.from('fake'), 'test.jpg')
+        .expect(200);
+
+      expect(response.body.access.mode).toBe('device_free');
+      expect(response.body.exif).toHaveProperty('Model');
+      expect(response.body.calculated).toHaveProperty('aspect_ratio');
+      expect(response.body.metadata_comparison).toBeTruthy();
+      expect(response.body.file_integrity.md5).toBe('a');
+      expect(response.body.burned_metadata.has_burned_metadata).toBe(true);
+      expect(response.body.burned_metadata.extracted_text).toBeNull();
+      expect(response.body.burned_metadata.parsed_data).not.toHaveProperty('gps');
+      expect(response.body.gps).toHaveProperty('latitude');
+      expect(Math.abs(response.body.gps.latitude - 12.35)).toBeLessThan(0.01);
+      expect(response.body.filesystem.owner).toBeUndefined();
     });
   });
 

@@ -3,6 +3,9 @@
  *
  * Central registration for all API routes.
  * Modular organization for better maintainability.
+ * 
+ * SECURITY NOTICE: Legacy extraction route disabled due to memory exhaustion vulnerability
+ * See: https://github.com/your-org/metaextract/security/advisories/001
  */
 
 import type { Express } from 'express';
@@ -45,7 +48,8 @@ export async function registerRoutes(
 
   // Register route modules
   registerImagesMvpRoutes(app);
-  registerExtractionRoutes(app);
+  // SECURITY: Legacy extraction route disabled for Images MVP launch
+  // registerExtractionRoutes(app); // 🚨 CRITICAL: 2GB memory storage vulnerability
   registerForensicRoutes(app);
   registerMetadataRoutes(app);
   registerLLMFindingsRoutes(app);

@@ -171,6 +171,8 @@ interface MetadataResponse {
     trial_granted?: boolean;
     credits_charged?: number;
     credits_required?: number;
+    mode?: 'device_free' | 'trial_limited' | 'paid';
+    free_used?: number;
   };
   persona_interpretation?: import('@shared/schema').PersonaInterpretation;
   medical_imaging?: Record<string, any>;
@@ -286,7 +288,10 @@ export default function Results() {
   useEffect(() => {
     const access = metadata?.access;
     if (!access) return;
-    const unlocked = access.trial_granted || (access.credits_charged ?? 0) > 0;
+    // Prefer explicit access.mode when available
+    const unlocked = access.mode
+      ? access.mode === 'paid' || access.mode === 'device_free'
+      : access.trial_granted || (access.credits_charged ?? 0) > 0;
     if (unlocked) {
       setIsUnlocked(true);
     }

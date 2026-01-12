@@ -117,6 +117,8 @@ interface MvpMetadata {
     trial_email_present: boolean;
     credits_charged?: number;
     credits_required?: number;
+    mode?: 'device_free' | 'trial_limited' | 'paid';
+    free_used?: number;
   };
   _trial_limited?: boolean;
   client_last_modified_iso?: string;
@@ -157,10 +159,9 @@ export default function ImagesMvpResults() {
   const resultsLogged = useRef(false);
 
   // Calculate limited report status (must be declared before any useEffect)
-  const isLimitedReport =
-    (metadata?.access?.credits_required ?? 0) > 0 &&
-    (metadata?.access?.credits_charged ?? 0) === 0;
-  const canExport = !isLimitedReport;
+  // Report is limited only when in 'trial_limited' mode — device_free is not considered limited
+  const isLimitedReport = metadata?.access?.mode === 'trial_limited';
+  const canExport = metadata?.access?.mode !== 'trial_limited';
 
   const hasValue = (value: unknown): boolean => {
     if (value === null || value === undefined) return false;
@@ -1309,6 +1310,24 @@ export default function ImagesMvpResults() {
               JSON export is available after credits are applied. Summary export
               stays available.
             </p>
+          )}
+
+          {metadata?.access?.mode === 'device_free' && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 bg-primary/10 border border-primary/20 rounded-lg flex items-start gap-3"
+            >
+              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-primary text-sm mb-1">
+                  Free check used ({metadata.access?.free_used ?? 1}/2). Credits not used yet.
+                </h4>
+                <p className="text-slate-200 text-xs leading-relaxed">
+                  Sensitive identifiers hidden: exact GPS, device IDs, owner/contact fields, and OCR-extracted address text. Credits are charged after 2 free checks.
+                </p>
+              </div>
+            </motion.div>
           )}
 
           {isLimitedReport && (

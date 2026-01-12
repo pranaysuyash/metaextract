@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Zap, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProgressBar } from './progress-bar';
-import { ExtractionHeader } from './extraction-header';
 
 interface ProgressData {
   percentage: number;
@@ -19,6 +18,8 @@ interface ProgressTrackerProps {
   sessionId: string;
   className?: string;
   uploadComplete?: boolean;
+  fallbackPercentage?: number;
+  fallbackStage?: string;
   onConnected?: () => void;
   onProgressUpdate?: (hasUpdate: boolean) => void;
 }
@@ -27,6 +28,8 @@ export function ProgressTracker({
   sessionId,
   className,
   uploadComplete = false,
+  fallbackPercentage,
+  fallbackStage,
   onConnected,
   onProgressUpdate,
 }: ProgressTrackerProps) {
@@ -115,7 +118,9 @@ export function ProgressTracker({
           try {
             const backendHost = `${wsProtocol}//${window.location.hostname}:3000`;
             console.log('Attempting fallback WebSocket to', backendHost);
-            ws = new WebSocket(`${backendHost}/api/images_mvp/progress/${sessionId}`);
+            ws = new WebSocket(
+              `${backendHost}/api/images_mvp/progress/${sessionId}`
+            );
             setupHandlers(ws);
           } catch (err) {
             console.error('Fallback WebSocket failed:', err);
@@ -144,113 +149,122 @@ export function ProgressTracker({
     return <Clock className="w-4 h-4" />;
   };
 
+  const effectivePercentage = hasProgressUpdate
+    ? (progress.percentage ?? 0)
+    : (fallbackPercentage ?? progress.percentage ?? 0);
+  const effectiveStage = hasProgressUpdate
+    ? progress.stage
+    : (fallbackStage ?? progress.stage);
   const showFinalizing = uploadComplete && !hasProgressUpdate && !isComplete;
   const showConnecting = !wsConnected && !isComplete && !showFinalizing;
+  const isUploadPhase = !hasProgressUpdate && !isComplete;
+  const headline = isComplete
+    ? 'Extraction Complete!'
+    : isUploadPhase
+      ? 'Uploading image...'
+      : 'Extracting Metadata...';
 
   return (
     <div>
-      {/* Header with summary + progress bar */}
-      <div className="mb-3">
-        <ExtractionHeader
-          percentage={progress.percentage ?? 0}
-          stage={progress.stage}
-          qualityMetrics={progress.quality_metrics}
-        />
-      </div>
-
       <div
         className={cn(
-          'w-full space-y-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10',
+          'w-full space-y-4 p-4 bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.35)]',
           className
         )}
         role="status"
         aria-live="polite"
       >
-      {/* Progress Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <motion.div
-            animate={{ rotate: isComplete ? 0 : shouldReduceMotion ? 0 : 360 }}
-            transition={{
-              duration: 2,
-              repeat: isComplete ? 0 : Infinity,
-              ease: 'linear',
-              repeatType: 'loop',
-            }}
-            style={{ originX: 0.5, originY: 0.5 }}
-          >
-            {getStageIcon(progress.stage)}
-          </motion.div>
-          <span className="text-sm font-medium text-slate-200">
-            {isComplete ? 'Extraction Complete!' : 'Extracting Metadata...'}
+        {/* Progress Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <motion.div
+              animate={{
+                rotate: isComplete ? 0 : shouldReduceMotion ? 0 : 360,
+              }}
+              transition={{
+                duration: 2,
+                repeat: isComplete ? 0 : Infinity,
+                ease: 'linear',
+                repeatType: 'loop',
+              }}
+              style={{ originX: 0.5, originY: 0.5 }}
+            >
+              {getStageIcon(effectiveStage)}
+            </motion.div>
+            <span className="text-sm font-medium text-slate-200">
+              {headline}
+            </span>
+          </div>
+          <span className="text-sm font-mono text-slate-200">
+            {effectivePercentage.toFixed(0)}%
           </span>
         </div>
-        <span className="text-sm font-mono text-slate-200">
-          {(progress.percentage ?? 0).toFixed(0)}%
-        </span>
-      </div>
 
-      {/* Progress Bar */}
-      <ProgressBar percentage={progress.percentage ?? 0} />
+        {/* Progress Bar */}
+        <ProgressBar
+          percentage={effectivePercentage}
+          className="h-2.5"
+          tone="emerald"
+        />
 
-      {/* Current Stage */}
-      <div className="text-center">
-        <p className="text-sm text-slate-200 mb-1">{progress.stage}</p>
-        {progress.eta && progress.eta > 0 && (
-          <p className="text-xs text-slate-300">
-            Estimated time remaining: {Math.ceil(progress.eta / 1000)}s
-          </p>
+        {/* Current Stage */}
+        <div className="text-center">
+          <p className="text-sm text-slate-200 mb-1">{effectiveStage}</p>
+          {progress.eta && progress.eta > 0 && (
+            <p className="text-xs text-slate-300">
+              Estimated time remaining: {Math.ceil(progress.eta / 1000)}s
+            </p>
+          )}
+        </div>
+
+        {/* Quality Metrics */}
+        {progress.quality_metrics && (
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
+            <div className="text-center">
+              <div className="text-xs text-slate-200 mb-1">Confidence</div>
+              <div className="text-lg font-bold text-green-400">
+                {(progress.quality_metrics.confidence_score * 100).toFixed(0)}%
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-slate-200 mb-1">Completeness</div>
+              <div className="text-lg font-bold text-blue-400">
+                {(
+                  progress.quality_metrics.extraction_completeness * 100
+                ).toFixed(0)}
+                %
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Connection Status */}
+        {showFinalizing && (
+          <div className="flex items-center justify-center space-x-2 text-blue-300 text-xs">
+            <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse" />
+            <span>Finalizing upload...</span>
+          </div>
+        )}
+
+        {showConnecting && (
+          <div className="flex items-center justify-center space-x-2 text-yellow-400 text-xs">
+            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+            <span>Preparing live updates...</span>
+          </div>
+        )}
+
+        {/* Completion Animation */}
+        {isComplete && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center justify-center space-x-2 text-green-400"
+          >
+            <CheckCircle className="w-5 h-5" />
+            <span className="text-sm font-medium">Ready to view results!</span>
+          </motion.div>
         )}
       </div>
-
-      {/* Quality Metrics */}
-      {progress.quality_metrics && (
-        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
-          <div className="text-center">
-            <div className="text-xs text-slate-200 mb-1">Confidence</div>
-            <div className="text-lg font-bold text-green-400">
-              {(progress.quality_metrics.confidence_score * 100).toFixed(0)}%
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-slate-200 mb-1">Completeness</div>
-            <div className="text-lg font-bold text-blue-400">
-              {(progress.quality_metrics.extraction_completeness * 100).toFixed(
-                0
-              )}
-              %
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Connection Status */}
-      {showFinalizing && (
-        <div className="flex items-center justify-center space-x-2 text-blue-300 text-xs">
-          <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse" />
-          <span>Finalizing upload...</span>
-        </div>
-      )}
-
-      {showConnecting && (
-        <div className="flex items-center justify-center space-x-2 text-yellow-400 text-xs">
-          <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-          <span>Connecting to progress tracker...</span>
-        </div>
-      )}
-
-      {/* Completion Animation */}
-      {isComplete && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="flex items-center justify-center space-x-2 text-green-400"
-        >
-          <CheckCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">Ready to view results!</span>
-        </motion.div>
-      )}
     </div>
-  </div>
   );
 }

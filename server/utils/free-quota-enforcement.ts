@@ -25,6 +25,7 @@ import {
   verifyDeviceToken as verifyServerDeviceToken,
   isDeviceSuspicious 
 } from './device-token';
+import { getOrSetSessionId } from './session-id';
 // import { trackImagesMvpEvent } from '../lib/images-mvp-analytics';
 
 // Token secret validation - fail fast if not set
@@ -192,8 +193,8 @@ export async function enforceFreeQuota(
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
 
-    // Get or create client token
-    let clientToken = req.cookies[CONFIG.COOKIE_NAME];
+    // Get or create client token (defensive: req.cookies may be undefined in some test environments)
+    let clientToken = req.cookies?.[CONFIG.COOKIE_NAME];
     let clientId: string;
     let isNewToken = false;
 
@@ -277,6 +278,11 @@ async function handleExtractionRequest(
 
     // Check quota
     if (currentCount >= CONFIG.FREE_LIMIT) {
+      const hasCredits = await hasCreditsAvailable(req, res);
+      if (hasCredits) {
+        next();
+        return;
+      }
       // Quota exceeded - handle based on abuse score
       await handleQuotaExceeded(req, res, clientId, ip);
       return;
@@ -299,6 +305,23 @@ async function handleExtractionRequest(
     console.error('Extraction handling error:', error);
     // Allow request but log error - don't break the app
     next();
+  }
+}
+
+async function hasCreditsAvailable(
+  req: Request,
+  res: Response
+): Promise<boolean> {
+  try {
+    const userId = (req as any).user?.id as string | undefined;
+    const balanceKey = userId
+      ? `images_mvp:user:${userId}`
+      : `images_mvp:${getOrSetSessionId(req, res)}`;
+    const balance = await storage.getOrCreateCreditBalance(balanceKey, userId);
+    return (balance?.credits ?? 0) > 0;
+  } catch (error) {
+    console.error('Credit availability check failed:', error);
+    return false;
   }
 }
 

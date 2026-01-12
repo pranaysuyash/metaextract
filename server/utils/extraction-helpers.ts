@@ -552,6 +552,120 @@ export function transformMetadataForFrontend(
   };
 }
 
+// Apply access-mode redactions in a single place so all routes behave consistently
+export function applyAccessModeRedaction(
+  metadata: FrontendMetadataResponse,
+  mode: 'device_free' | 'trial_limited' | 'paid'
+) {
+  if (mode === 'trial_limited') {
+    // Current trial behavior: heavy redaction (same as before)
+    metadata.iptc = null;
+    metadata.xmp = null;
+    metadata.exif = {}; // EXIF cannot be null in FrontendMetadataResponse, so use empty object
+    metadata.iptc_raw = null;
+    metadata.xmp_raw = null;
+    metadata._trial_limited = true;
+    // Mark locked_fields conservatively
+    metadata.locked_fields = Array.from(
+      new Set([...(metadata.locked_fields || []),
+        'filesystem_details',
+        'hashes',
+        'extended_attributes',
+        'thumbnail',
+        'embedded_thumbnails',
+        'perceptual_hashes',
+        'makernote',
+        'gps',
+        'iptc',
+        'xmp',
+        'calculated',
+        'forensic',
+        'burned_metadata',
+        'metadata_comparison'
+      ])
+    );
+  } else if (mode === 'device_free') {
+    // Hybrid mode: keep high-value fields, redact only sensitive identifiers
+
+    // GPS: round coordinates to 2 decimals OR replace with presence flag
+    if (metadata.gps && typeof metadata.gps === 'object') {
+      const lat = Number((metadata.gps as any).latitude ?? NaN);
+      const lon = Number((metadata.gps as any).longitude ?? NaN);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        (metadata.gps as any).latitude = Math.round(lat * 100) / 100;
+        (metadata.gps as any).longitude = Math.round(lon * 100) / 100;
+        // Remove precise map link to avoid exposing exact location
+        if ((metadata.gps as any).google_maps_url) delete (metadata.gps as any).google_maps_url;
+      } else {
+        // No coordinates - keep gps null
+        metadata.gps = null;
+      }
+    }
+
+    // Burned metadata: keep presence and confidence, redact text and parsed precise location
+    if (metadata.burned_metadata) {
+      const bm = metadata.burned_metadata as any;
+      bm.extracted_text = null;
+      if (bm.parsed_data) {
+        if (bm.parsed_data.gps) delete bm.parsed_data.gps;
+        if (bm.parsed_data.plus_code) delete bm.parsed_data.plus_code;
+        // Coarsen address by removing street-level info if present
+        if (bm.parsed_data.location) {
+          // Keep only city/state/country if available
+          const loc = bm.parsed_data.location as any;
+          const coarse: any = {};
+          if (loc.city) coarse.city = loc.city;
+          if (loc.state) coarse.state = loc.state;
+          if (loc.country) coarse.country = loc.country;
+          bm.parsed_data.location = Object.keys(coarse).length ? coarse : null;
+        }
+      }
+    }
+
+    // Extended attributes: keep available/count, redact attribute values
+    if (metadata.extended_attributes && (metadata.extended_attributes as any).attributes) {
+      const attrs = (metadata.extended_attributes as any).attributes;
+      const redacted: Record<string, any> = {};
+      Object.keys(attrs).forEach(k => (redacted[k] = null));
+      (metadata.extended_attributes as any).attributes = redacted;
+    }
+
+    // Filesystem: remove owner and sensitive internals
+    if (metadata.filesystem && typeof metadata.filesystem === 'object') {
+      ['owner','owner_uid','group','group_gid','inode','device','permissions_octal','permissions_human','hard_links'].forEach(k => delete (metadata.filesystem as any)[k]);
+    }
+
+    // Thumbnail: keep presence + basic attrs only
+    if (metadata.thumbnail && typeof metadata.thumbnail === 'object') {
+      const t = metadata.thumbnail as any;
+      metadata.thumbnail = {
+        has_embedded: !!t.has_embedded,
+        width: t.width || null,
+        height: t.height || null,
+      } as any;
+    }
+
+    // Perceptual hashes: keep only basic hashes
+    if (metadata.perceptual_hashes && typeof metadata.perceptual_hashes === 'object') {
+      const p = metadata.perceptual_hashes as any;
+      metadata.perceptual_hashes = {
+        phash: p.phash || null,
+        dhash: p.dhash || null,
+        ahash: p.ahash || null,
+        whash: p.whash || null,
+      } as any;
+    }
+
+    // Enterprise-only bulky buckets: hide to avoid leaking heavy internals
+    ['drone_telemetry','emerging_technology','synthetic_media_analysis','blockchain_provenance'].forEach(k => {
+      if ((metadata as any)[k]) (metadata as any)[k] = null;
+    });
+
+    // Update locked fields to reflect minimal redactions
+    metadata.locked_fields = Array.from(new Set([...(metadata.locked_fields || []), 'gps', 'extended_attributes']));
+  }
+}
+
 type ExtractOptions = {
   ocr?: boolean;
   maxDim?: number;

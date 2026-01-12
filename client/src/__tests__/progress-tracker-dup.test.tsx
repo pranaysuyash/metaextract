@@ -27,8 +27,8 @@ global.WebSocket = MockWebSocket as any;
 test('only images-mvp ProgressTracker renders and generic tracker is disabled', () => {
   render(<ProgressTracker sessionId="session-test" />);
 
-  // The images-mvp tracker shows 'Extracting Metadata...' (header + body)
-  expect(screen.getAllByText(/Extracting Metadata/).length).toBeGreaterThanOrEqual(1);
+  // The images-mvp tracker shows one of the status indicators (progressing to extraction)
+  expect(screen.getAllByText(/Extracting Metadata|Initializing extraction|Uploading image/).length).toBeGreaterThanOrEqual(1);
 
   // There should be exactly one status region (images-mvp tracker)
   expect(screen.getAllByRole('status').length).toBe(1);

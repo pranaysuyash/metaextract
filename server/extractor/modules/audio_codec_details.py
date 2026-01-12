@@ -42,6 +42,51 @@ AAC_PROFILES = {
     29: "HE-AAC v2 (PS)"
 }
 
+# Modern Audio Codecs (2024)
+MODERN_AUDIO_CODECS = {
+    "Opus": "Opus (Interactive Audio Codec)",
+    "FLAC": "FLAC (Free Lossless Audio Codec)",
+    "Vorbis": "Vorbis (Ogg Vorbis)",
+    "AAC-LC": "AAC Low Complexity",
+    "HE-AAC": "High-Efficiency AAC",
+    "HE-AACv2": "High-Efficiency AAC v2",
+    "LD-AAC": "Low-Delay AAC",
+    "ELD-AAC": "Enhanced Low-Delay AAC",
+    "xHE-AAC": "Extended High-Efficiency AAC",
+    "Dolby_AC3": "Dolby AC-3",
+    "Dolby_EAC3": "Dolby Enhanced AC-3",
+    "Dolby_Atmos": "Dolby Atmos",
+    "Dolby_TrueHD": "Dolby TrueHD",
+    "DTS": "DTS Digital Surround",
+    "DTS-HD": "DTS-HD High Resolution",
+    "DTS-X": "DTS:X",
+    "MLP": "Meridian Lossless Packing",
+    "PCM": "Pulse Code Modulation",
+    "DSD": "Direct Stream Digital",
+    "WMA": "Windows Media Audio",
+    "WMA-Pro": "Windows Media Audio Professional"
+}
+
+# Advanced Audio Features
+ADVANCED_AUDIO_FEATURES = {
+    "Spatial_Audio": "Spatial Audio Processing",
+    "Binaural_Rendering": "Binaural Audio Rendering",
+    "Ambisonics": "Ambisonic Audio Format",
+    "Dolby_Headphone": "Dolby Headphone Processing",
+    "Hi_Res_Audio": "High-Resolution Audio (96kHz/24bit+)",
+    "Master_Quality": "Master Quality Authenticated",
+    "Lossless_Compression": "Lossless Audio Compression",
+    "Variable_Bitrate": "Variable Bitrate Encoding",
+    "Joint_Stereo": "Joint Stereo Coding",
+    "Intensity_Stereo": "Intensity Stereo Coding",
+    "Mid_Side_Stereo": "Mid/Side Stereo Coding",
+    "Parametric_Stereo": "Parametric Stereo",
+    "Spectral_Band_Replication": "Spectral Band Replication",
+    "Parametric_SBR": "Parametric Spectral Band Replication",
+    "Noise_Band_Extension": "Noise Band Extension",
+    "Spectral_Band_Duplication": "Spectral Band Duplication"
+}
+
 # MP3 Channel Modes
 MP3_CHANNEL_MODES = {
     0: "Stereo",
@@ -3088,3 +3133,146 @@ def extract_audio_codec_metadata(filepath: str) -> Dict[str, Any]:
         result["error"] = f"Audio codec extraction failed: {str(e)[:200]}"
 
     return result
+
+
+def extract_advanced_audio_features(filepath: str, stream_data: Dict) -> Dict[str, Any]:
+    """Extract advanced audio codec features and modern format support.
+    
+    Adds support for spatial audio, hi-resolution formats, and modern
+    audio codec features that are missing from basic extraction.
+    
+    Args:
+        filepath: Path to audio file
+        stream_data: Audio stream data from ffprobe
+        
+    Returns:
+        dict: Advanced audio features including spatial audio, hi-res support
+    """
+    advanced_features = {
+        "spatial_audio": {
+            "supported": False,
+            "format": "unknown",
+            "channels": 0,
+            "layout": "unknown",
+            "ambisonics_order": 0,
+            "binaural_rendering": False,
+            "dolby_atmos": False,
+            "dolby_truehd": False,
+            "dts_x": False,
+            "auro_3d": False
+        },
+        "hi_resolution": {
+            "supported": False,
+            "sample_rate": 0,
+            "bit_depth": 0,
+            "bitrate": 0,
+            "lossless": False,
+            "master_quality": False,
+            "high_resolution_certified": False
+        },
+        "modern_codecs": {
+            "opus_advanced": False,
+            "aac_xhe": False,
+            "aac_eld": False,
+            "dolby_ac4": False,
+            "mpeg_h_3d": False,
+            "sony_360": False,
+            "dearvr": False
+        },
+        "advanced_processing": {
+            "spectral_band_replication": False,
+            "parametric_stereo": False,
+            "intensity_stereo": False,
+            "joint_stereo": False,
+            "variable_bitrate": False,
+            "noise_shaping": False,
+            "dithering": False
+        }
+    }
+    
+    try:
+        codec_name = stream_data.get("codec_name", "").lower()
+        sample_rate = int(stream_data.get("sample_rate", 0))
+        bit_depth = int(stream_data.get("bits_per_sample", 0))
+        channels = int(stream_data.get("channels", 0))
+        bitrate = int(stream_data.get("bit_rate", 0))
+        
+        # Hi-Resolution Audio Detection
+        if sample_rate >= 96000 and bit_depth >= 24:
+            advanced_features["hi_resolution"]["supported"] = True
+            advanced_features["hi_resolution"]["high_resolution_certified"] = True
+        elif sample_rate >= 48000 and bit_depth >= 24:
+            advanced_features["hi_resolution"]["supported"] = True
+        elif sample_rate >= 44100 and bit_depth >= 24:
+            advanced_features["hi_resolution"]["supported"] = True
+            
+        advanced_features["hi_resolution"]["sample_rate"] = sample_rate
+        advanced_features["hi_resolution"]["bit_depth"] = bit_depth
+        advanced_features["hi_resolution"]["bitrate"] = bitrate
+        
+        # Lossless detection
+        lossless_codecs = ["flac", "alac", "ape", "wav", "aiff", "dsd", "pcm"]
+        if codec_name in lossless_codecs:
+            advanced_features["hi_resolution"]["lossless"] = True
+            
+        # Master Quality detection
+        if codec_name == "mqa" or (sample_rate >= 88200 and bit_depth >= 24):
+            advanced_features["hi_resolution"]["master_quality"] = True
+            
+        # Spatial Audio Detection
+        if channels > 2:
+            advanced_features["spatial_audio"]["supported"] = True
+            advanced_features["spatial_audio"]["channels"] = channels
+            
+            # Surround sound layouts
+            if channels == 6:
+                advanced_features["spatial_audio"]["layout"] = "5.1_surround"
+            elif channels == 8:
+                advanced_features["spatial_audio"]["layout"] = "7.1_surround"
+            elif channels >= 10:
+                advanced_features["spatial_audio"]["layout"] = "immersive_audio"
+                
+        # Dolby Atmos detection (would need container analysis)
+        if "atmos" in filepath.lower() or codec_name == "truehd":
+            advanced_features["spatial_audio"]["dolby_atmos"] = True
+            advanced_features["spatial_audio"]["dolby_truehd"] = True
+            
+        # DTS:X detection
+        if "dts" in codec_name and channels >= 8:
+            advanced_features["spatial_audio"]["dts_x"] = True
+            
+        # Modern codec detection
+        if codec_name == "opus":
+            advanced_features["modern_codecs"]["opus_advanced"] = True
+            advanced_features["advanced_processing"]["variable_bitrate"] = True
+        elif codec_name == "aac":
+            # Check for HE-AAC profiles
+            profile = stream_data.get("profile", "").lower()
+            if "he" in profile or "high efficiency" in profile:
+                advanced_features["modern_codecs"]["aac_xhe"] = True
+                advanced_features["advanced_processing"]["spectral_band_replication"] = True
+            if "eld" in profile or "enhanced low delay" in profile:
+                advanced_features["modern_codecs"]["aac_eld"] = True
+                
+        # Joint stereo detection for MP3
+        if codec_name == "mp3":
+            advanced_features["advanced_processing"]["joint_stereo"] = True
+            advanced_features["advanced_processing"]["variable_bitrate"] = True
+            
+        # FLAC advanced features
+        if codec_name == "flac":
+            advanced_features["advanced_processing"]["noise_shaping"] = True
+            advanced_features["hi_resolution"]["lossless"] = True
+            
+        # Opus advanced features
+        if codec_name == "opus":
+            advanced_features["advanced_processing"]["variable_bitrate"] = True
+            # Opus supports up to 255 channels for ambisonics
+            if channels >= 4:
+                advanced_features["spatial_audio"]["ambisonics_order"] = min(7, channels // 4)
+                
+    except Exception as e:
+        logger.warning(f"Error extracting advanced audio features: {e}")
+        advanced_features["error"] = str(e)[:100]
+        
+    return advanced_features

@@ -30,6 +30,18 @@ C2PA_ALLOWLIST = {
     "soft_binding": "c2pa_soft_binding",
     "update_manifest": "c2pa_update_manifest",
     "redacted_fields": "c2pa_redacted_fields",
+    # Enhanced C2PA support (2024)
+    "content_credentials_version": "c2pa_content_credentials_version",
+    "trust_model": "c2pa_trust_model",
+    "validation_algorithm": "c2pa_validation_algorithm",
+    "ingredient_hash_algorithm": "c2pa_ingredient_hash_algorithm",
+    "manifest_store_format": "c2pa_manifest_store_format",
+    "jumbf_box_type": "c2pa_jumbf_box_type",
+    "content_binding_method": "c2pa_content_binding_method",
+    "time_stamp_authority": "c2pa_time_stamp_authority",
+    "certificate_chain": "c2pa_certificate_chain",
+    "public_key_fingerprint": "c2pa_public_key_fingerprint",
+    "private_key_protection": "c2pa_private_key_protection",
 }
 
 # Adobe Content Credentials Allowlist
@@ -45,6 +57,19 @@ ADOBE_CC_ALLOWLIST = {
     "content_binding": "adobe_cc_content_binding",
     "has_assertions": "adobe_cc_has_assertions",
     "assertion_types": "adobe_cc_assertion_types",
+    # Enhanced Adobe CC support (2024)
+    "adobe_firefly_generated": "adobe_firefly_generated",
+    "adobe_sensei_ai": "adobe_sensei_ai_processing",
+    "content_authenticity_initiative": "adobe_cai_compliant",
+    "creative_cloud_version": "adobe_cc_software_version",
+    "photoshop_neural_filters": "adobe_neural_filters_used",
+    "lightroom_ai_enhance": "adobe_lightroom_ai_enhance",
+    "premiere_pro_content_credentials": "adobe_premiere_content_credentials",
+    "after_effects_content_credentials": "adobe_after_effects_content_credentials",
+    "creative_cloud_libraries": "adobe_cc_libraries_used",
+    "stock_content_source": "adobe_stock_content_source",
+    "creative_commons_license": "adobe_creative_commons_license",
+    "do_not_train_metadata": "adobe_do_not_train_ai",
 }
 
 

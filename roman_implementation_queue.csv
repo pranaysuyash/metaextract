@@ -1,0 +1,21 @@
+Priority,Filename,Lines,Domain,Current_Status,Recommended_Action,Suggested_New_Name
+HIGH,makernotes_ultimate_advanced_extension_ii.py,579,Domain mapping,implemented,IMPLEMENT + RENAME,camera_makernotes_advanced.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xvii.py,219,Domain mapping,implemented,IMPLEMENT + RENAME,orthopedic_imaging.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xxxv.py,356,Domain mapping,implemented,IMPLEMENT + RENAME,scientific_dicom_fits.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_lxxxiv.py,467,Domain mapping,implemented,IMPLEMENT + RENAME,scientific_dicom_fits.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xcii.py,104,Domain mapping,implemented,IMPLEMENT + RENAME,scientific_dicom_fits.py
+HIGH,video_professional_ultimate_advanced_extension_iii.py,354,Domain mapping,implemented,IMPLEMENT + RENAME,neuroimaging.py
+HIGH,forensic_security_ultimate_advanced_extension_iii.py,390,Domain mapping,implemented,IMPLEMENT + RENAME,neuroimaging.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xxvi.py,181,Domain mapping,implemented,IMPLEMENT + RENAME,scientific_dicom_fits.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xcviii.py,104,Domain mapping,implemented,IMPLEMENT + RENAME,scientific_dicom_fits.py
+HIGH,scientific_dicom_fits_ultimate_advanced_extension_xliv.py,288,Domain mapping,implemented,IMPLEMENT + RENAME,scientific_dicom_fits.py
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cxxv.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cvii.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,forensic_security_ultimate_advanced_extension_x.py,27,Domain mapping,implemented,KEEP/IMPLEMENT LATER,
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cxxxi.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cliii.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,id3_audio_ultimate_advanced_extension_vi.py,27,Domain mapping,implemented,KEEP/IMPLEMENT LATER,
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cliv.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,video_professional_ultimate_advanced_extension_xiii.py,14,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cxlv.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,
+LOW,scientific_dicom_fits_ultimate_advanced_extension_cxvi.py,43,Domain mapping,placeholder,KEEP/IMPLEMENT LATER,

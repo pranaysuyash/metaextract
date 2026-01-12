@@ -4,16 +4,21 @@ import { motion } from 'framer-motion';
 interface ProgressBarProps {
   percentage: number;
   className?: string;
+  tone?: 'auto' | 'emerald' | 'blue' | 'amber';
 }
 
 export function ProgressBar({
   percentage = 0,
   className = '',
+  tone = 'auto',
 }: ProgressBarProps) {
   const pct = Math.min(100, Math.max(0, percentage));
   const getColor = (p: number) => {
-    if (p >= 80) return 'bg-green-500';
-    if (p >= 60) return 'bg-yellow-500';
+    if (tone === 'emerald') return 'bg-emerald-500';
+    if (tone === 'blue') return 'bg-blue-500';
+    if (tone === 'amber') return 'bg-amber-500';
+    if (p >= 80) return 'bg-emerald-500';
+    if (p >= 60) return 'bg-amber-500';
     return 'bg-blue-500';
   };
 

@@ -18,6 +18,7 @@ import {
   normalizeEmail,
   getSessionId,
   cleanupTempFile,
+  applyAccessModeRedaction,
 } from '../utils/extraction-helpers';
 import {
   sendQuotaExceededError,
@@ -1436,6 +1437,9 @@ export function registerImagesMvpRoutes(app: Express) {
       let useTrial = false;
       let chargeCredits = false;
 
+      // Access mode: device_free | trial_limited | paid
+      let accessMode: 'device_free' | 'trial_limited' | 'paid' = 'paid';
+
       let creditCost = 1;
       let runOcr = true;
       const quoteId =
@@ -1557,7 +1561,8 @@ export function registerImagesMvpRoutes(app: Express) {
         // Security is enforced in all environments
         // For testing, use accounts with sufficient credits
         if (hasTrialAvailable) {
-          useTrial = true;
+          // Email trial grants a restricted "trial_limited" mode (heavy redaction)
+          accessMode = 'trial_limited';
         } else {
           if (trialEmail) {
             // Trial email provided but trial is exhausted: require credits (do not stack free quota).
@@ -1579,6 +1584,7 @@ export function registerImagesMvpRoutes(app: Express) {
               );
             }
             chargeCredits = true;
+            accessMode = 'paid';
           } else {
             // No trial available: allow up to 2 free extractions per device, then require credits.
             const ip = req.ip || req.socket.remoteAddress || 'unknown';
@@ -1641,8 +1647,13 @@ export function registerImagesMvpRoutes(app: Express) {
 
             if (freeUsed < freeLimit) {
               await incrementUsage(deviceId, ip);
-              useTrial = true; // Use filtered trial view for free device extractions
+              // Device-level free check: show high-value data but redact sensitive identifiers
+              accessMode = 'device_free';
               chargeCredits = false;
+
+              // reflect usage count in response (n of freeLimit)
+              // freeUsed is prior to increment; record nextFreeUsed for response
+              (req as any)._nextFreeUsed = (freeUsed || 0) + 1;
 
               // Record success for circuit breaker recovery
               circuitBreaker.recordSuccess();
@@ -1663,6 +1674,7 @@ export function registerImagesMvpRoutes(app: Express) {
                 return;
               }
               chargeCredits = true;
+              accessMode = 'paid';
             }
           }
         }
@@ -1693,7 +1705,8 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Extract with enhanced features
-        const engineTier = useTrial ? 'free' : 'super';
+        // Use full engine tier for device_free to provide high-value fields; reserve `free` for trial_limited
+        const engineTier = accessMode === 'trial_limited' ? 'free' : 'super';
 
         // Send progress update before extraction
         if (sessionId) {
@@ -1799,23 +1812,24 @@ export function registerImagesMvpRoutes(app: Express) {
           progress_updates: [],
         };
 
-        // Filter for Trial
-        if (useTrial) {
-          // Remove Raw/Advanced data for trial to encourage upgrade
-          metadata.iptc = null;
-          metadata.xmp = null;
-          metadata.exif = {}; // EXIF cannot be null in FrontendMetadataResponse, so use empty object
-
-          metadata.iptc_raw = null;
-          metadata.xmp_raw = null;
-          metadata._trial_limited = true;
+        // Apply access-mode redactions
+        // 'trial_limited' = heavy redaction (email trial)
+        // 'device_free' = hybrid redaction (show high-value data, redact sensitive identifiers)
+        if (accessMode === 'trial_limited') {
+          applyAccessModeRedaction(metadata, 'trial_limited');
+        } else if (accessMode === 'device_free') {
+          // Ensure we don't mark trial-limited and apply hybrid redactions
+          delete (metadata as any)._trial_limited;
+          applyAccessModeRedaction(metadata, 'device_free');
         }
 
         metadata.access = {
           trial_email_present: !!trialEmail,
-          trial_granted: useTrial,
+          trial_granted: accessMode === 'trial_limited',
           credits_charged: chargeCredits ? creditCost : 0,
-          credits_required: creditCost,
+          credits_required: chargeCredits ? creditCost : 0,
+          mode: accessMode,
+          free_used: (req as any)._nextFreeUsed ?? undefined,
         };
 
         // Record Usage
@@ -1860,7 +1874,7 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // 3. Record Trial Usage
-        if (useTrial && trialEmail) {
+        if (accessMode === 'trial_limited' && trialEmail) {
           try {
             await storage.recordTrialUsage({
               email: trialEmail,
