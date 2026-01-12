@@ -50,7 +50,7 @@ export class MockEnterpriseSecurityManager {
     if (!customer) return baseResult;
     
     // Apply enterprise policy logic
-    let adjustedResult = { ...baseResult };
+    const adjustedResult = { ...baseResult };
     
     if (customer.tier === 'enterprise') {
       // Enterprise tier upgrades medium to high

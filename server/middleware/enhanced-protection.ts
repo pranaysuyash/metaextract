@@ -590,9 +590,10 @@ async function sendEnhancedChallenge(
     case ENHANCED_PROTECTION_CONFIG.CHALLENGES.DEVICE_VERIFICATION:
       challengeData = generateDeviceVerificationChallenge();
       break;
-    default:
+    default: {
       const safeChallengeType = challengeType || 'standard';
       challengeData = generateStandardChallenge(safeChallengeType, riskScore);
+    }
   }
 
   res.status(403).json({
@@ -872,7 +873,8 @@ export async function verifyEnhancedChallengeResponse(
       });
       return;
     }
-  } catch (error) {
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
     console.error('[EnhancedChallengeVerification] Error:', error);
     res.status(500).json({
       error: 'Challenge verification error',
