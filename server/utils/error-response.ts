@@ -260,7 +260,7 @@ export function sendFileTooLargeError(
 ): Response {
   return sendErrorResponse(
     res,
-    403,
+    413,
     'FILE_TOO_LARGE',
     `File size exceeds limit`,
     {
@@ -288,6 +288,18 @@ export function sendInvalidFileTypeError(
     },
     currentTier ? { current_tier: currentTier } : undefined
   );
+}
+
+export function sendUnsupportedFileTypeError(
+  res: Response,
+  message: string = 'File type not permitted'
+): Response {
+  // Historic endpoints expect a flat error shape; keep compatibility for file-filter errors
+  return res.status(403).json({
+    error: 'Unsupported file type',
+    message,
+    code: 'UNSUPPORTED_FILE_TYPE',
+  });
 }
 
 export function sendInternalServerError(

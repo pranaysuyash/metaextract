@@ -11,7 +11,7 @@
 import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
 import { storage } from '../storage';
-import { requireAuth } from '../auth';
+import { authenticateToken } from '../auth';
 import { rateLimitAPI } from '../rateLimitMiddleware';
 
 // ============================================================================
@@ -35,72 +35,140 @@ const PRIVACY_POLICY_VERSION = '1.0.0';
 const PRIVACY_POLICY_LAST_UPDATED = '2025-01-04';
 
 const privacyPolicyContent = `
-<h1>Privacy Policy for MetaExtract</h1>
+# Privacy Policy for MetaExtract
 
-<p><strong>Last Updated:</strong> ${new Date().toISOString().split('T')[0]}</p>
+**Last Updated:** ${new Date().toISOString().split('T')[0]}
 
-<h2>Information We Collect</h2>
-<p>We collect the following types of information when you use our service:</p>
+## Information We Collect
 
-<h3>File Data</h3>
-<ul>
-  <li>Metadata from uploaded files (EXIF, IPTC, XMP, etc.)</li>
-  <li>File hashes for integrity verification</li>
-  <li>File type, size, and basic properties</li>
-  <li>Processing results and analysis</li>
-</ul>
+We collect the following types of information when you use our service:
 
-<h3>Technical Information</h3>
-<ul>
-  <li>IP address and browser information</li>
-  <li>Device type and operating system</li>
-  <li>Timestamps of file uploads and downloads</li>
-  <li>Usage patterns and feature preferences</li>
-</ul>
+### File Data
+- Metadata from uploaded files (EXIF, IPTC, XMP, etc.)
+- File hashes for integrity verification
+- File type, size, and basic properties
+- Processing results and analysis
 
-<h3>Account Information</h3>
-<ul>
-  <li>Email address and username</li>
-  <li>Subscription tier and payment information</li>
-  <li>Credit usage and transaction history</li>
-  <li>Communication preferences</li>
-</ul>
+### Technical Information
+- IP address and browser information
+- Device type and operating system
+- Timestamps of file uploads and downloads
+- Usage patterns and feature preferences
 
-<h2>How We Use Your Information</h2>
-<ul>
-  <li>Provide and improve the service</li>
-  <li>Process and analyze uploaded files</li>
-  <li>Manage accounts, subscriptions, and billing</li>
-  <li>Protect against fraud and abuse and comply with legal obligations</li>
-</ul>
+### Account Information
+- Email address and username
+- Subscription tier and payment information
+- Credit usage and transaction history
+- Communication preferences
 
-<h2>Data Retention and Deletion</h2>
-<ul>
-  <li>Uploaded files are deleted after processing.</li>
-  <li>Metadata results may be retained to provide the service and improve reliability.</li>
-  <li>Account information is retained while your account remains active; deletion requests are processed subject to legal obligations.</li>
-</ul>
+## How We Use Your Information
 
-<h2>Your Rights</h2>
-<p>Depending on your jurisdiction (including GDPR), you may have rights to access, correct, delete, or export your personal data.</p>
+We use your information for the following purposes:
 
-<h2>Security Measures</h2>
-<p>We use reasonable technical and organizational safeguards to protect your data, including encryption in transit and access controls.</p>
+### Service Provision
+- To provide metadata extraction services
+- To process and analyze your uploaded files
+- To generate reports and results
+- To maintain service functionality
 
-<h2>Data Sharing and Disclosure</h2>
-<p>We do not sell your personal information. We may share information with service providers (e.g., infrastructure, payment processing) and to comply with legal obligations.</p>
+### Account Management
+- To authenticate and identify users
+- To manage subscriptions and billing
+- To track credit usage
+- To provide customer support
 
-<h2>International Transfers</h2>
-<p>If you are located outside the country where our servers are located, your information may be transferred and processed there with appropriate safeguards.</p>
+### Security and Compliance
+- To protect against unauthorized access
+- To detect and prevent fraudulent activities
+- To comply with legal obligations
+- To maintain service integrity
 
-<h2>Children's Privacy</h2>
-<p>Our service does not address anyone under the age of 13. We do not knowingly collect personal information from children under 13.</p>
+## Data Retention and Deletion
 
-<h2>Changes to This Privacy Policy</h2>
-<p>We may update this policy periodically by posting an updated version and changing the “Last Updated” date.</p>
+### File Data
+- Uploaded files are deleted immediately after processing
+- Metadata results are retained for 30 days unless you have an active subscription
+- For subscribed users, data retention follows your selected plan
 
-<h2>Contact Us</h2>
-<p>If you have questions about this privacy policy, contact <a href="mailto:privacy@metaextract.com">privacy@metaextract.com</a>.</p>
+### Account Data
+- Account information is retained as long as your account remains active
+- Upon account deletion, personal information is removed within 30 days
+- Aggregated, anonymized data may be retained for service improvement
+
+## Your Rights
+
+Under GDPR and other privacy laws, you have the following rights:
+
+### Right of Access
+- Request a copy of your personal data
+- Know how your data is being used
+- Receive information about data processing
+
+### Right to Rectification
+- Correct inaccurate personal data
+- Complete incomplete personal data
+- Update outdated information
+
+### Right to Erasure
+- Request deletion of your personal data
+- Remove consent for data processing
+- Close your account with data deletion
+
+### Right to Data Portability
+- Receive your personal data in a structured format
+- Transfer your data to another service
+- Obtain copies of your processed metadata
+
+## Security Measures
+
+We implement appropriate technical and organizational measures to ensure a level of security appropriate to the risk, including:
+
+### Technical Safeguards
+- Encryption in transit (TLS 1.3)
+- Secure file processing (temporary storage only)
+- Regular security assessments
+- Access controls and authentication
+
+### Organizational Safeguards
+- Employee confidentiality agreements
+- Regular security training
+- Incident response procedures
+- Third-party security reviews
+
+## Data Sharing and Disclosure
+
+We do not sell, trade, or rent your personal identification information to others. We may share your information in the following situations:
+
+### Service Providers
+- Cloud infrastructure providers
+- Payment processors
+- Analytics services
+- Customer support platforms
+
+### Legal Requirements
+- Compliance with legal obligations
+- Protection of our rights
+- Response to legal requests
+- Prevention of fraud
+
+## International Transfers
+
+If you are located outside the country where our servers are located, your information may be transferred to and processed in that country. We ensure appropriate safeguards are in place for international transfers.
+
+## Children's Privacy
+
+Our service does not address anyone under the age of 13. We do not knowingly collect personal information from children under 13.
+
+## Changes to This Privacy Policy
+
+We may update this privacy policy periodically. We will notify you of any changes by posting the new privacy policy on this page and updating the "Last Updated" date.
+
+## Contact Us
+
+If you have questions about this privacy policy, please contact us at:
+
+Email: privacy@metaextract.com
+Address: [Company Address]
 `;
 
 // ============================================================================
@@ -111,50 +179,54 @@ const TERMS_OF_SERVICE_VERSION = '1.0.0';
 const TERMS_OF_SERVICE_LAST_UPDATED = '2025-01-04';
 
 const termsOfServiceContent = `
-<h1>Terms of Service for MetaExtract</h1>
+# Terms of Service for MetaExtract
 
-<p><strong>Last Updated:</strong> ${new Date().toISOString().split('T')[0]}</p>
+**Last Updated:** ${new Date().toISOString().split('T')[0]}
 
-<h2>Acceptance of Terms</h2>
-<p>By accessing and using MetaExtract, you accept and agree to be bound by these Terms.</p>
+## Acceptance of Terms
 
-<h2>Description of Service</h2>
-<p>MetaExtract provides metadata extraction services for uploaded files. Results depend on what metadata is embedded in the file; some files may have metadata removed or missing.</p>
+By accessing and using MetaExtract, you accept and agree to be bound by the terms and provisions of this agreement.
 
-<h2>Credits and Usage</h2>
-<p>Some features require credits. Credits are consumed per analysis and are non-transferable.</p>
+## Description of Service
 
-<h2>Refund Policy (Credit Packs)</h2>
-<p><strong>Refunds are available within 7 days of purchase for unused credit packs only.</strong> If any credits are used, the purchase is non-refundable.</p>
+MetaExtract provides comprehensive metadata extraction services for various file types including images, videos, documents, and more.
 
-<h2>User Responsibilities</h2>
-<h3>Acceptable Use</h3>
-<ul>
-  <li>Use the service in compliance with applicable laws</li>
-  <li>Respect intellectual property rights</li>
-  <li>Do not upload illegal content</li>
-  <li>Do not attempt to circumvent security measures</li>
-</ul>
+## User Responsibilities
 
-<h3>Prohibited Activities</h3>
-<ul>
-  <li>Uploading copyrighted material without permission</li>
-  <li>Using the service for illegal activities</li>
-  <li>Attempting to disrupt service operations</li>
-  <li>Scraping or reverse engineering the service</li>
-</ul>
+### Acceptable Use
+- Use the service in compliance with applicable laws
+- Respect intellectual property rights
+- Do not upload illegal content
+- Do not attempt to circumvent security measures
 
-<h2>Intellectual Property</h2>
-<p>The service and its original content, features, and functionality are owned by MetaExtract and are protected by applicable intellectual property laws.</p>
+### Prohibited Activities
+- Uploading copyrighted material without permission
+- Using the service for illegal activities
+- Attempting to disrupt service operations
+- Scraping or reverse engineering the service
 
-<h2>Limitation of Liability</h2>
-<p>To the maximum extent permitted by law, MetaExtract will not be liable for indirect, incidental, special, consequential, or punitive damages.</p>
+## Intellectual Property
 
-<h2>Termination</h2>
-<p>We may terminate or suspend access to the service if you breach these Terms.</p>
+The service and its original content, features, and functionality are owned by MetaExtract and are protected by international copyright, trademark, and other intellectual property laws.
 
-<h2>Contact Information</h2>
-<p>For questions about these Terms, contact <a href="mailto:legal@metaextract.com">legal@metaextract.com</a>.</p>
+## Limitation of Liability
+
+In no event shall MetaExtract, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential, or punitive damages.
+
+## Termination
+
+We may terminate or suspend your account immediately, without prior notice, for any reason whatsoever, including without limitation if you breach the Terms.
+
+## Governing Law
+
+These Terms shall be governed and construed in accordance with the laws of [Jurisdiction], without regard to its conflict of law provisions.
+
+## Contact Information
+
+If you have any questions about these Terms, please contact us at:
+
+Email: legal@metaextract.com
+Address: [Company Address]
 `;
 
 // ============================================================================
@@ -163,29 +235,19 @@ const termsOfServiceContent = `
 
 async function handleGDPRAccessRequest(userId: string): Promise<any> {
   // Retrieve all personal data associated with the user
-  const userData = await storage.getUserById?.(userId);
-  const coreBalanceKey = `credits:core:user:${userId}`;
-  const imagesBalanceKey = `images_mvp:user:${userId}`;
-  const coreCredits = await storage.getCreditBalanceBySessionId?.(coreBalanceKey);
-  const imagesCredits = await storage.getCreditBalanceBySessionId?.(
-    imagesBalanceKey
-  );
-  const extractionHistory =
-    (await storage.getExtractionHistoryByUser?.(userId, 100)) ?? [];
-
+  const userData = await storage.getUserById(userId);
+  const creditBalance = await storage.getCreditBalance(userId);
+  const extractionHistory = await storage.getExtractionHistory(userId, { limit: 100 });
+  
   return {
-    userData: userData
-      ? {
-          id: userData.id,
-          email: userData.email,
-          username: userData.username,
-          createdAt: userData.createdAt,
-        }
-      : null,
-    creditData: {
-      core: coreCredits ?? null,
-      images_mvp: imagesCredits ?? null,
+    userData: {
+      id: userData.id,
+      email: userData.email,
+      username: userData.username,
+      createdAt: userData.createdAt,
+      updatedAt: userData.updatedAt,
     },
+    creditData: creditBalance,
     extractionHistory,
     timestamp: new Date().toISOString(),
   };
@@ -193,12 +255,12 @@ async function handleGDPRAccessRequest(userId: string): Promise<any> {
 
 async function handleGDPRErasureRequest(userId: string): Promise<void> {
   // Anonymize or delete user data according to retention policies
-  await storage.anonymizeUserData?.(userId);
+  await storage.anonymizeUserData(userId);
 }
 
 async function handleGDPRRectificationRequest(userId: string, updates: any): Promise<void> {
   // Update user data as requested
-  await storage.updateUserProfile?.(userId, updates);
+  await storage.updateUserProfile(userId, updates);
 }
 
 // ============================================================================
@@ -208,13 +270,11 @@ async function handleGDPRRectificationRequest(userId: string, updates: any): Pro
 export function registerLegalComplianceRoutes(app: Express): void {
   // Rate limit for legal endpoints
   const legalRateLimiter = rateLimitAPI({
-    ipBased: true,
-    tierBased: false,
-    endpoints: {
-      // Rough equivalent to 100 requests per 15 minutes.
-      requestsPerMinute: 20,
-      requestsPerDay: 1000,
-    },
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests for legal pages, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false,
   });
 
   // Privacy Policy
@@ -236,7 +296,7 @@ export function registerLegalComplianceRoutes(app: Express): void {
   });
 
   // GDPR Compliance Requests (authenticated users only)
-  app.post('/api/legal/gdpr', requireAuth, legalRateLimiter, async (req: Request, res: Response) => {
+  app.post('/api/legal/gdpr', authenticateToken, legalRateLimiter, async (req: Request, res: Response) => {
     try {
       const validationResult = gdprRequestSchema.safeParse(req.body);
       if (!validationResult.success) {
