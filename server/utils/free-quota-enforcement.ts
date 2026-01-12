@@ -6,7 +6,7 @@
  * Tier 2: IP rate limiting with fail-closed Redis fallback
  * Tier 3: Advanced fingerprinting and abuse scoring
  * Tier 4: Circuit breaker for load shedding
- * 
+ *
  * Security changelog:
  * - 2026-01-07: Added server-issued device tokens (device-token.ts)
  * - 2026-01-07: Fixed fail-open Redis to use in-memory fallback
@@ -20,10 +20,10 @@ import { getDatabase } from '../db';
 import { clientUsage } from '@shared/schema';
 import { storage } from '../storage/index';
 import { circuitBreaker } from './circuit-breaker';
-import { 
-  getOrCreateDeviceToken, 
+import {
+  getOrCreateDeviceToken,
   verifyDeviceToken as verifyServerDeviceToken,
-  isDeviceSuspicious 
+  isDeviceSuspicious,
 } from './device-token';
 import { getOrSetSessionId } from './session-id';
 // import { trackImagesMvpEvent } from '../lib/images-mvp-analytics';
@@ -121,7 +121,6 @@ export function verifyClientToken(
     return null;
   }
 }
-
 
 /**
  * Generate lightweight device fingerprint
@@ -465,10 +464,15 @@ export async function incrementUsage(
               lastUsed: new Date(),
             },
           });
-        console.log(`[QuotaDebug] Successfully incremented usage in DB for ${clientId}`);
+        console.log(
+          `[QuotaDebug] Successfully incremented usage in DB for ${clientId}`
+        );
         return;
       } catch (dbError) {
-        console.warn('[QuotaDebug] Database increment failed, falling back:', dbError);
+        console.warn(
+          '[QuotaDebug] Database increment failed, falling back:',
+          dbError
+        );
       }
     }
 
@@ -482,7 +486,11 @@ export async function incrementUsage(
           const parsed = JSON.parse(current);
           if (typeof parsed === 'number') {
             count = parsed;
-          } else if (parsed && typeof parsed === 'object' && 'freeUsed' in parsed) {
+          } else if (
+            parsed &&
+            typeof parsed === 'object' &&
+            'freeUsed' in parsed
+          ) {
             count = Number((parsed as { freeUsed: number }).freeUsed) || 0;
           } else {
             count = Number(current) || 0;
@@ -493,7 +501,9 @@ export async function incrementUsage(
       }
       const next = count + 1;
       await (storage as any).set(key, JSON.stringify({ freeUsed: next }));
-      console.log(`[QuotaDebug] Incremented usage in fallback storage for ${clientId}: ${next}`);
+      console.log(
+        `[QuotaDebug] Incremented usage in fallback storage for ${clientId}: ${next}`
+      );
     } else {
       console.warn('[QuotaDebug] Fallback storage does not support get/set');
     }
@@ -528,13 +538,19 @@ async function trackRequest(
     };
 
     // Prefer native list ops when available (Redis-like). Fall back to best-effort get/set if not.
-    if (typeof (storage as any).lpush === 'function' && typeof (storage as any).ltrim === 'function') {
+    if (
+      typeof (storage as any).lpush === 'function' &&
+      typeof (storage as any).ltrim === 'function'
+    ) {
       await (storage as any).lpush(key, JSON.stringify(activity));
       await (storage as any).ltrim(key, 0, 999); // Keep last 1000
       if (typeof (storage as any).expire === 'function') {
         await (storage as any).expire(key, 3600); // Expire after 1 hour
       }
-    } else if (typeof (storage as any).rpush === 'function' && typeof (storage as any).ltrim === 'function') {
+    } else if (
+      typeof (storage as any).rpush === 'function' &&
+      typeof (storage as any).ltrim === 'function'
+    ) {
       await (storage as any).rpush(key, JSON.stringify(activity));
       await (storage as any).ltrim(key, 0, 999);
       if (typeof (storage as any).expire === 'function') {
@@ -543,7 +559,10 @@ async function trackRequest(
     } else {
       // Best-effort fallback: use get/set to persist a JSON array of recent activities if storage supports it
       try {
-        if (typeof (storage as any).get === 'function' && typeof (storage as any).set === 'function') {
+        if (
+          typeof (storage as any).get === 'function' &&
+          typeof (storage as any).set === 'function'
+        ) {
           const existing = await (storage as any).get(key);
           let arr: any[] = [];
           if (existing) {
@@ -561,10 +580,15 @@ async function trackRequest(
           }
         } else {
           // Storage backend lacks list-like semantics; skip activity persistence quietly in tests or constrained envs
-          console.debug('[QuotaDebug] Storage lacks list ops; skipping activity persistence');
+          console.debug(
+            '[QuotaDebug] Storage lacks list ops; skipping activity persistence'
+          );
         }
       } catch (fallbackError) {
-        console.debug('[QuotaDebug] Activity tracking fallback failed:', fallbackError);
+        console.debug(
+          '[QuotaDebug] Activity tracking fallback failed:',
+          fallbackError
+        );
       }
     }
   } catch (error) {
@@ -636,7 +660,7 @@ export function checkCircuitBreaker(isPaid: boolean): {
       estimatedWaitSeconds: result.estimatedWaitSeconds,
     };
   }
-  
+
   const result = circuitBreaker.checkFreeTier();
   return {
     allowed: result.allowed,
@@ -658,21 +682,21 @@ export function getServerDeviceId(req: Request, res: Response): string {
  * Check if device shows suspicious behavior patterns
  */
 export async function checkDeviceSuspicious(
-  req: Request, 
+  req: Request,
   deviceId: string
 ): Promise<boolean> {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  
+
   // Get recent IPs for this device
   const recentActivity = await getRecentActivity(deviceId, ip, 15); // Last 15 minutes
   const recentIps = recentActivity.map(a => a.ip).filter(Boolean);
-  
+
   // Get device token for age check
   const token = req.cookies?.metaextract_device;
   if (!token) return false;
-  
+
   const decoded = verifyServerDeviceToken(token);
   if (!decoded) return false;
-  
+
   return isDeviceSuspicious(decoded, ip, recentIps);
 }

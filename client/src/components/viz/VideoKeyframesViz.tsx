@@ -102,7 +102,7 @@ export function VideoKeyframesViz({ video }: VideoKeyframesVizProps) {
         <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-muted/50">
           <div
             className="w-16 aspect-video rounded bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center"
-            style={{ aspectRatio: aspectRatio }}
+            style={{ aspectRatio }}
           >
             <Film className="w-8 h-8 text-white" />
           </div>

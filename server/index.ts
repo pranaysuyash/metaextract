@@ -269,7 +269,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
       res.status(status).json({
         error: status >= 500 ? 'Internal Server Error' : message,
-        requestId: requestId,
+        requestId,
       });
     } catch (handlerError) {
       // If the error handler itself fails, log and return a safe response

@@ -305,8 +305,7 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
           // Build dedupe key
           const dedupeKey = buildDedupeKey(
             validatedEvent.sessionId,
-            validatedEvent.eventFamily === 'comprehension' &&
-              props.fact
+            validatedEvent.eventFamily === 'comprehension' && props.fact
               ? `${validatedEvent.sessionId}:${validatedEvent.eventName}:${props.fact}`
               : validatedEvent.eventName
           );
@@ -393,7 +392,7 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
         duplicates: duplicates.length > 0 ? duplicates : undefined,
         receivedAt: new Date().toISOString(),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Analytics ingestion error:', error);
 
       return res.status(500).json({
@@ -442,7 +441,7 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
             ? 'healthy'
             : 'degraded',
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Analytics health check error:', error);
 
       return res.status(500).json({
@@ -468,16 +467,20 @@ export async function registerAnalyticsRoutes(app: any): Promise<void> {
         supportedEventFamilies: ['lifecycle', 'user_intent', 'comprehension'],
         lifecycleEvents: require('@shared/analytics-events').LifecycleEvent,
         userIntentEvents: require('@shared/analytics-events').UserIntentEvent,
-        comprehensionEvents: require('@shared/analytics-events').ComprehensionEvent,
+        comprehensionEvents: require('@shared/analytics-events')
+          .ComprehensionEvent,
         eventNames: require('@shared/analytics-events').EventName,
         keyFactTypes: require('@shared/analytics-events').KeyFactType,
-        factRevealTriggers: require('@shared/analytics-events').FactRevealTrigger,
-        prohibitedProperties: require('@shared/analytics-events').PROHIBITED_PROPERTIES,
+        factRevealTriggers: require('@shared/analytics-events')
+          .FactRevealTrigger,
+        prohibitedProperties: require('@shared/analytics-events')
+          .PROHIBITED_PROPERTIES,
         coarseDimensions: {
           fileSizeBuckets: require('@shared/analytics-events').FileSizeBucket,
           userTiers: require('@shared/analytics-events').UserTier,
           authStates: require('@shared/analytics-events').AuthState,
-          sourceEntryPoints: require('@shared/analytics-events').SourceEntryPoint,
+          sourceEntryPoints: require('@shared/analytics-events')
+            .SourceEntryPoint,
           resultDensities: require('@shared/analytics-events').ResultDensity,
           clientTypes: require('@shared/analytics-events').ClientType,
         },

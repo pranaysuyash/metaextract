@@ -541,7 +541,9 @@ export function transformMetadataForFrontend(
     gaming_entertainment: raw.gaming_entertainment ?? null,
 
     // Email and Communication metadata
-    email: raw.email?._locked ? { _locked: true, available: false } : (raw.email ?? null),
+    email: raw.email?._locked
+      ? { _locked: true, available: false }
+      : (raw.email ?? null),
 
     // Persona interpretation (if available from Python backend)
     persona_interpretation: (raw as any).persona_interpretation ?? undefined,
@@ -567,7 +569,8 @@ export function applyAccessModeRedaction(
     metadata._trial_limited = true;
     // Mark locked_fields conservatively
     metadata.locked_fields = Array.from(
-      new Set([...(metadata.locked_fields || []),
+      new Set([
+        ...(metadata.locked_fields || []),
         'filesystem_details',
         'hashes',
         'extended_attributes',
@@ -581,7 +584,7 @@ export function applyAccessModeRedaction(
         'calculated',
         'forensic',
         'burned_metadata',
-        'metadata_comparison'
+        'metadata_comparison',
       ])
     );
   } else if (mode === 'device_free') {
@@ -595,7 +598,8 @@ export function applyAccessModeRedaction(
         (metadata.gps as any).latitude = Math.round(lat * 100) / 100;
         (metadata.gps as any).longitude = Math.round(lon * 100) / 100;
         // Remove precise map link to avoid exposing exact location
-        if ((metadata.gps as any).google_maps_url) delete (metadata.gps as any).google_maps_url;
+        if ((metadata.gps as any).google_maps_url)
+          delete (metadata.gps as any).google_maps_url;
       } else {
         // No coordinates - keep gps null
         metadata.gps = null;
@@ -623,7 +627,10 @@ export function applyAccessModeRedaction(
     }
 
     // Extended attributes: keep available/count, redact attribute values
-    if (metadata.extended_attributes && (metadata.extended_attributes as any).attributes) {
+    if (
+      metadata.extended_attributes &&
+      (metadata.extended_attributes as any).attributes
+    ) {
       const attrs = (metadata.extended_attributes as any).attributes;
       const redacted: Record<string, any> = {};
       Object.keys(attrs).forEach(k => (redacted[k] = null));
@@ -632,7 +639,17 @@ export function applyAccessModeRedaction(
 
     // Filesystem: remove owner and sensitive internals
     if (metadata.filesystem && typeof metadata.filesystem === 'object') {
-      ['owner','owner_uid','group','group_gid','inode','device','permissions_octal','permissions_human','hard_links'].forEach(k => delete (metadata.filesystem as any)[k]);
+      [
+        'owner',
+        'owner_uid',
+        'group',
+        'group_gid',
+        'inode',
+        'device',
+        'permissions_octal',
+        'permissions_human',
+        'hard_links',
+      ].forEach(k => delete (metadata.filesystem as any)[k]);
     }
 
     // Thumbnail: keep presence + basic attrs only
@@ -646,7 +663,10 @@ export function applyAccessModeRedaction(
     }
 
     // Perceptual hashes: keep only basic hashes
-    if (metadata.perceptual_hashes && typeof metadata.perceptual_hashes === 'object') {
+    if (
+      metadata.perceptual_hashes &&
+      typeof metadata.perceptual_hashes === 'object'
+    ) {
       const p = metadata.perceptual_hashes as any;
       metadata.perceptual_hashes = {
         phash: p.phash || null,
@@ -657,12 +677,19 @@ export function applyAccessModeRedaction(
     }
 
     // Enterprise-only bulky buckets: hide to avoid leaking heavy internals
-    ['drone_telemetry','emerging_technology','synthetic_media_analysis','blockchain_provenance'].forEach(k => {
+    [
+      'drone_telemetry',
+      'emerging_technology',
+      'synthetic_media_analysis',
+      'blockchain_provenance',
+    ].forEach(k => {
       if ((metadata as any)[k]) (metadata as any)[k] = null;
     });
 
     // Update locked fields to reflect minimal redactions
-    metadata.locked_fields = Array.from(new Set([...(metadata.locked_fields || []), 'gps', 'extended_attributes']));
+    metadata.locked_fields = Array.from(
+      new Set([...(metadata.locked_fields || []), 'gps', 'extended_attributes'])
+    );
   }
 }
 
@@ -732,7 +759,9 @@ export async function extractMetadataWithPython(
     let stdout = '';
     let stderr = '';
 
-    const enablePyLogging = process.env.NODE_ENV !== 'test' || process.env.METAEXTRACT_LOG_PY_ARGS === '1';
+    const enablePyLogging =
+      process.env.NODE_ENV !== 'test' ||
+      process.env.METAEXTRACT_LOG_PY_ARGS === '1';
 
     python.stdout.on('data', data => {
       const dataStr = data.toString();
@@ -802,7 +831,10 @@ export async function extractMetadataWithPython(
         resolve(result);
       } catch (parseError) {
         if (enablePyLogging) {
-          console.error('Failed to parse Python extraction output:', parseError);
+          console.error(
+            'Failed to parse Python extraction output:',
+            parseError
+          );
           console.error(
             'Raw stdout (first 1000 chars):',
             stdout.substring(0, 1000)

@@ -577,3 +577,12 @@ def get_makernotes_ultimate_advanced_extension_ii_field_count() -> int:
 def extract_makernotes_ultimate_advanced_extension_ii_complete(filepath: str) -> Dict[str, Any]:
     """Main entry point for ultimate advanced extension II MakerNotes metadata extraction."""
     return extract_makernotes_ultimate_advanced_extension_ii(filepath)
+
+# New aliases for smoke test compatibility
+def extract_camera_makernotes_advanced(filepath: str) -> Dict[str, Any]:
+    """Alias for extract_makernotes_ultimate_advanced_extension_ii."""
+    return extract_makernotes_ultimate_advanced_extension_ii(filepath)
+
+def get_camera_makernotes_advanced_field_count() -> int:
+    """Alias for get_makernotes_ultimate_advanced_extension_ii_field_count."""
+    return get_makernotes_ultimate_advanced_extension_ii_field_count()

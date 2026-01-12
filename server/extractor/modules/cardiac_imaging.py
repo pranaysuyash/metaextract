@@ -464,9 +464,34 @@ def get_scientific_dicom_fits_ultimate_advanced_extension_ii_description() -> st
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
-        result = extract_scientific_dicom_fits_ultimate_advanced_extension_ii(sys.argv[1])
+        result = extract_cardiac_imaging(sys.argv[1])
         print(__import__('json').dumps(result, indent=2, default=str))
     else:
-        print("Usage: python scientific_dicom_fits_ultimate_advanced_extension_ii.py <dicom_file>")
-        print(f"Field count: {get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count()}")
-        print(f"Version: {get_scientific_dicom_fits_ultimate_advanced_extension_ii_version()}")
+        print("Usage: python cardiac_imaging.py <dicom_file>")
+        print(f"Field count: {get_cardiac_imaging_field_count()}")
+        print(f"Version: {get_cardiac_imaging_version()}")
+
+# New aliases for smoke test compatibility
+def extract_cardiac_imaging(file_path: str) -> Dict[str, Any]:
+    """Alias for extract_scientific_dicom_fits_ultimate_advanced_extension_ii."""
+    return extract_scientific_dicom_fits_ultimate_advanced_extension_ii(file_path)
+
+def get_cardiac_imaging_field_count() -> int:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count()
+
+def get_cardiac_imaging_supported_formats() -> List[str]:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_ii_supported_formats."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_ii_supported_formats()
+
+def get_cardiac_imaging_modalities() -> List[str]:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_ii_modalities."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_ii_modalities()
+
+def get_cardiac_imaging_version() -> str:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_ii_version."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_ii_version()
+
+def get_cardiac_imaging_description() -> str:
+    """Alias for get_scientific_dicom_fits_ultimate_advanced_extension_ii_description."""
+    return get_scientific_dicom_fits_ultimate_advanced_extension_ii_description()

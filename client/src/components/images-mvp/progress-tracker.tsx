@@ -149,6 +149,20 @@ export function ProgressTracker({
     return <Clock className="w-4 h-4" />;
   };
 
+  const formatStageLabel = (stage: string) => {
+    const normalized = stage.trim().toLowerCase();
+    const mapped = {
+      extraction_start: 'Starting extraction',
+      extraction_complete: 'Finalizing metadata',
+      upload_complete: 'Upload complete',
+      extraction_starting: 'Starting extraction',
+      processing: 'Processing metadata',
+      complete: 'Processing complete',
+    } as Record<string, string>;
+    if (mapped[normalized]) return mapped[normalized];
+    return stage.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   const effectivePercentage = hasProgressUpdate
     ? (progress.percentage ?? 0)
     : (fallbackPercentage ?? progress.percentage ?? 0);
@@ -163,6 +177,7 @@ export function ProgressTracker({
     : isUploadPhase
       ? 'Uploading image...'
       : 'Extracting Metadata...';
+  const displayStage = formatStageLabel(effectiveStage || 'Processing');
 
   return (
     <div>
@@ -189,7 +204,7 @@ export function ProgressTracker({
               }}
               style={{ originX: 0.5, originY: 0.5 }}
             >
-              {getStageIcon(effectiveStage)}
+              {getStageIcon(displayStage)}
             </motion.div>
             <span className="text-sm font-medium text-slate-200">
               {headline}
@@ -209,7 +224,7 @@ export function ProgressTracker({
 
         {/* Current Stage */}
         <div className="text-center">
-          <p className="text-sm text-slate-200 mb-1">{effectiveStage}</p>
+          <p className="text-sm text-slate-200 mb-1">{displayStage}</p>
           {progress.eta && progress.eta > 0 && (
             <p className="text-xs text-slate-300">
               Estimated time remaining: {Math.ceil(progress.eta / 1000)}s

@@ -109,7 +109,7 @@ async function initProgressBus(): Promise<void> {
             return;
           }
           sendToConnections(parsed.sessionId, parsed.payload);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Progress bus message parse error:', error);
         }
       });
@@ -117,7 +117,7 @@ async function initProgressBus(): Promise<void> {
       progressPublisher = publisher;
       progressSubscriber = subscriber;
       progressBusReady = true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to initialize progress bus:', error);
       progressPublisher = null;
       progressSubscriber = null;
@@ -401,18 +401,20 @@ const upload = multer({
     // SECURITY: Reject invalid file types before disk write
     const mimeType = file.mimetype;
     const fileExt = path.extname(file.originalname).toLowerCase();
-    
+
     // Check MIME type against supported list
     const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
-    
+
     // Check file extension as additional validation
-    const isSupportedExt = fileExt ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt) : false;
-    
+    const isSupportedExt = fileExt
+      ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
+      : false;
+
     // Allow if either MIME type or extension is supported (defensive)
     if (isSupportedMime || isSupportedExt) {
       return cb(null, true);
     }
-    
+
     // Reject with descriptive error
     // Provide a concise, security-minded error message for clients
     const errorMessage = 'File type not permitted';
@@ -420,7 +422,9 @@ const upload = multer({
     (error as any).code = 'UNSUPPORTED_FILE_TYPE';
 
     // Log the detailed reason at debug level for diagnostics
-    console.debug(`Rejected upload - unsupported file type: ${mimeType} (extension: ${fileExt})`);
+    console.debug(
+      `Rejected upload - unsupported file type: ${mimeType} (extension: ${fileExt})`
+    );
 
     cb(error as any, false);
   },
@@ -609,7 +613,7 @@ export function registerImagesMvpRoutes(app: Express) {
             if (message.type === 'ping') {
               ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
             }
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('WebSocket message parsing error:', error);
           }
         });
@@ -702,16 +706,16 @@ export function registerImagesMvpRoutes(app: Express) {
             ipAddress: req.ip || req.socket.remoteAddress || null,
             userAgent: req.headers['user-agent'] || null,
           });
-        } catch (error) {
+        } catch (error: unknown) {
           // Analytics is non-critical; fail open for unsigned users
           console.warn(
             '[ImagesMVP] Analytics log failed (non-blocking):',
-            (error as Error).message || error
+            error instanceof Error ? error.message : String(error)
           );
         }
 
         return res.status(204).send();
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Images MVP analytics error:', error);
         return res.status(500).json({ error: 'Failed to log analytics event' });
       }
@@ -972,7 +976,7 @@ export function registerImagesMvpRoutes(app: Express) {
             cta_clicked: paywallClicked,
           },
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Images MVP analytics report error:', error);
         return res
           .status(500)
@@ -1185,7 +1189,7 @@ export function registerImagesMvpRoutes(app: Express) {
         expiresAt: new Date(expiresAt).toISOString(),
         warnings,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Images MVP quote error:', error);
       res.status(500).json({ error: 'Failed to generate quote' });
     }
@@ -1223,7 +1227,7 @@ export function registerImagesMvpRoutes(app: Express) {
           credits: balance.credits,
           balanceId: balance.id,
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Get images_mvp credits error:', error);
         res.status(500).json({ error: 'Failed to get credit balance' });
       }
@@ -1242,7 +1246,7 @@ export function registerImagesMvpRoutes(app: Express) {
         if (!balanceId) return res.json({ transactions: [] });
         const transactions = await storage.getCreditTransactions(balanceId);
         return res.json({ transactions });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Get images_mvp credit transactions error:', error);
         return res
           .status(500)
@@ -1288,7 +1292,7 @@ export function registerImagesMvpRoutes(app: Express) {
         );
 
         return res.json({ transferred: amount });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Images MVP claim credits error:', error);
         return res.status(500).json({ error: 'Failed to claim credits' });
       }
@@ -1340,7 +1344,7 @@ export function registerImagesMvpRoutes(app: Express) {
           balanceId: balance.id,
           credits: updated?.credits ?? balance.credits,
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Images MVP dev grant credits error:', error);
         return res.status(500).json({ error: 'Failed to grant credits' });
       }
@@ -1434,7 +1438,7 @@ export function registerImagesMvpRoutes(app: Express) {
           checkout_url: session.checkout_url,
           session_id: session.session_id,
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Images MVP purchase error:', error);
         res.status(500).json({
           error: 'Failed to create checkout session',
@@ -1463,16 +1467,18 @@ export function registerImagesMvpRoutes(app: Express) {
             filename: req.file?.originalname || 'unknown',
             mimetype: req.file?.mimetype || 'unknown',
             size: req.file?.size || 0,
-            extension: path.extname(req.file?.originalname || '').toLowerCase() || 'unknown',
+            extension:
+              path.extname(req.file?.originalname || '').toLowerCase() ||
+              'unknown',
           });
-          
+
           return res.status(403).json({
             error: 'Unsupported file type',
             message: err.message,
             code: 'UNSUPPORTED_FILE_TYPE',
           });
         }
-        
+
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(413).json({
             error: 'File too large',
@@ -1480,7 +1486,7 @@ export function registerImagesMvpRoutes(app: Express) {
             code: 'FILE_TOO_LARGE',
           });
         }
-        
+
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
           return res.status(400).json({
             error: 'Invalid file upload',
@@ -1488,7 +1494,7 @@ export function registerImagesMvpRoutes(app: Express) {
             code: 'LIMIT_UNEXPECTED_FILE',
           });
         }
-        
+
         // Generic multer error
         return res.status(400).json({
           error: 'File upload failed',
@@ -1496,7 +1502,7 @@ export function registerImagesMvpRoutes(app: Express) {
           code: err.code || 'UPLOAD_ERROR',
         });
       }
-      
+
       // No error, proceed to main handler
       next();
     },
@@ -1701,7 +1707,14 @@ export function registerImagesMvpRoutes(app: Express) {
               console.warn(
                 `[Security] Suspicious device detected: ${deviceId} from IP ${ip}`
               );
-              // For now, just log - in future, could require CAPTCHA
+
+              // Return challenge response instead of just logging
+              return res.status(429).json({
+                error: 'Rate limit exceeded',
+                message: 'Please try again later',
+                code: 'SUSPICIOUS_DEVICE',
+                retryAfter: 300 // 5 minutes
+              });
             }
 
             // Check circuit breaker for free tier load shedding
@@ -1938,7 +1951,7 @@ export function registerImagesMvpRoutes(app: Express) {
               `Extraction: ${fileExtension} (Images MVP)`,
               mimeType
             );
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Failed to charge credits:', error);
             return res.status(402).json({
               error: 'Payment failed',
@@ -1958,13 +1971,13 @@ export function registerImagesMvpRoutes(app: Express) {
               sessionId: sessionId || undefined,
               // We log to the main trial table. This counts towards the "2 limit".
             });
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('Failed to record trial usage:', error);
           }
         }
 
         res.json(metadata);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Images MVP extraction error:', error);
 
         // Send error notification via WebSocket
@@ -2025,7 +2038,7 @@ export function registerImagesMvpRoutes(app: Express) {
           message:
             'Job not found. It may still be processing or the ID is invalid.',
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching job status:', error);
         return res.status(500).json({
           error: 'Failed to fetch job status',
@@ -2072,7 +2085,7 @@ export function registerImagesMvpRoutes(app: Express) {
             jpeg: true,
           },
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error generating thumbnail:', error);
         return res.status(500).json({
           error: 'Failed to generate thumbnail',

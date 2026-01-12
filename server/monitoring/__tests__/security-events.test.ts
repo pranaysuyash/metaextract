@@ -13,7 +13,9 @@ import { storage } from '../../storage';
 describe('getRateLimitKey and SecurityEventLogger integration', () => {
   beforeEach(() => {
     // Prevent actual storage interactions during this unit test
-    jest.spyOn(storage, 'logSecurityEvent').mockResolvedValue(undefined as any);
+    jest
+      .spyOn(storage as any, 'logSecurityEvent')
+      .mockResolvedValue(undefined as any);
   });
 
   afterEach(() => {
@@ -26,7 +28,9 @@ describe('getRateLimitKey and SecurityEventLogger integration', () => {
   });
 
   test('getRateLimitKey returns session key when session cookie is present', () => {
-    const key = getRateLimitKey({ cookies: { metaextract_session_id: 'sess_123' } } as any);
+    const key = getRateLimitKey({
+      cookies: { metaextract_session_id: 'sess_123' },
+    } as any);
     expect(key).toBe('session:sess_123');
   });
 
@@ -49,8 +53,9 @@ describe('getRateLimitKey and SecurityEventLogger integration', () => {
     // Force flush of the buffer to ensure storage is called in this test
     await (securityEventLogger as any).flushBuffer();
 
-    expect(storage.logSecurityEvent).toHaveBeenCalled();
-    const calledArg = (storage.logSecurityEvent as jest.Mock).mock.calls[0][0];
+    expect((storage as any).logSecurityEvent).toHaveBeenCalled();
+    const calledArg = ((storage as any).logSecurityEvent as jest.Mock).mock
+      .calls[0][0];
     expect(calledArg.details.sessionId).toBe('sess_abc');
   });
 });

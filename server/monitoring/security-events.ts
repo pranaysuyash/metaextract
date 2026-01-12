@@ -1,6 +1,6 @@
 /**
  * Security Event Logging and Analysis
- * 
+ *
  * Comprehensive security event tracking for:
  * - Failed uploads and rejections
  * - Rate limit violations
@@ -15,24 +15,34 @@ import { Request } from 'express';
 
 // Security Event Types
 export type SecurityEventType =
-  | 'upload_rejected'           // File rejected by fileFilter
-  | 'rate_limit_exceeded'       // Rate limit violation
-  | 'burst_limit_exceeded'      // Burst rate limit violation
-  | 'invalid_file_type'         // Unsupported file type attempt
-  | 'suspicious_access'         // Unusual access pattern
-  | 'authentication_failure'    // Failed authentication
-  | 'authorization_failure'     // Failed authorization
-  | 'temp_cleanup_performed'    // Temp file cleanup executed
-  | 'security_alert_sent'       // Security alert triggered
-  | 'health_check_failure'      // Health check failed
-  | 'monitoring_failure'        // Monitoring system error
-  | 'large_file_upload'         // File exceeds size threshold
-  | 'multiple_sessions_ip'      // Multiple sessions from same IP
-  | 'cookie_reset_detected'     // Session cookie reset detected
-  | 'geographic_anomaly'        // Unusual geographic access
-  | 'timing_anomaly'           // Unusual timing pattern
-  | 'user_agent_anomaly'       // Suspicious user agent
-  | 'ip_reputation_flag'       // IP flagged by reputation service
+  | 'upload_rejected' // File rejected by fileFilter
+  | 'rate_limit_exceeded' // Rate limit violation
+  | 'burst_limit_exceeded' // Burst rate limit violation
+  | 'invalid_file_type' // Unsupported file type attempt
+  | 'suspicious_access' // Unusual access pattern
+  | 'authentication_failure' // Failed authentication
+  | 'authorization_failure' // Failed authorization
+  | 'temp_cleanup_performed' // Temp file cleanup executed
+  | 'security_alert_sent' // Security alert triggered
+  | 'health_check_failure' // Health check failed
+  | 'monitoring_failure' // Monitoring system error
+  | 'large_file_upload' // File exceeds size threshold
+  | 'multiple_sessions_ip' // Multiple sessions from same IP
+  | 'cookie_reset_detected' // Session cookie reset detected
+  | 'geographic_anomaly' // Unusual geographic access
+  | 'timing_anomaly' // Unusual timing pattern
+  | 'user_agent_anomaly' // Suspicious user agent
+  | 'ip_reputation_flag' // IP flagged by reputation service
+  | 'invalid_fingerprint' // Invalid fingerprint submission
+  | 'protection_error'
+  | 'protection_decision'
+  | 'challenge_failed'
+  | 'fingerprint_analysis'
+  | 'fingerprint_submitted'
+  | 'fingerprint_error'
+  | 'protection_feedback'
+  | 'anomaly_detection'
+  | 'ml_anomaly_detection'; // ML anomaly detection result
 
 export interface SecurityEvent {
   id?: string;
@@ -44,6 +54,7 @@ export interface SecurityEvent {
   sessionId?: string;
   ipAddress: string;
   userAgent?: string;
+  message?: string;
   details: Record<string, any>;
   metadata?: {
     country?: string;
@@ -60,20 +71,20 @@ const SECURITY_THRESHOLDS = {
   // Upload rejection thresholds
   UPLOAD_REJECTIONS_PER_MINUTE: 50,
   UPLOAD_REJECTIONS_PER_IP_PER_HOUR: 20,
-  
-  // Rate limiting thresholds  
+
+  // Rate limiting thresholds
   RATE_LIMIT_VIOLATIONS_PER_MINUTE: 30,
   RATE_LIMIT_VIOLATIONS_PER_IP_PER_HOUR: 10,
-  
+
   // Suspicious behavior thresholds
   FAILED_ATTEMPTS_PER_IP_PER_HOUR: 50,
   COOKIE_RESETS_PER_IP_PER_HOUR: 30,
   MULTIPLE_SESSIONS_PER_IP: 15,
-  
+
   // Geographic thresholds
   COUNTRIES_PER_IP_PER_DAY: 5,
   IMPOSSIBLE_TRAVEL_TIME_MINUTES: 30,
-  
+
   // File analysis thresholds
   LARGE_FILE_SIZE_MB: 50,
   SUSPICIOUS_EXTENSIONS: ['.exe', '.scr', '.vbs', '.js', '.bat'],
@@ -111,14 +122,15 @@ export class SecurityEventLogger {
       this.eventBuffer.push(event);
 
       // Log immediately for debugging
-      console.log(`[SecurityEvent] ${event.severity.toUpperCase()}: ${event.event} - ${event.message || event.details.message || 'No message'}`);
+      console.log(
+        `[SecurityEvent] ${event.severity.toUpperCase()}: ${event.event} - ${event.message || event.details.message || 'No message'}`
+      );
 
       // Flush buffer if it's getting large
       if (this.eventBuffer.length >= this.BUFFER_SIZE) {
         await this.flushBuffer();
       }
-
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SecurityEvent] Failed to log security event:', error);
     }
   }
@@ -167,7 +179,8 @@ export class SecurityEventLogger {
     window: string
   ): Promise<void> {
     const event: SecurityEvent = {
-      event: limitType === 'burst' ? 'burst_limit_exceeded' : 'rate_limit_exceeded',
+      event:
+        limitType === 'burst' ? 'burst_limit_exceeded' : 'rate_limit_exceeded',
       severity: 'medium',
       timestamp: new Date(),
       source: 'rate_limiter',
@@ -195,7 +208,12 @@ export class SecurityEventLogger {
   ): Promise<void> {
     const event: SecurityEvent = {
       event: 'suspicious_access',
-      severity: confidence === 'high' ? 'high' : confidence === 'medium' ? 'medium' : 'low',
+      severity:
+        confidence === 'high'
+          ? 'high'
+          : confidence === 'medium'
+            ? 'medium'
+            : 'low',
       timestamp: new Date(),
       source: 'pattern_detection',
       ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
@@ -240,7 +258,10 @@ export class SecurityEventLogger {
   /**
    * Log temp cleanup event
    */
-  async logTempCleanup(filesRemoved: number, spaceFreed: number): Promise<void> {
+  async logTempCleanup(
+    filesRemoved: number,
+    spaceFreed: number
+  ): Promise<void> {
     const event: SecurityEvent = {
       event: 'temp_cleanup_performed',
       severity: filesRemoved > 100 ? 'medium' : 'low',
@@ -262,11 +283,14 @@ export class SecurityEventLogger {
    */
   private getRejectionSeverity(reason: string): 'low' | 'medium' | 'high' {
     const lowerReason = reason.toLowerCase();
-    
+
     if (lowerReason.includes('executable') || lowerReason.includes('script')) {
       return 'high';
     }
-    if (lowerReason.includes('unsupported') || lowerReason.includes('invalid')) {
+    if (
+      lowerReason.includes('unsupported') ||
+      lowerReason.includes('invalid')
+    ) {
       return 'medium';
     }
     return 'low';
@@ -277,7 +301,7 @@ export class SecurityEventLogger {
    */
   private sanitizeHeaders(headers: any): Record<string, string> {
     const sanitized: Record<string, string> = {};
-    
+
     // Only log safe headers
     const safeHeaders = [
       'user-agent',
@@ -289,13 +313,13 @@ export class SecurityEventLogger {
       'x-forwarded-for',
       'x-real-ip',
     ];
-    
+
     for (const header of safeHeaders) {
       if (headers[header]) {
         sanitized[header] = headers[header];
       }
     }
-    
+
     return sanitized;
   }
 
@@ -322,9 +346,11 @@ export class SecurityEventLogger {
     try {
       // Batch insert events into database
       await this.batchInsertEvents(eventsToFlush);
-      
-      console.log(`[SecurityEvent] Flushed ${eventsToFlush.length} events to database`);
-    } catch (error) {
+
+      console.log(
+        `[SecurityEvent] Flushed ${eventsToFlush.length} events to database`
+      );
+    } catch (error: unknown) {
       console.error('[SecurityEvent] Failed to flush event buffer:', error);
       // Put events back in buffer for retry
       this.eventBuffer.unshift(...eventsToFlush);
@@ -339,11 +365,11 @@ export class SecurityEventLogger {
       // In a real implementation, this would batch insert into database
       // For now, we'll log and store individually
       for (const event of events) {
-        await storage.logSecurityEvent(event);
+        await storage.logSecurityEvent?.(event);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SecurityEvent] Failed to batch insert events:', error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -367,16 +393,16 @@ export class SecurityEventLogger {
       return {
         totalEvents: 150,
         eventsByType: {
-          'upload_rejected': 80,
-          'rate_limit_exceeded': 30,
-          'suspicious_access': 20,
-          'temp_cleanup_performed': 20,
+          upload_rejected: 80,
+          rate_limit_exceeded: 30,
+          suspicious_access: 20,
+          temp_cleanup_performed: 20,
         },
         eventsBySeverity: {
-          'low': 100,
-          'medium': 30,
-          'high': 15,
-          'critical': 5,
+          low: 100,
+          medium: 30,
+          high: 15,
+          critical: 5,
         },
         topIPs: [
           { ip: '192.168.1.100', count: 45 },
@@ -389,9 +415,9 @@ export class SecurityEventLogger {
           { hour: '2026-01-12T12:00:00Z', count: 20 },
         ],
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SecurityEvent] Failed to get security analytics:', error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -411,12 +437,13 @@ export class SecurityEventLogger {
     try {
       // This would analyze recent events for patterns
       // For now, return mock detection results
-      
+
       const patterns = [
         {
           type: 'upload_flooding',
           confidence: 'medium' as const,
-          description: 'Multiple upload attempts with rejected files from same IP ranges',
+          description:
+            'Multiple upload attempts with rejected files from same IP ranges',
           affectedIPs: ['192.168.1.100', '192.168.1.101'],
           recommendation: 'Consider IP-based rate limiting or blocking',
         },
@@ -425,7 +452,8 @@ export class SecurityEventLogger {
           confidence: 'low' as const,
           description: 'Pattern suggesting attempts to bypass rate limiting',
           affectedIPs: ['10.0.0.50'],
-          recommendation: 'Monitor for continued attempts and consider stricter limits',
+          recommendation:
+            'Monitor for continued attempts and consider stricter limits',
         },
       ];
 
@@ -433,9 +461,9 @@ export class SecurityEventLogger {
         patterns,
         riskScore: 65, // Medium risk
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SecurityEvent] Failed to detect abuse patterns:', error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 }

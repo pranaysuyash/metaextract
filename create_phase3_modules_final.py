@@ -126,7 +126,8 @@ def create_all_phase3_modules():
     
     modules = [
         ("Rheumatology", "rheumatology_imaging", "Rheumatological imaging and diagnostics", 
-         ["Arthritis", "Joint Disorders", "Autoimmune Conditions"]),
+         ["Arthritis", "Joint Disorders", "Autoimmune Conditions"])
+
         ("Pulmonology", "pulmonology_imaging", "Pulmonary imaging and respiratory conditions", 
          ["COPD", "Asthma", "Interstitial Lung Disease"]),
         ("Nephrology", "nephrology_imaging", "Kidney imaging and urinary tract conditions", 
@@ -138,7 +139,8 @@ def create_all_phase3_modules():
     ]
     
     for domain, module_name, description, specialties in modules:
-        created = create_medical_specialty_module(domain, description, specialties)
+        domain_val, module_val, desc_val, specs_val = domain, module_name, description, specialties
+        created = create_medical_specialty_module(domain_val, module_val, desc_val, specs_val)
         created_modules.append(created)
     
     print("="*70)

@@ -774,7 +774,10 @@ export class MemStorage implements IStorage {
   }
 
   // Optional methods for compatibility
-  async getExtractionHistoryByUser?(userId: string, limit?: number): Promise<any[]> {
+  async getExtractionHistoryByUser?(
+    userId: string,
+    limit?: number
+  ): Promise<any[]> {
     return [];
   }
 
@@ -798,7 +801,10 @@ export class MemStorage implements IStorage {
     return [];
   }
 
-  async getExtractionHistoryByDateRange?(startDate: Date, endDate: Date): Promise<any[]> {
+  async getExtractionHistoryByDateRange?(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
     return [];
   }
 
@@ -828,14 +834,20 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
-  async updateUserPassword?(userId: string, newPassword: string): Promise<void> {
+  async updateUserPassword?(
+    userId: string,
+    newPassword: string
+  ): Promise<void> {
     const user = this.users.get(userId);
     if (user) {
       user.password = newPassword;
     }
   }
 
-  async updateUserProfile?(userId: string, profile: Partial<User>): Promise<User> {
+  async updateUserProfile?(
+    userId: string,
+    profile: Partial<User>
+  ): Promise<User> {
     const user = this.users.get(userId);
     if (!user) {
       throw new Error('User not found');
@@ -844,7 +856,11 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async setPasswordResetToken?(userId: string, token: string, expiresAt: Date): Promise<void> {
+  async setPasswordResetToken?(
+    userId: string,
+    token: string,
+    expiresAt: Date
+  ): Promise<void> {
     // Implementation would go here
   }
 
@@ -880,7 +896,8 @@ export class MemStorage implements IStorage {
       .map(id => this.batchJobs.get(id))
       .filter((job): job is BatchJob => Boolean(job))
       .sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
   }
 
@@ -888,10 +905,12 @@ export class MemStorage implements IStorage {
     return this.batchJobs.get(jobId);
   }
 
-  async createBatchJob(job: Omit<BatchJob, 'id' | 'createdAt' | 'updatedAt'>): Promise<BatchJob> {
+  async createBatchJob(
+    job: Omit<BatchJob, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<BatchJob> {
     const now = new Date().toISOString();
     const jobId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const newJob: BatchJob = {
       ...job,
       id: jobId,
@@ -900,25 +919,28 @@ export class MemStorage implements IStorage {
     };
 
     this.batchJobs.set(jobId, newJob);
-    
+
     // Add to user's job list
     const userJobs = this.batchJobsByUserId.get(job.userId) || [];
     userJobs.push(jobId);
     this.batchJobsByUserId.set(job.userId, userJobs);
-    
+
     return newJob;
   }
 
-  async updateBatchJob(jobId: string, updates: Partial<BatchJob>): Promise<void> {
+  async updateBatchJob(
+    jobId: string,
+    updates: Partial<BatchJob>
+  ): Promise<void> {
     const job = this.batchJobs.get(jobId);
     if (!job) return;
-    
+
     const updatedJob: BatchJob = {
       ...job,
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-    
+
     this.batchJobs.set(jobId, updatedJob);
   }
 
@@ -928,7 +950,8 @@ export class MemStorage implements IStorage {
       .map(id => this.batchResults.get(id))
       .filter((result): result is BatchResult => Boolean(result))
       .sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
   }
 
@@ -936,10 +959,12 @@ export class MemStorage implements IStorage {
     return this.batchResults.get(resultId);
   }
 
-  async createBatchResult(result: Omit<BatchResult, 'id' | 'createdAt'>): Promise<BatchResult> {
+  async createBatchResult(
+    result: Omit<BatchResult, 'id' | 'createdAt'>
+  ): Promise<BatchResult> {
     const now = new Date().toISOString();
     const resultId = `result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const newResult: BatchResult = {
       ...result,
       id: resultId,
@@ -947,34 +972,37 @@ export class MemStorage implements IStorage {
     };
 
     this.batchResults.set(resultId, newResult);
-    
+
     // Add to batch's result list
     const batchResults = this.batchResultsByBatchId.get(result.batchId) || [];
     batchResults.push(resultId);
     this.batchResultsByBatchId.set(result.batchId, batchResults);
-    
+
     return newResult;
   }
 
-  async updateBatchResult(resultId: string, updates: Partial<BatchResult>): Promise<void> {
+  async updateBatchResult(
+    resultId: string,
+    updates: Partial<BatchResult>
+  ): Promise<void> {
     const result = this.batchResults.get(resultId);
     if (!result) return;
-    
+
     const updatedResult: BatchResult = {
       ...result,
       ...updates,
     };
-    
+
     this.batchResults.set(resultId, updatedResult);
   }
 
   async deleteBatchJob(jobId: string): Promise<void> {
     const job = this.batchJobs.get(jobId);
     if (!job) return;
-    
+
     // Delete associated results first
     await this.deleteBatchResults(jobId);
-    
+
     // Remove from user's job list
     const userJobs = this.batchJobsByUserId.get(job.userId) || [];
     const updatedUserJobs = userJobs.filter(id => id !== jobId);
@@ -983,19 +1011,19 @@ export class MemStorage implements IStorage {
     } else {
       this.batchJobsByUserId.delete(job.userId);
     }
-    
+
     // Delete the job
     this.batchJobs.delete(jobId);
   }
 
   async deleteBatchResults(batchId: string): Promise<void> {
     const resultIds = this.batchResultsByBatchId.get(batchId) || [];
-    
+
     // Delete each result
     resultIds.forEach(resultId => {
       this.batchResults.delete(resultId);
     });
-    
+
     // Remove from batch's result list
     this.batchResultsByBatchId.delete(batchId);
   }

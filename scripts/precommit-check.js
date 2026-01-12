@@ -28,7 +28,9 @@ function stagedDiffLines() {
   console.log(`Staged change size: ${lines} lines`);
 
   if (lines > 200) {
-    console.log('Large change detected — running full checks (type-check + tests)');
+    console.log(
+      'Large change detected — running full checks (type-check + tests)'
+    );
     try {
       execSync('npm run check', { stdio: 'inherit' });
       execSync('npm test -- -i --runInBand', { stdio: 'inherit' });
@@ -40,7 +42,10 @@ function stagedDiffLines() {
     console.log('Small change — running quick lint and unit tests');
     try {
       execSync('npm run lint --silent', { stdio: 'inherit' });
-      execSync('npx jest client/src/__tests__/images-mvp.hook.test.tsx -i --runInBand', { stdio: 'inherit' });
+      execSync(
+        'npx jest client/src/__tests__/images-mvp.hook.test.tsx -i --runInBand',
+        { stdio: 'inherit' }
+      );
     } catch (e) {
       console.error('Quick checks failed — aborting commit');
       process.exit(1);

@@ -21,7 +21,7 @@ export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
     };
 
     // Log to database through storage system
-    await storage.logSecurityEvent(completeEvent);
+    await storage.logSecurityEvent?.(completeEvent);
     
     // Also log to console for immediate visibility
     console.log(`[SecurityLogger] ${completeEvent.severity.toUpperCase()}: ${completeEvent.event} from ${completeEvent.ipAddress}`);
@@ -53,8 +53,17 @@ export async function getSecurityEvents(
 }> {
   try {
     // Use storage system to query security events
-    const result = await storage.getSecurityEvents(filters);
-    return result;
+    if (!storage.getSecurityEvents) {
+      return { events: [], totalCount: 0, hasMore: false };
+    }
+    const raw = await storage.getSecurityEvents(filters);
+    if (!raw || Array.isArray(raw)) {
+      // Defensive fallback if storage returns unexpected shape
+      return { events: [], totalCount: 0, hasMore: false };
+    }
+
+    const result = raw as { events: SecurityEvent[]; totalCount: number; hasMore: boolean };
+    return result; 
   } catch (error) {
     console.error('[SecurityLogger] Failed to get security events:', error);
     return {

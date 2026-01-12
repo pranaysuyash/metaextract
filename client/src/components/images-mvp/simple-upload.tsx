@@ -41,6 +41,8 @@ export function SimpleUploadZone() {
   const [quoteOps, setQuoteOps] = useState<ImagesMvpQuoteOps>(
     createDefaultQuoteOps()
   );
+  const [ocrAutoApplied, setOcrAutoApplied] = useState(false);
+  const [ocrUserOverride, setOcrUserOverride] = useState(false);
   const [quoteData, setQuoteData] = useState<ImagesMvpQuoteResponse | null>(
     null
   );
@@ -48,6 +50,7 @@ export function SimpleUploadZone() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const openedFromQueryRef = useRef(false);
+  const ocrFromQueryRef = useRef(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
@@ -61,6 +64,9 @@ export function SimpleUploadZone() {
     if (index <= 0) return null;
     return name.slice(index).toLowerCase();
   };
+
+  const looksLikeMapCapture = (name: string): boolean =>
+    /gps|map|location|coords|coordinate|geotag/i.test(name);
 
   const probeImageDimensions = async (
     file: File
@@ -215,6 +221,32 @@ export function SimpleUploadZone() {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
+    if (ocrFromQueryRef.current) return;
+    if (searchParams.get('ocr') !== '1') return;
+    ocrFromQueryRef.current = true;
+    setOcrUserOverride(true);
+    setOcrAutoApplied(false);
+    setQuoteOps(prev => ({ ...prev, ocr: true }));
+    if (pendingFile && pendingFileId) {
+      void requestQuote(pendingFile, pendingFileId, pendingDimensions, {
+        ...quoteOps,
+        ocr: true,
+      });
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('ocr');
+    setSearchParams(next, { replace: true });
+  }, [
+    pendingDimensions,
+    pendingFile,
+    pendingFileId,
+    quoteOps,
+    requestQuote,
+    searchParams,
+    setSearchParams,
+  ]);
+
+  useEffect(() => {
     if (!showPricingModal) return;
     const active = document.activeElement as HTMLElement | null;
     if (active && typeof active.blur === 'function') {
@@ -252,16 +284,53 @@ export function SimpleUploadZone() {
 
   const handleOpsToggle = (key: keyof ImagesMvpQuoteOps) => {
     const nextOps = { ...quoteOps, [key]: !quoteOps[key] };
+    if (key === 'ocr') {
+      setOcrUserOverride(true);
+      setOcrAutoApplied(false);
+    }
     setQuoteOps(nextOps);
     if (pendingFile && pendingFileId) {
       void requestQuote(pendingFile, pendingFileId, pendingDimensions, nextOps);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFile(e.target.files[0]);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      e.target.value = '';
+      return;
     }
+
+    const files = Array.from(e.target.files);
+
+    // If multiple files selected, request a batch quote and set UI to reflect batch selection
+    if (files.length > 1) {
+      setQuoteLoading(true);
+      setQuoteError(null);
+      try {
+        const entries = files.map(f => ({
+          id: crypto.randomUUID(),
+          name: f.name,
+          mime: f.type || null,
+          sizeBytes: f.size,
+          width: null as number | null,
+          height: null as number | null,
+        }));
+        const response = await fetchImagesMvpQuote(entries, quoteOps);
+        setQuoteData(response);
+        // keep first file as pending to preserve single-file flow for immediate actions
+        setPendingFile(files[0]);
+        setPendingFileId(entries[0].id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to get quote';
+        setQuoteError(message);
+        setQuoteData(null);
+      } finally {
+        setQuoteLoading(false);
+      }
+    } else {
+      handleFile(files[0]);
+    }
+
     e.target.value = ''; // reset
   };
 
@@ -269,6 +338,7 @@ export function SimpleUploadZone() {
     const ext = getExtension(file.name);
     const mimeType = file.type || 'application/octet-stream';
     const sizeBucket = getFileSizeBucket(file.size);
+    setOcrUserOverride(false);
 
     trackImagesMvpEvent('upload_selected', {
       extension: ext,
@@ -287,8 +357,19 @@ export function SimpleUploadZone() {
 
     const dimensions = await probeImageDimensions(file);
     setPendingDimensions(dimensions);
+    const shouldSuggestOcr = looksLikeMapCapture(file.name);
+    const nextOps =
+      shouldSuggestOcr && !ocrUserOverride && !quoteOps.ocr
+        ? { ...quoteOps, ocr: true }
+        : quoteOps;
+    if (nextOps !== quoteOps) {
+      setQuoteOps(nextOps);
+      setOcrAutoApplied(true);
+    } else {
+      setOcrAutoApplied(false);
+    }
 
-    const quote = await requestQuote(file, fileId, dimensions, quoteOps);
+    const quote = await requestQuote(file, fileId, dimensions, nextOps);
     const fileQuote = quote?.quote?.perFile?.find(entry => entry.id === fileId);
     if (!quote || !fileQuote) {
       trackImagesMvpEvent('upload_rejected', {
@@ -355,6 +436,7 @@ export function SimpleUploadZone() {
     setShowProgressTracker(true);
     const formData = new FormData();
     sessionStorage.setItem('images_mvp_status', 'processing');
+    sessionStorage.setItem('images_mvp_ocr', String(quoteOps.ocr));
 
     // Append metadata fields BEFORE file to ensure streaming parsers see them first
     formData.append('session_id', sessionId);
@@ -676,6 +758,7 @@ export function SimpleUploadZone() {
               id="mvp-upload"
               ref={inputRef}
               type="file"
+              multiple
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               accept="image/*"
               disabled={isUploading}
@@ -760,6 +843,10 @@ export function SimpleUploadZone() {
                 >
                   Browse Files
                 </Button>
+
+                <div className="mt-2 text-xs text-slate-400">
+                  <span className="block">Files are processed securely and deleted within 1 hour.</span>
+                </div>
               </>
             )}
           </label>
@@ -783,12 +870,26 @@ export function SimpleUploadZone() {
                   : ' • dimensions pending'}
               </div>
             </div>
-            <div className="text-xs text-slate-300 shrink-0 flex items-center">
+            <div className="text-xs text-slate-300 shrink-0 flex items-center gap-2">
               {quoteLoading
                 ? 'Calculating quote...'
                 : activeQuoteEntry?.accepted
                   ? `Credits: ${activeQuoteEntry.creditsTotal}`
                   : 'Quote unavailable'}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  setResumeRequested(true);
+                  await checkCreditsAndMaybeResume();
+                  setResumeRequested(false);
+                  toast({ title: 'Checked for credits', description: 'Refreshed credit balance.' });
+                }}
+                className="ml-2"
+              >
+                Check for Credits
+              </Button>
             </div>
           </div>
 
@@ -875,6 +976,12 @@ export function SimpleUploadZone() {
                 </span>
               </span>
             </label>
+            {ocrAutoApplied && (
+              <div className="text-[11px] text-emerald-300">
+                Text scan enabled because this looks like a map/GPS image. You
+                can turn it off.
+              </div>
+            )}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">

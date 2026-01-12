@@ -1,6 +1,6 @@
 /**
  * Tests for temp file cleanup system
- * 
+ *
  * Verifies that:
  * 1. Old files are cleaned up
  * 2. Recent files are preserved
@@ -8,24 +8,28 @@
  * 4. Emergency cleanup triggers appropriately
  */
 
-import { cleanupOrphanedTempFiles, checkTempHealth, checkEmergencyCleanup } from './startup-cleanup';
+import {
+  cleanupOrphanedTempFiles,
+  checkTempHealth,
+  checkEmergencyCleanup,
+} from './startup-cleanup';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
 describe('Temp File Cleanup System', () => {
   const testDirs = ['/tmp/metaextract-test', '/tmp/metaextract-uploads-test'];
-  
+
   beforeAll(async () => {
     // Set environment variable to use test directories
     process.env.CLEANUP_TEMP_DIRS = testDirs.join(',');
-    
+
     // Create test directories
     for (const dir of testDirs) {
       await fs.mkdir(dir, { recursive: true });
     }
   });
-  
+
   afterAll(async () => {
     // Clean up environment variable
     delete process.env.CLEANUP_TEMP_DIRS;
@@ -45,70 +49,94 @@ describe('Temp File Cleanup System', () => {
   describe('File Age-Based Cleanup', () => {
     test('should remove files older than 1 hour', async () => {
       const testDir = testDirs[0];
-      
+
       // Create old file (2 hours ago)
       const oldFile = path.join(testDir, 'old-file.txt');
       await fs.writeFile(oldFile, 'old content');
       const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
-      console.log(`Setting old file time: ${new Date(twoHoursAgo).toISOString()}`);
+      console.log(
+        `Setting old file time: ${new Date(twoHoursAgo).toISOString()}`
+      );
       // fs.utimes expects timestamps in seconds, not milliseconds
       await fs.utimes(oldFile, new Date(twoHoursAgo), new Date(twoHoursAgo));
-      
+
       // Create recent file (30 minutes ago)
       const recentFile = path.join(testDir, 'recent-file.txt');
       await fs.writeFile(recentFile, 'recent content');
       const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
-      console.log(`Setting recent file time: ${new Date(thirtyMinutesAgo).toISOString()}`);
+      console.log(
+        `Setting recent file time: ${new Date(thirtyMinutesAgo).toISOString()}`
+      );
       // fs.utimes expects timestamps in seconds, not milliseconds
-      await fs.utimes(recentFile, new Date(thirtyMinutesAgo), new Date(thirtyMinutesAgo));
-      
+      await fs.utimes(
+        recentFile,
+        new Date(thirtyMinutesAgo),
+        new Date(thirtyMinutesAgo)
+      );
+
       // Verify file times were set correctly
       const oldStats = await fs.stat(oldFile);
       const recentStats = await fs.stat(recentFile);
-      console.log(`Old file mtime: ${new Date(oldStats.mtimeMs).toISOString()}`);
-      console.log(`Recent file mtime: ${new Date(recentStats.mtimeMs).toISOString()}`);
-      
+      console.log(
+        `Old file mtime: ${new Date(oldStats.mtimeMs).toISOString()}`
+      );
+      console.log(
+        `Recent file mtime: ${new Date(recentStats.mtimeMs).toISOString()}`
+      );
+
       // Run cleanup
       const result = await cleanupOrphanedTempFiles();
-      
+
       // Verify old file was removed
-      const oldFileExists = await fs.access(oldFile).then(() => true).catch(() => false);
+      const oldFileExists = await fs
+        .access(oldFile)
+        .then(() => true)
+        .catch(() => false);
       expect(oldFileExists).toBe(false);
-      
+
       // Verify recent file was preserved
-      const recentFileExists = await fs.access(recentFile).then(() => true).catch(() => false);
+      const recentFileExists = await fs
+        .access(recentFile)
+        .then(() => true)
+        .catch(() => false);
       expect(recentFileExists).toBe(true);
-      
+
       // Verify cleanup result
       expect(result.totalFilesRemoved).toBeGreaterThanOrEqual(1);
       expect(result.totalSpaceFreed).toBeGreaterThan(0);
-      
+
       console.log(`✅ Cleanup removed ${result.totalFilesRemoved} old files`);
     });
 
     test('should handle directories with no old files', async () => {
       const testDir = testDirs[0];
-      
+
       // Create only recent files
       const recentFile1 = path.join(testDir, 'recent1.txt');
       const recentFile2 = path.join(testDir, 'recent2.txt');
-      
+
       await fs.writeFile(recentFile1, 'content1');
       await fs.writeFile(recentFile2, 'content2');
-      
+
       // Run cleanup
       const result = await cleanupOrphanedTempFiles();
-      
+
       // Verify no files were removed
       expect(result.totalFilesRemoved).toBe(0);
       expect(result.totalSpaceFreed).toBe(0);
-      
+
       // Verify files still exist
-      const file1Exists = await fs.access(recentFile1).then(() => true).catch(() => false);
-      const file2Exists = await fs.access(recentFile2).then(() => true).catch(() => false);
+      const file1Exists = await fs
+        .access(recentFile1)
+        .then(() => true)
+        .catch(() => false);
+      const file2Exists = await fs
+        .access(recentFile2)
+        .then(() => true)
+        .catch(() => false);
       expect(file1Exists).toBe(true);
       expect(file2Exists).toBe(true);
-      
+
       console.log(`✅ No recent files were removed`);
     });
   });
@@ -116,26 +144,28 @@ describe('Temp File Cleanup System', () => {
   describe('Health Check', () => {
     test('should report healthy status for clean directories', async () => {
       const health = await checkTempHealth();
-      
+
       expect(health.healthy).toBe(true);
       expect(health.totalSize).toBeGreaterThanOrEqual(0);
       expect(health.fileCount).toBeGreaterThanOrEqual(0);
       expect(health.warnings).toHaveLength(0);
-      
-      console.log(`✅ Health check: ${health.fileCount} files, ${health.totalSize} bytes`);
+
+      console.log(
+        `✅ Health check: ${health.fileCount} files, ${health.totalSize} bytes`
+      );
     });
 
     test('should report warnings for high usage', async () => {
       // This test would require creating many large files
       // For now, just verify the structure is correct
       const health = await checkTempHealth();
-      
+
       expect(health).toHaveProperty('healthy');
       expect(health).toHaveProperty('totalSize');
       expect(health).toHaveProperty('fileCount');
       expect(health).toHaveProperty('warnings');
       expect(Array.isArray(health.warnings)).toBe(true);
-      
+
       console.log(`✅ Health check structure valid`);
     });
   });
@@ -145,7 +175,7 @@ describe('Temp File Cleanup System', () => {
       // Create a large number of files to trigger emergency cleanup
       const testDir = testDirs[0];
       const largeContent = Buffer.alloc(1024 * 1024); // 1MB per file
-      
+
       // Create files that will trigger the threshold
       for (let i = 0; i < 10; i++) {
         const file = path.join(testDir, `large-file-${i}.txt`);
@@ -154,13 +184,13 @@ describe('Temp File Cleanup System', () => {
         const oldTime = Date.now() - 2 * 60 * 60 * 1000;
         await fs.utimes(file, new Date(oldTime), new Date(oldTime));
       }
-      
+
       // Lower threshold for test speed - 1 byte will make totalSize > threshold
       process.env.CLEANUP_MAX_TOTAL_SIZE_BYTES = '1';
       const needsCleanup = await checkEmergencyCleanup();
       expect(needsCleanup).toBe(true);
       delete process.env.CLEANUP_MAX_TOTAL_SIZE_BYTES;
-      
+
       console.log(`✅ Emergency cleanup correctly detected`);
     });
   });
@@ -168,15 +198,15 @@ describe('Temp File Cleanup System', () => {
   describe('Error Handling', () => {
     test('should handle non-existent directories gracefully', async () => {
       const nonExistentDir = '/tmp/non-existent-directory-12345';
-      
+
       // Try to clean a non-existent directory
       const result = await cleanupOrphanedTempFiles();
-      
+
       // Should complete without throwing
       expect(result).toBeDefined();
       expect(result.directories).toBeDefined();
       expect(result.errors).toBeDefined();
-      
+
       console.log(`✅ Handled non-existent directories gracefully`);
     });
 
@@ -184,12 +214,12 @@ describe('Temp File Cleanup System', () => {
       // This test would require creating a file with restricted permissions
       // For now, just verify error handling structure
       const result = await cleanupOrphanedTempFiles();
-      
+
       expect(result).toHaveProperty('errors');
       expect(Array.isArray(result.errors)).toBe(true);
       expect(result).toHaveProperty('warnings');
       expect(Array.isArray(result.warnings)).toBe(true);
-      
+
       console.log(`✅ Error handling structure valid`);
     });
   });
@@ -202,9 +232,9 @@ describe('Temp File Cleanup System', () => {
       await fs.writeFile(oldFile, 'old content');
       const oldTime = Date.now() - 2 * 60 * 60 * 1000;
       await fs.utimes(oldFile, new Date(oldTime), new Date(oldTime));
-      
+
       const result = await cleanupOrphanedTempFiles();
-      
+
       // Verify summary structure
       expect(result).toHaveProperty('totalFilesRemoved');
       expect(result).toHaveProperty('totalSpaceFreed');
@@ -213,13 +243,15 @@ describe('Temp File Cleanup System', () => {
       expect(Array.isArray(result.directories)).toBe(true);
       expect(result).toHaveProperty('warnings');
       expect(result).toHaveProperty('errors');
-      
+
       // Verify values
       expect(result.totalFilesRemoved).toBeGreaterThanOrEqual(1);
       expect(result.totalSpaceFreed).toBeGreaterThan(0);
       expect(result.totalDuration).toBeGreaterThan(0);
-      
-      console.log(`✅ Cleanup summary complete: ${result.totalFilesRemoved} files, ${result.totalSpaceFreed} bytes freed`);
+
+      console.log(
+        `✅ Cleanup summary complete: ${result.totalFilesRemoved} files, ${result.totalSpaceFreed} bytes freed`
+      );
     });
   });
 });

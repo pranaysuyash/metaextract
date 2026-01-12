@@ -112,7 +112,8 @@ jest.mock('../utils/extraction-helpers', () => ({
         if (typeof metadata.gps.latitude === 'number')
           metadata.gps.latitude = Math.round(metadata.gps.latitude * 100) / 100;
         if (typeof metadata.gps.longitude === 'number')
-          metadata.gps.longitude = Math.round(metadata.gps.longitude * 100) / 100;
+          metadata.gps.longitude =
+            Math.round(metadata.gps.longitude * 100) / 100;
         delete (metadata.gps as any).google_maps_url;
       }
       if (metadata.filesystem) {
@@ -239,7 +240,10 @@ describe('Images MVP API Tests', () => {
 
     it('POST /api/images_mvp/extract sets metaextract_client cookie for anonymous users', async () => {
       // multipart/form-data upload using supertest attach
-      (storage.getOrCreateCreditBalance as jest.Mock).mockResolvedValue({ id: 'bal_anon', credits: 0 });
+      (storage.getOrCreateCreditBalance as jest.Mock).mockResolvedValue({
+        id: 'bal_anon',
+        credits: 0,
+      });
 
       const response = await request(app)
         .post('/api/images_mvp/extract')
@@ -248,16 +252,22 @@ describe('Images MVP API Tests', () => {
 
       // Should set cookie containing metaextract_client or server-side device token
       const setCookies = response.headers['set-cookie'] || [];
-      const cookies = Array.isArray(setCookies) ? setCookies.join(';') : String(setCookies);
+      const cookies = Array.isArray(setCookies)
+        ? setCookies.join(';')
+        : String(setCookies);
       // Historically we set a client token cookie; newer flow may set a server-side device cookie instead.
-      const clientOrDevicePresent = /metaextract_client=/.test(cookies) || /metaextract_device=/.test(cookies);
+      const clientOrDevicePresent =
+        /metaextract_client=/.test(cookies) ||
+        /metaextract_device=/.test(cookies);
       expect(clientOrDevicePresent).toBe(true);
     });
 
     it('device_free returns hybrid view and access.mode set', async () => {
       // Simulate device usage below free limit so server will choose device_free mode
       const freeQuota = require('../utils/free-quota-enforcement');
-      jest.spyOn(freeQuota, 'getClientUsage').mockResolvedValue({ freeUsed: 0 });
+      jest
+        .spyOn(freeQuota, 'getClientUsage')
+        .mockResolvedValue({ freeUsed: 0 });
       jest.spyOn(freeQuota, 'incrementUsage').mockResolvedValue(undefined);
 
       // Mock a rich metadata payload so we can validate redaction
@@ -270,7 +280,12 @@ describe('Images MVP API Tests', () => {
         calculated: { aspect_ratio: '3:4' },
         metadata_comparison: { summary: {} },
         file_integrity: { md5: 'a', sha1: 'b', sha256: 'c', crc32: 'd' },
-        thumbnail: { has_embedded: true, width: 120, height: 160, extra: 'remove' },
+        thumbnail: {
+          has_embedded: true,
+          width: 120,
+          height: 160,
+          extra: 'remove',
+        },
         perceptual_hashes: { phash: 'p', dhash: 'd', ahash: 'a', whash: 'w' },
         burned_metadata: {
           has_burned_metadata: true,
@@ -279,11 +294,25 @@ describe('Images MVP API Tests', () => {
           parsed_data: {
             gps: { latitude: 12.345678, longitude: 98.765432 },
             plus_code: 'XYZ',
-            location: { street: '1 st', city: 'Town', state: 'ST', country: 'CT' },
+            location: {
+              street: '1 st',
+              city: 'Town',
+              state: 'ST',
+              country: 'CT',
+            },
           },
         },
-        gps: { latitude: 12.345678, longitude: 98.765432, google_maps_url: 'https://maps' },
-        filesystem: { size_bytes: 1234, owner: 'pranay', owner_uid: 501, group: 'wheel' },
+        gps: {
+          latitude: 12.345678,
+          longitude: 98.765432,
+          google_maps_url: 'https://maps',
+        },
+        filesystem: {
+          size_bytes: 1234,
+          owner: 'pranay',
+          owner_uid: 501,
+          group: 'wheel',
+        },
       });
 
       const response = await request(app)
@@ -298,7 +327,9 @@ describe('Images MVP API Tests', () => {
       expect(response.body.file_integrity.md5).toBe('a');
       expect(response.body.burned_metadata.has_burned_metadata).toBe(true);
       expect(response.body.burned_metadata.extracted_text).toBeNull();
-      expect(response.body.burned_metadata.parsed_data).not.toHaveProperty('gps');
+      expect(response.body.burned_metadata.parsed_data).not.toHaveProperty(
+        'gps'
+      );
       expect(response.body.gps).toHaveProperty('latitude');
       expect(Math.abs(response.body.gps.latitude - 12.35)).toBeLessThan(0.01);
       expect(response.body.filesystem.owner).toBeUndefined();
@@ -531,7 +562,9 @@ describe('Images MVP API Tests', () => {
         .attach('file', Buffer.from('fake jpg'), 'test.jpg')
         .expect(200);
 
-      const call = (extractMetadataWithPython as jest.Mock).mock.calls.slice(-1)[0];
+      const call = (extractMetadataWithPython as jest.Mock).mock.calls.slice(
+        -1
+      )[0];
       expect(call[5]).toMatchObject({ ocr: false, maxDim: 2048 });
     });
   });

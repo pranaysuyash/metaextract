@@ -409,7 +409,7 @@ export function registerAuthRoutes(app: Express) {
           response.token = token;
         }
         return res.json(response);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Password reset request error:', error);
         return res.status(500).json({ error: 'Password reset request failed' });
       }
@@ -506,7 +506,7 @@ export function registerAuthRoutes(app: Express) {
         }
 
         return res.json({ success: true });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Password reset confirm error:', error);
         return res.status(500).json({ error: 'Password reset failed' });
       }
@@ -611,7 +611,7 @@ export function registerAuthRoutes(app: Express) {
         },
         token,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       const status = isDatabaseConnectionError(error) ? 503 : 500;
       res.status(status).json({
@@ -772,7 +772,7 @@ export function registerAuthRoutes(app: Express) {
         },
         token,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
       const status = isDatabaseConnectionError(error) ? 503 : 500;
       res.status(status).json({

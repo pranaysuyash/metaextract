@@ -41,15 +41,16 @@ interface AlertChannel {
 }
 
 interface SecurityAlert {
-  id: string;
+  id?: string;
   type: 'security' | 'performance' | 'abuse';
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   message: string;
   details: Record<string, any>;
-  timestamp: Date;
-  source: string;
+  timestamp?: Date;
+  source?: string;
   recommendation?: string;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -78,6 +79,7 @@ class EmailAlertChannel implements AlertChannel {
   }
 
   private formatEmail(alert: SecurityAlert): string {
+    const ts = alert.timestamp || new Date();
     return `
 Subject: [${alert.severity.toUpperCase()}] ${alert.title}
 
@@ -86,7 +88,7 @@ ${alert.message}
 Details:
 ${JSON.stringify(alert.details, null, 2)}
 
-Timestamp: ${alert.timestamp.toISOString()}
+Timestamp: ${ts.toISOString()}
 Source: ${alert.source}
 ${alert.recommendation ? `Recommendation: ${alert.recommendation}` : ''}
 
@@ -97,7 +99,7 @@ This is an automated security alert from MetaExtract.
 
   private async storeAlert(alert: SecurityAlert): Promise<void> {
     try {
-      await storage.logSecurityEvent({
+      await storage.logSecurityEvent?.({
         event: 'security_alert_sent',
         severity: alert.severity,
         alertId: alert.id,
@@ -124,13 +126,14 @@ class WebhookAlertChannel implements AlertChannel {
     if (!this.enabled) return;
 
     try {
+      const ts = alert.timestamp || new Date();
       const payload = {
         alert_id: alert.id,
         severity: alert.severity,
         title: alert.title,
         message: alert.message,
         details: alert.details,
-        timestamp: alert.timestamp.toISOString(),
+        timestamp: ts.toISOString(),
         source: alert.source,
         recommendation: alert.recommendation,
       };
@@ -178,7 +181,7 @@ class LogAlertChannel implements AlertChannel {
 
     // Always store in database for audit trail
     try {
-      await storage.logSecurityEvent({
+      await storage.logSecurityEvent?.({
         event: 'security_alert_logged',
         severity: alert.severity,
         alertId: alert.id,
@@ -409,7 +412,12 @@ export class SecurityAlertManager {
   /**
    * Send alert through all enabled channels
    */
-  private async sendAlert(alert: SecurityAlert): Promise<void> {
+  public async sendAlert(alert: SecurityAlert): Promise<void> {
+    // Ensure required defaults exist
+    alert.id = alert.id || `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    alert.timestamp = alert.timestamp || new Date();
+    alert.source = alert.source || 'SecurityAlertManager';
+
     // Check cooldown to prevent alert spam
     const cooldownKey = `${alert.type}_${alert.severity}_${alert.source}`;
     const now = Date.now();
@@ -478,7 +486,7 @@ export class SecurityAlertManager {
   /**
    * Start periodic security monitoring
    */
-  startPeriodicMonitoring(intervalMs = 60 * 1000): NodeJS.Timer {
+  startPeriodicMonitoring(intervalMs = 60 * 1000): NodeJS.Timeout {
     console.log(`[SecurityAlert] Starting periodic security monitoring every ${intervalMs / 1000} seconds`);
     
     return setInterval(async () => {
@@ -493,7 +501,7 @@ export class SecurityAlertManager {
   /**
    * Stop periodic monitoring
    */
-  stopPeriodicMonitoring(timer: NodeJS.Timer): void {
+  stopPeriodicMonitoring(timer: NodeJS.Timeout): void {
     clearInterval(timer);
     console.log('[SecurityAlert] Periodic security monitoring stopped');
   }

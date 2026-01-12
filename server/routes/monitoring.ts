@@ -5,7 +5,7 @@
  */
 
 import type { Express, Request, Response } from 'express';
-import { securityEventLogger } from '../monitoring/security-events';
+import { securityEventLogger, SecurityEventType } from '../monitoring/security-events';
 import { securityAlertManager } from '../monitoring/security-alerts';
 import { checkTempHealth } from '../startup-cleanup';
 import os from 'os';
@@ -70,8 +70,8 @@ export function registerMonitoringRoutes(app: Express): void {
           topIPs: analytics.topIPs,
           hourlyBreakdown: analytics.hourlyBreakdown,
         },
-        recentAlerts: recentAlerts,
-        abuseDetection: abuseDetection,
+        recentAlerts,
+        abuseDetection,
         recommendations: generateRecommendations(tempHealth, analytics, abuseDetection),
       };
 
@@ -407,12 +407,13 @@ function convertToCSV(analytics: any): string {
   rows.push(headers.join(','));
 
   // Add data rows
-  Object.entries(analytics.eventsByType).forEach(([type, count]: [string, number]) => {
+  Object.entries(analytics.eventsByType).forEach(([type, count]) => {
+    const numericCount = Number(count) || 0;
     rows.push([
       new Date().toISOString(),
       type,
       'mixed',
-      count,
+      numericCount,
       `Total ${type} events`,
     ].join(','));
   });

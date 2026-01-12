@@ -1,6 +1,6 @@
 /**
  * Health Check Routes
- * 
+ *
  * Provides health monitoring endpoints for:
  * - Temp directory usage
  * - Memory usage
@@ -44,13 +44,15 @@ export function registerHealthRoutes(app: Express): void {
   app.get('/api/health/disk', async (req: Request, res: Response) => {
     try {
       const tempHealth = await checkTempHealth();
-      
+
       // Get disk space info
       const diskInfo = {
         total: os.totalmem(),
         free: os.freemem(),
         used: os.totalmem() - os.freemem(),
-        usage_percent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+        usage_percent: Math.round(
+          ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
+        ),
       };
 
       const response = {
@@ -89,7 +91,10 @@ export function registerHealthRoutes(app: Express): void {
   app.post('/api/health/cleanup', async (req: Request, res: Response) => {
     try {
       // Optional: Add authentication for this endpoint in production
-      if (process.env.NODE_ENV === 'production' && !req.headers['x-admin-token']) {
+      if (
+        process.env.NODE_ENV === 'production' &&
+        !req.headers['x-admin-token']
+      ) {
         return res.status(401).json({
           error: 'Unauthorized',
           message: 'Admin token required for cleanup',
@@ -97,7 +102,7 @@ export function registerHealthRoutes(app: Express): void {
       }
 
       const result = await cleanupOrphanedTempFiles();
-      
+
       res.json({
         status: 'success',
         timestamp: new Date().toISOString(),
@@ -131,7 +136,7 @@ export function registerHealthRoutes(app: Express): void {
     try {
       // Get basic security metrics
       const tempHealth = await checkTempHealth();
-      
+
       // Get process security info
       const securityInfo = {
         uid: process.getuid?.() || null,
@@ -171,7 +176,9 @@ export function registerHealthRoutes(app: Express): void {
             system: {
               total: os.totalmem(),
               free: os.freemem(),
-              usage_percent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+              usage_percent: Math.round(
+                ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
+              ),
             },
           },
         },
@@ -193,11 +200,11 @@ export function registerHealthRoutes(app: Express): void {
       const loadAvg = os.loadavg();
       const cpuCount = os.cpus().length;
       const networkInterfaces = os.networkInterfaces();
-      
+
       // Get disk space for temp directories
       const tempDirs = ['/tmp', '/tmp/metaextract', '/tmp/metaextract-uploads'];
       const diskInfo: Record<string, any> = {};
-      
+
       for (const dir of tempDirs) {
         try {
           const stats = await fs.stat(dir);
@@ -234,12 +241,14 @@ export function registerHealthRoutes(app: Express): void {
             total: os.totalmem(),
             free: os.freemem(),
             used: os.totalmem() - os.freemem(),
-            usage_percent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+            usage_percent: Math.round(
+              ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
+            ),
           },
           process: {
             pid: process.pid,
             ppid: process.ppid,
-            uptime: uptime,
+            uptime,
             version: process.version,
             versions: process.versions,
             arch: process.arch,

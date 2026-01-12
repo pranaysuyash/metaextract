@@ -1,6 +1,6 @@
 /**
  * Tests for upload rate limiting middleware
- * 
+ *
  * Verifies that:
  * 1. Rate limits are enforced correctly
  * 2. Different limits apply to authenticated vs anonymous users
@@ -21,7 +21,7 @@ describe('Upload Rate Limiting', () => {
     app = express();
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    
+
     // Apply rate limiting
     applyUploadRateLimiting(app);
 
@@ -41,17 +41,23 @@ describe('Upload Rate Limiting', () => {
       const response = await request(app)
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('test content'), 'test.jpg');
-      
+
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
-        message: 'Upload processed'
+        message: 'Upload processed',
       });
-      
+
       // Check rate limit headers (accept either legacy x- headers or standard ratelimit headers)
-      const hasLimitHeader = 'x-ratelimit-limit' in response.headers || 'ratelimit-limit' in response.headers;
-      const hasRemainingHeader = 'x-ratelimit-remaining' in response.headers || 'ratelimit-remaining' in response.headers;
-      const hasResetHeader = 'x-ratelimit-reset' in response.headers || 'ratelimit-reset' in response.headers;
+      const hasLimitHeader =
+        'x-ratelimit-limit' in response.headers ||
+        'ratelimit-limit' in response.headers;
+      const hasRemainingHeader =
+        'x-ratelimit-remaining' in response.headers ||
+        'ratelimit-remaining' in response.headers;
+      const hasResetHeader =
+        'x-ratelimit-reset' in response.headers ||
+        'ratelimit-reset' in response.headers;
       expect(hasLimitHeader).toBe(true);
       expect(hasRemainingHeader).toBe(true);
       expect(hasResetHeader).toBe(true);
@@ -67,16 +73,16 @@ describe('Upload Rate Limiting', () => {
             .attach('file', Buffer.from(`test content ${i}`), `test${i}.jpg`)
         );
       }
-      
+
       const responses = await Promise.allSettled(requests);
-      
+
       // Find the first rate-limited response
-      const rateLimitedResponse = responses.find(r => 
-        r.status === 'fulfilled' && r.value.status === 429
+      const rateLimitedResponse = responses.find(
+        r => r.status === 'fulfilled' && r.value.status === 429
       );
-      
+
       expect(rateLimitedResponse).toBeDefined();
-      
+
       if (rateLimitedResponse && rateLimitedResponse.status === 'fulfilled') {
         const response = rateLimitedResponse.value;
         expect(response.status).toBe(429);
@@ -117,15 +123,17 @@ describe('Upload Rate Limiting', () => {
             .attach('file', Buffer.from(`rapid content ${i}`), `rapid${i}.jpg`)
         );
       }
-      
+
       // Execute requests in rapid succession
       const responses = await Promise.allSettled(rapidRequests);
-      
+
       // Check for burst rate limit
-      const burstLimited = responses.find(r => 
-        r.status === 'fulfilled' && r.value.body.error === 'Burst rate limit exceeded'
+      const burstLimited = responses.find(
+        r =>
+          r.status === 'fulfilled' &&
+          r.value.body.error === 'Burst rate limit exceeded'
       );
-      
+
       if (burstLimited && burstLimited.status === 'fulfilled') {
         const response = burstLimited.value;
         expect(response.status).toBe(429);
@@ -134,7 +142,7 @@ describe('Upload Rate Limiting', () => {
           message: expect.stringContaining('Too many rapid upload attempts'),
           limit_type: 'burst',
           window_seconds: 60,
-          max_requests: 10
+          max_requests: 10,
         });
       }
     });
@@ -145,22 +153,34 @@ describe('Upload Rate Limiting', () => {
       const response = await request(app)
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('test content'), 'test.jpg');
-      
+
       // Request may be allowed or rate-limited depending on previous test noise; accept either 200 or 429
       expect([200, 429]).toContain(response.status);
-      
+
       // Check standard headers (accept either legacy x- headers or standard ratelimit headers)
-      const hasLimitHeader = 'x-ratelimit-limit' in response.headers || 'ratelimit-limit' in response.headers;
-      const hasRemainingHeader = 'x-ratelimit-remaining' in response.headers || 'ratelimit-remaining' in response.headers;
-      const hasResetHeader = 'x-ratelimit-reset' in response.headers || 'ratelimit-reset' in response.headers;
+      const hasLimitHeader =
+        'x-ratelimit-limit' in response.headers ||
+        'ratelimit-limit' in response.headers;
+      const hasRemainingHeader =
+        'x-ratelimit-remaining' in response.headers ||
+        'ratelimit-remaining' in response.headers;
+      const hasResetHeader =
+        'x-ratelimit-reset' in response.headers ||
+        'ratelimit-reset' in response.headers;
       expect(hasLimitHeader).toBe(true);
       expect(hasRemainingHeader).toBe(true);
       expect(hasResetHeader).toBe(true);
-      
+
       // Verify header values are reasonable
-      const limitHeader = (response.headers['x-ratelimit-limit'] as string) || (response.headers['ratelimit-limit'] as string);
-      const remainingHeader = (response.headers['x-ratelimit-remaining'] as string) || (response.headers['ratelimit-remaining'] as string);
-      const resetHeader = (response.headers['x-ratelimit-reset'] as string) || (response.headers['ratelimit-reset'] as string);
+      const limitHeader =
+        (response.headers['x-ratelimit-limit'] as string) ||
+        (response.headers['ratelimit-limit'] as string);
+      const remainingHeader =
+        (response.headers['x-ratelimit-remaining'] as string) ||
+        (response.headers['ratelimit-remaining'] as string);
+      const resetHeader =
+        (response.headers['x-ratelimit-reset'] as string) ||
+        (response.headers['ratelimit-reset'] as string);
 
       const limit = parseInt(limitHeader as string);
       const remaining = parseInt(remainingHeader as string);
@@ -180,7 +200,7 @@ describe('Upload Rate Limiting', () => {
       const response = await request(app)
         .post('/api/images_mvp/extract')
         .attach('file', Buffer.from('test content'), 'test.jpg');
-      
+
       if (response.status === 429) {
         // Suggestions are only included on the main rate limit response, not burst
         if ('suggestions' in response.body) {
@@ -200,12 +220,12 @@ describe('Upload Rate Limiting', () => {
       // Save original env
       const originalEnv = process.env.NODE_ENV;
       const originalBypass = process.env.BYPASS_RATE_LIMIT;
-      
+
       try {
         // Set development environment with bypass
         process.env.NODE_ENV = 'development';
         process.env.BYPASS_RATE_LIMIT = 'true';
-        
+
         // Create new app instance with bypass enabled
         const bypassApp = express();
         bypassApp.use(express.json());
@@ -213,25 +233,28 @@ describe('Upload Rate Limiting', () => {
           res.json({ success: true, bypassed: true });
         });
         applyUploadRateLimiting(bypassApp);
-        
+
         // Should allow many requests without rate limiting
         const responses = [];
         for (let i = 0; i < 100; i++) {
           const response = await request(bypassApp)
             .post('/api/images_mvp/extract')
-            .attach('file', Buffer.from(`bypass content ${i}`), `bypass${i}.jpg`);
+            .attach(
+              'file',
+              Buffer.from(`bypass content ${i}`),
+              `bypass${i}.jpg`
+            );
           responses.push(response);
         }
-        
+
         // All requests should succeed
         responses.forEach(response => {
           expect(response.status).toBe(200);
           expect(response.body).toMatchObject({
             success: true,
-            bypassed: true
+            bypassed: true,
           });
         });
-        
       } finally {
         // Restore original env
         process.env.NODE_ENV = originalEnv;
