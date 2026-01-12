@@ -21,6 +21,7 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+.env.production
 
 # IDE
 .idea/
@@ -57,6 +58,9 @@ coverage/
 
 # Large scientific test datasets (GitHub 100MB limit)
 tests/scientific-test-datasets/scientific-test-datasets/
+test_datasets/
+tests/persona-files/
+tests/fixtures/*.jpg
 *.nc
 *.h5
 *.hdf5
