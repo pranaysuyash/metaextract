@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from 'express';
+import type { Express, Request, Response, NextFunction } from 'express';
 import type { WebSocket } from 'ws';
 import multer from 'multer';
 import crypto from 'crypto';
@@ -395,6 +395,33 @@ const upload = multer({
   }),
   limits: {
     fileSize: IMAGES_MVP_MAX_BYTES,
+  },
+  fileFilter: (req, file, cb) => {
+    // SECURITY: Reject invalid file types before disk write
+    const mimeType = file.mimetype;
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    
+    // Check MIME type against supported list
+    const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
+    
+    // Check file extension as additional validation
+    const isSupportedExt = fileExt ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt) : false;
+    
+    // Allow if either MIME type or extension is supported (defensive)
+    if (isSupportedMime || isSupportedExt) {
+      return cb(null, true);
+    }
+    
+    // Reject with descriptive error
+    // Provide a concise, security-minded error message for clients
+    const errorMessage = 'File type not permitted';
+    const error = new Error(errorMessage);
+    (error as any).code = 'UNSUPPORTED_FILE_TYPE';
+
+    // Log the detailed reason at debug level for diagnostics
+    console.debug(`Rejected upload - unsupported file type: ${mimeType} (extension: ${fileExt})`);
+
+    cb(error as any, false);
   },
 });
 
@@ -1425,6 +1452,45 @@ export function registerImagesMvpRoutes(app: Express) {
     freeQuotaMiddleware,
     rateLimitExtraction(), // Rate limit: per-IP/user throttling
     upload.single('file'),
+    // Multer error handling middleware
+    (err: any, req: Request, res: Response, next: Function) => {
+      if (err) {
+        // Handle multer-specific errors
+        if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+          return res.status(403).json({
+            error: 'Unsupported file type',
+            message: err.message,
+            code: 'UNSUPPORTED_FILE_TYPE',
+          });
+        }
+        
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({
+            error: 'File too large',
+            message: `File size exceeds the maximum allowed size of ${IMAGES_MVP_MAX_BYTES / (1024 * 1024)}MB`,
+            code: 'FILE_TOO_LARGE',
+          });
+        }
+        
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return res.status(400).json({
+            error: 'Invalid file upload',
+            message: 'Only one file can be uploaded at a time',
+            code: 'LIMIT_UNEXPECTED_FILE',
+          });
+        }
+        
+        // Generic multer error
+        return res.status(400).json({
+          error: 'File upload failed',
+          message: err.message || 'Unknown upload error',
+          code: err.code || 'UPLOAD_ERROR',
+        });
+      }
+      
+      // No error, proceed to main handler
+      next();
+    },
     async (req: Request, res: Response) => {
       const startTime = Date.now();
       // Correlation ID for observability (traces request through pipeline)

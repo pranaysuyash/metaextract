@@ -732,11 +732,13 @@ export async function extractMetadataWithPython(
     let stdout = '';
     let stderr = '';
 
+    const enablePyLogging = process.env.NODE_ENV !== 'test' || process.env.METAEXTRACT_LOG_PY_ARGS === '1';
+
     python.stdout.on('data', data => {
       const dataStr = data.toString();
       stdout += dataStr;
       // Log large outputs in chunks to avoid overwhelming the console
-      if (dataStr.length > 1000) {
+      if (enablePyLogging && dataStr.length > 1000) {
         console.log(
           `Python stdout (partial): ${dataStr.substring(0, 1000)}...`
         );
@@ -746,12 +748,16 @@ export async function extractMetadataWithPython(
     python.stderr.on('data', data => {
       const dataStr = data.toString();
       stderr += dataStr;
-      // Log errors immediately
-      console.error(`Python stderr: ${dataStr}`);
+      // Log errors immediately when not running unit tests
+      if (enablePyLogging) {
+        console.error(`Python stderr: ${dataStr}`);
+      }
     });
 
     python.on('close', code => {
-      console.log(`Python extraction process exited with code: ${code}`);
+      if (enablePyLogging) {
+        console.log(`Python extraction process exited with code: ${code}`);
+      }
 
       if (code !== 0) {
         const errorDetails = {
@@ -763,7 +769,9 @@ export async function extractMetadataWithPython(
           tier,
         };
 
-        console.error('Python extraction error details:', errorDetails);
+        if (enablePyLogging) {
+          console.error('Python extraction error details:', errorDetails);
+        }
         reject(
           new Error(`Python extractor failed: ${stderr || 'Unknown error'}`)
         );
@@ -772,29 +780,35 @@ export async function extractMetadataWithPython(
 
       if (!stdout) {
         const error = 'Python extractor returned empty output';
-        console.error(error, {
-          stderr,
-          command: `${pythonExecutable} ${args.join(' ')}`,
-        });
+        if (enablePyLogging) {
+          console.error(error, {
+            stderr,
+            command: `${pythonExecutable} ${args.join(' ')}`,
+          });
+        }
         reject(new Error(error));
         return;
       }
 
       try {
         const result = JSON.parse(stdout);
-        console.log(
-          `Successfully parsed Python extraction result for ${path.basename(
-            filePath
-          )}, ${result.extraction_info?.fields_extracted || 0} fields extracted`
-        );
+        if (enablePyLogging) {
+          console.log(
+            `Successfully parsed Python extraction result for ${path.basename(
+              filePath
+            )}, ${result.extraction_info?.fields_extracted || 0} fields extracted`
+          );
+        }
         resolve(result);
       } catch (parseError) {
-        console.error('Failed to parse Python extraction output:', parseError);
-        console.error(
-          'Raw stdout (first 1000 chars):',
-          stdout.substring(0, 1000)
-        );
-        console.error('Raw stderr:', stderr.substring(0, 500));
+        if (enablePyLogging) {
+          console.error('Failed to parse Python extraction output:', parseError);
+          console.error(
+            'Raw stdout (first 1000 chars):',
+            stdout.substring(0, 1000)
+          );
+          console.error('Raw stderr:', stderr.substring(0, 500));
+        }
         reject(
           new Error(
             `Failed to parse metadata extraction result: ${

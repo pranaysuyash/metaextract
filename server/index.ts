@@ -21,6 +21,8 @@ import {
   sanitizeErrorMessage,
 } from './security-utils';
 import { pythonExecutable } from './utils/extraction-helpers';
+import { cleanupOrphanedTempFiles, startPeriodicCleanup, cleanupOnExit } from './startup-cleanup';
+import { registerHealthRoutes } from './routes/health';
 
 const app = express();
 const httpServer = createServer(app);
@@ -153,6 +155,47 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // Register main API routes
   await registerRoutes(httpServer, app);
+
+  // Register health check routes
+  registerHealthRoutes(app);
+  log('Registered health check routes');
+
+  // Initialize temp file cleanup system
+  log('Initializing temp file cleanup system...');
+  try {
+    // Run cleanup on startup
+    const startupResult = await cleanupOrphanedTempFiles();
+    log(`Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`);
+    
+    // Start periodic cleanup (hourly)
+    const cleanupInterval = startPeriodicCleanup(60 * 60 * 1000);
+    log('Periodic cleanup scheduled every hour');
+    
+    // Cleanup on process exit
+    process.on('exit', async () => {
+      clearInterval(cleanupInterval);
+      await cleanupOnExit();
+    });
+    
+    // Handle graceful shutdown
+    process.on('SIGINT', async () => {
+      log('Received SIGINT, cleaning up...');
+      clearInterval(cleanupInterval);
+      await cleanupOnExit();
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', async () => {
+      log('Received SIGTERM, cleaning up...');
+      clearInterval(cleanupInterval);
+      await cleanupOnExit();
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    log(`Warning: Temp cleanup system initialization failed: ${error}`, 'startup');
+    // Continue startup even if cleanup fails
+  }
 
   // CRITICAL FIX: Add API 404 handler for undefined API routes
   app.use('/api/*', (req: Request, res: Response) => {

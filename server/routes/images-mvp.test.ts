@@ -397,7 +397,8 @@ describe('Images MVP API Tests', () => {
         })
         .expect(403);
 
-      expect(response.body.error).toBe('File type not permitted');
+      expect(response.body.error).toBe('Unsupported file type');
+      expect(response.body.message).toBe('File type not permitted');
     });
 
     it('should use trial if available (uses < 2)', async () => {

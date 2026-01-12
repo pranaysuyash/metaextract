@@ -80,23 +80,13 @@ describe('Extraction Route Security', () => {
   });
 
   describe('MVP Route Security', () => {
-    test('should still serve MVP extraction route', async () => {
-      // This test will be implemented after we add the MVP route security fixes
-      // For now, just verify the route exists and doesn't return 404
-      const response = await request(app)
-        .post('/api/images_mvp/extract')
-        .attach('file', Buffer.from('test'), 'test.jpg')
-        .timeout(10000); // Increase timeout for file processing
-      
-      // Should not return 404 (might return other errors due to missing auth/etc)
-      expect(response.status).not.toBe(404);
-      
-      // Log the actual response for debugging
-      console.log(`MVP route status: ${response.status} - ${response.text ?? ''}`);
-      if (response.status >= 400) {
-        console.log('MVP route error response:', response.body);
-      }
-    }, 10000); // 10 second timeout
+    test('should still register MVP extraction route', async () => {
+      // Verify the extraction route is registered on the app without performing a full extraction request
+      // This avoids executing heavy extraction logic while confirming route presence
+      const stack = (app as any)._router?.stack || [];
+      const found = stack.some((layer: any) => layer && layer.route && layer.route.path === '/api/images_mvp/extract');
+      expect(found).toBe(true);
+    });
   });
 
   describe('Security Headers', () => {
