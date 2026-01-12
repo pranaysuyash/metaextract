@@ -1500,7 +1500,7 @@ export function registerImagesMvpRoutes(app: Express) {
       let tempPath: string | null = null;
       let sessionId: string | null = null;
       let creditBalanceId: string | null = null;
-      let useTrial = false;
+      const useTrial = false;
       let chargeCredits = false;
 
       // Access mode: device_free | trial_limited | paid

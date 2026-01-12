@@ -12,12 +12,14 @@ import path from 'path';
 import os from 'os';
 
 // Configuration - allow override for testing
-export const TEMP_DIRS = process.env.CLEANUP_TEMP_DIRS 
-  ? process.env.CLEANUP_TEMP_DIRS.split(',')
-  : [
-      '/tmp/metaextract',
-      '/tmp/metaextract-uploads',
-    ];
+export function getTempDirs(): string[] {
+  return process.env.CLEANUP_TEMP_DIRS
+    ? process.env.CLEANUP_TEMP_DIRS.split(',')
+    : [
+        '/tmp/metaextract',
+        '/tmp/metaextract-uploads',
+      ];
+}
 
 const MAX_FILE_AGE_MS = 60 * 60 * 1000; // 1 hour
 const MAX_TOTAL_SIZE_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
@@ -58,21 +60,31 @@ async function cleanupDirectory(dirPath: string): Promise<CleanupResult> {
     await fs.mkdir(dirPath, { recursive: true });
     
     const files = await fs.readdir(dirPath);
+    console.log(`[Cleanup] Found ${files.length} files in ${dirPath}`);
+    
     const now = Date.now();
     const cutoffTime = now - MAX_FILE_AGE_MS;
+    console.log(`[Cleanup] Cutoff time: ${new Date(cutoffTime).toISOString()}`);
 
     for (const file of files) {
       const filePath = path.join(dirPath, file);
       
       try {
         const stats = await fs.stat(filePath);
+        console.log(`[Cleanup] Processing: ${file}`);
+        console.log(`[Cleanup] - mtime: ${new Date(stats.mtimeMs).toISOString()}`);
+        console.log(`[Cleanup] - cutoff: ${new Date(cutoffTime).toISOString()}`);
+        console.log(`[Cleanup] - isOld: ${stats.mtimeMs < cutoffTime}`);
         
         // Remove files older than 1 hour
         if (stats.mtimeMs < cutoffTime) {
+          console.log(`[Cleanup] Removing old file: ${file}`);
           await fs.unlink(filePath);
           result.filesRemoved++;
           result.spaceFreed += stats.size;
           console.log(`[Cleanup] Removed: ${file} (${Math.round(stats.size / 1024)}KB)`);
+        } else {
+          console.log(`[Cleanup] Preserving recent file: ${file}`);
         }
       } catch (fileError) {
         const errorMsg = `Could not process ${file}: ${fileError}`;
@@ -87,6 +99,7 @@ async function cleanupDirectory(dirPath: string): Promise<CleanupResult> {
   }
 
   result.duration = Date.now() - startTime;
+  console.log(`[Cleanup] Directory ${dirPath} cleanup completed in ${result.duration}ms`);
   return result;
 }
 
@@ -98,7 +111,7 @@ export async function checkEmergencyCleanup(): Promise<boolean> {
     let totalSize = 0;
     let totalFiles = 0;
 
-    for (const dir of TEMP_DIRS) {
+    for (const dir of getTempDirs()) {
       try {
         const files = await fs.readdir(dir);
         for (const file of files) {
@@ -130,6 +143,8 @@ export async function checkEmergencyCleanup(): Promise<boolean> {
 export async function cleanupOrphanedTempFiles(): Promise<CleanupSummary> {
   const startTime = Date.now();
   console.log('[Cleanup] Starting temp file cleanup...');
+  const tempDirs = getTempDirs();
+  console.log('[Cleanup] Using directories:', tempDirs);
 
   const summary: CleanupSummary = {
     totalFilesRemoved: 0,
@@ -148,9 +163,11 @@ export async function cleanupOrphanedTempFiles(): Promise<CleanupSummary> {
     }
 
     // Clean up each directory
-    for (const dir of TEMP_DIRS) {
+    for (const dir of tempDirs) {
       try {
+        console.log(`[Cleanup] Cleaning directory: ${dir}`);
         const result = await cleanupDirectory(dir);
+        console.log(`[Cleanup] Directory result:`, result);
         summary.directories.push(result);
         summary.totalFilesRemoved += result.filesRemoved;
         summary.totalSpaceFreed += result.spaceFreed;
@@ -203,9 +220,10 @@ export async function checkTempHealth(): Promise<{
   const warnings: string[] = [];
   let totalSize = 0;
   let totalFiles = 0;
+  const tempDirs = getTempDirs();
 
   try {
-    for (const dir of TEMP_DIRS) {
+    for (const dir of tempDirs) {
       try {
         const files = await fs.readdir(dir);
         

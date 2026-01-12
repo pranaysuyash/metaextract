@@ -160,41 +160,45 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   registerHealthRoutes(app);
   log('Registered health check routes');
 
-  // Initialize temp file cleanup system
-  log('Initializing temp file cleanup system...');
-  try {
-    // Run cleanup on startup
-    const startupResult = await cleanupOrphanedTempFiles();
-    log(`Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`);
-    
-    // Start periodic cleanup (hourly)
-    const cleanupInterval = startPeriodicCleanup(60 * 60 * 1000);
-    log('Periodic cleanup scheduled every hour');
-    
-    // Cleanup on process exit
-    process.on('exit', async () => {
-      clearInterval(cleanupInterval);
-      await cleanupOnExit();
-    });
-    
-    // Handle graceful shutdown
-    process.on('SIGINT', async () => {
-      log('Received SIGINT, cleaning up...');
-      clearInterval(cleanupInterval);
-      await cleanupOnExit();
-      process.exit(0);
-    });
-    
-    process.on('SIGTERM', async () => {
-      log('Received SIGTERM, cleaning up...');
-      clearInterval(cleanupInterval);
-      await cleanupOnExit();
-      process.exit(0);
-    });
-    
-  } catch (error) {
-    log(`Warning: Temp cleanup system initialization failed: ${error}`, 'startup');
-    // Continue startup even if cleanup fails
+  // Initialize temp file cleanup system (skip in test environment)
+  if (process.env.NODE_ENV !== 'test') {
+    log('Initializing temp file cleanup system...');
+    try {
+      // Run cleanup on startup
+      const startupResult = await cleanupOrphanedTempFiles();
+      log(`Startup cleanup completed: removed ${startupResult.totalFilesRemoved} files, freed ${Math.round(startupResult.totalSpaceFreed / (1024 * 1024))}MB`);
+      
+      // Start periodic cleanup (hourly)
+      const cleanupInterval = startPeriodicCleanup(60 * 60 * 1000);
+      log('Periodic cleanup scheduled every hour');
+      
+      // Cleanup on process exit
+      process.on('exit', async () => {
+        clearInterval(cleanupInterval);
+        await cleanupOnExit();
+      });
+      
+      // Handle graceful shutdown
+      process.on('SIGINT', async () => {
+        log('Received SIGINT, cleaning up...');
+        clearInterval(cleanupInterval);
+        await cleanupOnExit();
+        process.exit(0);
+      });
+      
+      process.on('SIGTERM', async () => {
+        log('Received SIGTERM, cleaning up...');
+        clearInterval(cleanupInterval);
+        await cleanupOnExit();
+        process.exit(0);
+      });
+      
+    } catch (error) {
+      log(`Warning: Temp cleanup system initialization failed: ${error}`, 'startup');
+      // Continue startup even if cleanup fails
+    }
+  } else {
+    log('Skipping temp cleanup system initialization in test environment');
   }
 
   // CRITICAL FIX: Add API 404 handler for undefined API routes
