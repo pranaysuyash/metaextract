@@ -353,3 +353,28 @@ def get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_keywords() -> Lis
         "dental", "CBCT", "panoramic", "cephalometric", "intraoral", "orthodontic",
         "maxillofacial", "implant", "endodontic", "periodontic", "oral surgery"
     ]
+
+# Aliases for smoke test compatibility
+def extract_ecological_imaging(file_path: str) -> Dict[str, Any]:
+    return extract_scientific_dicom_fits_ultimate_advanced_extension_xxxv(file_path)
+
+def get_ecological_imaging_field_count() -> int:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_field_count()
+
+def get_ecological_imaging_version() -> str:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_version()
+
+def get_ecological_imaging_description() -> str:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_description()
+
+def get_ecological_imaging_supported_formats() -> List[str]:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_supported_formats()
+
+def get_ecological_imaging_modalities() -> List[str]:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_modalities()
+
+def get_ecological_imaging_category() -> str:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_category()
+
+def get_ecological_imaging_keywords() -> List[str]:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_xxxv_keywords()

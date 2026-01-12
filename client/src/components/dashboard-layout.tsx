@@ -56,6 +56,10 @@ export function DashboardLayout({
           {isMobile && sidebarOpen && (
             <div
               className="fixed inset-0 bg-black/50 z-40"
+              role="button"
+              tabIndex={0}
+              aria-label="Close sidebar"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSidebarOpen(false); } }}
               onClick={() => setSidebarOpen(false)}
             />
           )}

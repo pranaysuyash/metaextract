@@ -42,7 +42,18 @@ export type SecurityEventType =
   | 'fingerprint_error'
   | 'protection_feedback'
   | 'anomaly_detection'
-  | 'ml_anomaly_detection'; // ML anomaly detection result
+  | 'ml_anomaly_detection' // ML anomaly detection result
+  | 'enhanced_protection_critical_error' // Enhanced protection critical error
+  | 'enhanced_protection_decision' // Enhanced protection decision made
+  | 'enhanced_challenge_passed' // Enhanced challenge verification passed
+  | 'enhanced_challenge_failed' // Enhanced challenge verification failed
+  | 'threat_intelligence_detection' // Threat intelligence check result
+  | 'security_threat' // Security threat detected
+  | 'malicious_ip_reported' // Malicious IP reported to threat feed
+  | 'behavioral_analysis_received' // Behavioral analysis data received
+  | 'threat_intelligence_lookup' // Threat intelligence lookup performed
+  | 'threat_report_submitted' // Threat report submitted
+  | 'security_incident'; // Security incident recorded
 
 export interface SecurityEvent {
   id?: string;

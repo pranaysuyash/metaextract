@@ -37,7 +37,7 @@ interface BatchResult {
   fileSize: number;
   fileType: string;
   authenticityScore?: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   processingTime?: number;
   errorMessage?: string;
   batchId?: string;
@@ -289,26 +289,26 @@ export const BatchGrid: React.FC<BatchGridProps> = ({
             className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
           />
         </div>
-        <div className="col-span-4 flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => handleSort('filename')}>
+        <button type="button" aria-label="Sort by filename" className="col-span-4 flex items-center gap-2 cursor-pointer hover:text-white text-left" onClick={() => handleSort('filename')}>
           File
           {getSortIcon('filename')}
-        </div>
-        <div className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => handleSort('status')}>
+        </button>
+        <button type="button" aria-label="Sort by status" className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-white text-left" onClick={() => handleSort('status')}>
           Status
           {getSortIcon('status')}
-        </div>
-        <div className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => handleSort('fields')}>
+        </button>
+        <button type="button" aria-label="Sort by fields" className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-white text-left" onClick={() => handleSort('fields')}>
           Fields
           {getSortIcon('fields')}
-        </div>
-        <div className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => handleSort('size')}>
+        </button>
+        <button type="button" aria-label="Sort by size" className="col-span-1 flex items-center gap-2 cursor-pointer hover:text-white text-left" onClick={() => handleSort('size')}>
           Size
           {getSortIcon('size')}
-        </div>
-        <div className="col-span-2 flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => handleSort('date')}>
+        </button>
+        <button type="button" aria-label="Sort by date" className="col-span-2 flex items-center gap-2 cursor-pointer hover:text-white text-left" onClick={() => handleSort('date')}>
           Date
           {getSortIcon('date')}
-        </div>
+        </button>
         <div className="col-span-2">Authenticity</div>
         <div className="col-span-1">Actions</div>
       </div>

@@ -336,8 +336,14 @@ export const AccessibleModal: React.FC<AccessibleModalProps> = ({
 
   return (
     <FocusTrap isActive={isOpen}>
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+        role="button"
+        tabIndex={0}
+        aria-label="Close modal"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); } }}
+        onKeyUp={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); } }}
         onClick={onClose}
       >
         <div
@@ -382,7 +388,7 @@ export const AccessibleModal: React.FC<AccessibleModalProps> = ({
 // Accessible Table Component
 interface AccessibleTableProps {
   headers: string[];
-  data: any[][];
+  data: unknown[][];
   caption?: string;
   className?: string;
 }

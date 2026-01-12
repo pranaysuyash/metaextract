@@ -464,3 +464,28 @@ def get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_keywords() -> L
         "PET-CT", "FDG-PET", "tumor markers", "metastasis",
         "chemotherapy", "radiation therapy", "immunotherapy", "targeted therapy"
     ]
+
+# Aliases for smoke test compatibility
+def extract_regenerative_medicine_imaging(file_path: str) -> Dict[str, Any]:
+    return extract_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv(file_path)
+
+def get_regenerative_medicine_imaging_field_count() -> int:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_field_count()
+
+def get_regenerative_medicine_imaging_version() -> str:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_version()
+
+def get_regenerative_medicine_imaging_description() -> str:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_description()
+
+def get_regenerative_medicine_imaging_supported_formats() -> List[str]:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_supported_formats()
+
+def get_regenerative_medicine_imaging_modalities() -> List[str]:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_modalities()
+
+def get_regenerative_medicine_imaging_category() -> str:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_category()
+
+def get_regenerative_medicine_imaging_keywords() -> List[str]:
+    return get_scientific_dicom_fits_ultimate_advanced_extension_lxxxiv_keywords()
