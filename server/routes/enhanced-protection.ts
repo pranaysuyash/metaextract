@@ -174,7 +174,7 @@ router.get('/threat-intel/:ip', async (req: Request, res: Response) => {
 
     // Create mock request for threat intelligence check
     const mockReq = {
-      ip: ip,
+      ip,
       connection: { remoteAddress: ip },
       headers: req.headers,
       body: {},
@@ -249,8 +249,8 @@ router.post('/report-threat', async (req: Request, res: Response) => {
       userId,
       details: {
         reportedIP: ipAddress,
-        categories: categories,
-        comment: comment
+        categories,
+        comment
       }
     });
 
@@ -258,7 +258,7 @@ router.post('/report-threat', async (req: Request, res: Response) => {
       success: true,
       message: 'Threat report submitted successfully',
       reportedIP: ipAddress,
-      categories: categories,
+      categories,
       timestamp: new Date()
     });
 
@@ -281,7 +281,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      stats: stats,
+      stats,
       timestamp: new Date()
     });
 

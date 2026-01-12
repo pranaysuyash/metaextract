@@ -336,7 +336,7 @@ export const AccessibleModal: React.FC<AccessibleModalProps> = ({
 
   return (
     <FocusTrap isActive={isOpen}>
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      { }
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
         role="button"
