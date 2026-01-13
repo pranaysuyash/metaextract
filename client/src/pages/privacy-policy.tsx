@@ -133,13 +133,10 @@ export default function PrivacyPolicyPage() {
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <a
-              href="mailto:support@metaextract.com?subject=MetaExtract%20Support"
-              className="flex items-center gap-2"
-            >
+            <Link to="/support" className="flex items-center gap-2">
               <ExternalLink className="w-4 h-4" />
               Contact Support
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

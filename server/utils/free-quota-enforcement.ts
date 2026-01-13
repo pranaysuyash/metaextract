@@ -25,6 +25,7 @@ import {
   verifyDeviceToken as verifyServerDeviceToken,
   isDeviceSuspicious,
 } from './device-token';
+import { sendQuotaExceededError } from '../utils/error-response';
 import { getOrSetSessionId } from './session-id';
 // import { trackImagesMvpEvent } from '../lib/images-mvp-analytics';
 
@@ -355,23 +356,19 @@ export async function handleQuotaExceeded(
 
     // Respond based on abuse score
     if (abuseScore > CONFIG.ABUSE_SCORE_THRESHOLD) {
-      // High abuse score - require CAPTCHA
-      res.status(429).json({
-        error: 'Quota exceeded',
-        message:
-          'Free limit reached on this device. Complete verification to continue.',
-        requires_captcha: true,
-        abuse_score: abuseScore,
-      });
+      // High abuse score - require CAPTCHA (treat as quota exceeded for now)
+      sendQuotaExceededError(
+        res,
+        'Free limit reached on this device. Complete verification to continue.'
+      );
+      return;
     } else {
       // Normal quota exceeded - show paywall
-      res.status(429).json({
-        error: 'Quota exceeded',
-        message:
-          'Free limit reached on this device. Purchase credits to continue.',
-        credits_required: 1,
-        current_usage: CONFIG.FREE_LIMIT,
-      });
+      sendQuotaExceededError(
+        res,
+        'Free limit reached on this device. Purchase credits to continue.'
+      );
+      return;
     }
   } catch (error) {
     console.error('Quota exceeded handling error:', error);

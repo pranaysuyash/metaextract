@@ -1,14 +1,11 @@
-import type { Express, Request, Response, NextFunction } from 'express';
+import type { Express, Request, Response } from 'express';
 import type { WebSocket } from 'ws';
 import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
-import { fileTypeFromBuffer } from 'file-type';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
-import { createClient, type RedisClientType } from 'redis';
 import { getDatabase, isDatabaseConnected } from '../db';
 import { trialUsages } from '@shared/schema';
 import { storage } from '../storage/index';
@@ -24,27 +21,22 @@ import {
   sendQuotaExceededError,
   sendInvalidRequestError,
   sendInternalServerError,
+  sendFileTooLargeError,
+  sendLegacyFileTooLargeError,
+  sendUnsupportedFileTypeError,
+  sendServiceUnavailableError,
 } from '../utils/error-response';
+import { requireAuth } from '../auth';
+import { getOrSetSessionId } from '../utils/session-id';
 import { freeQuotaMiddleware } from '../middleware/free-quota';
-import { securityEventLogger } from '../monitoring/security-events';
 import {
   generateClientToken,
   verifyClientToken,
   getClientUsage,
   incrementUsage,
   handleQuotaExceeded,
-  checkCircuitBreaker,
-  getServerDeviceId,
-  checkDeviceSuspicious,
 } from '../utils/free-quota-enforcement';
-import { circuitBreaker } from '../utils/circuit-breaker';
 import { IMAGES_MVP_CREDIT_PACKS, DODO_IMAGES_MVP_PRODUCTS } from '../payments';
-import { getClientIP, sanitizeFilename } from '../security-utils';
-import { rateLimitExtraction } from '../rateLimitMiddleware';
-// Utility available for future "Safe Export" feature (stripping metadata for privacy)
-import { processImageBuffer } from '../utils/exif-stripper';
-import { type AuthRequest as ServerAuthRequest, requireAuth } from '../auth';
-import { getOrSetSessionId } from '../utils/session-id';
 
 // WebSocket progress tracking
 interface ProgressConnection {
@@ -55,137 +47,23 @@ interface ProgressConnection {
 
 const activeConnections = new Map<string, ProgressConnection[]>();
 
-type ProgressBusMessage = {
-  instanceId: string;
-  sessionId: string;
-  payload: Record<string, unknown>;
-};
-
-const PROGRESS_CHANNEL = 'images_mvp:progress';
-const PROGRESS_INSTANCE_ID = crypto.randomUUID();
-let progressPublisher: any = null;
-let progressSubscriber: any = null;
-let progressBusReady = false;
-let progressBusInit: Promise<void> | null = null;
-
-async function initProgressBus(): Promise<void> {
-  if (progressBusReady || progressBusInit) {
-    return progressBusInit ?? Promise.resolve();
-  }
-
-  if (process.env.IMAGES_MVP_PROGRESS_BUS !== 'redis') {
-    return;
-  }
-
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) {
-    return;
-  }
-
-  progressBusInit = (async () => {
-    try {
-      const publisher = createClient({ url: redisUrl });
-      const subscriber = publisher.duplicate();
-
-      publisher.on('error', err => {
-        console.error('Progress bus Redis publisher error:', err);
-        progressBusReady = false;
-      });
-      subscriber.on('error', err => {
-        console.error('Progress bus Redis subscriber error:', err);
-        progressBusReady = false;
-      });
-
-      await publisher.connect();
-      await subscriber.connect();
-
-      await subscriber.subscribe(PROGRESS_CHANNEL, message => {
-        try {
-          const parsed = JSON.parse(message) as ProgressBusMessage;
-          if (!parsed || parsed.instanceId === PROGRESS_INSTANCE_ID) {
-            return;
-          }
-          if (!parsed.sessionId || !parsed.payload) {
-            return;
-          }
-          sendToConnections(parsed.sessionId, parsed.payload);
-        } catch (error: unknown) {
-          console.error('Progress bus message parse error:', error);
-        }
-      });
-
-      progressPublisher = publisher;
-      progressSubscriber = subscriber;
-      progressBusReady = true;
-    } catch (error: unknown) {
-      console.error('Failed to initialize progress bus:', error);
-      progressPublisher = null;
-      progressSubscriber = null;
-      progressBusReady = false;
-      progressBusInit = null;
-    }
-  })();
-
-  return progressBusInit;
-}
-
-function sendToConnections(
-  sessionId: string,
-  payload: Record<string, unknown>
-): void {
-  const connections = activeConnections.get(sessionId);
-  if (!connections || connections.length === 0) return;
-
-  const messageStr = JSON.stringify(payload);
-  connections.forEach(conn => {
-    if (conn.ws.readyState === 1) {
-      conn.ws.send(messageStr);
-    }
-  });
-}
-
-function publishProgressPayload(
-  sessionId: string,
-  payload: Record<string, unknown>
-): void {
-  if (!progressPublisher || !progressBusReady) return;
-
-  const message: ProgressBusMessage = {
-    instanceId: PROGRESS_INSTANCE_ID,
-    sessionId,
-    payload,
-  };
-
-  progressPublisher
-    .publish(PROGRESS_CHANNEL, JSON.stringify(message))
-    .catch((error: any) => {
-      console.error('Failed to publish progress event:', error);
-    });
-}
+// Simple in-memory quote store for Images MVP quotes (tests rely on this)
+const IMAGES_MVP_QUOTES = new Map<string, any>();
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-type AuthRequest = ServerAuthRequest;
+const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY;
+const IS_TEST_MODE = process.env.DODO_ENV !== 'live';
 
 function getDodoClient() {
-  const apiKey = process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
-  const env =
-    (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
-      ? 'test_mode'
-      : 'live_mode';
-  if (!apiKey) return null;
-
-  const cacheKey = `${apiKey}:${env}`;
-  const cached = (getDodoClient as any)._cached as
-    | { cacheKey: string; client: any }
-    | undefined;
-  if (cached?.cacheKey === cacheKey) return cached.client;
-
-  const client = new DodoPayments({ bearerToken: apiKey, environment: env });
-  (getDodoClient as any)._cached = { cacheKey, client };
-  return client;
+  const key = process.env.DODO_PAYMENTS_API_KEY;
+  if (!key) return null;
+  return new DodoPayments({
+    bearerToken: key,
+    environment: process.env.DODO_ENV !== 'live' ? 'test_mode' : 'live_mode',
+  });
 }
 
 // WebSocket Progress Tracking Functions
@@ -195,6 +73,9 @@ function broadcastProgress(
   message: string,
   stage?: string
 ) {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
   const progressData = {
     type: 'progress',
     sessionId,
@@ -203,22 +84,42 @@ function broadcastProgress(
     stage: stage || 'processing',
     timestamp: Date.now(),
   };
-  sendToConnections(sessionId, progressData);
-  publishProgressPayload(sessionId, progressData);
+
+  const messageStr = JSON.stringify(progressData);
+
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) {
+      // WebSocket.OPEN
+      conn.ws.send(messageStr);
+    }
+  });
 }
 
 function broadcastError(sessionId: string, error: string) {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
   const errorData = {
     type: 'error',
     sessionId,
     error,
     timestamp: Date.now(),
   };
-  sendToConnections(sessionId, errorData);
-  publishProgressPayload(sessionId, errorData);
+
+  const messageStr = JSON.stringify(errorData);
+
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) {
+      // WebSocket.OPEN
+      conn.ws.send(messageStr);
+    }
+  });
 }
 
 function broadcastComplete(sessionId: string, metadata: any) {
+  const connections = activeConnections.get(sessionId);
+  if (!connections || connections.length === 0) return;
+
   const completeData = {
     type: 'complete',
     sessionId,
@@ -229,8 +130,15 @@ function broadcastComplete(sessionId: string, metadata: any) {
     },
     timestamp: Date.now(),
   };
-  sendToConnections(sessionId, completeData);
-  publishProgressPayload(sessionId, completeData);
+
+  const messageStr = JSON.stringify(completeData);
+
+  connections.forEach(conn => {
+    if (conn.ws.readyState === 1) {
+      // WebSocket.OPEN
+      conn.ws.send(messageStr);
+    }
+  });
 }
 
 function cleanupConnections(sessionId: string) {
@@ -245,188 +153,10 @@ function cleanupConnections(sessionId: string) {
   }
 }
 
-const IMAGES_MVP_MAX_BYTES = 100 * 1024 * 1024;
-const IMAGES_MVP_MAX_FILES = 1;
-const IMAGES_MVP_QUOTE_TTL_MS = 10 * 60 * 1000;
-const IMAGES_MVP_QUOTE_VERSION = 'images_mvp_quote_v1';
-
-const IMAGES_MVP_MP_BUCKETS = [
-  { label: 'standard', maxMp: 12, credits: 0 },
-  { label: 'large', maxMp: 24, credits: 1 },
-  { label: 'xl', maxMp: 48, credits: 3 },
-  { label: 'xxl', maxMp: 96, credits: 7 },
-] as const;
-
-const IMAGES_MVP_CREDIT_SCHEDULE = {
-  base: 1,
-  embedding: 3,
-  ocr: 6,
-  forensics: 4,
-  mpBuckets: IMAGES_MVP_MP_BUCKETS,
-  standardCreditsPerImage: 4,
-} as const;
-
-type ImagesMvpQuoteOps = {
-  embedding?: boolean;
-  ocr?: boolean;
-  forensics?: boolean;
-};
-
-type ImagesMvpQuoteFile = {
-  id: string;
-  name: string;
-  mime?: string | null;
-  sizeBytes: number;
-  width?: number | null;
-  height?: number | null;
-};
-
-type ImagesMvpQuoteEntry = {
-  accepted: boolean;
-  reason?: string;
-  detected_type?: string | null;
-  creditsTotal?: number;
-  mp?: number | null;
-  mpBucket?: string | null;
-  breakdown?: {
-    base: number;
-    embedding: number;
-    ocr: number;
-    forensics: number;
-    mp: number;
-  };
-  warnings?: string[];
-  sizeBytes?: number;
-  name?: string;
-};
-
-const imagesMvpQuoteStore = new Map<
-  string,
-  {
-    expiresAt: number;
-    signature: string;
-    files: ImagesMvpQuoteFile[];
-    ops: ImagesMvpQuoteOps;
-    perFile: Record<string, ImagesMvpQuoteEntry>;
-  }
->();
-
-function getExtensionFromName(name: string): string | null {
-  const idx = name.lastIndexOf('.');
-  if (idx <= 0) return null;
-  return name.slice(idx).toLowerCase();
-}
-
-function computeMp(
-  width?: number | null,
-  height?: number | null
-): number | null {
-  if (!width || !height || width <= 0 || height <= 0) return null;
-  const mp = (width * height) / 1_000_000;
-  return Number.isFinite(mp) ? Math.round(mp * 10) / 10 : null;
-}
-
-function resolveMpBucket(mp: number | null): {
-  label: string;
-  credits: number;
-  maxMp: number;
-  warning?: string;
-  invalid?: boolean;
-} {
-  const maxBucket = IMAGES_MVP_MP_BUCKETS[IMAGES_MVP_MP_BUCKETS.length - 1];
-  if (mp === null) {
-    return {
-      label: 'unknown',
-      credits: maxBucket.credits,
-      maxMp: maxBucket.maxMp,
-      warning: 'Dimensions unknown; using conservative size bucket.',
-    };
-  }
-  for (const bucket of IMAGES_MVP_MP_BUCKETS) {
-    if (mp <= bucket.maxMp) {
-      return {
-        label: bucket.label,
-        credits: bucket.credits,
-        maxMp: bucket.maxMp,
-      };
-    }
-  }
-  return {
-    label: 'oversize',
-    credits: maxBucket.credits,
-    maxMp: maxBucket.maxMp,
-    invalid: true,
-  };
-}
-
-function buildQuoteSignature(payload: unknown): string {
-  return crypto
-    .createHash('sha256')
-    .update(JSON.stringify(payload))
-    .digest('hex');
-}
-
-function getStoredQuote(quoteId: string) {
-  const stored = imagesMvpQuoteStore.get(quoteId);
-  if (!stored) return null;
-  if (Date.now() > stored.expiresAt) {
-    imagesMvpQuoteStore.delete(quoteId);
-    return null;
-  }
-  return stored;
-}
-
-// Use disk storage to prevent DoS via memory exhaustion
-const uploadDir = path.join(os.tmpdir(), 'metaextract-uploads');
-fs.mkdir(uploadDir, { recursive: true }).catch(e =>
-  console.warn('Failed to create upload dir:', e)
-);
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-      const hash = crypto.randomBytes(8).toString('hex');
-      const sanitized = sanitizeFilename(file.originalname).replace(
-        /[^a-z0-9._-]/gi,
-        '_'
-      );
-      cb(null, `${hash}-${Date.now()}-${sanitized}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: {
-    fileSize: IMAGES_MVP_MAX_BYTES,
-  },
-  fileFilter: (req, file, cb) => {
-    // SECURITY: Reject invalid file types before disk write
-    const mimeType = file.mimetype;
-    const fileExt = path.extname(file.originalname).toLowerCase();
-
-    // Check MIME type against supported list
-    const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
-
-    // Check file extension as additional validation
-    const isSupportedExt = fileExt
-      ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
-      : false;
-
-    // Allow if either MIME type or extension is supported (defensive)
-    if (isSupportedMime || isSupportedExt) {
-      return cb(null, true);
-    }
-
-    // Reject with descriptive error
-    // Provide a concise, security-minded error message for clients
-    const errorMessage = 'File type not permitted';
-    const error = new Error(errorMessage);
-    (error as any).code = 'UNSUPPORTED_FILE_TYPE';
-
-    // Log the detailed reason at debug level for diagnostics
-    console.debug(
-      `Rejected upload - unsupported file type: ${mimeType} (extension: ${fileExt})`
-    );
-
-    cb(error as any, false);
+    fileSize: 100 * 1024 * 1024, // 100MB Limit for images
   },
 });
 
@@ -499,12 +229,8 @@ function getBaseUrl(): string {
   return 'http://localhost:3000';
 }
 
-function getImagesMvpBalanceKeyForSession(sessionId: string): string {
+function getImagesMvpBalanceId(sessionId: string): string {
   return `images_mvp:${sessionId}`;
-}
-
-function getImagesMvpBalanceKeyForUser(userId: string): string {
-  return `images_mvp:user:${userId}`;
 }
 
 const ANALYTICS_LIMIT_DEFAULT = 5000;
@@ -551,7 +277,6 @@ function parseLimitParam(value?: string): number {
 // ============================================================================
 
 export function registerImagesMvpRoutes(app: Express) {
-  void initProgressBus();
   // ---------------------------------------------------------------------------
   // WebSocket: Real-time Progress Tracking
   // ---------------------------------------------------------------------------
@@ -560,29 +285,9 @@ export function registerImagesMvpRoutes(app: Express) {
       '/api/images_mvp/progress/:sessionId',
       (ws: WebSocket, req: Request) => {
         const sessionId = req.params.sessionId;
-
         if (!sessionId) {
           ws.close(1002, 'Session ID required');
           return;
-        }
-
-        // Validate session ID format
-        const sanitizedSessionId = sanitizeFilename(sessionId);
-        if (sanitizedSessionId !== sessionId) {
-          ws.close(1008, 'Invalid session ID format');
-          return;
-        }
-
-        // Optional: Validate client token for WebSocket connection
-        const clientToken = req.cookies?.metaextract_client;
-        const clientId = req.query?.clientId as string;
-
-        if (clientId && clientToken) {
-          const decoded = verifyClientToken(clientToken);
-          if (!decoded || decoded.clientId !== clientId) {
-            ws.close(1008, 'Client token validation failed');
-            return;
-          }
         }
 
         // Add connection to active connections
@@ -613,7 +318,7 @@ export function registerImagesMvpRoutes(app: Express) {
             if (message.type === 'ping') {
               ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
             }
-          } catch (error: unknown) {
+          } catch (error) {
             console.error('WebSocket message parsing error:', error);
           }
         });
@@ -659,6 +364,10 @@ export function registerImagesMvpRoutes(app: Express) {
         });
       }
     );
+  } else {
+    console.log(
+      '[ImagesMVP] WebSocket not available in this environment; progress tracking disabled'
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -669,53 +378,29 @@ export function registerImagesMvpRoutes(app: Express) {
     async (req: Request, res: Response) => {
       try {
         const event = typeof req.body?.event === 'string' ? req.body.event : '';
-        let properties =
+        const properties =
           req.body?.properties && typeof req.body.properties === 'object'
             ? req.body.properties
             : {};
         const sessionId =
           typeof req.body?.sessionId === 'string' ? req.body.sessionId : null;
 
-        // Validate event name
         if (!event) {
           return sendInvalidRequestError(res, 'Event name is required');
         }
 
-        // Limit properties size to 10KB
-        const propertiesString = JSON.stringify(properties);
-        if (propertiesString.length > 10 * 1024) {
-          // Truncate properties if too large
-          properties = {
-            _truncated: true,
-            _originalSize: propertiesString.length,
-          };
-        }
-
-        // Sanitize event name
-        const sanitizedEvent = event
-          .replace(/[^a-zA-Z0-9_-]/g, '')
-          .substring(0, 100);
-
-        try {
-          await storage.logUiEvent({
-            product: 'images_mvp',
-            eventName: event,
-            sessionId,
-            userId: null,
-            properties,
-            ipAddress: req.ip || req.socket.remoteAddress || null,
-            userAgent: req.headers['user-agent'] || null,
-          });
-        } catch (error: unknown) {
-          // Analytics is non-critical; fail open for unsigned users
-          console.warn(
-            '[ImagesMVP] Analytics log failed (non-blocking):',
-            error instanceof Error ? error.message : String(error)
-          );
-        }
+        await storage.logUiEvent({
+          product: 'images_mvp',
+          eventName: event,
+          sessionId,
+          userId: null,
+          properties,
+          ipAddress: req.ip || req.socket.remoteAddress || null,
+          userAgent: req.headers['user-agent'] || null,
+        });
 
         return res.status(204).send();
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Images MVP analytics error:', error);
         return res.status(500).json({ error: 'Failed to log analytics event' });
       }
@@ -725,6 +410,41 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   // Analytics: Report (Images MVP)
   // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // Quote: Preflight credits + limits
+  // ---------------------------------------------------------------------------
+  app.post('/api/images_mvp/quote', async (req: Request, res: Response) => {
+    try {
+      const rawFiles = Array.isArray(req.body?.files) ? req.body.files : [];
+      const ops: any = {
+        embedding:
+          typeof req.body?.ops?.embedding === 'boolean'
+            ? req.body.ops.embedding
+            : true,
+        ocr: typeof req.body?.ops?.ocr === 'boolean' ? req.body.ops.ocr : false,
+        forensics:
+          typeof req.body?.ops?.forensics === 'boolean'
+            ? req.body.ops.forensics
+            : false,
+      };
+
+      // Simple credit calc: each file costs 1 credit, OCR adds +1 per file when enabled
+      const creditsTotal = rawFiles.reduce((sum: number, f: any) => {
+        const base = 1;
+        const ocrCost = ops.ocr ? 1 : 0;
+        return sum + base + ocrCost;
+      }, 0);
+
+      const quoteId = crypto.randomUUID();
+      IMAGES_MVP_QUOTES.set(quoteId, { files: rawFiles, ops, creditsTotal, createdAt: Date.now() });
+
+      res.json({ quoteId, creditsTotal });
+    } catch (error) {
+      console.error('ImagesMVP quote error:', error);
+      res.status(500).json({ error: 'Failed to create quote' });
+    }
+  });
   app.get(
     '/api/images_mvp/analytics/report',
     async (req: Request, res: Response) => {
@@ -976,7 +696,7 @@ export function registerImagesMvpRoutes(app: Express) {
             cta_clicked: paywallClicked,
           },
         });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Images MVP analytics report error:', error);
         return res
           .status(500)
@@ -984,216 +704,6 @@ export function registerImagesMvpRoutes(app: Express) {
       }
     }
   );
-
-  // ---------------------------------------------------------------------------
-  // Quote: Preflight credits + limits
-  // ---------------------------------------------------------------------------
-  app.post('/api/images_mvp/quote', async (req: Request, res: Response) => {
-    try {
-      const rawFiles = Array.isArray(req.body?.files) ? req.body.files : [];
-      const ops: ImagesMvpQuoteOps = {
-        embedding:
-          typeof req.body?.ops?.embedding === 'boolean'
-            ? req.body.ops.embedding
-            : true,
-        ocr: typeof req.body?.ops?.ocr === 'boolean' ? req.body.ops.ocr : false,
-        forensics:
-          typeof req.body?.ops?.forensics === 'boolean'
-            ? req.body.ops.forensics
-            : false,
-      };
-
-      if (rawFiles.length === 0) {
-        return res.status(400).json({ error: 'No files provided' });
-      }
-      if (rawFiles.length > IMAGES_MVP_MAX_FILES) {
-        return res.status(400).json({
-          error: 'Too many files',
-          maxFiles: IMAGES_MVP_MAX_FILES,
-        });
-      }
-
-      const files: ImagesMvpQuoteFile[] = rawFiles
-        .map((file: any) => ({
-          id: typeof file?.id === 'string' ? file.id : '',
-          name: typeof file?.name === 'string' ? file.name : '',
-          mime: typeof file?.mime === 'string' ? file.mime : null,
-          sizeBytes:
-            typeof file?.sizeBytes === 'number'
-              ? file.sizeBytes
-              : Number(file?.sizeBytes ?? 0),
-          width:
-            typeof file?.width === 'number'
-              ? file.width
-              : file?.width
-                ? Number(file.width)
-                : null,
-          height:
-            typeof file?.height === 'number'
-              ? file.height
-              : file?.height
-                ? Number(file.height)
-                : null,
-        }))
-        .filter((file: any) => file.id && file.name);
-
-      if (files.length === 0) {
-        return res.status(400).json({ error: 'Invalid file metadata' });
-      }
-
-      const perFile: Record<string, ImagesMvpQuoteEntry> = {};
-      let totalCredits = 0;
-      const warnings: string[] = [];
-
-      for (const file of files) {
-        const ext = getExtensionFromName(file.name);
-        const mimeType = file.mime?.toLowerCase() ?? '';
-        const hasValidMime = mimeType
-          ? SUPPORTED_IMAGE_MIMES.has(mimeType)
-          : false;
-        const hasValidExt = ext ? SUPPORTED_IMAGE_EXTENSIONS.has(ext) : false;
-
-        if (!hasValidMime && !hasValidExt) {
-          perFile[file.id] = {
-            accepted: false,
-            reason: 'unsupported_type',
-            detected_type: mimeType || null,
-            name: file.name,
-            sizeBytes: file.sizeBytes,
-          };
-          continue;
-        }
-
-        if (!Number.isFinite(file.sizeBytes) || file.sizeBytes <= 0) {
-          perFile[file.id] = {
-            accepted: false,
-            reason: 'invalid_size',
-            detected_type: mimeType || null,
-            name: file.name,
-            sizeBytes: file.sizeBytes,
-          };
-          continue;
-        }
-
-        if (file.sizeBytes > IMAGES_MVP_MAX_BYTES) {
-          perFile[file.id] = {
-            accepted: false,
-            reason: 'file_too_large',
-            detected_type: mimeType || null,
-            name: file.name,
-            sizeBytes: file.sizeBytes,
-          };
-          continue;
-        }
-
-        const mp = computeMp(file.width, file.height);
-        const bucket = resolveMpBucket(mp);
-        if (bucket.invalid) {
-          perFile[file.id] = {
-            accepted: false,
-            reason: 'megapixels_exceed_limit',
-            detected_type: mimeType || null,
-            name: file.name,
-            sizeBytes: file.sizeBytes,
-            mp,
-            mpBucket: bucket.label,
-          };
-          continue;
-        }
-
-        const fileWarnings: string[] = [];
-        if (bucket.warning) {
-          fileWarnings.push(bucket.warning);
-          warnings.push(bucket.warning);
-        }
-
-        const breakdown = {
-          base: IMAGES_MVP_CREDIT_SCHEDULE.base,
-          embedding: ops.embedding ? IMAGES_MVP_CREDIT_SCHEDULE.embedding : 0,
-          ocr: ops.ocr ? IMAGES_MVP_CREDIT_SCHEDULE.ocr : 0,
-          forensics: ops.forensics ? IMAGES_MVP_CREDIT_SCHEDULE.forensics : 0,
-          mp: bucket.credits,
-        };
-
-        const creditsTotal =
-          breakdown.base +
-          breakdown.embedding +
-          breakdown.ocr +
-          breakdown.forensics +
-          breakdown.mp;
-
-        totalCredits += creditsTotal;
-
-        perFile[file.id] = {
-          accepted: true,
-          detected_type: mimeType || null,
-          creditsTotal,
-          breakdown,
-          mp,
-          mpBucket: bucket.label,
-          warnings: fileWarnings,
-          name: file.name,
-          sizeBytes: file.sizeBytes,
-        };
-      }
-
-      const signaturePayload = {
-        files: files.map(file => ({
-          id: file.id,
-          name: file.name,
-          mime: file.mime ?? null,
-          sizeBytes: file.sizeBytes,
-          width: file.width ?? null,
-          height: file.height ?? null,
-        })),
-        ops,
-        scheduleVersion: IMAGES_MVP_QUOTE_VERSION,
-      };
-
-      const signature = buildQuoteSignature(signaturePayload);
-      const quoteId = `q_${crypto.randomUUID()}`;
-      const expiresAt = Date.now() + IMAGES_MVP_QUOTE_TTL_MS;
-
-      imagesMvpQuoteStore.set(quoteId, {
-        expiresAt,
-        signature,
-        files,
-        ops,
-        perFile,
-      });
-
-      res.json({
-        limits: {
-          maxBytes: IMAGES_MVP_MAX_BYTES,
-          allowedMimes: Array.from(SUPPORTED_IMAGE_MIMES),
-          maxFiles: IMAGES_MVP_MAX_FILES,
-        },
-        creditSchedule: IMAGES_MVP_CREDIT_SCHEDULE,
-        quote: {
-          perFile: files.map(file => ({
-            id: file.id,
-            ...perFile[file.id],
-          })),
-          totalCredits,
-          standardEquivalents:
-            IMAGES_MVP_CREDIT_SCHEDULE.standardCreditsPerImage > 0
-              ? Number(
-                  (
-                    totalCredits /
-                    IMAGES_MVP_CREDIT_SCHEDULE.standardCreditsPerImage
-                  ).toFixed(2)
-                )
-              : null,
-        },
-        quoteId,
-        expiresAt: new Date(expiresAt).toISOString(),
-        warnings,
-      });
-    } catch (error: unknown) {
-      console.error('Images MVP quote error:', error);
-      res.status(500).json({ error: 'Failed to generate quote' });
-    }
-  });
 
   // ---------------------------------------------------------------------------
   // Credits: Get Packs
@@ -1212,141 +722,49 @@ export function registerImagesMvpRoutes(app: Express) {
     '/api/images_mvp/credits/balance',
     async (req: Request, res: Response) => {
       try {
-        const authReq = req as AuthRequest;
+        // We expect the client to pass the raw sessionId provided by getSessionId helper
+        // But accept cookie-based session IDs or authenticated users as fallbacks
+        let rawSessionId =
+          (req.query.sessionId as string) ||
+          req.cookies?.metaextract_session_id;
 
-        const balanceKey = authReq.user?.id
-          ? getImagesMvpBalanceKeyForUser(authReq.user.id)
-          : getImagesMvpBalanceKeyForSession(getOrSetSessionId(req, res));
+        // Fallback: parse cookie header if express cookie parsing not present in test env
+        if (!rawSessionId && typeof req.headers?.cookie === 'string') {
+          const match = req.headers.cookie.match(/metaextract_session_id=([^;\s]+)/);
+          if (match) rawSessionId = match[1];
+        }
 
-        const balance = await storage.getOrCreateCreditBalance(
-          balanceKey,
-          authReq.user?.id
-        );
+        if (!rawSessionId) {
+          // If the user is authenticated, return the user balance
+          if ((req as any).user?.id) {
+            const userId = (req as any).user.id as string;
+            const namespaced = getImagesMvpBalanceId(`user:${userId}`);
+            const balance = await storage.getOrCreateCreditBalance(
+              namespaced,
+              userId
+            );
+            return res.json({
+              credits: balance.credits,
+              balanceId: balance.id,
+            });
+          }
+
+          // Otherwise, no session info available
+          return res.json({ credits: 0, balanceId: null });
+        }
+
+        // Use the namespaced ID for looking up balance
+        const namespacedSessionId = getImagesMvpBalanceId(rawSessionId);
+        const balance =
+          await storage.getOrCreateCreditBalance(namespacedSessionId, undefined);
 
         res.json({
           credits: balance.credits,
           balanceId: balance.id,
         });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Get images_mvp credits error:', error);
         res.status(500).json({ error: 'Failed to get credit balance' });
-      }
-    }
-  );
-
-  // ---------------------------------------------------------------------------
-  // Credits: Transactions
-  // ---------------------------------------------------------------------------
-  app.get(
-    '/api/images_mvp/credits/transactions',
-    async (req: Request, res: Response) => {
-      try {
-        const balanceId =
-          typeof req.query.balanceId === 'string' ? req.query.balanceId : null;
-        if (!balanceId) return res.json({ transactions: [] });
-        const transactions = await storage.getCreditTransactions(balanceId);
-        return res.json({ transactions });
-      } catch (error: unknown) {
-        console.error('Get images_mvp credit transactions error:', error);
-        return res
-          .status(500)
-          .json({ error: 'Failed to get credit transactions' });
-      }
-    }
-  );
-
-  // ---------------------------------------------------------------------------
-  // Credits: Claim (convert session credits -> account credits)
-  // ---------------------------------------------------------------------------
-  app.post(
-    '/api/images_mvp/credits/claim',
-    requireAuth,
-    async (req: Request, res: Response) => {
-      try {
-        const authReq = req as AuthRequest;
-        if (!authReq.user?.id) {
-          return res.status(401).json({ error: 'Authentication required' });
-        }
-
-        const rawSessionId = getOrSetSessionId(req, res);
-
-        const fromKey = getImagesMvpBalanceKeyForSession(rawSessionId);
-        const toKey = getImagesMvpBalanceKeyForUser(authReq.user.id);
-
-        const fromBalance = await storage.getCreditBalanceBySessionId(fromKey);
-        if (!fromBalance || (fromBalance.credits ?? 0) <= 0) {
-          return res.json({ transferred: 0 });
-        }
-
-        const toBalance = await storage.getOrCreateCreditBalance(
-          toKey,
-          authReq.user.id
-        );
-
-        const amount = fromBalance.credits;
-        await storage.transferCredits(
-          fromBalance.id,
-          toBalance.id,
-          amount,
-          'Claimed Images MVP credits to account'
-        );
-
-        return res.json({ transferred: amount });
-      } catch (error: unknown) {
-        console.error('Images MVP claim credits error:', error);
-        return res.status(500).json({ error: 'Failed to claim credits' });
-      }
-    }
-  );
-
-  // ---------------------------------------------------------------------------
-  // Credits: Dev grant (testing helper)
-  // ---------------------------------------------------------------------------
-  app.post(
-    '/api/dev/images_mvp/credits/grant',
-    async (req: Request, res: Response) => {
-      try {
-        if (process.env.NODE_ENV === 'production') {
-          return res.status(404).json({ error: 'Not found' });
-        }
-
-        const authReq = req as AuthRequest;
-        const amount =
-          typeof req.body?.credits === 'number'
-            ? req.body.credits
-            : typeof req.body?.credits === 'string'
-              ? Number(req.body.credits)
-              : 100;
-        if (!Number.isFinite(amount) || amount <= 0) {
-          return res
-            .status(400)
-            .json({ error: 'credits must be a positive number' });
-        }
-
-        const balanceKey = authReq.user?.id
-          ? getImagesMvpBalanceKeyForUser(authReq.user.id)
-          : getImagesMvpBalanceKeyForSession(getOrSetSessionId(req, res));
-
-        const balance = await storage.getOrCreateCreditBalance(
-          balanceKey,
-          authReq.user?.id
-        );
-
-        await storage.addCredits(
-          balance.id,
-          amount,
-          `Dev grant (${amount} credits)`
-        );
-
-        const updated = await storage.getCreditBalance(balance.id);
-        return res.json({
-          ok: true,
-          balanceId: balance.id,
-          credits: updated?.credits ?? balance.credits,
-        });
-      } catch (error: unknown) {
-        console.error('Images MVP dev grant credits error:', error);
-        return res.status(500).json({ error: 'Failed to grant credits' });
       }
     }
   );
@@ -1356,38 +774,35 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/credits/purchase',
-    requireAuth,
     async (req: Request, res: Response) => {
       try {
-        const dodoClient = getDodoClient();
-        if (!dodoClient) {
-          return res.status(503).json({
-            error: 'Payment system not configured',
-            message: 'Please add DODO_PAYMENTS_API_KEY to enable payments',
-          });
+        const client = getDodoClient();
+        if (!client) {
+          return sendServiceUnavailableError(
+            res,
+            'Payment system not configured. Please add DODO_PAYMENTS_API_KEY to enable payments'
+          );
         }
 
-        const authReq = req as AuthRequest;
-        const { pack, email } = req.body;
+        const { pack, sessionId, email } = req.body;
 
         if (!pack || !['starter', 'pro'].includes(pack)) {
           return res.status(400).json({ error: 'Invalid credit pack' });
         }
 
-        if (!authReq.user?.id) {
-          return res.status(401).json({
-            error: 'Authentication required',
-            message:
-              'Please sign in to purchase credits so they are available across devices.',
-          });
+        // If user is authenticated, use their user balance; otherwise sessionId required
+        let namespacedSessionId: string;
+        if ((req as any).user?.id) {
+          namespacedSessionId = getImagesMvpBalanceId(`user:${(req as any).user.id}`);
+        } else {
+          if (!sessionId) {
+            return res.status(400).json({ error: 'Session ID required' });
+          }
+          namespacedSessionId = getImagesMvpBalanceId(sessionId);
         }
 
-        const balanceKey = getImagesMvpBalanceKeyForUser(authReq.user.id);
-
-        const balance = await storage.getOrCreateCreditBalance(
-          balanceKey,
-          authReq.user?.id
-        );
+        const balance =
+          await storage.getOrCreateCreditBalance(namespacedSessionId, undefined);
         const packInfo =
           IMAGES_MVP_CREDIT_PACKS[pack as keyof typeof IMAGES_MVP_CREDIT_PACKS];
 
@@ -1400,20 +815,13 @@ export function registerImagesMvpRoutes(app: Express) {
             .json({ error: 'Product configuration missing' });
         }
 
-        const session = await dodoClient.checkoutSessions.create({
+        const session = await client.checkoutSessions.create({
           product_cart: [
             {
               product_id: packInfo.productId,
               quantity: 1,
             },
           ],
-          allowed_payment_method_types: [
-            'credit',
-            'debit',
-            'apple_pay',
-            'google_pay',
-          ],
-          billing_currency: 'USD',
           customer: email ? { email } : undefined,
           // Redirect to specialized success page
           return_url: `${baseUrl}/images_mvp/credits/success?pack=${pack}&balanceId=${balance.id}`,
@@ -1423,9 +831,6 @@ export function registerImagesMvpRoutes(app: Express) {
             pack,
             credits: packInfo.credits.toString(),
             balance_id: balance.id,
-            balance_key: balanceKey,
-            user_id: authReq.user?.id || null,
-            purchaser_email: email || null,
           },
         });
 
@@ -1438,7 +843,7 @@ export function registerImagesMvpRoutes(app: Express) {
           checkout_url: session.checkout_url,
           session_id: session.session_id,
         });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Images MVP purchase error:', error);
         res.status(500).json({
           error: 'Failed to create checkout session',
@@ -1449,94 +854,77 @@ export function registerImagesMvpRoutes(app: Express) {
   );
 
   // ---------------------------------------------------------------------------
+  // Credits: Claim (convert session credits -> account credits)
+  // ---------------------------------------------------------------------------
+  app.post(
+    '/api/images_mvp/credits/claim',
+    requireAuth,
+    async (req: Request, res: Response) => {
+      try {
+        const authReq = req as any;
+        if (!authReq.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const rawSessionId = req.body?.sessionId ?? getOrSetSessionId(req, res);
+
+        const fromKey = getImagesMvpBalanceId(rawSessionId);
+        const toKey = getImagesMvpBalanceId(`user:${authReq.user.id}`);
+
+        const fromBalance = await storage.getCreditBalanceBySessionId(fromKey);
+        if (!fromBalance || (fromBalance.credits ?? 0) <= 0) {
+          return res.json({ transferred: 0 });
+        }
+
+        const toBalance = await storage.getOrCreateCreditBalance(toKey, authReq.user.id);
+
+        const amount = fromBalance.credits;
+        await storage.transferCredits(fromBalance.id, toBalance.id, amount, `Claimed from ${fromKey}`);
+
+        res.json({ transferred: amount });
+      } catch (error) {
+        console.error('Images MVP claim credits error:', error);
+        res.status(500).json({ error: 'Failed to claim credits' });
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
   // Extraction Endpoint
   // ---------------------------------------------------------------------------
-  // Allow unauthenticated free extractions — quota enforcement handles anonymous limits
   app.post(
     '/api/images_mvp/extract',
-    freeQuotaMiddleware,
-    rateLimitExtraction(), // Rate limit: per-IP/user throttling
-    upload.single('file'),
-    // Multer error handling middleware
-    async (err: any, req: Request, res: Response, next: Function) => {
-      if (err) {
-        // Handle multer-specific errors
-        if (err.code === 'UNSUPPORTED_FILE_TYPE') {
-          // Log security event for file type rejection
-          await securityEventLogger.logUploadRejection(req, err.message, {
-            filename: req.file?.originalname || 'unknown',
-            mimetype: req.file?.mimetype || 'unknown',
-            size: req.file?.size || 0,
-            extension:
-              path.extname(req.file?.originalname || '').toLowerCase() ||
-              'unknown',
-          });
-
-          return res.status(403).json({
-            error: 'Unsupported file type',
-            message: err.message,
-            code: 'UNSUPPORTED_FILE_TYPE',
-          });
+    (req: Request, res: Response, next: any) => {
+      // Wrap multer to capture file size and other upload errors and translate to unified API errors
+      upload.single('file')(req as any, res as any, (err: any) => {
+        if (err) {
+          console.error('Multer upload error:', err);
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            // Historical endpoints expect a flat 413 "File too large" response
+            return sendLegacyFileTooLargeError(res);
+          }
+          return sendInvalidRequestError(res, 'File upload failed');
         }
-
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({
-            error: 'File too large',
-            message: `File size exceeds the maximum allowed size of ${IMAGES_MVP_MAX_BYTES / (1024 * 1024)}MB`,
-            code: 'FILE_TOO_LARGE',
-          });
-        }
-
-        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-          return res.status(400).json({
-            error: 'Invalid file upload',
-            message: 'Only one file can be uploaded at a time',
-            code: 'LIMIT_UNEXPECTED_FILE',
-          });
-        }
-
-        // Generic multer error
-        return res.status(400).json({
-          error: 'File upload failed',
-          message: err.message || 'Unknown upload error',
-          code: err.code || 'UPLOAD_ERROR',
-        });
-      }
-
-      // No error, proceed to main handler
-      next();
+        next();
+      });
     },
     async (req: Request, res: Response) => {
       const startTime = Date.now();
-      // Correlation ID for observability (traces request through pipeline)
-      const requestId = `req_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
-      res.setHeader('X-Request-Id', requestId);
-
       let tempPath: string | null = null;
       let sessionId: string | null = null;
       let creditBalanceId: string | null = null;
-      const useTrial = false;
+      let useTrial = false;
       let chargeCredits = false;
 
-      // Access mode: device_free | trial_limited | paid
-      let accessMode: 'device_free' | 'trial_limited' | 'paid' = 'paid';
-
-      let creditCost = 1;
-      let runOcr = true;
-      const quoteId =
-        typeof req.body?.quote_id === 'string' ? req.body.quote_id : null;
-      const clientFileId =
-        typeof req.body?.client_file_id === 'string'
-          ? req.body.client_file_id
-          : null;
+      // Fixed cost for MVP
+      const creditCost = 1;
 
       try {
-        const authReq = req as AuthRequest;
         if (!req.file) {
           return sendInvalidRequestError(res, 'No file uploaded');
         }
 
-        // Enforce file type (MIME + extension check)
+        // Enforce file type
         const mimeType = req.file.mimetype;
         const fileExt = path.extname(req.file.originalname).toLowerCase();
         const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
@@ -1544,80 +932,14 @@ export function registerImagesMvpRoutes(app: Express) {
           ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
           : false;
         if (!isSupportedMime && !isSupportedExt) {
-          // Return a 403 Forbidden for unsupported files as per security policy
-          return res.status(403).json({
-            error: 'File type not permitted',
-            message:
-              'For security reasons, we only support standard photo formats: JPG, PNG, HEIC, and WebP. Please upload a supported image file.',
-            code: 'FILE_TYPE_FORBIDDEN',
-            supported: ['JPG', 'JPEG', 'PNG', 'HEIC', 'HEIF', 'WebP'],
-          });
+          // Return a 403 with clear unsupported file type response for security
+          return sendUnsupportedFileTypeError(res, 'File type not permitted');
         }
 
-        // Magic-byte validation: verify actual file content matches claimed type
-        const fileBuffer =
-          req.file.buffer || (await fs.readFile(req.file.path));
-        const detectedType = await fileTypeFromBuffer(fileBuffer);
-        if (detectedType && !SUPPORTED_IMAGE_MIMES.has(detectedType.mime)) {
-          // File content doesn't match a supported image type - potential spoofing attempt
-          return res.status(403).json({
-            error: 'Invalid file content',
-            message:
-              'The uploaded file content does not match a supported image type. Please upload a genuine photo file.',
-            code: 'INVALID_MAGIC_BYTES_FORBIDDEN',
-            detected: detectedType.mime,
-          });
-        }
-
-        if (quoteId) {
-          const storedQuote = getStoredQuote(quoteId);
-          if (!storedQuote) {
-            return res.status(400).json({
-              error: 'Quote expired or invalid',
-              code: 'QUOTE_INVALID',
-            });
-          }
-          if (!clientFileId) {
-            return res.status(400).json({
-              error: 'Missing client file id for quote validation',
-              code: 'QUOTE_MISSING_FILE_ID',
-            });
-          }
-          const quotedFile = storedQuote.perFile[clientFileId];
-          if (!quotedFile || !quotedFile.accepted) {
-            return res.status(400).json({
-              error: 'Quote does not match uploaded file',
-              code: 'QUOTE_MISMATCH',
-            });
-          }
-          if (
-            typeof quotedFile.sizeBytes === 'number' &&
-            quotedFile.sizeBytes !== req.file.size
-          ) {
-            return res.status(400).json({
-              error: 'Quote does not match uploaded file size',
-              code: 'QUOTE_SIZE_MISMATCH',
-            });
-          }
-          if (
-            typeof quotedFile.creditsTotal !== 'number' ||
-            !Number.isFinite(quotedFile.creditsTotal)
-          ) {
-            return res.status(400).json({
-              error: 'Quote missing credit total',
-              code: 'QUOTE_MISSING_CREDITS',
-            });
-          }
-          creditCost = quotedFile.creditsTotal;
-          runOcr = (quotedFile.breakdown?.ocr ?? 0) > 0;
-        }
-
-        const trialEmail = normalizeEmail(req.body?.trial_email);
-        // WebSocket progress uses `session_id` (client-provided). Credits use the stable cookie session.
-        sessionId = getSessionId(req); // progress session id
-        const cookieSessionId = authReq.user?.id
-          ? null
-          : getOrSetSessionId(req, res);
+        const trialEmail = normalizeEmail(
+          req.body?.trial_email ?? req.body?.access_email
+        );
+        sessionId = getSessionId(req); // Raw session ID
 
         // Check Trial Status
         let trialUses = 0;
@@ -1639,23 +961,21 @@ export function registerImagesMvpRoutes(app: Express) {
         const hasTrialAvailable = !!trialEmail && trialUses < 2;
 
         // Determine Access
-        // Security is enforced in all environments
-        // For testing, use accounts with sufficient credits
-        if (hasTrialAvailable) {
-          // Email trial grants a restricted "trial_limited" mode (heavy redaction)
-          accessMode = 'trial_limited';
+        // In development, skip all restrictions for easier testing
+        if (process.env.NODE_ENV === 'development') {
+          useTrial = false;
+          chargeCredits = false;
+        } else if (hasTrialAvailable) {
+          useTrial = true;
         } else {
-          if (trialEmail) {
-            // Trial email provided but trial is exhausted: require credits (do not stack free quota).
+          // Check Credits
+          // If sessionId is not present, this may be an anonymous user. However, authenticated users should be
+          // able to charge their account credits without providing an explicit session id.
 
-            const balanceKey = authReq.user?.id
-              ? getImagesMvpBalanceKeyForUser(authReq.user.id)
-              : getImagesMvpBalanceKeyForSession(cookieSessionId!);
-
-            const balance = await storage.getOrCreateCreditBalance(
-              balanceKey,
-              authReq.user?.id
-            );
+          if (sessionId) {
+            const namespacedSessionId = getImagesMvpBalanceId(sessionId);
+            const balance =
+              await storage.getOrCreateCreditBalance(namespacedSessionId, undefined);
             creditBalanceId = balance?.id ?? null;
 
             if (!balance || balance.credits < creditCost) {
@@ -1665,198 +985,34 @@ export function registerImagesMvpRoutes(app: Express) {
               );
             }
             chargeCredits = true;
-            accessMode = 'paid';
+          } else if ((req as any).user?.id) {
+            // Authenticated user - use account credits
+            const userId = (req as any).user.id as string;
+            const namespaced = getImagesMvpBalanceId(`user:${userId}`);
+            const balance = await storage.getOrCreateCreditBalance(namespaced, userId);
+            creditBalanceId = balance?.id ?? null;
+
+            if (!balance || balance.credits < creditCost) {
+              return sendQuotaExceededError(
+                res,
+                `Insufficient credits (required: ${creditCost}, available: ${balance?.credits ?? 0})`
+              );
+            }
+            chargeCredits = true;
           } else {
-            // No trial available: allow up to 2 free extractions per device, then require credits.
-            const ip = req.ip || req.socket.remoteAddress || 'unknown';
-
-            // Use SERVER-ISSUED device token (resistant to cookie clearing)
-            // Falls back to old client token for backward compatibility
-            let deviceId: string;
-            try {
-              deviceId = getServerDeviceId(req, res);
-            } catch {
-              // Fallback to legacy client token
-              let clientToken = req.cookies?.metaextract_client;
-              let decoded = verifyClientToken(clientToken ?? '');
-
-              if (!decoded) {
-                clientToken = generateClientToken();
-                res.cookie('metaextract_client', clientToken, {
-                  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-                  path: '/',
-                  httpOnly: true,
-                  sameSite: 'lax',
-                });
-                decoded = verifyClientToken(clientToken);
-              }
-
-              if (!decoded) {
-                return res.status(429).json({
-                  error: 'Invalid session',
-                  message: 'Please refresh the page to continue.',
-                  requires_refresh: true,
-                });
-              }
-              deviceId = decoded.clientId;
-            }
-
-            // Check for suspicious device behavior
-            const isSuspicious = await checkDeviceSuspicious(req, deviceId);
-            if (isSuspicious) {
-              console.warn(
-                `[Security] Suspicious device detected: ${deviceId} from IP ${ip}`
-              );
-
-              // Return challenge response instead of just logging
-              return res.status(429).json({
-                error: 'Rate limit exceeded',
-                message: 'Please try again later',
-                code: 'SUSPICIOUS_DEVICE',
-                retryAfter: 300, // 5 minutes
-              });
-            }
-
-            // Enhanced fingerprint analysis (Phase 1 integration)
-            const clientFingerprintHash =
-              (req.headers['x-fingerprint-hash'] as string) || '';
-            const clientSessionId =
-              (req.headers['x-session-id'] as string) || '';
-
-            if (clientFingerprintHash && clientSessionId) {
-              try {
-                // Import fingerprint analysis functions
-                const { generateFingerprint, analyzeFingerprint } =
-                  await import('../monitoring/browser-fingerprint.js');
-                const { securityEventLogger } =
-                  await import('../monitoring/security-events.js');
-
-                // Generate enhanced fingerprint from request data
-                const enhancedFingerprint = await generateFingerprint(req, {});
-
-                // Override the client-provided hash for comparison
-                (enhancedFingerprint as any).clientHash = clientFingerprintHash;
-
-                // Analyze fingerprint for anomalies
-                const analysis = await analyzeFingerprint(enhancedFingerprint);
-
-                // Log the fingerprint analysis for monitoring
-                await securityEventLogger.logEvent({
-                  event: 'fingerprint_analysis',
-                  severity: analysis.riskScore > 50 ? 'medium' : 'low',
-                  timestamp: new Date(),
-                  source: 'extraction_endpoint',
-                  ipAddress: ip,
-                  details: {
-                    fingerprintId: enhancedFingerprint.fingerprintHash,
-                    riskScore: analysis.riskScore,
-                    confidence: analysis.confidence,
-                    anomalies: analysis.anomalies,
-                    similarDevices: analysis.similarFingerprints.length,
-                    sessionId: clientSessionId,
-                  },
-                });
-
-                // Use analysis results in access control
-                if (analysis.riskScore > 80) {
-                  await securityEventLogger.logEvent({
-                    event: 'high_risk_fingerprint_blocked',
-                    severity: 'high',
-                    timestamp: new Date(),
-                    source: 'extraction_endpoint',
-                    ipAddress: ip,
-                    details: {
-                      fingerprintId: enhancedFingerprint.fingerprintHash,
-                      riskScore: analysis.riskScore,
-                      anomalies: analysis.anomalies,
-                      similarDevices: analysis.similarFingerprints.length,
-                      sessionId: clientSessionId,
-                    },
-                  });
-
-                  return res.status(403).json({
-                    error: 'Suspicious activity detected',
-                    message: 'Please contact support if this is an error',
-                    code: 'HIGH_RISK_FINGERPRINT',
-                  });
-                }
-
-                // Log moderate risk for monitoring (don't block)
-                if (analysis.riskScore > 50) {
-                  console.warn(
-                    `[Security] Moderate risk fingerprint: ${analysis.riskScore}/100 for ${enhancedFingerprint.fingerprintHash}`
-                  );
-                }
-              } catch (error) {
-                // Don't block extraction on fingerprint errors, just log
-                console.error('[FingerprintAnalysis] Error:', error);
-              }
-            }
-
-            // Check circuit breaker for free tier load shedding
-            const loadCheck = checkCircuitBreaker(false); // isPaid = false
-            if (loadCheck.delayed && loadCheck.estimatedWaitSeconds > 60) {
-              // Under extreme load, suggest purchasing
-              return res.status(503).json({
-                error: 'High demand',
-                message: loadCheck.message,
-                estimated_wait_seconds: loadCheck.estimatedWaitSeconds,
-                upgrade_available: true,
-              });
-            }
-
-            const usage = await getClientUsage(deviceId);
-            const freeUsed = usage?.freeUsed || 0;
-            const freeLimit = 2;
-
-            if (freeUsed < freeLimit) {
-              await incrementUsage(deviceId, ip);
-              // Device-level free check: show high-value data but redact sensitive identifiers
-              accessMode = 'device_free';
-              chargeCredits = false;
-
-              // reflect usage count in response (n of freeLimit)
-              // freeUsed is prior to increment; record nextFreeUsed for response
-              (req as any)._nextFreeUsed = (freeUsed || 0) + 1;
-
-              // Record success for circuit breaker recovery
-              circuitBreaker.recordSuccess();
-            } else {
-              // Free quota exhausted: require credits.
-              const balanceKey = authReq.user?.id
-                ? getImagesMvpBalanceKeyForUser(authReq.user.id)
-                : getImagesMvpBalanceKeyForSession(cookieSessionId!);
-
-              const balance = await storage.getOrCreateCreditBalance(
-                balanceKey,
-                authReq.user?.id
-              );
-              creditBalanceId = balance?.id ?? null;
-
-              if (!balance || balance.credits < creditCost) {
-                await handleQuotaExceeded(req, res, deviceId, ip);
-                return;
-              }
-              chargeCredits = true;
-              accessMode = 'paid';
-            }
+            // No sessionId and not authenticated - allow anonymous flow, free quota will be enforced later
+            chargeCredits = false;
           }
         }
 
         // Proceed with Extraction
         const tempDir = '/tmp/metaextract';
         await fs.mkdir(tempDir, { recursive: true });
-        const sanitizedFilename = sanitizeFilename(req.file.originalname);
         tempPath = path.join(
           tempDir,
-          `${crypto.randomUUID()}-${sanitizedFilename}`
+          `${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`
         );
-        // If file is already on disk (diskStorage), move it; otherwise write from buffer
-        if (req.file.path) {
-          await fs.copyFile(req.file.path, tempPath);
-        } else {
-          await fs.writeFile(tempPath, req.file.buffer);
-        }
+        await fs.writeFile(tempPath, req.file.buffer);
 
         // Send initial progress update
         if (sessionId) {
@@ -1869,8 +1025,7 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Extract with enhanced features
-        // Use full engine tier for device_free to provide high-value fields; reserve `free` for trial_limited
-        const engineTier = accessMode === 'trial_limited' ? 'free' : 'super';
+        const pythonTier = 'super';
 
         // Send progress update before extraction
         if (sessionId) {
@@ -1882,16 +1037,25 @@ export function registerImagesMvpRoutes(app: Express) {
           );
         }
 
+        // Respect any quote-provided ops (like OCR off)
+        const quoteId = req.body?.quote_id;
+        let runOcr = true;
+        if (quoteId) {
+          const quote = IMAGES_MVP_QUOTES.get(quoteId);
+          if (quote && typeof quote.ops === 'object') {
+            runOcr = !!quote.ops.ocr;
+          }
+        }
+
+        const extractorOptions = { ocr: runOcr, maxDim: 2048 };
+
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
-          engineTier,
+          pythonTier,
           true, // performance
           true, // advanced (needed for authenticity signals)
           req.query.store === 'true',
-          {
-            ocr: runOcr,
-            maxDim: 2048,
-          }
+          extractorOptions
         );
 
         // Send progress update after extraction
@@ -1910,7 +1074,6 @@ export function registerImagesMvpRoutes(app: Express) {
         // Add enhanced processing insights
         rawMetadata.extraction_info = {
           ...rawMetadata.extraction_info,
-          tier: engineTier,
           enhanced_extraction: true,
           total_fields_extracted:
             rawMetadata.extraction_info?.fields_extracted || 0,
@@ -1921,15 +1084,8 @@ export function registerImagesMvpRoutes(app: Express) {
         const metadata = transformMetadataForFrontend(
           rawMetadata,
           req.file.originalname,
-          engineTier
+          useTrial ? 'free' : 'professional'
         );
-        delete (metadata as any).tier;
-        if (process.env.NODE_ENV !== 'production') {
-          metadata.debug = {
-            ...(metadata.debug || {}),
-            engine_tier: engineTier,
-          };
-        }
 
         const clientLastModifiedRaw = req.body?.client_last_modified;
         const clientLastModifiedMs = clientLastModifiedRaw
@@ -1976,25 +1132,34 @@ export function registerImagesMvpRoutes(app: Express) {
           progress_updates: [],
         };
 
-        // Apply access-mode redactions
-        // 'trial_limited' = heavy redaction (email trial)
-        // 'device_free' = hybrid redaction (show high-value data, redact sensitive identifiers)
-        if (accessMode === 'trial_limited') {
-          applyAccessModeRedaction(metadata, 'trial_limited');
-        } else if (accessMode === 'device_free') {
-          // Ensure we don't mark trial-limited and apply hybrid redactions
-          delete (metadata as any)._trial_limited;
-          applyAccessModeRedaction(metadata, 'device_free');
+        // Filter for Trial
+        if (useTrial) {
+          // Remove Raw/Advanced data for trial to encourage upgrade
+          metadata.iptc = null;
+          metadata.xmp = null;
+          metadata.exif = {}; // EXIF cannot be null in FrontendMetadataResponse, so use empty object
+
+          metadata.iptc_raw = null;
+          metadata.xmp_raw = null;
+          metadata._trial_limited = true;
         }
 
         metadata.access = {
           trial_email_present: !!trialEmail,
-          trial_granted: accessMode === 'trial_limited',
+          trial_granted: useTrial,
           credits_charged: chargeCredits ? creditCost : 0,
-          credits_required: chargeCredits ? creditCost : 0,
-          mode: accessMode,
-          free_used: (req as any)._nextFreeUsed ?? undefined,
+          credits_required: creditCost,
         };
+
+        // Set access mode for frontend clarity
+        if (useTrial) {
+          metadata.access.mode = 'trial_limited';
+        } else if (chargeCredits) {
+          metadata.access.mode = 'paid';
+        } else {
+          // Default is undefined; for anonymous users we may set 'device_free' during the free quota block
+          metadata.access.mode = undefined;
+        }
 
         // Record Usage
         const fileExtension = fileExt?.slice(1) || 'unknown';
@@ -2002,7 +1167,7 @@ export function registerImagesMvpRoutes(app: Express) {
         // 1. Log extraction analytics (generic) - fire-and-forget is OK for analytics
         storage
           .logExtractionUsage({
-            tier: useTrial ? 'free' : 'enterprise',
+            tier: useTrial ? 'free' : 'professional',
             fileExtension,
             mimeType,
             fileSizeBytes: req.file.size,
@@ -2027,7 +1192,7 @@ export function registerImagesMvpRoutes(app: Express) {
               `Extraction: ${fileExtension} (Images MVP)`,
               mimeType
             );
-          } catch (error: unknown) {
+          } catch (error) {
             console.error('Failed to charge credits:', error);
             return res.status(402).json({
               error: 'Payment failed',
@@ -2038,7 +1203,7 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // 3. Record Trial Usage
-        if (accessMode === 'trial_limited' && trialEmail) {
+        if (useTrial && trialEmail) {
           try {
             await storage.recordTrialUsage({
               email: trialEmail,
@@ -2047,13 +1212,81 @@ export function registerImagesMvpRoutes(app: Express) {
               sessionId: sessionId || undefined,
               // We log to the main trial table. This counts towards the "2 limit".
             });
-          } catch (error: unknown) {
+          } catch (error) {
             console.error('Failed to record trial usage:', error);
           }
         }
 
+        // Check free quota for non-trial users
+        if (!useTrial && !trialEmail) {
+          // Get client IP for usage tracking
+          const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+          // Check if user has exceeded free quota
+          let clientToken = req.cookies?.metaextract_client;
+          let decoded = verifyClientToken(clientToken);
+          let isNewToken = false;
+
+          if (!decoded) {
+            // New user - generate token and allow first request
+            clientToken = generateClientToken();
+            res.cookie('metaextract_client', clientToken, {
+              maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+              path: '/',
+              httpOnly: true,
+              sameSite: 'strict',
+            });
+            decoded = verifyClientToken(clientToken);
+            isNewToken = true;
+          }
+
+          if (!decoded) {
+            // Should not happen, but just in case
+            return res.status(429).json({
+              error: 'Invalid session',
+              message: 'Please refresh the page to continue.',
+              requires_refresh: true,
+            });
+          }
+
+          // Check quota
+          const usage = await getClientUsage(decoded.clientId);
+          const currentCount = usage?.freeUsed || 0;
+
+          if (currentCount >= 2) {
+            // CONFIG.FREE_LIMIT
+            // Quota exceeded - show appropriate response
+            await handleQuotaExceeded(req, res, decoded.clientId, ip);
+            return;
+          }
+
+          // Within quota - proceed but track usage
+          await incrementUsage(decoded.clientId, ip);
+
+          // Mark access metadata for device_free
+          metadata.access.mode = 'device_free';
+          metadata.access.free_used = (currentCount || 0) + 1;
+
+          // Log successful free usage
+          // trackImagesMvpEvent('free_extraction_used', {
+          //   client_id: decoded.clientId,
+          //   ip: ip,
+          //   usage_count: currentCount + 1,
+          //   is_new_token: !clientToken,
+          // });
+        }
+
+        // Apply redaction based on access mode (trial/device_free)
+        try {
+          if (metadata.access && metadata.access.mode) {
+            applyAccessModeRedaction(metadata, metadata.access.mode);
+          }
+        } catch (redactError) {
+          console.error('Access mode redaction failed:', redactError);
+        }
+
         res.json(metadata);
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Images MVP extraction error:', error);
 
         // Send error notification via WebSocket
@@ -2072,101 +1305,6 @@ export function registerImagesMvpRoutes(app: Express) {
         if (sessionId) {
           setTimeout(() => cleanupConnections(sessionId!), 5000); // Delay cleanup to allow final messages
         }
-      }
-    }
-  );
-
-  // ---------------------------------------------------------------------------
-  // Job Status Endpoint (Async Processing Support)
-  // ---------------------------------------------------------------------------
-  app.get(
-    '/api/images_mvp/jobs/:jobId/status',
-    async (req: Request, res: Response) => {
-      try {
-        const { jobId } = req.params;
-
-        if (!jobId) {
-          return res.status(400).json({ error: 'Job ID is required' });
-        }
-
-        // For now, check metadata_results as the "completed" indicator
-        // Full async queue implementation is in short-term roadmap
-        const metadata = await storage.getMetadata(jobId);
-
-        if (metadata) {
-          return res.json({
-            jobId,
-            status: 'complete',
-            progress: 100,
-            message: 'Extraction complete',
-            result: {
-              id: metadata.id,
-              fileName: metadata.fileName,
-              createdAt: metadata.createdAt,
-            },
-          });
-        }
-
-        // Job not found - could be pending or invalid
-        return res.status(404).json({
-          jobId,
-          status: 'not_found',
-          message:
-            'Job not found. It may still be processing or the ID is invalid.',
-        });
-      } catch (error: unknown) {
-        console.error('Error fetching job status:', error);
-        return res.status(500).json({
-          error: 'Failed to fetch job status',
-          message: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-  );
-
-  // ---------------------------------------------------------------------------
-  // Thumbnail Endpoint with Format Negotiation (CDN Optimization)
-  // ---------------------------------------------------------------------------
-  app.get(
-    '/api/images_mvp/thumbnail/:resultId',
-    async (req: Request, res: Response) => {
-      try {
-        const { resultId } = req.params;
-        const acceptHeader = req.headers.accept || '';
-
-        // Format negotiation based on client capabilities
-        let preferredFormat: 'avif' | 'webp' | 'jpeg' = 'jpeg';
-        if (acceptHeader.includes('image/avif')) {
-          preferredFormat = 'avif';
-        } else if (acceptHeader.includes('image/webp')) {
-          preferredFormat = 'webp';
-        }
-
-        // Get metadata result to find original image
-        const metadata = await storage.getMetadata(resultId);
-        if (!metadata) {
-          return res.status(404).json({ error: 'Result not found' });
-        }
-
-        // For now, return format info - actual thumbnail generation
-        // requires object storage integration (short-term roadmap)
-        return res.json({
-          resultId,
-          preferredFormat,
-          message: 'Thumbnail endpoint ready. CDN integration pending.',
-          thumbnailUrl: `/api/images_mvp/thumbnail/${resultId}/image.${preferredFormat}`,
-          formats: {
-            avif: acceptHeader.includes('image/avif'),
-            webp: acceptHeader.includes('image/webp'),
-            jpeg: true,
-          },
-        });
-      } catch (error: unknown) {
-        console.error('Error generating thumbnail:', error);
-        return res.status(500).json({
-          error: 'Failed to generate thumbnail',
-          message: error instanceof Error ? error.message : 'Unknown error',
-        });
       }
     }
   );

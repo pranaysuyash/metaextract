@@ -6,13 +6,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { OnboardingProvider } from "@/lib/onboarding";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { AccessibilityProvider } from "@/lib/accessibility-context";
 import { TutorialOverlay, useTutorialOverlay } from "@/components/tutorial-overlay";
 import { ContextAdapterProvider } from "@/context/ContextAdapter";
 import { ErrorBoundary } from "@/components/error-boundary";
+import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import BatchResultsPage from "@/pages/batch-results";
-import TimelineViewPage from "@/pages/timeline-view";
+import Results from "@/pages/results";
+import ResultsV2 from "@/pages/results-v2";
 import ImagesMvpLanding from "@/pages/images-mvp";
 import ImagesMvpResults from "@/pages/images-mvp/results";
 import ImagesMvpCreditsSuccess from "@/pages/images-mvp/credits-success";
@@ -20,11 +20,9 @@ import ImagesMvpAnalytics from "@/pages/images-mvp/analytics";
 import DashboardImproved from "@/pages/dashboard-improved";
 import CheckoutSuccess from "@/pages/checkout-success";
 import CreditsSuccess from "@/pages/credits-success";
-import CreditsPage from "@/pages/credits";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
 import GDPRCompliance from "@/pages/gdpr-compliance";
-import ResetPasswordPage from "@/pages/reset-password";
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -66,8 +64,7 @@ function AppRouter() {
 
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/images_mvp" replace />} />
-          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Home />} />
           <Route
             path="/settings"
             element={
@@ -76,31 +73,9 @@ function AppRouter() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/credits"
-            element={
-              <ProtectedRoute>
-                <CreditsPage />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/dashboard" element={<Navigate to="/settings" replace />} />
-          <Route
-            path="/batch-results"
-            element={
-              <ProtectedRoute>
-                <BatchResultsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/timeline-view"
-            element={
-              <ProtectedRoute>
-                <TimelineViewPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/results" element={<Results />} />
+          <Route path="/results-v2" element={<ResultsV2 />} />
           <Route
             path="/checkout/success"
             element={
@@ -111,19 +86,16 @@ function AppRouter() {
           />
           <Route
             path="/credits/success"
-            element={<CreditsSuccess />}
+            element={
+              <ProtectedRoute>
+                <CreditsSuccess />
+              </ProtectedRoute>
+            }
           />
           <Route path="/images_mvp" element={<ImagesMvpLanding />} />
           <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
           <Route path="/images_mvp/credits/success" element={<ImagesMvpCreditsSuccess />} />
-          <Route
-            path="/images_mvp/analytics"
-            element={
-              <ProtectedRoute>
-                <ImagesMvpAnalytics />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/images_mvp/analytics" element={<ImagesMvpAnalytics />} />
           <Route path="/images-mvp" element={<Navigate to="/images_mvp" replace />} />
           <Route path="/images-mvp/results" element={<Navigate to="/images_mvp/results" replace />} />
           <Route path="/images-mvp/credits/success" element={<Navigate to="/images_mvp/credits/success" replace />} />
@@ -133,9 +105,8 @@ function AppRouter() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/gdpr" element={<GDPRCompliance />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          <Route path="*" element={<Navigate to="/images_mvp" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
 
@@ -149,20 +120,18 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultMode="dark" injectCssVars={true}>
-        <AccessibilityProvider>
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <OnboardingProvider>
-                <ContextAdapterProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <AppRouter />
-                  </TooltipProvider>
-                </ContextAdapterProvider>
-              </OnboardingProvider>
-            </AuthProvider>
-          </QueryClientProvider>
-        </AccessibilityProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <OnboardingProvider>
+              <ContextAdapterProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <AppRouter />
+                </TooltipProvider>
+              </ContextAdapterProvider>
+            </OnboardingProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

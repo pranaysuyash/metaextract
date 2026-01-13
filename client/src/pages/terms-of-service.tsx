@@ -122,13 +122,10 @@ export default function TermsOfServicePage() {
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <a
-              href="mailto:support@metaextract.com?subject=MetaExtract%20Support"
-              className="flex items-center gap-2"
-            >
+            <Link to="/support" className="flex items-center gap-2">
               <ExternalLink className="w-4 h-4" />
               Contact Support
-            </a>
+            </Link>
           </Button>
         </div>
       </div>
@@ -174,9 +171,6 @@ const defaultTermsOfServiceContent = `
 
 <h2>Termination</h2>
 <p>We may terminate or suspend your account immediately, without prior notice, for any reason whatsoever, including without limitation if you breach the Terms.</p>
-
-<h2>Refund Policy (Credit Packs)</h2>
-<p><strong>Refunds are available within 7 days of purchase for unused credit packs only.</strong> If any credits are used, the purchase is non-refundable. Credits do not expire.</p>
 
 <h2>Governing Law</h2>
 <p>These Terms shall be governed and construed in accordance with the laws of [Jurisdiction], without regard to its conflict of law provisions.</p>

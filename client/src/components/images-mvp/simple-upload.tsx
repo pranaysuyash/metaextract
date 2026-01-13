@@ -1,9 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { LimitedAccessModal } from '@/components/limited-access-modal';
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
 import { ProgressTracker } from '@/components/images-mvp/progress-tracker';
 import {
@@ -11,58 +13,39 @@ import {
   getImagesMvpSessionId,
   trackImagesMvpEvent,
 } from '@/lib/images-mvp-analytics';
-import {
-  createDefaultQuoteOps,
-  fetchImagesMvpQuote,
-  type ImagesMvpQuoteOps,
-  type ImagesMvpQuoteResponse,
-} from '@/lib/images-mvp-quote';
-import { useAuth } from '@/lib/auth';
-import {
-  generateBrowserFingerprint,
-  generateFingerprintHash,
-  getSessionId,
-} from '@/lib/browser-fingerprint';
+
+const SUPPORTED_EXTENSIONS = [
+  // Popular photo formats for casual users
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.heic',
+  '.heif',
+  '.webp',
+];
+
+const SUPPORTED_MIMES = [
+  // Popular photo formats for casual users
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/heif',
+  'image/webp',
+];
 
 export function SimpleUploadZone() {
-  const { isAuthenticated } = useAuth();
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [accessEmail, setAccessEmail] = useState<string | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingFileId, setPendingFileId] = useState<string | null>(null);
-  const [pendingDimensions, setPendingDimensions] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [paywallShownAt, setPaywallShownAt] = useState<number | null>(null);
-  const [pricingDismissed, setPricingDismissed] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [showProgressTracker, setShowProgressTracker] = useState(false);
-  const [resumeRequested, setResumeRequested] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-  const [quoteOps, setQuoteOps] = useState<ImagesMvpQuoteOps>(
-    createDefaultQuoteOps()
-  );
-  const [ocrAutoApplied, setOcrAutoApplied] = useState(false);
-  const [ocrUserOverride, setOcrUserOverride] = useState(false);
-  const [quoteData, setQuoteData] = useState<ImagesMvpQuoteResponse | null>(
-    null
-  );
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const openedFromQueryRef = useRef(false);
-  const ocrFromQueryRef = useRef(false);
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const maxBytesDisplay =
-    typeof quoteData?.limits?.maxBytes === 'number'
-      ? quoteData.limits.maxBytes
-      : null;
 
   const getExtension = (name: string): string | null => {
     const index = name.lastIndexOf('.');
@@ -70,194 +53,10 @@ export function SimpleUploadZone() {
     return name.slice(index).toLowerCase();
   };
 
-  const looksLikeMapCapture = (name: string): boolean =>
-    /gps|map|location|coords|coordinate|geotag/i.test(name);
-
-  const probeImageDimensions = async (
-    file: File
-  ): Promise<{ width: number; height: number } | null> => {
-    try {
-      const objectUrl = URL.createObjectURL(file);
-      const result = await new Promise<{
-        width: number;
-        height: number;
-      } | null>(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          resolve({ width: img.width, height: img.height });
-          URL.revokeObjectURL(objectUrl);
-        };
-        img.onerror = () => {
-          resolve(null);
-          URL.revokeObjectURL(objectUrl);
-        };
-        img.src = objectUrl;
-      });
-      return result;
-    } catch {
-      return null;
-    }
-  };
-
-  const requestQuote = useCallback(
-    async (
-      file: File,
-      fileId: string,
-      dimensions: { width: number; height: number } | null,
-      ops: ImagesMvpQuoteOps
-    ) => {
-      setQuoteLoading(true);
-      setQuoteError(null);
-      try {
-        const response = await fetchImagesMvpQuote(
-          [
-            {
-              id: fileId,
-              name: file.name,
-              mime: file.type || null,
-              sizeBytes: file.size,
-              width: dimensions?.width ?? null,
-              height: dimensions?.height ?? null,
-            },
-          ],
-          ops
-        );
-        setQuoteData(response);
-        return response;
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to get quote';
-        setQuoteError(message);
-        setQuoteData(null);
-        return null;
-      } finally {
-        setQuoteLoading(false);
-      }
-    },
-    []
-  );
-
-  const checkCreditsAndMaybeResume = useCallback(async () => {
-    if (!resumeRequested) return;
-    if (!pendingFile || isUploading) return;
-    try {
-      const res = await fetch('/api/images_mvp/credits/balance', {
-        credentials: 'include',
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const credits =
-        typeof data?.credits === 'number' ? (data.credits as number) : 0;
-      if (credits >= 1) {
-        if (!pendingFileId) {
-          toast({
-            title: 'Quote expired',
-            description:
-              'Quote expired or file changed. Re-select the file to refresh.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        const refreshed = await requestQuote(
-          pendingFile,
-          pendingFileId,
-          pendingDimensions,
-          quoteOps
-        );
-        if (!refreshed) {
-          toast({
-            title: 'Quote refresh failed',
-            description:
-              'Please select the file again to generate a fresh quote.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        setShowPricingModal(false);
-        toast({
-          title: 'Credits available',
-          description: 'Ready to analyze. Click Analyze to continue.',
-        });
-      }
-    } catch {
-      // Best-effort only
-    }
-  }, [
-    pendingFile,
-    pendingFileId,
-    isUploading,
-    quoteOps,
-    pendingDimensions,
-    requestQuote,
-    resumeRequested,
-    toast,
-  ]);
-
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'metaextract_images_mvp_purchase_completed') {
-        void checkCreditsAndMaybeResume();
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [checkCreditsAndMaybeResume]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const stored = localStorage.getItem('metaextract_access_email');
+    if (stored) setAccessEmail(stored);
   }, []);
-
-  useEffect(() => {
-    if (openedFromQueryRef.current) return;
-    const pricingFlag =
-      searchParams.get('pricing') || searchParams.get('credits');
-    if (!pricingFlag) return;
-    openedFromQueryRef.current = true;
-    setShowPricingModal(true);
-    setPricingDismissed(false);
-    const next = new URLSearchParams(searchParams);
-    next.delete('pricing');
-    next.delete('credits');
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
-
-  useEffect(() => {
-    if (ocrFromQueryRef.current) return;
-    if (searchParams.get('ocr') !== '1') return;
-    ocrFromQueryRef.current = true;
-    setOcrUserOverride(true);
-    setOcrAutoApplied(false);
-    setQuoteOps(prev => ({ ...prev, ocr: true }));
-    if (pendingFile && pendingFileId) {
-      void requestQuote(pendingFile, pendingFileId, pendingDimensions, {
-        ...quoteOps,
-        ocr: true,
-      });
-    }
-    const next = new URLSearchParams(searchParams);
-    next.delete('ocr');
-    setSearchParams(next, { replace: true });
-  }, [
-    pendingDimensions,
-    pendingFile,
-    pendingFileId,
-    quoteOps,
-    requestQuote,
-    searchParams,
-    setSearchParams,
-  ]);
-
-  useEffect(() => {
-    if (!showPricingModal) return;
-    const active = document.activeElement as HTMLElement | null;
-    if (active && typeof active.blur === 'function') {
-      active.blur();
-    }
-  }, [showPricingModal]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -276,160 +75,54 @@ export function SimpleUploadZone() {
     if (files.length > 0) handleFile(files[0]);
   }, []);
 
-  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      inputRef.current?.click();
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
     }
-  }, []);
-
-  const activeQuoteEntry =
-    quoteData?.quote?.perFile?.find(entry => entry.id === pendingFileId) ??
-    null;
-
-  const handleOpsToggle = (key: keyof ImagesMvpQuoteOps) => {
-    const nextOps = { ...quoteOps, [key]: !quoteOps[key] };
-    if (key === 'ocr') {
-      setOcrUserOverride(true);
-      setOcrAutoApplied(false);
-    }
-    setQuoteOps(nextOps);
-    if (pendingFile && pendingFileId) {
-      void requestQuote(pendingFile, pendingFileId, pendingDimensions, nextOps);
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) {
-      e.target.value = '';
-      return;
-    }
-
-    const files = Array.from(e.target.files);
-
-    // If multiple files selected, request a batch quote and set UI to reflect batch selection
-    if (files.length > 1) {
-      setQuoteLoading(true);
-      setQuoteError(null);
-      try {
-        const entries = files.map(f => ({
-          id: crypto.randomUUID(),
-          name: f.name,
-          mime: f.type || null,
-          sizeBytes: f.size,
-          width: null as number | null,
-          height: null as number | null,
-        }));
-        const response = await fetchImagesMvpQuote(entries, quoteOps);
-        setQuoteData(response);
-        // keep first file as pending to preserve single-file flow for immediate actions
-        setPendingFile(files[0]);
-        setPendingFileId(entries[0].id);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to get quote';
-        setQuoteError(message);
-        setQuoteData(null);
-      } finally {
-        setQuoteLoading(false);
-      }
-    } else {
-      handleFile(files[0]);
-    }
-
     e.target.value = ''; // reset
   };
 
-  const handleFile = async (file: File) => {
+  const handleFile = (file: File) => {
     const ext = getExtension(file.name);
+    const isSupportedExt = ext ? SUPPORTED_EXTENSIONS.includes(ext) : false;
+    const isSupportedMime = SUPPORTED_MIMES.includes(file.type);
     const mimeType = file.type || 'application/octet-stream';
     const sizeBucket = getFileSizeBucket(file.size);
-    setOcrUserOverride(false);
 
     trackImagesMvpEvent('upload_selected', {
       extension: ext,
       mime_type: mimeType,
       size_bytes: file.size,
       size_bucket: sizeBucket,
-      has_trial_email: false,
+      has_access_email: Boolean(accessEmail),
     });
 
-    const fileId = crypto.randomUUID();
-    setPendingFile(file);
-    setPendingFileId(fileId);
-    setPendingDimensions(null);
-    sessionStorage.setItem('images_mvp_status', 'idle');
-    sessionStorage.removeItem('images_mvp_error');
-
-    const dimensions = await probeImageDimensions(file);
-    setPendingDimensions(dimensions);
-    const shouldSuggestOcr = looksLikeMapCapture(file.name);
-    const nextOps =
-      shouldSuggestOcr && !ocrUserOverride && !quoteOps.ocr
-        ? { ...quoteOps, ocr: true }
-        : quoteOps;
-    if (nextOps !== quoteOps) {
-      setQuoteOps(nextOps);
-      setOcrAutoApplied(true);
-    } else {
-      setOcrAutoApplied(false);
-    }
-
-    const quote = await requestQuote(file, fileId, dimensions, nextOps);
-    const fileQuote = quote?.quote?.perFile?.find(entry => entry.id === fileId);
-    if (!quote || !fileQuote) {
+    if (!isSupportedExt && !isSupportedMime) {
       trackImagesMvpEvent('upload_rejected', {
         extension: ext,
         mime_type: mimeType,
         size_bytes: file.size,
         size_bucket: sizeBucket,
-        reason: 'quote_failed',
+        reason: 'unsupported_format',
       });
       toast({
-        title: 'Quote failed',
-        description: 'We could not price this file. Please try again.',
-        variant: 'destructive',
-      });
-      setPendingFile(null);
-      setPendingFileId(null);
-      return;
-    }
-
-    if (!fileQuote.accepted) {
-      trackImagesMvpEvent('upload_rejected', {
-        extension: ext,
-        mime_type: mimeType,
-        size_bytes: file.size,
-        size_bucket: sizeBucket,
-        reason: fileQuote.reason || 'unsupported_format',
-      });
-      toast({
-        title: 'Upload blocked',
+        title: 'Unsupported File',
         description:
-          fileQuote.reason === 'file_too_large'
-            ? 'File exceeds the maximum size limit.'
-            : fileQuote.reason === 'megapixels_exceed_limit'
-              ? 'Image resolution exceeds the supported limit.'
-              : 'Unsupported file type.',
+          'Please upload a photo (JPG, PNG, HEIC from iPhone, or WebP).',
         variant: 'destructive',
       });
-      setPendingFile(null);
-      setPendingFileId(null);
-      setQuoteData(null);
       return;
+    }
+
+    if (!accessEmail) {
+      setPendingFile(file);
+      setShowAccessModal(true);
+    } else {
+      uploadFile(file, accessEmail);
     }
   };
 
-  const uploadFile = async (file: File) => {
-    if (!quoteData || !pendingFileId) {
-      toast({
-        title: 'Quote required',
-        description: 'Please select the file again to get a fresh quote.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const uploadFile = async (file: File, email: string) => {
     setIsUploading(true);
     setUploadProgress(0);
     const startedAt = Date.now();
@@ -441,20 +134,14 @@ export function SimpleUploadZone() {
     setCurrentSessionId(sessionId);
     setShowProgressTracker(true);
     const formData = new FormData();
-    sessionStorage.setItem('images_mvp_status', 'processing');
-    sessionStorage.setItem('images_mvp_ocr', String(quoteOps.ocr));
-
-    // Append metadata fields BEFORE file to ensure streaming parsers see them first
-    formData.append('session_id', sessionId);
-    formData.append('quote_id', quoteData.quoteId);
-    formData.append('client_file_id', pendingFileId);
-    formData.append('op_embedding', String(quoteOps.embedding));
-    formData.append('op_ocr', String(quoteOps.ocr));
-    formData.append('op_forensics', String(quoteOps.forensics));
+    formData.append('file', file);
+    formData.append('trial_email', email);
     if (file.lastModified) {
       formData.append('client_last_modified', String(file.lastModified));
     }
-    formData.append('file', file);
+
+    // Add session ID for WebSocket progress tracking
+    formData.append('session_id', sessionId);
 
     const sizeBucket = getFileSizeBucket(file.size);
     const mimeType = file.type || 'application/octet-stream';
@@ -465,97 +152,62 @@ export function SimpleUploadZone() {
       mime_type: mimeType,
       size_bytes: file.size,
       size_bucket: sizeBucket,
-      has_trial_email: false,
+      has_trial_email: Boolean(email),
     });
 
-    // Generate browser fingerprint for security
-    let fingerprintData: any = null;
     try {
-      const fingerprint = await generateBrowserFingerprint();
-      const fingerprintHash = generateFingerprintHash(fingerprint);
-      const sessionId = getSessionId();
-
-      fingerprintData = {
-        ...fingerprint,
-        hash: fingerprintHash,
-        timestamp: new Date().toISOString(),
-      };
-
-      // Submit fingerprint to backend for analysis
-      await fetch('/api/protection/fingerprint', {
+      const res = await fetch('/api/images_mvp/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fingerprint: fingerprintData,
-          sessionId,
-        }),
-      }).catch(err => {
-        // Don't block upload if fingerprint submission fails
-        console.warn('[Fingerprint] Submission failed:', err);
+        body: formData,
       });
-    } catch (error) {
-      // Don't block upload if fingerprint generation fails
-      console.warn('[Fingerprint] Generation failed:', error);
-    }
 
-    try {
-      const data = await new Promise<any>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
+      const responseText = await res.text();
+      let data: any = null;
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        data = null;
+      }
 
-        xhr.upload.onprogress = event => {
-          if (event.lengthComputable) {
-            const percentComplete = (event.loaded / event.total) * 100;
-            setUploadProgress(percentComplete);
-          }
-        };
+      if (!res.ok) {
+        const errorMessage =
+          typeof data?.error === 'string'
+            ? data.error
+            : data?.error?.message ||
+              data?.message ||
+              responseText ||
+              'Extraction failed';
+        trackImagesMvpEvent('analysis_completed', {
+          success: false,
+          status: res.status,
+          error_message: errorMessage,
+          extension,
+          mime_type: mimeType,
+          size_bucket: sizeBucket,
+          elapsed_ms: Date.now() - startedAt,
+        });
 
-        xhr.onload = () => {
-          let responseData;
-          try {
-            responseData = xhr.responseText
-              ? JSON.parse(xhr.responseText)
-              : null;
-          } catch {
-            responseData = null;
-          }
-
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(responseData);
-          } else {
-            const errorMessage =
-              typeof responseData?.error === 'string'
-                ? responseData.error
-                : responseData?.error?.message ||
-                  responseData?.message ||
-                  xhr.responseText ||
-                  'Extraction failed';
-
-            reject({
-              status: xhr.status,
-              message: errorMessage,
-              data: responseData,
-            });
-          }
-        };
-
-        xhr.onerror = () => reject({ message: 'Network error' });
-
-        xhr.open('POST', '/api/images_mvp/extract');
-
-        // Add fingerprint headers first
-        if (fingerprintData) {
-          xhr.setRequestHeader('X-Fingerprint-Hash', fingerprintData.hash);
-          xhr.setRequestHeader('X-Session-ID', getSessionId());
+        if (res.status === 402) {
+          // Trigger Credit Purchase Flow
+          trackImagesMvpEvent('paywall_viewed', {
+            reason: 'trial_exhausted',
+            extension,
+            mime_type: mimeType,
+          });
+          toast({
+            title: 'Limit reached',
+            description:
+              "You've used your 2 free checks. Unlock more with credits.",
+            variant: 'destructive',
+          });
+          setShowPricingModal(true);
+          return;
         }
-
-        // Add authentication headers and credentials
-        const authToken = localStorage.getItem('auth_token');
-        if (authToken) {
-          xhr.setRequestHeader('Authorization', 'Bearer ' + authToken);
-        }
-        xhr.withCredentials = true;
-        xhr.send(formData);
-      });
+        setUploadError(true);
+        setShowProgressTracker(false); // Hide progress tracker on error
+        setTimeout(() => setUploadError(false), 3000);
+        throw new Error(errorMessage);
+      }
 
       // Success
       const processingMs =
@@ -575,8 +227,6 @@ export function SimpleUploadZone() {
 
       setUploadProgress(100);
       sessionStorage.setItem('currentMetadata', JSON.stringify(data));
-      sessionStorage.setItem('images_mvp_status', 'success');
-      sessionStorage.removeItem('images_mvp_error');
       // Hide progress tracker and navigate to results
       setShowProgressTracker(false);
       setTimeout(() => {
@@ -584,68 +234,12 @@ export function SimpleUploadZone() {
       }, 500);
     } catch (err: any) {
       console.error(err);
-
-      const errorMessage = err.message || 'Upload failed';
-      const status = err.status || 500;
-      const body = err.data || null;
-      sessionStorage.setItem('images_mvp_status', 'fail');
-      sessionStorage.setItem(
-        'images_mvp_error',
-        JSON.stringify({
-          status,
-          message: errorMessage,
-        })
-      );
-
-      trackImagesMvpEvent('analysis_completed', {
-        success: false,
-        status,
-        error_message: errorMessage,
-        extension,
-        mime_type: mimeType,
-        size_bucket: sizeBucket,
-        elapsed_ms: Date.now() - startedAt,
-      });
-
-      const isPaywall =
-        status === 402 ||
-        (status === 429 &&
-          (body?.credits_required ||
-            String(body?.error || '')
-              .toLowerCase()
-              .includes('quota') ||
-            String(body?.message || '')
-              .toLowerCase()
-              .includes('purchase credits')));
-
-      if (isPaywall) {
-        // Trigger Credit Purchase Flow
-        trackImagesMvpEvent('paywall_viewed', {
-          reason: 'free_quota_exhausted_or_insufficient_credits',
-          extension,
-          mime_type: mimeType,
-        });
-        toast({
-          title: 'Free checks used',
-          description: 'Buy credits to continue analyzing images.',
-          variant: 'destructive',
-        });
-        if (!showPricingModal && !pricingDismissed) {
-          setShowPricingModal(true);
-          setPaywallShownAt(Date.now());
-        }
-        setResumeRequested(true);
-        return;
-      }
-
+      const fallbackMessage =
+        typeof err?.message === 'string' ? err.message : 'Network error';
       setUploadError(true);
       setShowProgressTracker(false); // Hide progress tracker on error
       setTimeout(() => setUploadError(false), 3000);
-
-      if (
-        errorMessage.toLowerCase().includes('failed to fetch') ||
-        errorMessage === 'Network error'
-      ) {
+      if (fallbackMessage.toLowerCase().includes('failed to fetch')) {
         toast({
           title: 'Backend unavailable',
           description:
@@ -654,50 +248,9 @@ export function SimpleUploadZone() {
         });
         return;
       }
-      if (body?.code && String(body.code).startsWith('QUOTE_')) {
-        toast({
-          title: 'Quote expired',
-          description:
-            'Quote expired or file changed. Re-select the file to refresh.',
-          variant: 'destructive',
-        });
-        setPendingFile(null);
-        setPendingFileId(null);
-        setQuoteData(null);
-        return;
-      }
-      if (status === 413) {
-        const maxBytes = quoteData?.limits?.maxBytes ?? 100 * 1024 * 1024;
-        const maxMb = Math.round(maxBytes / (1024 * 1024));
-        toast({
-          title: 'File too large',
-          description: `Max ${maxMb} MB.`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (status === 415) {
-        toast({
-          title: 'Unsupported file type',
-          description:
-            'Unsupported file type. Please upload a supported image.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (status === 403) {
-        toast({
-          title: 'Upload blocked',
-          description:
-            body?.message ||
-            'For security reasons, this file type is not permitted.',
-          variant: 'destructive',
-        });
-        return;
-      }
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: err.message || 'Upload failed',
         variant: 'destructive',
       });
     } finally {
@@ -706,362 +259,110 @@ export function SimpleUploadZone() {
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 sm:px-0">
-      <PricingModal
-        isOpen={showPricingModal}
+    <div className="w-full max-w-lg mx-auto">
+      <LimitedAccessModal
+        isOpen={showAccessModal}
         onClose={() => {
-          setShowPricingModal(false);
-          setPricingDismissed(true);
+          setShowAccessModal(false);
+          setPendingFile(null);
+        }}
+        onConfirm={email => {
+          setAccessEmail(email);
+          localStorage.setItem('metaextract_access_email', email);
+          setShowAccessModal(false);
+          if (pendingFile) uploadFile(pendingFile, email);
         }}
       />
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        defaultEmail={accessEmail || undefined}
+      />
 
-      {resumeRequested && pendingFile && (
-        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-left">
-          <div className="text-xs text-slate-200">
-            Ready to analyze:{' '}
-            <span className="text-white font-semibold">{pendingFile.name}</span>
-          </div>
-          <div className="mt-2 flex gap-2">
+      {/* Real-time Progress Tracker */}
+      {showProgressTracker && currentSessionId && (
+        <div className="mb-6">
+          <ProgressTracker sessionId={currentSessionId} />
+        </div>
+      )}
+
+      <div
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onClick={() =>
+          !isUploading && document.getElementById('mvp-upload')?.click()
+        }
+        className={cn(
+          'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer overflow-hidden group',
+          isUploading
+            ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
+            : isDragActive
+              ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
+              : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
+        )}
+      >
+        <input
+          id="mvp-upload"
+          type="file"
+          className="hidden"
+          accept={SUPPORTED_EXTENSIONS.join(',')}
+          onChange={handleFileSelect}
+        />
+
+        {isUploading ? (
+          <>
+            {/* Progress bar background */}
+            <div className="absolute inset-0 bg-black/20 rounded-xl" />
+            {/* Progress bar fill */}
+            <motion.div
+              className={`absolute left-0 top-0 h-full rounded-xl ${
+                uploadError
+                  ? 'bg-gradient-to-r from-red-500/40 to-red-500/20'
+                  : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'
+              }`}
+              initial={{ width: '0%' }}
+              animate={{ width: `${uploadProgress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+            {/* Content overlay */}
+            <div className="relative flex flex-col items-center justify-center gap-4 w-full h-full">
+              <p className="text-white font-mono text-sm">
+                {uploadError ? 'Upload Failed' : 'Extracting Metadata...'}
+              </p>
+              <span
+                className={`text-xs font-mono ${uploadError ? 'text-red-400' : 'text-emerald-400'}`}
+              >
+                {uploadError ? 'Error' : `${Math.round(uploadProgress)}%`}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-4">
+              <div className="w-16 h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                <Upload className="w-8 h-8 text-primary" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">
+              Drop your image here
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Supports popular photo formats: JPG, PNG, HEIC (iPhone), WebP{' '}
+              <br />
+              <span className="text-primary/80 text-xs font-mono mt-1 block">
+                <Zap className="w-3 h-3 inline mr-1" />2 Free Checks Included
+              </span>
+            </p>
             <Button
               variant="outline"
-              className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
-              onClick={() => void checkCreditsAndMaybeResume()}
-              disabled={isUploading}
+              className="border-white/10 hover:bg-white/5 hover:text-white"
             >
-              Refresh credits
+              Browse Files
             </Button>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-black font-semibold"
-              onClick={() => {
-                setPricingDismissed(false);
-                setShowPricingModal(true);
-              }}
-              disabled={isUploading}
-            >
-              Buy credits
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-slate-300 hover:text-white hover:bg-white/10"
-              onClick={() => {
-                setPendingFile(null);
-                setResumeRequested(false);
-              }}
-              disabled={isUploading}
-            >
-              Pick different file
-            </Button>
-          </div>
-          {paywallShownAt && (
-            <div className="mt-2 text-[10px] text-slate-500">
-              If you completed checkout in another tab, come back here and we’ll
-              continue automatically.
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="mb-4 sm:mb-6">
-        {isUploading && showProgressTracker && currentSessionId ? (
-          <ProgressTracker
-            sessionId={currentSessionId}
-            uploadComplete={uploadProgress >= 100}
-            fallbackPercentage={uploadProgress}
-            fallbackStage={
-              uploadProgress < 100
-                ? 'Uploading file to analysis engine'
-                : 'Preparing extraction'
-            }
-          />
-        ) : (
-          <label
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
-            onKeyDown={onKeyDown}
-            htmlFor="mvp-upload"
-            role="button"
-            tabIndex={0}
-            data-testid="image-dropzone"
-            aria-label={
-              isMobile
-                ? 'Tap to select image'
-                : 'Upload image drop zone. Drag and drop a file here or click to browse.'
-            }
-            className={cn(
-              'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
-              isUploading
-                ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
-                : isDragActive
-                  ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
-                  : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
-            )}
-          >
-            <input
-              id="mvp-upload"
-              ref={inputRef}
-              type="file"
-              multiple
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              accept="image/*"
-              disabled={isUploading}
-              onChange={handleFileSelect}
-              title="Upload image"
-              data-testid="image-upload-input"
-              aria-hidden={false}
-            />
-
-            {isUploading ? (
-              <div
-                className="relative flex flex-col items-center justify-center gap-2 sm:gap-3 w-full h-full"
-                aria-live="polite"
-              >
-                <p className="text-white font-mono text-xs sm:text-sm">
-                  {uploadError ? 'Upload Failed' : 'Processing current upload'}
-                </p>
-                {!showProgressTracker && (
-                  <span
-                    className={`text-[11px] font-mono ${uploadError ? 'text-red-300' : 'text-emerald-300'}`}
-                  >
-                    {uploadError ? 'Error' : 'Uploading...'}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="mb-3 sm:mb-4">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-tr from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                    <Upload
-                      className="w-6 h-6 sm:w-8 sm:h-8 text-primary"
-                      aria-hidden="true"
-                    />
-                  </div>
-                </div>
-
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
-                  {isMobile ? 'Tap to select a photo' : 'Drop your image here'}
-                </h3>
-
-                <p className="text-slate-200 text-xs sm:text-sm mb-4 sm:mb-6">
-                  {isMobile ? (
-                    <>
-                      JPG, PNG, HEIC, WebP
-                      {maxBytesDisplay
-                        ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
-                        : ''}
-                      {!isAuthenticated && (
-                        <span className="text-primary text-xs font-mono mt-1 block">
-                          <Zap
-                            className="w-3 h-3 inline mr-1"
-                            aria-hidden="true"
-                          />
-                          2 free checks (no signup)
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      Supports JPG, PNG, HEIC, WebP
-                      {maxBytesDisplay
-                        ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
-                        : ''}{' '}
-                      <br className="hidden sm:block" />
-                      {!isAuthenticated && (
-                        <span className="text-primary text-xs font-mono mt-1 block">
-                          <Zap
-                            className="w-3 h-3 inline mr-1"
-                            aria-hidden="true"
-                          />
-                          2 free checks (no signup)
-                        </span>
-                      )}
-                    </>
-                  )}
-                </p>
-
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="border-white/10 hover:bg-white/5 hover:text-white w-full sm:w-auto"
-                >
-                  Browse Files
-                </Button>
-
-                <div className="mt-2 text-xs text-slate-400">
-                  <span className="block">
-                    Files are processed securely and deleted within 1 hour.
-                  </span>
-                </div>
-              </>
-            )}
-          </label>
+          </>
         )}
       </div>
-
-      {pendingFile && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <div
-                className="text-sm font-semibold text-white truncate"
-                title={pendingFile.name}
-              >
-                {pendingFile.name}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                {(pendingFile.size / (1024 * 1024)).toFixed(2)} MB
-                {pendingDimensions
-                  ? ` • ${pendingDimensions.width}×${pendingDimensions.height}`
-                  : ' • dimensions pending'}
-              </div>
-            </div>
-            <div className="text-xs text-slate-300 shrink-0 flex items-center gap-2">
-              {quoteLoading
-                ? 'Calculating quote...'
-                : activeQuoteEntry?.accepted
-                  ? `Credits: ${activeQuoteEntry.creditsTotal}`
-                  : 'Quote unavailable'}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  setResumeRequested(true);
-                  await checkCreditsAndMaybeResume();
-                  setResumeRequested(false);
-                  toast({
-                    title: 'Checked for credits',
-                    description: 'Refreshed credit balance.',
-                  });
-                }}
-                className="ml-2"
-              >
-                Check for Credits
-              </Button>
-            </div>
-          </div>
-
-          {quoteError && (
-            <div className="mt-2 text-xs text-red-300">{quoteError}</div>
-          )}
-
-          {activeQuoteEntry?.accepted && activeQuoteEntry.breakdown && (
-            <div className="mt-3 space-y-2 text-xs text-slate-300">
-              {/* Size badge - only show if not standard */}
-              {activeQuoteEntry.mpBucket &&
-                activeQuoteEntry.mpBucket !== 'standard' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
-                      {activeQuoteEntry.mpBucket === 'large'
-                        ? 'Large image'
-                        : activeQuoteEntry.mpBucket}
-                    </span>
-                    {activeQuoteEntry.warnings?.map(warning => (
-                      <span
-                        key={warning}
-                        className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
-                      >
-                        {warning}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-              {/* User-friendly breakdown */}
-              <div className="grid gap-1.5 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300">Base scan</span>
-                  <span className="text-white font-semibold">
-                    {activeQuoteEntry.breakdown.base +
-                      activeQuoteEntry.breakdown.embedding}{' '}
-                    credits
-                  </span>
-                </div>
-
-                {activeQuoteEntry.breakdown.ocr > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">Text scan</span>
-                    <span className="text-white font-semibold">
-                      +{activeQuoteEntry.breakdown.ocr} credits
-                    </span>
-                  </div>
-                )}
-
-                {activeQuoteEntry.breakdown.mp > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300">Large image fee</span>
-                    <span className="text-white font-semibold">
-                      +{activeQuoteEntry.breakdown.mp} credits
-                    </span>
-                  </div>
-                )}
-
-                <div className="h-px bg-white/10 my-1"></div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-white font-medium">Total</span>
-                  <span className="text-white font-bold text-base">
-                    {activeQuoteEntry.creditsTotal} credits
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-4 grid gap-2 text-xs text-slate-300">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={quoteOps.ocr}
-                onChange={() => handleOpsToggle('ocr')}
-                disabled={quoteLoading || isUploading}
-                className="cursor-pointer"
-              />
-              <span className="select-none">
-                Detect overlaid text{' '}
-                <span className="text-slate-400">
-                  (+6 credits if text found)
-                </span>
-              </span>
-            </label>
-            {ocrAutoApplied && (
-              <div className="text-[11px] text-emerald-300">
-                Text scan enabled because this looks like a map/GPS image. You
-                can turn it off.
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              className="bg-primary hover:bg-primary/90 text-black font-semibold"
-              onClick={() => void uploadFile(pendingFile)}
-              disabled={
-                isUploading ||
-                quoteLoading ||
-                !activeQuoteEntry?.accepted ||
-                !quoteData
-              }
-            >
-              Analyze
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-slate-300 hover:text-white hover:bg-white/10"
-              onClick={() => {
-                setPendingFile(null);
-                setPendingFileId(null);
-                setPendingDimensions(null);
-                setQuoteData(null);
-                setQuoteError(null);
-              }}
-              disabled={isUploading}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

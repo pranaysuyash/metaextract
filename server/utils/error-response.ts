@@ -71,7 +71,7 @@ export function createApiErrorResponse(
 export function zodsErrorToFieldErrors(
   zodError: ZodError
 ): ValidationFieldError[] {
-  return zodError.errors.map((error) => {
+  return zodError.errors.map(error => {
     const fieldError: ValidationFieldError = {
       field: error.path.join('.') || 'unknown',
       message: error.message,
@@ -148,7 +148,13 @@ export function sendErrorResponse(
   details?: unknown,
   context?: Record<string, unknown>
 ): Response {
-  const response = createApiErrorResponse(code, message, status, details, context);
+  const response = createApiErrorResponse(
+    code,
+    message,
+    status,
+    details,
+    context
+  );
   return res.status(status).json(response);
 }
 
@@ -193,37 +199,21 @@ export function sendInvalidRequestError(
   message: string,
   details?: any
 ): Response {
-  return sendErrorResponse(
-    res,
-    400,
-    'INVALID_REQUEST',
-    message,
-    details
-  );
+  return sendErrorResponse(res, 400, 'INVALID_REQUEST', message, details);
 }
 
 export function sendUnauthorizedError(
   res: Response,
   message: string = 'Authentication required'
 ): Response {
-  return sendErrorResponse(
-    res,
-    401,
-    'UNAUTHORIZED',
-    message
-  );
+  return sendErrorResponse(res, 401, 'UNAUTHORIZED', message);
 }
 
 export function sendForbiddenError(
   res: Response,
   message: string = 'Access denied'
 ): Response {
-  return sendErrorResponse(
-    res,
-    403,
-    'FORBIDDEN',
-    message
-  );
+  return sendErrorResponse(res, 403, 'FORBIDDEN', message);
 }
 
 export function sendTierInsufficientError(
@@ -244,15 +234,33 @@ export function sendQuotaExceededError(
   res: Response,
   reason: string = 'Quota exceeded'
 ): Response {
-  return sendErrorResponse(
-    res,
-    402,
-    'QUOTA_EXCEEDED',
-    reason
-  );
+  return sendErrorResponse(res, 402, 'QUOTA_EXCEEDED', reason);
 }
 
 export function sendFileTooLargeError(
+  res: Response,
+  fileSizeMB: number,
+  maxSizeMB: number,
+  currentTier?: string
+): Response {
+  return sendErrorResponse(
+    res,
+    413,
+    'FILE_TOO_LARGE',
+    `File size exceeds limit`,
+    {
+      file_size_mb: fileSizeMB,
+      max_size_mb: maxSizeMB,
+    },
+    currentTier ? { current_tier: currentTier } : undefined
+  );
+}
+
+/**
+ * Tier-aware file-too-large response (403)
+ * Used by endpoints that enforce size limits as a tier restriction rather than a transport-level limit.
+ */
+export function sendFileTooLargeForTier(
   res: Response,
   fileSizeMB: number,
   maxSizeMB: number,
@@ -269,6 +277,21 @@ export function sendFileTooLargeError(
     },
     currentTier ? { current_tier: currentTier } : undefined
   );
+}
+
+/**
+ * Legacy flat file-too-large response (413)
+ * Some legacy file-filter endpoints expect a flat error shape (back-compat).
+ */
+export function sendLegacyFileTooLargeError(
+  res: Response,
+  message: string = 'File too large'
+): Response {
+  // Historic endpoints expect a flat error shape; keep compatibility for file-filter errors
+  return res.status(413).json({
+    error: message,
+    code: 'FILE_TOO_LARGE',
+  });
 }
 
 export function sendInvalidFileTypeError(
@@ -290,28 +313,29 @@ export function sendInvalidFileTypeError(
   );
 }
 
+export function sendUnsupportedFileTypeError(
+  res: Response,
+  message: string = 'File type not permitted'
+): Response {
+  // Historic endpoints expect a flat error shape; keep compatibility for file-filter errors
+  return res.status(403).json({
+    error: 'Unsupported file type',
+    message,
+    code: 'UNSUPPORTED_FILE_TYPE',
+  });
+}
+
 export function sendInternalServerError(
   res: Response,
   message: string = 'Internal server error',
   details?: unknown
 ): Response {
-  return sendErrorResponse(
-    res,
-    500,
-    'INTERNAL_ERROR',
-    message,
-    details
-  );
+  return sendErrorResponse(res, 500, 'INTERNAL_ERROR', message, details);
 }
 
 export function sendServiceUnavailableError(
   res: Response,
   message: string = 'Service temporarily unavailable'
 ): Response {
-  return sendErrorResponse(
-    res,
-    503,
-    'SERVICE_UNAVAILABLE',
-    message
-  );
+  return sendErrorResponse(res, 503, 'SERVICE_UNAVAILABLE', message);
 }

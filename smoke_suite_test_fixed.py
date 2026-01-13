@@ -2,7 +2,8 @@
 """
 Manual Smoke Suite Test - MetaExtract Core Functionality  
 Tests 3 critical smoke tests to verify system health before deployment.
-Updated to use actual function names from renamed modules.
+Updated for Phase 5: All Roman numeral files renamed with aliases.
+Covers Phases 2, 3, and 5 modules.
 """
 
 import sys
@@ -21,8 +22,8 @@ def test_smoke_1_basic_imports():
     tests_passed = 0
     tests_failed = 0
     
-    # Test renamed modules (our Phase 2 work) - all 17 files
-    renamed_modules = [
+    # Test renamed modules (Phase 2 work) - 17 files
+    phase2_modules = [
         ('server.extractor.modules.camera_makernotes_advanced', 'Camera makernotes'),
         ('server.extractor.modules.cardiac_imaging', 'Cardiac imaging'),
         ('server.extractor.modules.neuroimaging', 'Neuroimaging'),
@@ -49,9 +50,38 @@ def test_smoke_1_basic_imports():
         ('server.extractor.modules.gastroenterology_imaging', 'Gastroenterology'),
     ]
     
-    all_modules = renamed_modules + phase3_modules
+    # Test Phase 5 modules (sample of renamed files)
+    phase5_modules = [
+        ('server.extractor.modules.mammography_imaging', 'Mammography'),
+        ('server.extractor.modules.interventional_radiology', 'Interventional Radiology'),
+        ('server.extractor.modules.pediatric_imaging', 'Pediatric Imaging'),
+        ('server.extractor.modules.veterinary_imaging', 'Veterinary Imaging'),
+        ('server.extractor.modules.ophthalmology_imaging', 'Ophthalmology'),
+        ('server.extractor.modules.dermatology_imaging', 'Dermatology'),
+        ('server.extractor.modules.urology_imaging', 'Urology'),
+        ('server.extractor.modules.obstetrics_imaging', 'Obstetrics'),
+        ('server.extractor.modules.radiology_advanced', 'Radiology Advanced'),
+        ('server.extractor.modules.pathology_imaging', 'Pathology'),
+        ('server.extractor.modules.critical_care', 'Critical Care'),
+        ('server.extractor.modules.emergency_medicine', 'Emergency Medicine'),
+        ('server.extractor.modules.trauma_care', 'Trauma Care'),
+        ('server.extractor.modules.video_streaming', 'Video Streaming'),
+        ('server.extractor.modules.video_broadcast', 'Video Broadcast'),
+        ('server.extractor.modules.forensic_basic', 'Forensic Basic'),
+        ('server.extractor.modules.security_monitoring', 'Security Monitoring'),
+        ('server.extractor.modules.camera_makernotes_basic', 'Camera Makernotes Basic'),
+        ('server.extractor.modules.camera_makernotes_pro', 'Camera Makernotes Pro'),
+        ('server.extractor.modules.audio_basic', 'Audio Basic'),
+        ('server.extractor.modules.audio_pro', 'Audio Pro'),
+        ('server.extractor.modules.emerging_tech_basic', 'Emerging Tech Basic'),
+        ('server.extractor.modules.emerging_tech_ai', 'Emerging Tech AI'),
+        ('server.extractor.modules.pdf_office_basic', 'PDF Office Basic'),
+        ('server.extractor.modules.pdf_office_pro', 'PDF Office Pro'),
+    ]
     
-    print(f"\nTesting {len(all_modules)} renamed modules...")
+    all_modules = phase2_modules + phase3_modules + phase5_modules
+    
+    print(f"\nTesting {len(all_modules)} modules (Phases 2, 3, 5)...")
     
     for module_path, description in all_modules:
         try:
@@ -87,12 +117,17 @@ def test_smoke_2_basic_extraction():
         non_existent_path = tmp.name
     os.unlink(non_existent_path)
     
-    # Map modules to their actual function names
+    # Map modules to their extraction function names (Phase 2-5)
     extraction_tests = [
         ('server.extractor.modules.camera_makernotes_advanced', 'extract_camera_makernotes_advanced'),
         ('server.extractor.modules.cardiac_imaging', 'extract_cardiac_imaging'),
         ('server.extractor.modules.neuroimaging', 'extract_neuroimaging'),
         ('server.extractor.modules.orthopedic_imaging', 'extract_orthopedic_imaging'),
+        ('server.extractor.modules.mammography_imaging', 'extract_mammography_imaging'),
+        ('server.extractor.modules.pediatric_imaging', 'extract_pediatric_imaging'),
+        ('server.extractor.modules.veterinary_imaging', 'extract_veterinary_imaging'),
+        ('server.extractor.modules.radiology_advanced', 'extract_radiology_advanced'),
+        ('server.extractor.modules.critical_care', 'extract_critical_care'),
         ('server.extractor.modules.rheumatology_imaging', 'extract_rheumatology_imaging'),
         ('server.extractor.modules.pulmonology_imaging', 'extract_pulmonology_imaging'),
         ('server.extractor.modules.nephrology_imaging', 'extract_nephrology_imaging'),
@@ -153,12 +188,16 @@ def test_smoke_3_field_counts():
     tests_passed = 0
     tests_failed = 0
     
-    # Map modules to their actual field count function names
+    # Map modules to their field count function names
     field_count_tests = [
         ('server.extractor.modules.camera_makernotes_advanced', 'get_camera_makernotes_advanced_field_count'),
         ('server.extractor.modules.cardiac_imaging', 'get_scientific_dicom_fits_ultimate_advanced_extension_ii_field_count'),
         ('server.extractor.modules.neuroimaging', 'get_scientific_dicom_fits_ultimate_advanced_extension_iii_field_count'),
         ('server.extractor.modules.orthopedic_imaging', 'get_scientific_dicom_fits_ultimate_advanced_extension_xvii_field_count'),
+        ('server.extractor.modules.mammography_imaging', 'get_mammography_imaging_field_count'),
+        ('server.extractor.modules.pediatric_imaging', 'get_pediatric_imaging_field_count'),
+        ('server.extractor.modules.radiology_advanced', 'get_radiology_advanced_field_count'),
+        ('server.extractor.modules.critical_care', 'get_critical_care_field_count'),
         ('server.extractor.modules.rheumatology_imaging', 'get_rheumatology_imaging_field_count'),
         ('server.extractor.modules.pulmonology_imaging', 'get_pulmonology_imaging_field_count'),
         ('server.extractor.modules.nephrology_imaging', 'get_nephrology_imaging_field_count'),
@@ -196,7 +235,7 @@ def run_all_smoke_tests():
     print("\n" + "="*70)
     print("🚀 METAEXTRACT MANUAL SMOKE SUITE")
     print("="*70)
-    print("\nTesting renamed modules and Phase 3 modules...")
+    print("\nTesting Phase 2, 3, and 5 modules (225+ files renamed)...")
     
     results = []
     
@@ -218,7 +257,8 @@ def run_all_smoke_tests():
     print("\n" + "="*70)
     if all_passed:
         print("🎉 ALL SMOKE TESTS PASSED!")
-        print("✅ Renamed modules and Phase 3 modules are healthy!")
+        print("✅ Phase 2, 3, and 5 modules are healthy!")
+        print(f"✅ 225+ Roman numeral files renamed with aliases")
     else:
         print("⚠️  SOME SMOKE TESTS FAILED!")
         print("❌ Review failures above and fix issues.")

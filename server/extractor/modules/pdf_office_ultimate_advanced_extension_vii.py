@@ -1,27 +1,36 @@
 """
 PDF Office Ultimate Advanced Extension VII
+
+DEPRECATED: This module has been renamed to pdf_office_forensics.py
+This file is kept for backward compatibility only.
+
+Use the new module instead:
+    from .pdf_office_forensics import extract_pdf_office_forensics
 """
 
-PDF_OFFICE_ULTIMATE_ADVANCED_EXTENSION_VII_AVAILABLE = True
+from .pdf_office_forensics import (
+    PDF_OFFICE_FORENSICS_AVAILABLE,
+    PDF_OFFICE_FORENSICS_TOTAL_TAGS,
+    extract_pdf_office_forensics,
+    extract_pdf_office_ultimate_advanced_extension_vii,
+    get_pdf_office_forensics_field_count,
+    get_pdf_office_ultimate_advanced_extension_vii_field_count,
+    get_pdf_office_forensics_version,
+    get_pdf_office_forensics_description,
+    get_pdf_office_forensics_modalities,
+    get_pdf_office_forensics_supported_formats,
+    get_pdf_office_forensics_category,
+    get_pdf_office_forensics_keywords,
+)
 
-def extract_pdf_office_ultimate_advanced_extension_vii(file_path: str) -> dict:
-    metadata = {}
-    try:
-        metadata.update({
-            'pdf_version_history_id': 'extract_pdf_version_history_id',
-            'document_collaboration_conflict_ids': 'extract_collab_conflict_ids',
-            'signed_manifest_hash_tree': 'extract_signed_manifest_hash_tree',
-            'document_verification_policy_refs': 'extract_doc_verif_policy_refs',
-            'embedded_media_provenance_ids': 'extract_embedded_media_provenance_ids',
-            'office_linked_resource_ids': 'extract_office_linked_resource_ids',
-            'pdfa_validation_audit_id': 'extract_pdfa_validation_audit_id',
-            'presentation_slide_template_hash': 'extract_slide_template_hash',
-            'form_automation_script_ids': 'extract_form_automation_script_ids',
-            'enterprise_document_classification_id': 'extract_enterprise_doc_classification_id',
-        })
-    except Exception as e:
-        metadata['extraction_error'] = f"Error in PDF Office VII extraction: {str(e)}"
-    return metadata
+PDF_OFFICE_ULTIMATE_ADVANCED_EXTENSION_VII_AVAILABLE = PDF_OFFICE_FORENSICS_AVAILABLE
 
-def get_pdf_office_ultimate_advanced_extension_vii_field_count():
-    return 200
+__all__ = [
+    'PDF_OFFICE_ULTIMATE_ADVANCED_EXTENSION_VII_AVAILABLE',
+    'extract_pdf_office_ultimate_advanced_extension_vii',
+    'get_pdf_office_ultimate_advanced_extension_vii_field_count',
+    'extract_pdf_office_forensics',
+    'get_pdf_office_forensics_field_count',
+    'get_pdf_office_forensics_version',
+    'get_pdf_office_forensics_description',
+]

@@ -14,6 +14,7 @@ import { requireAuth } from '../auth';
 import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
 import {
   getTierConfig,
@@ -41,11 +42,10 @@ const MAX_FORENSIC_FILE_SIZE = parseInt(
 // Ensure the temp dir exists with restricted permissions (owner rwx)
 try {
   // Use sync variant to ensure dir exists before multer initializes
-  const { mkdirSync, chmodSync } = require('fs');
-  mkdirSync(TEMP_DIR, { recursive: true, mode: 0o700 });
+  fsSync.mkdirSync(TEMP_DIR, { recursive: true, mode: 0o700 });
   // In case the dir already existed, enforce perms
   try {
-    chmodSync(TEMP_DIR, 0o700);
+    fsSync.chmodSync(TEMP_DIR, 0o700);
   } catch (e) {
     // ignore if not permitted
   }

@@ -132,10 +132,6 @@ export default function ImagesMvpAnalytics() {
     fetchReport(period);
   }, [period]);
 
-  useEffect(() => {
-    document.title = "MetaExtract | Analytics";
-  }, []);
-
   const overviewCards = useMemo(() => {
     if (!report) return [];
     return [
@@ -193,12 +189,12 @@ export default function ImagesMvpAnalytics() {
         <div className="container mx-auto px-4 py-10 space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 text-xs text-primary font-mono uppercase">
+              <div className="inline-flex items-center gap-2 text-xs text-primary/80 font-mono uppercase">
                 <BarChart3 className="h-4 w-4" />
                 Images MVP Analytics
               </div>
               <h1 className="text-3xl font-bold mt-2">Launch Signal Dashboard</h1>
-              <p className="text-sm text-slate-200 mt-2">
+              <p className="text-sm text-slate-400 mt-2">
                 A lightweight pulse plus full event detail for Images MVP.
               </p>
             </div>
@@ -231,7 +227,7 @@ export default function ImagesMvpAnalytics() {
 
           {loading && (
             <Card className="border-white/10 bg-white/5">
-              <CardContent className="py-10 text-center text-sm text-slate-200">
+              <CardContent className="py-10 text-center text-sm text-slate-400">
                 Loading analytics…
               </CardContent>
             </Card>
@@ -260,7 +256,7 @@ export default function ImagesMvpAnalytics() {
                     <Card key={card.title} className="border-white/10 bg-white/5">
                       <CardContent className="flex items-center justify-between py-6">
                         <div>
-                          <div className="text-xs text-slate-200 uppercase font-mono">
+                          <div className="text-xs text-slate-400 uppercase font-mono">
                             {card.title}
                           </div>
                           <div className="text-2xl font-semibold mt-2">
@@ -278,13 +274,13 @@ export default function ImagesMvpAnalytics() {
                 <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
                   <Card className="border-white/10 bg-white/5">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         Conversion Signals
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Landing → Upload</span>
+                        <span className="text-slate-400">Landing → Upload</span>
                         <Badge variant="outline">
                           {formatPercent(
                             report.funnel.upload_selected,
@@ -293,7 +289,7 @@ export default function ImagesMvpAnalytics() {
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Upload → Analysis</span>
+                        <span className="text-slate-400">Upload → Analysis</span>
                         <Badge variant="outline">
                           {formatPercent(
                             report.funnel.analysis_completed,
@@ -302,7 +298,7 @@ export default function ImagesMvpAnalytics() {
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Analysis → Results</span>
+                        <span className="text-slate-400">Analysis → Results</span>
                         <Badge variant="outline">
                           {formatPercent(
                             report.funnel.results_viewed,
@@ -311,7 +307,7 @@ export default function ImagesMvpAnalytics() {
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Paywall → Purchase</span>
+                        <span className="text-slate-400">Paywall → Purchase</span>
                         <Badge variant="outline">
                           {formatPercent(
                             report.funnel.purchase_completed,
@@ -321,7 +317,7 @@ export default function ImagesMvpAnalytics() {
                       </div>
                       <Separator className="bg-white/5" />
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">
+                        <span className="text-slate-400">
                           Avg processing time
                         </span>
                         <span className="text-white font-mono text-xs">
@@ -335,7 +331,7 @@ export default function ImagesMvpAnalytics() {
 
                   <Card className="border-white/10 bg-white/5">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         Purpose Mix
                       </CardTitle>
                     </CardHeader>
@@ -350,7 +346,7 @@ export default function ImagesMvpAnalytics() {
                           key={label}
                           className="flex items-center justify-between"
                         >
-                          <span className="text-slate-200 capitalize">
+                          <span className="text-slate-300 capitalize">
                             {label}
                           </span>
                           <span className="text-white font-mono text-xs">
@@ -360,13 +356,13 @@ export default function ImagesMvpAnalytics() {
                       ))}
                       <Separator className="bg-white/5" />
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Prompt shown</span>
+                        <span className="text-slate-400">Prompt shown</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.purposes.prompt_shown)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Skipped</span>
+                        <span className="text-slate-400">Skipped</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.purposes.skipped)}
                         </span>
@@ -377,7 +373,7 @@ export default function ImagesMvpAnalytics() {
 
                 <Card className="border-white/10 bg-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       Format Mix
                     </CardTitle>
                   </CardHeader>
@@ -392,7 +388,7 @@ export default function ImagesMvpAnalytics() {
                         key={label}
                         className="flex items-center justify-between"
                       >
-                        <span className="text-slate-200">{label}</span>
+                        <span className="text-slate-300">{label}</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(count)}
                         </span>
@@ -405,38 +401,38 @@ export default function ImagesMvpAnalytics() {
               <TabsContent value="funnel" className="mt-6 space-y-6">
                 <Card className="border-white/10 bg-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       Funnel Detail
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2 text-sm">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Landing viewed</span>
+                        <span className="text-slate-400">Landing viewed</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.landing_viewed)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Upload selected</span>
+                        <span className="text-slate-400">Upload selected</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.upload_selected)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Upload rejected</span>
+                        <span className="text-slate-400">Upload rejected</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.upload_rejected)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Analysis started</span>
+                        <span className="text-slate-400">Analysis started</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.analysis_started)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Analysis completed</span>
+                        <span className="text-slate-400">Analysis completed</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.analysis_completed)}
                         </span>
@@ -444,43 +440,43 @@ export default function ImagesMvpAnalytics() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Results viewed</span>
+                        <span className="text-slate-400">Results viewed</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.results_viewed)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Paywall previewed</span>
+                        <span className="text-slate-400">Paywall previewed</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.paywall_previewed)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Paywall clicked</span>
+                        <span className="text-slate-400">Paywall clicked</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.paywall_clicked)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Purchases</span>
+                        <span className="text-slate-400">Purchases</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.purchase_completed)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Summary exports</span>
+                        <span className="text-slate-400">Summary exports</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.export_summary_downloaded)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">JSON exports</span>
+                        <span className="text-slate-400">JSON exports</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.export_json_downloaded)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Full report exports</span>
+                        <span className="text-slate-400">Full report exports</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.export_full_txt_downloaded)}
                         </span>
@@ -493,7 +489,7 @@ export default function ImagesMvpAnalytics() {
               <TabsContent value="full" className="mt-6 space-y-6">
                 <Card className="border-white/10 bg-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       Events by Name
                     </CardTitle>
                   </CardHeader>
@@ -511,7 +507,7 @@ export default function ImagesMvpAnalytics() {
                             <TableCell className="text-slate-200">
                               {name}
                             </TableCell>
-                            <TableCell className="text-right text-slate-200 font-mono text-xs">
+                            <TableCell className="text-right text-slate-300 font-mono text-xs">
                               {formatNumber(count)}
                             </TableCell>
                           </TableRow>
@@ -524,7 +520,7 @@ export default function ImagesMvpAnalytics() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <Card className="border-white/10 bg-white/5">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         Tabs
                       </CardTitle>
                     </CardHeader>
@@ -534,7 +530,7 @@ export default function ImagesMvpAnalytics() {
                           key={name}
                           className="flex items-center justify-between"
                         >
-                          <span className="text-slate-200 capitalize">
+                          <span className="text-slate-300 capitalize">
                             {name}
                           </span>
                           <span className="text-white font-mono text-xs">
@@ -547,7 +543,7 @@ export default function ImagesMvpAnalytics() {
 
                   <Card className="border-white/10 bg-white/5">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         Density Mode
                       </CardTitle>
                     </CardHeader>
@@ -557,7 +553,7 @@ export default function ImagesMvpAnalytics() {
                           key={name}
                           className="flex items-center justify-between"
                         >
-                          <span className="text-slate-200 capitalize">
+                          <span className="text-slate-300 capitalize">
                             {name}
                           </span>
                           <span className="text-white font-mono text-xs">
@@ -572,13 +568,13 @@ export default function ImagesMvpAnalytics() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <Card className="border-white/10 bg-white/5">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         Exports
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200 flex items-center gap-2">
+                        <span className="text-slate-300 flex items-center gap-2">
                           <Download className="h-4 w-4 text-slate-500" />
                           Summary downloads
                         </span>
@@ -587,7 +583,7 @@ export default function ImagesMvpAnalytics() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200 flex items-center gap-2">
+                        <span className="text-slate-300 flex items-center gap-2">
                           <FileJson className="h-4 w-4 text-slate-500" />
                           JSON downloads
                         </span>
@@ -596,7 +592,7 @@ export default function ImagesMvpAnalytics() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200 flex items-center gap-2">
+                        <span className="text-slate-300 flex items-center gap-2">
                           <FileText className="h-4 w-4 text-slate-500" />
                           Full report downloads
                         </span>
@@ -605,7 +601,7 @@ export default function ImagesMvpAnalytics() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200 flex items-center gap-2">
+                        <span className="text-slate-300 flex items-center gap-2">
                           <Timer className="h-4 w-4 text-slate-500" />
                           Summary copied
                         </span>
@@ -618,25 +614,25 @@ export default function ImagesMvpAnalytics() {
 
                   <Card className="border-white/10 bg-white/5">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         Paywall
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Previewed</span>
+                        <span className="text-slate-300">Previewed</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.paywall.previewed)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">CTA clicked</span>
+                        <span className="text-slate-300">CTA clicked</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.paywall.cta_clicked)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-200">Paywall viewed</span>
+                        <span className="text-slate-300">Paywall viewed</span>
                         <span className="text-white font-mono text-xs">
                           {formatNumber(report.funnel.paywall_viewed)}
                         </span>
@@ -649,7 +645,7 @@ export default function ImagesMvpAnalytics() {
               <TabsContent value="raw" className="mt-6">
                 <Card className="border-white/10 bg-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       Raw JSON
                     </CardTitle>
                   </CardHeader>

@@ -39,13 +39,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -103,58 +97,55 @@ interface MvpMetadata {
   calculated?: Record<string, unknown> | null;
   processing_ms?: number;
   fields_extracted?: number;
+  access: {
+    granted?: boolean;
+    email_present?: boolean;
+    trial_granted?: boolean;
+    mode?: 'device_free' | string;
+    free_used?: number;
+    free_remaining?: number;
+  };
+  _limited?: boolean;
+  client_last_modified_iso?: string;
+  registry_summary?: {
+    image?: { exif?: number; iptc?: number; xmp?: number };
+    [key: string]: unknown;
+  };
   quality_metrics?: {
     confidence_score?: number;
     extraction_completeness?: number;
     format_support_level?: string;
+    [key: string]: unknown;
   };
   processing_insights?: {
     total_fields_extracted?: number;
     processing_time_ms?: number;
+    [key: string]: unknown;
   };
-  access: {
-    trial_granted: boolean;
-    trial_email_present: boolean;
-    credits_charged?: number;
-    credits_required?: number;
-    mode?: 'device_free' | 'trial_limited' | 'paid';
-    free_used?: number;
-  };
-  _trial_limited?: boolean;
-  client_last_modified_iso?: string;
-  registry_summary?: Record<string, unknown>;
-  locked_fields?: string[];
   [key: string]: unknown;
 }
 
 type TabValue = 'privacy' | 'authenticity' | 'photography' | 'raw';
 type PurposeValue = 'privacy' | 'authenticity' | 'photography' | 'explore';
 type DensityMode = 'normal' | 'advanced';
-type ResultsViewState = 'idle' | 'processing' | 'success' | 'empty' | 'fail';
 
 const PURPOSE_STORAGE_KEY = 'images_mvp_purpose';
 const DENSITY_STORAGE_KEY = 'images_mvp_density';
 
 export default function ImagesMvpResults() {
   const [metadata, setMetadata] = useState<MvpMetadata | null>(null);
-  const [viewState, setViewState] = useState<ResultsViewState>('processing');
-  const [errorInfo, setErrorInfo] = useState<{
-    status?: number;
-    message?: string;
-  } | null>(null);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'empty'>(
+    'loading'
+  );
   const [activeTab, setActiveTab] = useState<TabValue>('privacy');
   const [rawSearch, setRawSearch] = useState('');
   const [showOverlayText, setShowOverlayText] = useState(false);
   const [showAllExif, setShowAllExif] = useState(false);
-  const [showEmptyRaw, setShowEmptyRaw] = useState(false);
   const [purpose, setPurpose] = useState<PurposeValue | null>(null);
   const [showPurposeModal, setShowPurposeModal] = useState(false);
   const [densityMode, setDensityMode] = useState<DensityMode>('normal');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
-  const ocrSelected =
-    typeof window !== 'undefined' &&
-    sessionStorage.getItem('images_mvp_ocr') === 'true';
   const navigate = useNavigate();
   const { toast } = useToast();
   const purposePromptLogged = useRef(false);
@@ -162,94 +153,19 @@ export default function ImagesMvpResults() {
   const paywallLogged = useRef(false);
   const resultsLogged = useRef(false);
 
-  // Calculate limited report status (must be declared before any useEffect)
-  // Report is limited only when in 'trial_limited' mode — device_free is not considered limited
-  const isLimitedReport = metadata?.access?.mode === 'trial_limited';
-  const canExport = metadata?.access?.mode !== 'trial_limited';
-
-  const hasValue = (value: unknown): boolean => {
-    if (value === null || value === undefined) return false;
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return Number.isFinite(value);
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      return (
-        trimmed.length > 0 &&
-        trimmed.toLowerCase() !== 'n/a' &&
-        trimmed.toLowerCase() !== 'unknown'
-      );
-    }
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object') return Object.keys(value).length > 0;
-    return true;
-  };
-
   useEffect(() => {
     const stored = sessionStorage.getItem('currentMetadata');
-    const status = sessionStorage.getItem('images_mvp_status');
-    const errorRaw = sessionStorage.getItem('images_mvp_error');
-
-    if (status === 'fail') {
-      setViewState('fail');
-      if (errorRaw) {
-        try {
-          setErrorInfo(JSON.parse(errorRaw));
-        } catch {
-          setErrorInfo({ message: 'Extraction failed' });
-        }
-      } else {
-        setErrorInfo({ message: 'Extraction failed' });
-      }
-      return;
-    }
-
     if (!stored) {
-      if (status === 'uploading' || status === 'processing') {
-        setViewState('processing');
-      } else {
-        setViewState('idle');
-      }
+      setLoadState('empty');
       return;
     }
-
     try {
-      const parsed = JSON.parse(stored) as MvpMetadata;
-      setMetadata(parsed);
-      const countMeaningfulFields = (obj: unknown): number => {
-        if (obj === null || obj === undefined) return 0;
-        if (typeof obj !== 'object') return hasValue(obj) ? 1 : 0;
-        if (Array.isArray(obj)) return hasValue(obj) ? 1 : 0;
-        const record = obj as Record<string, unknown>;
-        let count = 0;
-        for (const key of Object.keys(record)) {
-          if (key.startsWith('_') || key === 'access') continue;
-          const value = record[key];
-          if (
-            value !== null &&
-            typeof value === 'object' &&
-            !Array.isArray(value)
-          ) {
-            count += countMeaningfulFields(value);
-          } else if (hasValue(value)) {
-            count += 1;
-          }
-        }
-        return count;
-      };
-      const meaningfulCount = countMeaningfulFields(parsed);
-      const fieldCount =
-        typeof parsed.fields_extracted === 'number'
-          ? parsed.fields_extracted
-          : typeof parsed.processing_insights?.total_fields_extracted ===
-              'number'
-            ? parsed.processing_insights.total_fields_extracted
-            : 0;
-      setViewState(meaningfulCount > 0 ? 'success' : 'empty');
+      setMetadata(JSON.parse(stored));
+      setLoadState('ready');
     } catch {
-      setViewState('fail');
-      setErrorInfo({ message: 'Failed to load results' });
+      setLoadState('empty');
     }
-  }, []);
+  }, [navigate]);
 
   const isTabValue = (value: string): value is TabValue =>
     value === 'privacy' ||
@@ -373,13 +289,15 @@ export default function ImagesMvpResults() {
 
   useEffect(() => {
     if (!metadata || paywallLogged.current) return;
-    const trialLimited = isLimitedReport;
+    const isLimited =
+      (metadata._limited ?? metadata._trial_limited) ||
+      (metadata.access?.granted ?? metadata.access?.trial_granted);
     const summary = metadata.registry_summary?.image as
       | { exif?: number; iptc?: number; xmp?: number }
       | undefined;
     const lockedTotal =
       (summary?.exif ?? 0) + (summary?.iptc ?? 0) + (summary?.xmp ?? 0);
-    if (trialLimited && lockedTotal > 0) {
+    if (isLimited && lockedTotal > 0) {
       trackEvent('paywall_preview_shown', {
         locked_total: lockedTotal,
       });
@@ -387,99 +305,14 @@ export default function ImagesMvpResults() {
     }
   }, [metadata, trackEvent]);
 
-  useEffect(() => {
-    if (metadata?.filename) {
-      document.title = `Results: ${metadata.filename} | MetaExtract`;
-    } else {
-      document.title = 'MetaExtract | Analysis Results';
-    }
-  }, [metadata?.filename]);
-
-  type DetailEntry = { path: string; valuePreview: string; value: unknown };
-
-  const previewValue = (value: unknown): string => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string')
-      return value.length > 180 ? `${value.slice(0, 180)}…` : value;
-    if (typeof value === 'number' || typeof value === 'boolean')
-      return String(value);
-
-    try {
-      const text = JSON.stringify(value);
-      return text.length > 180 ? `${text.slice(0, 180)}…` : text;
-    } catch {
-      return String(value);
-    }
-  };
-
-  const collectDetailEntries = (
-    obj: unknown,
-    prefix = '',
-    depth = 0,
-    maxDepth = 4,
-    out: DetailEntry[] = [],
-    maxEntries = 200
-  ): DetailEntry[] => {
-    if (out.length >= maxEntries) return out;
-    if (depth > maxDepth) return out;
-    if (obj === null || obj === undefined) return out;
-    if (typeof obj !== 'object') {
-      if (!hasValue(obj)) return out;
-      out.push({
-        path: prefix || '(root)',
-        valuePreview: previewValue(obj),
-        value: obj,
-      });
-      return out;
-    }
-    if (Array.isArray(obj)) {
-      if (!hasValue(obj)) return out;
-      out.push({
-        path: prefix || '(root)',
-        valuePreview: previewValue(obj),
-        value: obj,
-      });
-      return out;
-    }
-    const record = obj as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
-      if (key.startsWith('_')) continue;
-      if (key === 'access') continue;
-      if (key === 'extracted_text') continue;
-      const next = prefix ? `${prefix}.${key}` : key;
-      const value = record[key];
-      if (
-        value !== null &&
-        typeof value === 'object' &&
-        !Array.isArray(value)
-      ) {
-        collectDetailEntries(value, next, depth + 1, maxDepth, out, maxEntries);
-      } else {
-        if (!hasValue(value)) continue;
-        out.push({
-          path: next,
-          valuePreview: previewValue(value),
-          value,
-        });
-      }
-      if (out.length >= maxEntries) break;
-    }
-    return out;
-  };
-
-  const fieldsFound = useMemo(() => {
-    if (!metadata) return 0;
-    return collectDetailEntries(metadata, '', 0, 4, [], 1000).length;
-  }, [metadata]);
-
-  if (viewState === 'processing') {
+  if (loadState === 'loading') {
     return (
       <Layout showHeader={true} showFooter={true}>
         <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
           <div className="container mx-auto px-4 max-w-3xl">
             <Card className="bg-[#11121a] border-white/10">
-              <CardContent className="p-8 text-center text-slate-200">
-                Processing your image...
+              <CardContent className="p-8 text-center text-slate-300">
+                Loading results...
               </CardContent>
             </Card>
           </div>
@@ -488,7 +321,7 @@ export default function ImagesMvpResults() {
     );
   }
 
-  if (viewState === 'idle') {
+  if (loadState === 'empty' || !metadata) {
     return (
       <Layout showHeader={true} showFooter={true}>
         <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
@@ -497,9 +330,9 @@ export default function ImagesMvpResults() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileImage className="w-5 h-5 text-primary" />
-                  Ready when you are
+                  No results yet
                 </CardTitle>
-                <CardDescription className="text-slate-200">
+                <CardDescription className="text-slate-400">
                   Upload an image to extract metadata and view the analysis
                   here.
                 </CardDescription>
@@ -514,10 +347,10 @@ export default function ImagesMvpResults() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
-                  onClick={() => navigate('/images_mvp?pricing=1')}
+                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  onClick={() => navigate('/#pricing')}
                 >
-                  Learn about credits
+                  Learn about plans
                 </Button>
               </CardContent>
             </Card>
@@ -527,75 +360,10 @@ export default function ImagesMvpResults() {
     );
   }
 
-  if (viewState === 'fail') {
-    return (
-      <Layout showHeader={true} showFooter={true}>
-        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
-          <div className="container mx-auto px-4 max-w-3xl">
-            <Card className="bg-[#11121a] border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldAlert className="w-5 h-5 text-amber-400" />
-                  Extraction failed
-                </CardTitle>
-                <CardDescription className="text-slate-200">
-                  {errorInfo?.message || 'We could not process this file.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {errorInfo?.status && (
-                  <p className="text-xs text-slate-400">
-                    Error code: {errorInfo.status}
-                  </p>
-                )}
-                <Button
-                  className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
-                  onClick={() => navigate('/images_mvp')}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Try another image
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (viewState === 'empty' || !metadata) {
-    return (
-      <Layout showHeader={true} showFooter={true}>
-        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
-          <div className="container mx-auto px-4 max-w-3xl">
-            <Card className="bg-[#11121a] border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Info className="w-5 h-5 text-primary" />
-                  No metadata found
-                </CardTitle>
-                <CardDescription className="text-slate-200">
-                  We didn’t detect metadata in this file. Try another image or a
-                  different format.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <Button
-                  className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
-                  onClick={() => navigate('/images_mvp')}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload another image
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  const creditsRequired = metadata.access?.credits_required ?? 0;
-  const creditsCharged = metadata.access?.credits_charged ?? 0;
+  const isLimited =
+    (metadata._limited ?? metadata._trial_limited) ||
+    (metadata.access?.granted ?? metadata.access?.trial_granted);
+  const canExport = !isLimited;
 
   const handleDownloadJson = () => {
     if (!canExport) {
@@ -665,6 +433,23 @@ export default function ImagesMvpResults() {
     } catch {
       return dateStr;
     }
+  };
+
+  const hasValue = (value: unknown): boolean => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return (
+        trimmed.length > 0 &&
+        trimmed.toLowerCase() !== 'n/a' &&
+        trimmed.toLowerCase() !== 'unknown'
+      );
+    }
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
   };
 
   const getGpsCoords = (gps: Record<string, unknown> | null | undefined) => {
@@ -749,26 +534,16 @@ export default function ImagesMvpResults() {
     (metadata.exif?.DateTimeOriginal as string | null | undefined) ||
       (metadata.exif?.CreateDate as string | null | undefined)
   );
-  const captureDateFromCalculated = parseExifDate(
-    (metadata.calculated?.capture_date as string | null | undefined) || null
-  );
-  const hasCalculatedCapture = !!captureDateFromCalculated;
   const captureDateLabel = captureDateFromExif
-    ? 'CAPTURE DATE (EXIF)'
+    ? 'CAPTURE DATE'
     : filenameDate
-      ? 'CAPTURE DATE (FILENAME)'
-      : hasCalculatedCapture && !isLimitedReport
-        ? 'CAPTURE DATE (INFERRED)'
-        : 'CAPTURE DATE';
+      ? 'FILENAME DATE'
+      : 'CAPTURE DATE';
   const captureDateValue = captureDateFromExif
     ? captureDateFromExif.toISOString()
     : filenameDate
       ? filenameDate.toISOString()
-      : hasCalculatedCapture && !isLimitedReport
-        ? captureDateFromCalculated?.toISOString() || null
-        : null;
-  const filesystemTimestamp =
-    metadata.filesystem?.created || metadata.filesystem?.modified || null;
+      : null;
   const localModifiedValue = metadata.client_last_modified_iso || null;
 
   const embeddedGpsState = hasGps
@@ -778,29 +553,87 @@ export default function ImagesMvpResults() {
       : 'none';
   const burnedTimestamp =
     metadata.burned_metadata?.parsed_data?.timestamp || null;
-  const filenameSuggestsMap = /gps|map|location|coords|coordinate|geotag/i.test(
-    metadata.filename || ''
-  );
   const hashSha256 =
     metadata.hashes?.sha256 || metadata.file_integrity?.sha256 || null;
   const hashMd5 = metadata.hashes?.md5 || metadata.file_integrity?.md5 || null;
   const fieldsExtracted = metadata.fields_extracted ?? null;
   const processingMs = metadata.processing_ms ?? null;
   const software = (metadata.exif?.Software as string | undefined) || null;
-  const extractionInfo = metadata.extraction_info as
-    | {
-        dynamic_modules_enabled?: boolean;
-        specialized_engines?: Record<string, boolean>;
-      }
-    | undefined;
-  const enabledEnginesCount = extractionInfo?.specialized_engines
-    ? Object.values(extractionInfo.specialized_engines).filter(Boolean).length
-    : null;
   const formatHint = getFormatHint(metadata.mime_type, metadata.filename);
   const formatToneClass =
     formatHint?.tone === 'emerald'
       ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-100'
       : 'border-amber-500/20 bg-amber-500/5 text-amber-100';
+
+  type DetailEntry = { path: string; valuePreview: string; value: unknown };
+  const previewValue = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string')
+      return value.length > 180 ? `${value.slice(0, 180)}…` : value;
+    if (typeof value === 'number' || typeof value === 'boolean')
+      return String(value);
+    try {
+      const text = JSON.stringify(value);
+      return text.length > 180 ? `${text.slice(0, 180)}…` : text;
+    } catch {
+      return String(value);
+    }
+  };
+
+  const collectDetailEntries = (
+    obj: unknown,
+    prefix = '',
+    depth = 0,
+    maxDepth = 4,
+    out: DetailEntry[] = [],
+    maxEntries = 200
+  ): DetailEntry[] => {
+    if (out.length >= maxEntries) return out;
+    if (depth > maxDepth) return out;
+    if (obj === null || obj === undefined) return out;
+    if (typeof obj !== 'object') {
+      if (!hasValue(obj)) return out;
+      out.push({
+        path: prefix || '(root)',
+        valuePreview: previewValue(obj),
+        value: obj,
+      });
+      return out;
+    }
+    if (Array.isArray(obj)) {
+      if (!hasValue(obj)) return out;
+      out.push({
+        path: prefix || '(root)',
+        valuePreview: previewValue(obj),
+        value: obj,
+      });
+      return out;
+    }
+    const record = obj as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      if (key.startsWith('_')) continue;
+      if (key === 'access') continue;
+      if (key === 'extracted_text') continue;
+      const next = prefix ? `${prefix}.${key}` : key;
+      const value = record[key];
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      ) {
+        collectDetailEntries(value, next, depth + 1, maxDepth, out, maxEntries);
+      } else {
+        if (!hasValue(value)) continue;
+        out.push({
+          path: next,
+          valuePreview: previewValue(value),
+          value,
+        });
+      }
+      if (out.length >= maxEntries) break;
+    }
+    return out;
+  };
 
   const scrollTo = (tab: typeof activeTab, anchorId: string) => {
     setActiveTab(tab);
@@ -839,38 +672,17 @@ export default function ImagesMvpResults() {
   }> = [];
   if (captureDateValue) {
     highlights.push({
-      text: `Capture time found (${captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'from filename' : 'from EXIF'}).`,
+      text: `Capture time found (${captureDateLabel === 'FILENAME DATE' ? 'from filename' : 'from EXIF'}).`,
       intent: 'Photography',
       impact: 'Workflow',
-      confidence:
-        captureDateLabel === 'CAPTURE DATE (FILENAME)' ? 'Medium' : 'High',
-      icon: highlightIcon('Photography'),
-      accentClass: highlightAccent('Photography'),
-      target: { tab: 'privacy', anchorId: 'section-timestamps' },
-    });
-  } else if (isLimitedReport && hasCalculatedCapture) {
-    highlights.push({
-      text: 'Capture time is available in the full report.',
-      intent: 'Photography',
-      impact: 'Workflow',
-      confidence: 'Medium',
-      icon: highlightIcon('Photography'),
-      accentClass: highlightAccent('Photography'),
-      target: { tab: 'privacy', anchorId: 'section-timestamps' },
-    });
-  } else if (filesystemTimestamp) {
-    highlights.push({
-      text: 'Capture time not in metadata; file timestamps are available (upload time).',
-      intent: 'Photography',
-      impact: 'Workflow',
-      confidence: 'Low',
+      confidence: captureDateLabel === 'FILENAME DATE' ? 'Medium' : 'High',
       icon: highlightIcon('Photography'),
       accentClass: highlightAccent('Photography'),
       target: { tab: 'privacy', anchorId: 'section-timestamps' },
     });
   } else {
     highlights.push({
-      text: 'Capture time not present in metadata (common after sharing apps).',
+      text: 'Capture time not present in this file (common after sharing apps).',
       intent: 'Photography',
       impact: 'Workflow',
       confidence: 'Medium',
@@ -900,16 +712,11 @@ export default function ImagesMvpResults() {
       target: { tab: 'privacy', anchorId: 'section-location' },
     });
   } else {
-    const locationCopy = !ocrSelected
-      ? 'No GPS in metadata. Text scan was off, so stamped locations were not checked.'
-      : isLimitedReport
-        ? 'No GPS in metadata. Text scan results are limited in this free report.'
-        : 'No GPS in metadata or overlay text.';
     highlights.push({
-      text: locationCopy,
+      text: 'Location not present in this file.',
       intent: 'Privacy',
       impact: 'Privacy',
-      confidence: ocrSelected && !isLimitedReport ? 'Medium' : 'High',
+      confidence: 'High',
       icon: highlightIcon('Privacy'),
       accentClass: highlightAccent('Privacy'),
       target: { tab: 'privacy', anchorId: 'section-location' },
@@ -1056,9 +863,16 @@ export default function ImagesMvpResults() {
   const purposeLabel = purpose
     ? `${purpose.charAt(0).toUpperCase()}${purpose.slice(1)}`
     : 'Not set';
-  const trialEmail =
+  const accessEmail =
     typeof window !== 'undefined'
-      ? localStorage.getItem('metaextract_trial_email')
+      ? localStorage.getItem('metaextract_access_email') ||
+        (() => {
+          for (const k of Object.keys(localStorage)) {
+            if (k.startsWith('metaextract_') && k.endsWith('_email'))
+              return localStorage.getItem(k);
+          }
+          return null;
+        })()
       : null;
 
   const exifEntries = Object.entries(metadata.exif || {}).filter(([, v]) =>
@@ -1094,17 +908,6 @@ export default function ImagesMvpResults() {
     },
   ].filter(group => group.count > 0);
   const lockedTotal = lockedGroups.reduce((sum, group) => sum + group.count, 0);
-  const lockedFields = Array.isArray(metadata.locked_fields)
-    ? metadata.locked_fields
-        .filter((field): field is string => typeof field === 'string')
-        .map(field => field.trim())
-        .filter(field => field.length > 0)
-    : [];
-  const showUnlock =
-    !canExport &&
-    lockedTotal > 0 &&
-    creditsRequired > 0 &&
-    creditsCharged === 0;
 
   const imageWidth = metadata.exif?.ImageWidth;
   const imageHeight = metadata.exif?.ImageHeight ?? metadata.exif?.ImageLength;
@@ -1127,8 +930,7 @@ export default function ImagesMvpResults() {
     obj: unknown,
     prefix = '',
     depth = 0,
-    out: DetailEntry[] = [],
-    includeEmpty = false
+    out: DetailEntry[] = []
   ): DetailEntry[] => {
     if (out.length >= 500) return out;
     if (depth > 5) return out;
@@ -1159,7 +961,7 @@ export default function ImagesMvpResults() {
         typeof value === 'object' &&
         !Array.isArray(value)
       ) {
-        collectPaths(value, next, depth + 1, out, includeEmpty);
+        collectPaths(value, next, depth + 1, out);
       } else if (Array.isArray(value)) {
         const preview = previewValue(value.slice(0, 5));
         out.push({
@@ -1168,7 +970,7 @@ export default function ImagesMvpResults() {
           value,
         });
       } else {
-        if (!includeEmpty && !hasValue(value)) continue;
+        if (!hasValue(value)) continue;
         out.push({
           path: next,
           valuePreview: previewValue(value).slice(0, 140),
@@ -1180,7 +982,7 @@ export default function ImagesMvpResults() {
     return out;
   };
 
-  const allRawPaths = collectPaths(metadata, '', 0, [], showEmptyRaw);
+  const allRawPaths = collectPaths(metadata);
   const q = rawSearch.trim().toLowerCase();
   const rawMatches = q
     ? allRawPaths
@@ -1194,22 +996,19 @@ export default function ImagesMvpResults() {
 
   return (
     <Layout showHeader={true} showFooter={true}>
-      <div
-        className="min-h-screen bg-[#0B0C10] text-white pt-16 sm:pt-20 pb-20"
-        data-testid="results-root"
-      >
-        <div className="container mx-auto px-3 sm:px-4 max-w-4xl">
+      <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+        <div className="container mx-auto px-4 max-w-4xl">
           <PricingModal
             isOpen={showPricingModal}
             onClose={() => setShowPricingModal(false)}
-            defaultEmail={trialEmail || undefined}
+            defaultEmail={accessEmail || undefined}
           />
           <Dialog open={showPurposeModal} onOpenChange={setShowPurposeModal}>
             <DialogContent className="sm:max-w-[520px] bg-[#0A0A0A] border border-white/10 text-white">
               <DialogTitle className="text-lg font-semibold">
                 What brings you here?
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-200">
+              <DialogDescription className="text-sm text-slate-400">
                 Pick a focus so we can highlight what matters most. You can
                 change this later.
               </DialogDescription>
@@ -1217,12 +1016,12 @@ export default function ImagesMvpResults() {
                 <button
                   type="button"
                   onClick={() => handlePurposeSelect('privacy')}
-                  className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black"
+                  className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors"
                 >
                   <div className="text-sm font-semibold text-white">
                     Privacy check
                   </div>
-                  <div className="text-xs text-slate-200">
+                  <div className="text-xs text-slate-400">
                     Find location data, device details, and personal
                     identifiers.
                   </div>
@@ -1230,24 +1029,24 @@ export default function ImagesMvpResults() {
                 <button
                   type="button"
                   onClick={() => handlePurposeSelect('authenticity')}
-                  className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black"
+                  className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors"
                 >
                   <div className="text-sm font-semibold text-white">
                     Verify authenticity
                   </div>
-                  <div className="text-xs text-slate-200">
+                  <div className="text-xs text-slate-400">
                     Check edit history, hashes, and integrity signals.
                   </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePurposeSelect('photography')}
-                  className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black"
+                  className="border border-white/10 rounded-lg p-4 text-left hover:border-primary/60 hover:bg-white/5 transition-colors"
                 >
                   <div className="text-sm font-semibold text-white">
                     Photography details
                   </div>
-                  <div className="text-xs text-slate-200">
+                  <div className="text-xs text-slate-400">
                     Review camera settings, lens info, and capture details.
                   </div>
                 </button>
@@ -1262,7 +1061,7 @@ export default function ImagesMvpResults() {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="text-slate-200 hover:text-white"
+                  className="text-slate-400 hover:text-white"
                   onClick={() => {
                     trackEvent('purpose_skipped', { location: 'results' });
                     setShowPurposeModal(false);
@@ -1275,26 +1074,21 @@ export default function ImagesMvpResults() {
           </Dialog>
 
           {/* Header */}
-          <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4">
+          <div className="mb-8 flex flex-col gap-4">
             <div className="min-w-full">
-              <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 break-words">
-                <FileImage className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
-                <span title={metadata.filename} className="line-clamp-2">
-                  {metadata.filename}
-                </span>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <FileImage className="w-6 h-6 text-primary shrink-0" />
+                <span title={metadata.filename}>{metadata.filename}</span>
               </h1>
-              <p
-                className="text-slate-200 text-xs sm:text-sm font-mono mt-1 break-words"
-                data-testid="key-field-mime-type"
-              >
+              <p data-testid="key-field-mime-type" className="text-slate-400 text-sm font-mono mt-1 truncate">
                 {metadata.filesize} • {metadata.mime_type}
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap items-stretch sm:items-center w-full sm:w-auto">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap items-center">
               <Button
                 variant="outline"
                 onClick={() => navigate('/images_mvp')}
-                className="border-white/10 hover:bg-white/5 w-full sm:w-auto"
+                className="border-white/10 hover:bg-white/5"
               >
                 Analyze Another Photo
               </Button>
@@ -1302,11 +1096,11 @@ export default function ImagesMvpResults() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="border-white/10 hover:bg-white/5 flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-between"
+                    className="border-white/10 hover:bg-white/5 flex items-center gap-2"
                   >
                     <Clipboard className="w-4 h-4" />
-                    <span className="flex-1 sm:flex-none">Summary actions</span>
-                    <ChevronDown className="w-4 h-4 text-slate-200" />
+                    Summary actions
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -1314,11 +1108,11 @@ export default function ImagesMvpResults() {
                   className="border-[#1b1b24] bg-[#050608] text-white"
                 >
                   <DropdownMenuItem onSelect={handleCopySummary}>
-                    <Clipboard className="w-4 h-4 text-slate-200" />
+                    <Clipboard className="w-4 h-4 text-slate-400" />
                     Copy summary
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={handleDownloadSummary}>
-                    <FileText className="w-4 h-4 text-slate-200" />
+                    <FileText className="w-4 h-4 text-slate-400" />
                     Download summary
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1327,11 +1121,11 @@ export default function ImagesMvpResults() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="border-white/10 hover:bg-white/5 flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-between"
+                    className="border-white/10 hover:bg-white/5 flex items-center gap-2"
                   >
                     <Download className="w-4 h-4" />
-                    <span className="flex-1 sm:flex-none">Export data</span>
-                    <ChevronDown className="w-4 h-4 text-slate-200" />
+                    Export data
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -1342,14 +1136,14 @@ export default function ImagesMvpResults() {
                     onSelect={handleDownloadJson}
                     disabled={!canExport}
                   >
-                    <FileJson className="w-4 h-4 text-slate-200" />
+                    <FileJson className="w-4 h-4 text-slate-400" />
                     Download JSON
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={handleDownloadFullTxt}
                     disabled={!canExport}
                   >
-                    <FileText className="w-4 h-4 text-slate-200" />
+                    <FileText className="w-4 h-4 text-slate-400" />
                     Download full report (txt)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1358,11 +1152,12 @@ export default function ImagesMvpResults() {
           </div>
           {!canExport && (
             <p className="text-xs text-slate-500 mb-6">
-              JSON export is available after credits are applied. Summary export
+              JSON export is available after the limit is lifted. Summary export
               stays available.
             </p>
           )}
 
+          {/* Device-free banner */}
           {metadata?.access?.mode === 'device_free' && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -1384,7 +1179,8 @@ export default function ImagesMvpResults() {
             </motion.div>
           )}
 
-          {isLimitedReport && (
+          {/* Limited Warning Banner */}
+          {isLimited && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1393,48 +1189,16 @@ export default function ImagesMvpResults() {
               <ShieldAlert className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-primary text-sm mb-1">
-                  Limited report
+                  Limited report active
                 </h4>
-                <p className="text-slate-200 text-xs leading-relaxed">
-                  You are viewing a limited free report. Raw IPTC and XMP data
-                  has been summarized or redacted. Use credits to view the full
+                <p className="text-slate-300 text-xs leading-relaxed">
+                  You are viewing a limited report. Raw IPTC and XMP data has
+                  been summarized or redacted. Unlock credits to view the full
                   report and raw exports.
                 </p>
               </div>
+              {/* TODO: Add Upgrade Button if this was a paid feature MVP */}
             </motion.div>
-          )}
-          {isLimitedReport && lockedFields.length > 0 && (
-            <Card className="mb-6 bg-[#121217] border-white/10">
-              <CardHeader>
-                <CardTitle className="text-sm font-mono text-slate-200">
-                  LOCKED FIELDS PREVIEW
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-400">
-                  Field names are visible, values are hidden.{' '}
-                  {lockedFields.length} total locked fields.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  {lockedFields.slice(0, 12).map(field => (
-                    <div
-                      key={field}
-                      className="flex items-center justify-between border border-white/5 rounded px-3 py-2 bg-white/5"
-                    >
-                      <span className="text-slate-200 truncate pr-2">
-                        {field}
-                      </span>
-                      <span className="text-slate-500">•••</span>
-                    </div>
-                  ))}
-                </div>
-                {lockedFields.length > 12 && (
-                  <div className="text-xs text-slate-500">
-                    +{lockedFields.length - 12} more locked fields hidden
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           )}
           {formatHint && (
             <Card className={`mb-6 border ${formatToneClass}`}>
@@ -1444,24 +1208,23 @@ export default function ImagesMvpResults() {
                   <div className="font-semibold text-white">
                     {formatHint.title}
                   </div>
-                  <div className="text-xs text-slate-200 mt-1">
+                  <div className="text-xs text-slate-300 mt-1">
                     {formatHint.body}
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
-          {showUnlock && (
+          {!canExport && lockedTotal > 0 && (
             <Card className="mb-6 bg-[#121217] border-white/10">
               <CardHeader>
-                <CardTitle className="text-sm font-mono text-slate-200">
+                <CardTitle className="text-sm font-mono text-slate-400">
                   UNLOCK FULL REPORT
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 <div className="text-slate-200">
-                  Use credits to unlock {lockedTotal} additional fields for this
-                  file.
+                  Unlock {lockedTotal} additional fields for this file.
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   {lockedGroups.slice(0, 6).map(group => (
@@ -1469,7 +1232,7 @@ export default function ImagesMvpResults() {
                       key={group.key}
                       className="flex items-center justify-between border border-white/5 rounded px-3 py-2 bg-white/5"
                     >
-                      <span className="text-slate-200">{group.label}</span>
+                      <span className="text-slate-400">{group.label}</span>
                       <span className="text-slate-200 font-mono">
                         {group.count}
                       </span>
@@ -1502,7 +1265,7 @@ export default function ImagesMvpResults() {
 
           <Card className="bg-[#121217] border-white/5 mb-6">
             <CardHeader>
-              <CardTitle className="text-sm font-mono text-slate-200">
+              <CardTitle className="text-sm font-mono text-slate-400">
                 HIGHLIGHTS
               </CardTitle>
             </CardHeader>
@@ -1516,7 +1279,7 @@ export default function ImagesMvpResults() {
                       ? scrollTo(h.target.tab, h.target.anchorId)
                       : undefined
                   }
-                  className={`w-full text-left flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black ${h.accentClass} ${h.target ? 'hover:bg-white/5' : ''}`}
+                  className={`w-full text-left flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${h.accentClass} ${h.target ? 'hover:bg-white/5' : ''}`}
                 >
                   <div className="mt-0.5 opacity-90">{h.icon}</div>
                   <div className="flex-1">
@@ -1536,60 +1299,51 @@ export default function ImagesMvpResults() {
                 Limitations: Metadata can be missing or stripped. Absence is not
                 proof.
               </div>
-              {(fieldsExtracted || fieldsFound || processingMs) && (
+              {(fieldsExtracted || processingMs) && (
                 <div className="pt-2 text-xs text-slate-500 font-mono">
-                  {fieldsExtracted ? `${fieldsExtracted} fields checked` : null}
-                  {fieldsExtracted && (fieldsFound || processingMs)
-                    ? ' • '
+                  {fieldsExtracted
+                    ? `${fieldsExtracted} fields extracted`
                     : null}
-                  {fieldsFound ? `${fieldsFound} fields found` : null}
-                  {fieldsFound && processingMs ? ' • ' : null}
+                  {fieldsExtracted && processingMs ? ' • ' : null}
                   {processingMs ? `${Math.round(processingMs)} ms` : null}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className="mb-4 flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 font-mono">
-                <span className="whitespace-nowrap">
-                  Focus: {typeof purposeLabel === 'string' ? purposeLabel : ''}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-slate-200 hover:text-white h-7 px-2 text-xs"
-                  onClick={() => {
-                    trackEvent('purpose_prompt_opened', {
-                      location: 'results',
-                    });
-                    setShowPurposeModal(true);
-                  }}
-                >
-                  Change focus
-                </Button>
-              </div>
-              <ToggleGroup
-                type="single"
-                value={densityMode}
-                onValueChange={handleDensityChange}
-                className="bg-[#121217] border border-white/10 rounded-lg p-1 w-fit"
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
+              <span>Focus: {purposeLabel}</span>
+              <Button
+                variant="ghost"
+                className="text-slate-400 hover:text-white h-7 px-2"
+                onClick={() => {
+                  trackEvent('purpose_prompt_opened', { location: 'results' });
+                  setShowPurposeModal(true);
+                }}
               >
-                <ToggleGroupItem
-                  value="normal"
-                  className="text-xs px-2 sm:px-3 py-1 text-slate-200 data-[state=on]:bg-white/10 data-[state=on]:text-white"
-                >
-                  Normal
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="advanced"
-                  className="text-xs px-2 sm:px-3 py-1 text-slate-200 data-[state=on]:bg-white/10 data-[state=on]:text-white"
-                >
-                  Advanced
-                </ToggleGroupItem>
-              </ToggleGroup>
+                Change focus
+              </Button>
             </div>
+            <ToggleGroup
+              type="single"
+              value={densityMode}
+              onValueChange={handleDensityChange}
+              className="bg-[#121217] border border-white/10 rounded-lg p-1"
+            >
+              <ToggleGroupItem
+                value="normal"
+                className="text-xs px-3 py-1 text-slate-300 data-[state=on]:bg-white/10 data-[state=on]:text-white"
+              >
+                Normal
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="advanced"
+                className="text-xs px-3 py-1 text-slate-300 data-[state=on]:bg-white/10 data-[state=on]:text-white"
+              >
+                Advanced
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           <Tabs
@@ -1597,40 +1351,14 @@ export default function ImagesMvpResults() {
             onValueChange={v => (isTabValue(v) ? setActiveTab(v) : undefined)}
             className="w-full"
           >
-            <TabsList
-              className="bg-[#121217] border border-white/5 overflow-x-auto flex-nowrap"
-              aria-label="Metadata categories"
-            >
-              <TabsTrigger
-                value="privacy"
-                className="text-xs sm:text-sm whitespace-nowrap"
-              >
-                Privacy
-              </TabsTrigger>
-              <TabsTrigger
-                value="authenticity"
-                className="text-xs sm:text-sm whitespace-nowrap"
-              >
-                Authenticity
-              </TabsTrigger>
-              <TabsTrigger
-                value="photography"
-                className="text-xs sm:text-sm whitespace-nowrap"
-              >
-                Photography
-              </TabsTrigger>
+            <TabsList className="bg-[#121217] border border-white/5">
+              <TabsTrigger value="privacy">Privacy</TabsTrigger>
+              <TabsTrigger value="authenticity">Authenticity</TabsTrigger>
+              <TabsTrigger value="photography">Photography</TabsTrigger>
               {isAdvanced && (
-                <TabsTrigger
-                  value="raw"
-                  className="text-xs sm:text-sm whitespace-nowrap"
-                >
-                  <span className="inline-flex items-center gap-1 sm:gap-2">
-                    {!canExport && (
-                      <Lock
-                        className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70"
-                        aria-hidden="true"
-                      />
-                    )}
+                <TabsTrigger value="raw">
+                  <span className="inline-flex items-center gap-2">
+                    {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" />}
                     Raw
                   </span>
                 </TabsTrigger>
@@ -1645,9 +1373,8 @@ export default function ImagesMvpResults() {
                   id="section-location"
                 >
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-200">
-                      <MapPin className="w-4 h-4" aria-hidden="true" /> LOCATION
-                      DATA
+                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
+                      <MapPin className="w-4 h-4" /> LOCATION DATA
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1718,7 +1445,7 @@ export default function ImagesMvpResults() {
                         )}
                         {(burnedTimestamp ||
                           metadata.burned_metadata?.parsed_data?.plus_code) && (
-                          <div className="text-xs text-slate-200 space-y-1">
+                          <div className="text-xs text-slate-400 space-y-1">
                             {burnedTimestamp && (
                               <div>
                                 <span className="text-slate-500">
@@ -1762,43 +1489,11 @@ export default function ImagesMvpResults() {
                       <div className="py-8 text-center">
                         <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3 opacity-20" />
                         <p className="text-emerald-500 font-bold">
-                          Location not found
+                          Location not present
                         </p>
                         <p className="text-slate-500 text-xs mt-1">
-                          No GPS coordinates are embedded in the metadata.
+                          No GPS coordinates were found in this file.
                         </p>
-                        {!ocrSelected && (
-                          <div className="mt-3 space-y-2 text-xs text-slate-300">
-                            <div>
-                              Text scan was off, so stamped map/location text
-                              wasn’t checked. Enable text scan to look for
-                              overlays (+6 credits if text found).
-                            </div>
-                            <Button
-                              variant="outline"
-                              className="border-white/10 hover:bg-white/5 w-full"
-                              onClick={() => navigate('/images_mvp?ocr=1')}
-                            >
-                              Re-run with text scan (+6 credits if text found)
-                            </Button>
-                          </div>
-                        )}
-                        {ocrSelected && isLimitedReport && (
-                          <div className="mt-3 text-xs text-slate-300">
-                            Text scan results are limited in the free report.
-                            Use credits to view full overlay findings.
-                          </div>
-                        )}
-                        {ocrSelected && !isLimitedReport && (
-                          <div className="mt-3 text-xs text-slate-300">
-                            Text scan ran and found no stamped location text.
-                          </div>
-                        )}
-                        {filenameSuggestsMap && !ocrSelected && (
-                          <div className="mt-2 text-[11px] text-slate-400">
-                            Filename suggests a map/GPS overlay.
-                          </div>
-                        )}
                       </div>
                     )}
                   </CardContent>
@@ -1810,9 +1505,8 @@ export default function ImagesMvpResults() {
                   id="section-device"
                 >
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-200">
-                      <Camera className="w-4 h-4" aria-hidden="true" /> DEVICE
-                      INFORMATION
+                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
+                      <Camera className="w-4 h-4" /> DEVICE INFORMATION
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1866,37 +1560,20 @@ export default function ImagesMvpResults() {
                   id="section-timestamps"
                 >
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-200">
-                      <Calendar className="w-4 h-4" aria-hidden="true" />{' '}
-                      TIMESTAMPS
+                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
+                      <Calendar className="w-4 h-4" /> TIMESTAMPS
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                       <div className="pb-3 border-b border-white/5">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-slate-500 inline-flex items-center gap-1 text-xs font-mono mb-1">
-                              {captureDateLabel}
-                              <Info className="w-3 h-3 text-slate-600" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs text-xs">
-                            {captureDateFromExif
-                              ? 'From camera EXIF metadata (original capture time).'
-                              : filenameDate
-                                ? 'Parsed from filename; may be approximate.'
-                                : hasCalculatedCapture && !isLimitedReport
-                                  ? 'Inferred from available metadata.'
-                                  : 'No capture timestamp found in metadata.'}
-                          </TooltipContent>
-                        </Tooltip>
+                        <span className="text-slate-500 block text-xs font-mono mb-1">
+                          {captureDateLabel}
+                        </span>
                         <span className="text-white font-medium">
                           {captureDateValue
                             ? formatDate(captureDateValue)
-                            : isLimitedReport && hasCalculatedCapture
-                              ? 'Available in full report'
-                              : 'Not present in metadata'}
+                            : 'Not present in this file'}
                         </span>
                       </div>
                       {hasValue(burnedTimestamp) && (
@@ -1910,18 +1587,9 @@ export default function ImagesMvpResults() {
                         </div>
                       )}
                       <div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-slate-500 inline-flex items-center gap-1 text-xs font-mono mb-1">
-                              ORIGINAL FILE MODIFIED (BROWSER)
-                              <Info className="w-3 h-3 text-slate-600" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs text-xs">
-                            From your device/browser (file last modified). This
-                            is not the capture time.
-                          </TooltipContent>
-                        </Tooltip>
+                        <span className="text-slate-500 block text-xs font-mono mb-1">
+                          LOCAL FILE MODIFIED
+                        </span>
                         <span className="text-white font-medium">
                           {formatDate(
                             localModifiedValue || undefined,
@@ -1929,31 +1597,6 @@ export default function ImagesMvpResults() {
                           )}
                         </span>
                       </div>
-                      {filesystemTimestamp && (
-                        <div>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-slate-500 inline-flex items-center gap-1 text-xs font-mono mb-1">
-                                SERVER FILE TIMESTAMP
-                                <Info className="w-3 h-3 text-slate-600" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs text-xs">
-                              Timestamp from server-side processing/storage. Not
-                              the camera capture time.
-                            </TooltipContent>
-                          </Tooltip>
-                          <span className="text-white font-medium">
-                            {formatDate(filesystemTimestamp)}
-                          </span>
-                        </div>
-                      )}
-                      {!captureDateValue && filesystemTimestamp && (
-                        <div className="text-xs text-slate-400">
-                          File system dates reflect upload/server time, not when
-                          the photo was captured.
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1961,9 +1604,8 @@ export default function ImagesMvpResults() {
                 {/* Hidden Data Summary */}
                 <Card className="bg-[#121217] border-white/5">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-200">
-                      <Lock className="w-4 h-4" aria-hidden="true" /> HIDDEN
-                      DATA
+                    <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
+                      <Lock className="w-4 h-4" /> HIDDEN DATA
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1999,13 +1641,13 @@ export default function ImagesMvpResults() {
                         <ul className="space-y-3">
                           {hasMakerNotes && (
                             <li className="flex justify-between text-sm">
-                              <span className="text-slate-200">MakerNotes</span>
+                              <span className="text-slate-400">MakerNotes</span>
                               <span className="text-red-400">Detected</span>
                             </li>
                           )}
                           {hasValue(serial) && (
                             <li className="flex justify-between text-sm">
-                              <span className="text-slate-200">
+                              <span className="text-slate-400">
                                 Serial Numbers
                               </span>
                               <span className="text-slate-200 truncate max-w-[55%]">
@@ -2015,7 +1657,7 @@ export default function ImagesMvpResults() {
                           )}
                           {hasValue(colorProfile) && (
                             <li className="flex justify-between text-sm">
-                              <span className="text-slate-200">
+                              <span className="text-slate-400">
                                 Color Profile
                               </span>
                               <span className="text-slate-200">
@@ -2036,15 +1678,14 @@ export default function ImagesMvpResults() {
                     id="section-integrity"
                   >
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-200">
-                        <Hash className="w-4 h-4" aria-hidden="true" />{' '}
-                        INTEGRITY
+                      <CardTitle className="flex items-center gap-2 text-sm font-mono text-slate-400">
+                        <Hash className="w-4 h-4" /> INTEGRITY
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm font-mono">
                       {hasValue(hashSha256) && (
                         <div className="flex justify-between gap-3">
-                          <span className="text-slate-200">SHA256</span>
+                          <span className="text-slate-400">SHA256</span>
                           <span className="text-slate-200 truncate max-w-[60%]">
                             {String(hashSha256)}
                           </span>
@@ -2052,7 +1693,7 @@ export default function ImagesMvpResults() {
                       )}
                       {hasValue(hashMd5) && (
                         <div className="flex justify-between gap-3">
-                          <span className="text-slate-200">MD5</span>
+                          <span className="text-slate-400">MD5</span>
                           <span className="text-slate-200 truncate max-w-[60%]">
                             {String(hashMd5)}
                           </span>
@@ -2065,7 +1706,7 @@ export default function ImagesMvpResults() {
                 {isAdvanced && (
                   <Card className="bg-[#121217] border-white/5 md:col-span-2">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         ADVANCED DETAILS
                       </CardTitle>
                     </CardHeader>
@@ -2141,8 +1782,8 @@ export default function ImagesMvpResults() {
                                   {!canExport && (
                                     <div className="text-xs text-slate-500 mb-3">
                                       Showing the first {maxEntries} entries.
-                                      Use credits to unlock the full report and
-                                      search everything.
+                                      Unlock the full report to search and view
+                                      everything.
                                     </div>
                                   )}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -2150,7 +1791,7 @@ export default function ImagesMvpResults() {
                                       <button
                                         key={d.path}
                                         type="button"
-                                        className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
+                                        className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
                                         onClick={() =>
                                           navigator.clipboard?.writeText(
                                             JSON.stringify(
@@ -2161,7 +1802,7 @@ export default function ImagesMvpResults() {
                                           )
                                         }
                                       >
-                                        <div className="text-xs font-mono text-slate-200 truncate">
+                                        <div className="text-xs font-mono text-slate-300 truncate">
                                           {d.path}
                                         </div>
                                         <div className="text-xs text-slate-500 truncate">
@@ -2189,12 +1830,12 @@ export default function ImagesMvpResults() {
                   id="section-auth-signals"
                 >
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       AUTHENTICITY SIGNALS
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div className="text-slate-200">
+                    <div className="text-slate-300">
                       <span className="text-slate-500 block text-xs font-mono mb-1">
                         EDIT SOFTWARE
                       </span>
@@ -2204,7 +1845,7 @@ export default function ImagesMvpResults() {
                           : 'No tag present (inconclusive)'}
                       </span>
                     </div>
-                    <div className="text-slate-200">
+                    <div className="text-slate-300">
                       <span className="text-slate-500 block text-xs font-mono mb-1">
                         METADATA STATE
                       </span>
@@ -2214,7 +1855,7 @@ export default function ImagesMvpResults() {
                       </span>
                     </div>
                     {metadata.metadata_comparison?.warnings?.length ? (
-                      <ul className="list-disc pl-5 text-slate-200 text-xs space-y-1">
+                      <ul className="list-disc pl-5 text-slate-400 text-xs space-y-1">
                         {metadata.metadata_comparison.warnings
                           .slice(0, 3)
                           .map((w, i) => (
@@ -2231,14 +1872,14 @@ export default function ImagesMvpResults() {
 
                 <Card className="bg-[#121217] border-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       FINGERPRINTS
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm font-mono">
                     {hasValue(metadata.perceptual_hashes?.phash) && (
                       <div className="flex justify-between gap-3">
-                        <span className="text-slate-200">pHash</span>
+                        <span className="text-slate-400">pHash</span>
                         <span className="text-slate-200 truncate max-w-[60%]">
                           {String(metadata.perceptual_hashes?.phash)}
                         </span>
@@ -2246,7 +1887,7 @@ export default function ImagesMvpResults() {
                     )}
                     {hasValue(metadata.perceptual_hashes?.dhash) && (
                       <div className="flex justify-between gap-3">
-                        <span className="text-slate-200">dHash</span>
+                        <span className="text-slate-400">dHash</span>
                         <span className="text-slate-200 truncate max-w-[60%]">
                           {String(metadata.perceptual_hashes?.dhash)}
                         </span>
@@ -2264,7 +1905,7 @@ export default function ImagesMvpResults() {
                 {isAdvanced && (
                   <Card className="bg-[#121217] border-white/5 md:col-span-2">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         ADVANCED DETAILS
                       </CardTitle>
                     </CardHeader>
@@ -2319,8 +1960,8 @@ export default function ImagesMvpResults() {
                                   {!canExport && (
                                     <div className="text-xs text-slate-500 mb-3">
                                       Showing the first {maxEntries} entries.
-                                      Use credits to unlock the full report and
-                                      search everything.
+                                      Unlock the full report to search and view
+                                      everything.
                                     </div>
                                   )}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -2328,7 +1969,7 @@ export default function ImagesMvpResults() {
                                       <button
                                         key={d.path}
                                         type="button"
-                                        className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
+                                        className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
                                         onClick={() =>
                                           navigator.clipboard?.writeText(
                                             JSON.stringify(
@@ -2339,7 +1980,7 @@ export default function ImagesMvpResults() {
                                           )
                                         }
                                       >
-                                        <div className="text-xs font-mono text-slate-200 truncate">
+                                        <div className="text-xs font-mono text-slate-300 truncate">
                                           {d.path}
                                         </div>
                                         <div className="text-xs text-slate-500 truncate">
@@ -2364,13 +2005,13 @@ export default function ImagesMvpResults() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="bg-[#121217] border-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       CAMERA SETTINGS
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     {hasValue(metadata.normalized?.exposure_triangle) && (
-                      <div className="text-slate-200">
+                      <div className="text-slate-300">
                         <span className="text-slate-500 block text-xs font-mono mb-1">
                           EXPOSURE
                         </span>
@@ -2428,7 +2069,7 @@ export default function ImagesMvpResults() {
 
                 <Card className="bg-[#121217] border-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       IMAGE INFO
                     </CardTitle>
                   </CardHeader>
@@ -2442,7 +2083,7 @@ export default function ImagesMvpResults() {
                     ) : (
                       <>
                         {dimensionsValue && (
-                          <div className="text-slate-200">
+                          <div className="text-slate-300">
                             <span className="text-slate-500 block text-xs font-mono mb-1">
                               DIMENSIONS
                             </span>
@@ -2452,7 +2093,7 @@ export default function ImagesMvpResults() {
                           </div>
                         )}
                         {megapixelsValue && (
-                          <div className="text-slate-200">
+                          <div className="text-slate-300">
                             <span className="text-slate-500 block text-xs font-mono mb-1">
                               MEGAPIXELS
                             </span>
@@ -2462,7 +2103,7 @@ export default function ImagesMvpResults() {
                           </div>
                         )}
                         {colorSpaceValue && (
-                          <div className="text-slate-200">
+                          <div className="text-slate-300">
                             <span className="text-slate-500 block text-xs font-mono mb-1">
                               COLOR SPACE
                             </span>
@@ -2478,7 +2119,7 @@ export default function ImagesMvpResults() {
 
                 <Card className="bg-[#121217] border-white/5 md:col-span-2">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       EXIF FIELDS
                     </CardTitle>
                   </CardHeader>
@@ -2486,7 +2127,7 @@ export default function ImagesMvpResults() {
                     <div className="text-xs text-slate-500">
                       {exifEntries.length} fields present
                       {!canExport && exifEntries.length > 14
-                        ? ' • Use credits to see all fields'
+                        ? ' • Unlock the full report to see all fields'
                         : ''}
                     </div>
                     {exifEntries.length === 0 ? (
@@ -2500,7 +2141,7 @@ export default function ImagesMvpResults() {
                             key={k}
                             className="flex justify-between gap-3 bg-white/5 border border-white/5 rounded px-3 py-2"
                           >
-                            <span className="text-slate-200 truncate">{k}</span>
+                            <span className="text-slate-400 truncate">{k}</span>
                             <span className="text-slate-200 truncate max-w-[55%]">
                               {String(v)}
                             </span>
@@ -2525,7 +2166,7 @@ export default function ImagesMvpResults() {
                 {isAdvanced && (
                   <Card className="bg-[#121217] border-white/5 md:col-span-2">
                     <CardHeader>
-                      <CardTitle className="text-sm font-mono text-slate-200">
+                      <CardTitle className="text-sm font-mono text-slate-400">
                         ADVANCED DETAILS
                       </CardTitle>
                     </CardHeader>
@@ -2591,8 +2232,8 @@ export default function ImagesMvpResults() {
                                   {!canExport && (
                                     <div className="text-xs text-slate-500 mb-3">
                                       Showing the first {maxEntries} entries.
-                                      Use credits to unlock the full report and
-                                      search everything.
+                                      Unlock the full report to search and view
+                                      everything.
                                     </div>
                                   )}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -2600,7 +2241,7 @@ export default function ImagesMvpResults() {
                                       <button
                                         key={d.path}
                                         type="button"
-                                        className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
+                                        className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
                                         onClick={() =>
                                           navigator.clipboard?.writeText(
                                             JSON.stringify(
@@ -2611,7 +2252,7 @@ export default function ImagesMvpResults() {
                                           )
                                         }
                                       >
-                                        <div className="text-xs font-mono text-slate-200 truncate">
+                                        <div className="text-xs font-mono text-slate-300 truncate">
                                           {d.path}
                                         </div>
                                         <div className="text-xs text-slate-500 truncate">
@@ -2636,38 +2277,26 @@ export default function ImagesMvpResults() {
               <TabsContent value="raw" className="mt-6">
                 <Card className="bg-[#121217] border-white/5">
                   <CardHeader>
-                    <CardTitle className="text-sm font-mono text-slate-200">
+                    <CardTitle className="text-sm font-mono text-slate-400">
                       {canExport ? 'RAW JSON' : 'RAW JSON (PREVIEW)'}
                     </CardTitle>
-                    <p className="text-xs text-slate-500">
-                      Engine flags indicate enabled modules, not that data was
-                      found. Toggle empty fields to see nulls/absent values.
-                    </p>
                   </CardHeader>
                   <CardContent>
                     {!canExport && (
-                      <div className="text-sm text-slate-200 mb-4">
-                        Raw JSON export is locked on free scans, but you can
-                        preview and search a subset of extracted fields here.
+                      <div className="text-sm text-slate-400 mb-4">
+                        Raw JSON export is locked for limited reports, but you
+                        can preview and search a subset of extracted fields
+                        here.
                       </div>
                     )}
-                    <div className="mb-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <div className="flex-1 flex items-center gap-2">
-                        <Search className="w-4 h-4 text-slate-500" />
-                        <Input
-                          value={rawSearch}
-                          onChange={e => setRawSearch(e.target.value)}
-                          placeholder="Search keys/values..."
-                          className="bg-black/30 border-white/10 text-slate-200 placeholder:text-slate-600"
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="border-white/10 hover:bg-white/5"
-                        onClick={() => setShowEmptyRaw(v => !v)}
-                      >
-                        {showEmptyRaw ? 'Hide empty' : 'Show empty'}
-                      </Button>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Search className="w-4 h-4 text-slate-500" />
+                      <Input
+                        value={rawSearch}
+                        onChange={e => setRawSearch(e.target.value)}
+                        placeholder="Search keys/values..."
+                        className="bg-black/30 border-white/10 text-slate-200 placeholder:text-slate-600"
+                      />
                     </div>
                     <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
                       {(canExport ? rawMatches : rawMatches.slice(0, 20)).map(
@@ -2675,14 +2304,14 @@ export default function ImagesMvpResults() {
                           <button
                             key={m.path}
                             type="button"
-                            className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors min-h-[44px] flex flex-col justify-center"
+                            className="text-left bg-white/5 border border-white/5 rounded px-3 py-2 hover:bg-white/10 transition-colors"
                             onClick={() =>
                               navigator.clipboard?.writeText(
                                 JSON.stringify({ [m.path]: m.value }, null, 2)
                               )
                             }
                           >
-                            <div className="text-xs font-mono text-slate-200 truncate">
+                            <div className="text-xs font-mono text-slate-300 truncate">
                               {m.path}
                             </div>
                             <div className="text-xs text-slate-500 truncate">
@@ -2698,7 +2327,7 @@ export default function ImagesMvpResults() {
                       </pre>
                     ) : (
                       <div className="text-xs text-slate-500">
-                        Showing up to 20 matches. Use credits to download the
+                        Showing up to 20 matches. Unlock credits to download the
                         full report and view complete raw JSON.
                       </div>
                     )}
@@ -2714,7 +2343,7 @@ export default function ImagesMvpResults() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-white/10 text-slate-200 hover:text-white hover:bg-white/5"
+                    className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-white/10 text-slate-400 hover:text-white hover:bg-white/5"
                     aria-label="Extraction details"
                   >
                     i
@@ -2764,30 +2393,11 @@ export default function ImagesMvpResults() {
                         )}
                       </div>
                     ) : null}
-                    {typeof extractionInfo?.dynamic_modules_enabled ===
-                    'boolean' ? (
-                      <div>
-                        Engine mode:{' '}
-                        {extractionInfo.dynamic_modules_enabled
-                          ? 'dynamic selection'
-                          : 'fixed engine set'}{' '}
-                        (capability flags only)
-                      </div>
-                    ) : null}
-                    {typeof enabledEnginesCount === 'number' ? (
-                      <div>
-                        Specialized engines enabled:{' '}
-                        {enabledEnginesCount.toLocaleString()} (not data found)
-                      </div>
-                    ) : null}
                     {!metadata.quality_metrics?.confidence_score &&
                     !metadata.quality_metrics?.extraction_completeness &&
                     !metadata.processing_insights?.total_fields_extracted &&
                     !metadata.processing_insights?.processing_time_ms &&
-                    !metadata.quality_metrics?.format_support_level &&
-                    typeof extractionInfo?.dynamic_modules_enabled !==
-                      'boolean' &&
-                    typeof enabledEnginesCount !== 'number' ? (
+                    !metadata.quality_metrics?.format_support_level ? (
                       <div>Quality data not reported for this file.</div>
                     ) : null}
                   </div>

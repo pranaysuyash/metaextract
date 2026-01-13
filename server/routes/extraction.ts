@@ -39,6 +39,7 @@ import type { AuthRequest } from '../auth';
 import { requireAuth } from '../auth';
 import {
   sendFileTooLargeError,
+  sendFileTooLargeForTier,
   sendInvalidFileTypeError,
   sendTierInsufficientError,
   sendQuotaExceededError,
@@ -146,7 +147,7 @@ export function registerExtractionRoutes(app: Express): void {
         if (!isFileSizeAllowed(normalizedTier, req.file.size)) {
           const fileSizeMB =
             Math.round((req.file.size / (1024 * 1024)) * 100) / 100;
-          return sendFileTooLargeError(
+          return sendFileTooLargeForTier(
             res,
             fileSizeMB,
             tierConfig.maxFileSizeMB,
