@@ -1,9 +1,9 @@
 /**
  * Pricing System
- * 
+ *
  * Dynamic pricing calculator with feature comparisons, usage-based calculations,
  * and currency localization.
- * 
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.6
  */
 
@@ -14,7 +14,13 @@ export const SUPPORTED_CURRENCIES = {
   GBP: { symbol: '£', rate: 0.79, name: 'British Pound', locale: 'en-GB' },
   CAD: { symbol: 'CA$', rate: 1.36, name: 'Canadian Dollar', locale: 'en-CA' },
   AUD: { symbol: 'A$', rate: 1.53, name: 'Australian Dollar', locale: 'en-AU' },
-  JPY: { symbol: '¥', rate: 149.50, name: 'Japanese Yen', locale: 'ja-JP', decimals: 0 },
+  JPY: {
+    symbol: '¥',
+    rate: 149.5,
+    name: 'Japanese Yen',
+    locale: 'ja-JP',
+    decimals: 0,
+  },
   INR: { symbol: '₹', rate: 83.12, name: 'Indian Rupee', locale: 'en-IN' },
   BRL: { symbol: 'R$', rate: 4.97, name: 'Brazilian Real', locale: 'pt-BR' },
   MXN: { symbol: 'MX$', rate: 17.15, name: 'Mexican Peso', locale: 'es-MX' },
@@ -32,7 +38,11 @@ export interface CurrencyInfo {
 }
 
 // Subscription tiers
-export type SubscriptionTier = 'free' | 'professional' | 'forensic' | 'enterprise';
+export type SubscriptionTier =
+  | 'free'
+  | 'professional'
+  | 'forensic'
+  | 'enterprise';
 
 export interface PricingTier {
   id: SubscriptionTier;
@@ -73,9 +83,24 @@ export const FEATURE_CATEGORIES = [
   'export-support',
 ] as const;
 
-export type FeatureCategory = typeof FEATURE_CATEGORIES[number];
+export type FeatureCategory = (typeof FEATURE_CATEGORIES)[number];
 
-// Pricing tiers definition
+// ============================================================================
+// OBSOLETE: PRICING TIERS
+// ============================================================================
+//
+// DEPRECATION NOTICE:
+// This PRICING_TIERS object is OBSOLETE for the Images MVP launch.
+// The MVP uses a credit-based pricing model (IMAGES_MVP_CREDIT_PACKS).
+//
+// This data is preserved for historical reference only.
+// Do not use in new code.
+//
+
+/**
+ * @deprecated OBSOLETE - tier pricing is not used for Images MVP (credits are used instead).
+ * This is kept exported because legacy UI components still import it.
+ */
 export const PRICING_TIERS: PricingTier[] = [
   {
     id: 'free',
@@ -144,14 +169,14 @@ export const PRICING_TIERS: PricingTier[] = [
     name: 'Forensic',
     basePrice: 49,
     annualDiscount: 20,
-    description: 'All file types, advanced analysis',
+    description: 'Complete forensic toolkit',
     tagline: 'Complete forensic toolkit',
     recommended: true,
     limits: {
-      monthlyUploads: 2000,
+      monthlyUploads: 5000,
       maxFileSize: 500,
       apiCalls: 5000,
-      batchSize: 50,
+      batchSize: 100,
       retentionDays: 90,
       supportLevel: 'priority',
     },
@@ -167,23 +192,22 @@ export const PRICING_TIERS: PricingTier[] = [
       { id: 'json-export', name: 'JSON Export', description: 'Export to JSON', included: true },
       { id: 'csv-export', name: 'CSV Export', description: 'Export to CSV', included: true },
       { id: 'pdf-reports', name: 'PDF Reports', description: 'Professional reports', included: true },
-      { id: 'api-access', name: 'API Access', description: 'Programmatic access', included: true, value: '5,000/mo' },
+      { id: 'api-access', name: 'API Access', description: 'Programmatic access', included: true },
     ],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
     basePrice: 149,
-    annualDiscount: 25,
+    annualDiscount: 0,
     description: 'Unlimited everything + dedicated support',
     tagline: 'For agencies & legal teams',
     recommended: false,
-    isEnterprise: true,
     limits: {
-      monthlyUploads: 'unlimited',
-      maxFileSize: 2048,
-      apiCalls: 'unlimited',
-      batchSize: 'unlimited' as unknown as number,
+      monthlyUploads: -1, // unlimited
+      maxFileSize: 2000,
+      apiCalls: -1, // unlimited
+      batchSize: -1, // unlimited
       retentionDays: 365,
       supportLevel: 'dedicated',
     },
@@ -199,10 +223,22 @@ export const PRICING_TIERS: PricingTier[] = [
       { id: 'json-export', name: 'JSON Export', description: 'Export to JSON', included: true },
       { id: 'csv-export', name: 'CSV Export', description: 'Export to CSV', included: true },
       { id: 'pdf-reports', name: 'PDF Reports', description: 'Professional reports', included: true },
-      { id: 'api-access', name: 'API Access', description: 'Programmatic access', included: true, value: 'Unlimited' },
+      { id: 'api-access', name: 'API Access', description: 'Programmatic access', included: true },
     ],
   },
 ];
+
+// ============================================================================
+// OBSOLETE: CREDIT PACKS
+// ============================================================================
+//
+// DEPRECATION NOTICE:
+// This CREDIT_PACKS object is OBSOLETE for the Images MVP.
+// The MVP uses IMAGES_MVP_CREDIT_PACKS from server/payments.ts instead.
+//
+// This data is preserved for historical reference only.
+// Do not use in new code.
+//
 
 // Credit pack definitions for pay-as-you-go
 export interface CreditPack {
@@ -215,11 +251,44 @@ export interface CreditPack {
   popular?: boolean;
 }
 
+/**
+ * @deprecated OBSOLETE - Images MVP uses `IMAGES_MVP_CREDIT_PACKS` server-side.
+ * This is kept exported because legacy UI components still import it.
+ */
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: 'single', name: 'Single', credits: 1, basePrice: 2, perCreditPrice: 2.00, description: '1 full forensic analysis' },
-  { id: 'investigation', name: 'Investigation', credits: 10, basePrice: 15, perCreditPrice: 1.50, description: 'Perfect for small cases', popular: true },
-  { id: 'case', name: 'Case Pack', credits: 50, basePrice: 50, perCreditPrice: 1.00, description: 'Best value for cases' },
-  { id: 'agency', name: 'Agency', credits: 200, basePrice: 150, perCreditPrice: 0.75, description: 'Bulk discount' },
+  {
+    id: 'single',
+    name: 'Single',
+    credits: 1,
+    basePrice: 2,
+    perCreditPrice: 2.0,
+    description: '1 full forensic analysis',
+  },
+  {
+    id: 'investigation',
+    name: 'Investigation',
+    credits: 10,
+    basePrice: 15,
+    perCreditPrice: 1.5,
+    description: 'Perfect for small cases',
+    popular: true,
+  },
+  {
+    id: 'case',
+    name: 'Case Pack',
+    credits: 50,
+    basePrice: 50,
+    perCreditPrice: 1.0,
+    description: 'Best value for cases',
+  },
+  {
+    id: 'agency',
+    name: 'Agency',
+    credits: 200,
+    basePrice: 150,
+    perCreditPrice: 0.75,
+    description: 'Bulk discount',
+  },
 ];
 
 // Credit costs by file type
@@ -263,15 +332,33 @@ export function getCreditCost(mimeType: string): number {
 /**
  * Calculate total credits needed for a list of files
  */
-export function calculateTotalCredits(files: Array<{ type: string; size?: number }>): number {
+export function calculateTotalCredits(
+  files: Array<{ type: string; size?: number }>
+): number {
   return files.reduce((total, file) => total + getCreditCost(file.type), 0);
 }
 
 // Country to currency mapping (simplified)
 const COUNTRY_CURRENCY_MAP: Record<string, CurrencyCode> = {
-  US: 'USD', CA: 'CAD', GB: 'GBP', AU: 'AUD', JP: 'JPY',
-  DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR', NL: 'EUR', BE: 'EUR', AT: 'EUR', PT: 'EUR', IE: 'EUR', FI: 'EUR',
-  IN: 'INR', BR: 'BRL', MX: 'MXN', CH: 'CHF',
+  US: 'USD',
+  CA: 'CAD',
+  GB: 'GBP',
+  AU: 'AUD',
+  JP: 'JPY',
+  DE: 'EUR',
+  FR: 'EUR',
+  IT: 'EUR',
+  ES: 'EUR',
+  NL: 'EUR',
+  BE: 'EUR',
+  AT: 'EUR',
+  PT: 'EUR',
+  IE: 'EUR',
+  FI: 'EUR',
+  IN: 'INR',
+  BR: 'BRL',
+  MX: 'MXN',
+  CH: 'CHF',
 };
 
 /**
@@ -281,11 +368,11 @@ export function detectUserCurrency(): CurrencyCode {
   // Try to get from browser locale
   const locale = navigator.language || 'en-US';
   const countryCode = locale.split('-')[1]?.toUpperCase();
-  
+
   if (countryCode && COUNTRY_CURRENCY_MAP[countryCode]) {
     return COUNTRY_CURRENCY_MAP[countryCode];
   }
-  
+
   // Try timezone-based detection
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (timezone.includes('Europe')) return 'EUR';
@@ -296,7 +383,7 @@ export function detectUserCurrency(): CurrencyCode {
   if (timezone.includes('Australia')) return 'AUD';
   if (timezone.includes('Europe/London')) return 'GBP';
   if (timezone.includes('Europe/Zurich')) return 'CHF';
-  
+
   return 'USD';
 }
 
@@ -318,8 +405,9 @@ export function formatPrice(
 ): string {
   const currencyInfo = SUPPORTED_CURRENCIES[currency] as CurrencyInfo;
   const convertedPrice = convertPrice(priceUSD, currency);
-  const decimals = currencyInfo.decimals ?? (options.showDecimals !== false ? 2 : 0);
-  
+  const decimals =
+    currencyInfo.decimals ?? (options.showDecimals !== false ? 2 : 0);
+
   if (options.compact && convertedPrice >= 1000) {
     const formatter = new Intl.NumberFormat(currencyInfo.locale, {
       style: 'currency',
@@ -329,29 +417,44 @@ export function formatPrice(
     });
     return formatter.format(convertedPrice);
   }
-  
+
   const formatter = new Intl.NumberFormat(currencyInfo.locale, {
     style: 'currency',
     currency,
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
-  
+
   return formatter.format(convertedPrice);
 }
 
 /**
  * Get pricing tier by ID
+ *
+ * @deprecated OBSOLETE - This function uses obsolete tier-based pricing.
+ * The Images MVP uses credit-based pricing instead.
+ * Use IMAGES_MVP_CREDIT_PACKS from server/payments.ts instead.
  */
-export function getPricingTier(tierId: SubscriptionTier): PricingTier | undefined {
-  return PRICING_TIERS.find(tier => tier.id === tierId);
+export function getPricingTier(
+  _tierId: SubscriptionTier
+): PricingTier | undefined {
+  console.warn(
+    '[DEPRECATED] getPricingTier called - tier-based pricing is obsolete'
+  );
+  return undefined;
 }
 
 /**
  * Get recommended tier
+ *
+ * @deprecated OBSOLETE - This function uses obsolete tier-based pricing.
+ * The Images MVP uses credit-based pricing instead.
  */
-export function getRecommendedTier(): PricingTier {
-  return PRICING_TIERS.find(tier => tier.recommended) || PRICING_TIERS[2];
+export function getRecommendedTier(): PricingTier | undefined {
+  console.warn(
+    '[DEPRECATED] getRecommendedTier called - tier-based pricing is obsolete'
+  );
+  return undefined;
 }
 
 /**
@@ -363,11 +466,11 @@ export function calculateMonthlyPrice(
   currency: CurrencyCode = 'USD'
 ): number {
   let price = tier.basePrice;
-  
+
   if (billingCycle === 'annual') {
     price = price * (1 - tier.annualDiscount / 100);
   }
-  
+
   return convertPrice(price, currency);
 }
 
@@ -409,20 +512,27 @@ export interface UsageEstimate {
  */
 export function recommendTier(usage: UsageEstimate): SubscriptionTier {
   // Enterprise for high volume or API needs
-  if (usage.filesPerMonth > 2000 || (usage.needsApiAccess && usage.filesPerMonth > 500)) {
+  if (
+    usage.filesPerMonth > 2000 ||
+    (usage.needsApiAccess && usage.filesPerMonth > 500)
+  ) {
     return 'enterprise';
   }
-  
+
   // Forensic for video/audio or heavy forensic needs
-  if (usage.needsVideoAudio || usage.needsPdfReports || (usage.needsForensicAnalysis && usage.filesPerMonth > 100)) {
+  if (
+    usage.needsVideoAudio ||
+    usage.needsPdfReports ||
+    (usage.needsForensicAnalysis && usage.filesPerMonth > 100)
+  ) {
     return 'forensic';
   }
-  
+
   // Professional for RAW formats or moderate usage
   if (usage.needsRawFormats || usage.filesPerMonth > 90) {
     return 'professional';
   }
-  
+
   // Free for basic usage
   return 'free';
 }
@@ -433,10 +543,15 @@ export function recommendTier(usage: UsageEstimate): SubscriptionTier {
 export function calculateEstimatedCost(
   usage: UsageEstimate,
   currency: CurrencyCode = 'USD'
-): { tier: SubscriptionTier; monthlyPrice: number; annualPrice: number; savings: number } {
+): {
+  tier: SubscriptionTier;
+  monthlyPrice: number;
+  annualPrice: number;
+  savings: number;
+} {
   const recommendedTierId = recommendTier(usage);
   const tier = getPricingTier(recommendedTierId)!;
-  
+
   return {
     tier: recommendedTierId,
     monthlyPrice: calculateMonthlyPrice(tier, 'monthly', currency),
@@ -448,10 +563,13 @@ export function calculateEstimatedCost(
 /**
  * Check if a feature is available in a tier
  */
-export function isFeatureAvailable(tierId: SubscriptionTier, featureId: string): boolean {
+export function isFeatureAvailable(
+  tierId: SubscriptionTier,
+  featureId: string
+): boolean {
   const tier = getPricingTier(tierId);
   if (!tier) return false;
-  
+
   const feature = tier.features.find(f => f.id === featureId);
   return feature?.included ?? false;
 }
@@ -465,60 +583,68 @@ export function getFeatureDifferences(
 ): { gained: PricingFeature[]; lost: PricingFeature[] } {
   const from = getPricingTier(fromTier);
   const to = getPricingTier(toTier);
-  
+
   if (!from || !to) {
     return { gained: [], lost: [] };
   }
-  
+
   const gained: PricingFeature[] = [];
   const lost: PricingFeature[] = [];
-  
+
   to.features.forEach(toFeature => {
     const fromFeature = from.features.find(f => f.id === toFeature.id);
     if (toFeature.included && (!fromFeature || !fromFeature.included)) {
       gained.push(toFeature);
     }
   });
-  
+
   from.features.forEach(fromFeature => {
     const toFeature = to.features.find(f => f.id === fromFeature.id);
     if (fromFeature.included && (!toFeature || !toFeature.included)) {
       lost.push(fromFeature);
     }
   });
-  
+
   return { gained, lost };
 }
 
 /**
  * Compare all tiers for a specific feature
+ *
+ * @deprecated OBSOLETE - This function uses obsolete tier-based pricing.
+ * The Images MVP uses credit-based pricing instead.
  */
-export function compareFeatureAcrossTiers(featureId: string): Record<SubscriptionTier, boolean | string | number> {
-  const result: Record<SubscriptionTier, boolean | string | number> = {} as Record<SubscriptionTier, boolean | string | number>;
-  
-  PRICING_TIERS.forEach(tier => {
-    const feature = tier.features.find(f => f.id === featureId);
-    if (feature) {
-      result[tier.id] = feature.value ?? feature.included;
-    } else {
-      result[tier.id] = false;
-    }
-  });
-  
+export function compareFeatureAcrossTiers(
+  _featureId: string
+): Record<SubscriptionTier, boolean | string | number> {
+  console.warn(
+    '[DEPRECATED] compareFeatureAcrossTiers called - tier-based pricing is obsolete'
+  );
+  const result: Record<SubscriptionTier, boolean | string | number> =
+    {} as Record<SubscriptionTier, boolean | string | number>;
   return result;
 }
 
 /**
  * Get credit pack by ID
+ *
+ * @deprecated OBSOLETE - This function uses obsolete credit packs.
+ * The Images MVP uses IMAGES_MVP_CREDIT_PACKS from server/payments.ts instead.
  */
-export function getCreditPack(packId: string): CreditPack | undefined {
-  return CREDIT_PACKS.find(pack => pack.id === packId);
+export function getCreditPack(_packId: string): CreditPack | undefined {
+  console.warn(
+    '[DEPRECATED] getCreditPack called - use IMAGES_MVP_CREDIT_PACKS instead'
+  );
+  return undefined;
 }
 
 /**
  * Calculate credit pack price in target currency
  */
-export function getCreditPackPrice(packId: string, currency: CurrencyCode = 'USD'): number {
+export function getCreditPackPrice(
+  packId: string,
+  currency: CurrencyCode = 'USD'
+): number {
   const pack = getCreditPack(packId);
   if (!pack) return 0;
   return convertPrice(pack.basePrice, currency);

@@ -702,7 +702,11 @@ class BurnedMetadataExtractor:
     def _calculate_confidence(self, parsed: Dict[str, Any]) -> str:
         """Calculate confidence level based on extracted data."""
         score = 0
-        
+
+        # GPS coordinates are the strongest signal (high confidence on their own).
+        gps = parsed.get("gps")
+        if isinstance(gps, dict) and gps.get("latitude") is not None and gps.get("longitude") is not None:
+            return "high"
         if "gps" in parsed:
             score += 3
         if "location" in parsed or "address" in parsed:
@@ -716,7 +720,7 @@ class BurnedMetadataExtractor:
         
         if score >= 5:
             return "high"
-        elif score >= 3:
+        elif score >= 2:
             return "medium"
         elif score >= 1:
             return "low"

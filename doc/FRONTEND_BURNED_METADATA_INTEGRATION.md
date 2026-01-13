@@ -1,5 +1,19 @@
 # Frontend Burned Metadata Integration - Completion Report
 
+## ⚠️ DEPRECATED - Images MVP Launch
+
+**This document describes the legacy burned metadata system which is OBSOLETE for the Images MVP launch.**
+
+The Images MVP uses simplified metadata extraction:
+
+- **Access modes**: Trial (2 free redacted), Paid (credits)
+- **No tier gating**: All features available to paid users
+- **Redaction contract**: Sensitive identifiers redacted in free mode
+
+The tier-based access control and "FORENSIC" tab are disabled in production.
+
+---
+
 ## Summary
 
 Successfully implemented end-to-end frontend integration for OCR-extracted burned metadata and metadata comparison analysis in MetaExtract.

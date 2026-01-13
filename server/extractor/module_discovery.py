@@ -1430,6 +1430,7 @@ class ModuleRegistry:
         """
         if not self.hot_reloading_enabled:
             logger.warning("Hot reloading is disabled")
+            self.hot_reload_errors += 1
             return False
         
         # Check minimum reload interval

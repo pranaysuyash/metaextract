@@ -18,6 +18,7 @@ import json
 import pickle
 import struct
 import os
+import re
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
@@ -142,9 +143,9 @@ def _detect_model_type(filepath: str) -> Optional[str]:
             return 'sklearn'
         elif ext == '.model':
             return 'xgboost'
-        elif ext in ['.json', '.yaml', '.yml'] and any(x in name for x in ['config', 'model', 'hyper', 'param']):
+        elif ext in ['.json', '.yaml', '.yml']:
             return 'config'
-        elif ext in ['.cfg', '.ini'] and any(x in name for x in ['model', 'train', 'config']):
+        elif ext in ['.cfg', '.ini']:
             return 'config'
 
     except Exception:
@@ -444,6 +445,21 @@ def _extract_hdf5_dataset(dataset) -> Any:
 
 def _analyze_config_dict(config: Dict[str, Any], result: Dict[str, Any]) -> None:
     """Analyze configuration dictionary for ML patterns."""
+    def find_value(obj: Any, needle: str) -> Any:
+        if isinstance(obj, dict):
+            if needle in obj:
+                return obj[needle]
+            for value in obj.values():
+                found = find_value(value, needle)
+                if found is not None:
+                    return found
+        elif isinstance(obj, list):
+            for value in obj:
+                found = find_value(value, needle)
+                if found is not None:
+                    return found
+        return None
+
     # Look for common ML configuration keys
     ml_keys = {
         'learning_rate': 'config_learning_rate',
@@ -460,8 +476,13 @@ def _analyze_config_dict(config: Dict[str, Any], result: Dict[str, Any]) -> None
     }
 
     for key, field in ml_keys.items():
-        if key in config:
-            result[field] = config[key]
+        value = find_value(config, key)
+        if value is None:
+            continue
+        if key == "model" and isinstance(value, dict):
+            result[field] = value.get("type") or value.get("model_type") or "unknown"
+        else:
+            result[field] = value
 
     # Count nested structures
     if 'layers' in config and isinstance(config['layers'], list):
@@ -500,4 +521,13 @@ def get_ai_ml_field_count() -> int:
 # Integration point for metadata_engine.py
 def extract_ai_ml_complete(filepath: str) -> Dict[str, Any]:
     """Main entry point for AI/ML metadata extraction."""
-    return extract_ai_ml_metadata(filepath)
+    result = extract_ai_ml_metadata(filepath)
+    if "ai_ml_extraction_error" not in result:
+        aggregate = None
+        for key, value in result.items():
+            if key.endswith("_error") and value:
+                aggregate = value
+                break
+        if aggregate:
+            result["ai_ml_extraction_error"] = aggregate
+    return result

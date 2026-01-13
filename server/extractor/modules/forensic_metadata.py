@@ -176,9 +176,9 @@ WATERMARK_TAGS = {
     "LSB_Steganography": "lsb_steganography",
     "DCT_Steganography": "dct_steganography",
     "DWT_Steganography": "dwt_steganography",
-    "Echo_Hiding": "echo_hiding",
-    "Phase_Coding": "phase_coding",
-    "Spread_Spectrum": "spread_spectrum",
+    "Echo_Hiding": "steganography_echo_hiding",
+    "Phase_Coding": "steganography_phase_coding",
+    "Spread_Spectrum": "steganography_spread_spectrum",
 }
 
 # Adobe Content Credentials - Expanded
@@ -584,6 +584,15 @@ def extract_forensic_metadata(filepath: str) -> Optional[Dict[str, Any]]:
         status="info",
         details={"file_path": filepath}
     )
+
+    # Fast-fail for missing files (contract: top-level "error").
+    if not filepath or not os.path.exists(filepath):
+        return {
+            "error": f"Failed to extract forensic metadata: file not found ({filepath})",
+            "error_type": "FileNotFoundError",
+            "file": {"path": filepath},
+            "fields_extracted": 0,
+        }
 
     result = {
         "forensic": {
@@ -1039,6 +1048,7 @@ async def extract_forensic_metadata_async(filepath: str) -> Dict[str, Any]:
         Dictionary with forensic/security metadata
     """
     import asyncio
+    import concurrent.futures
     import datetime
     start_time = datetime.datetime.now()
 

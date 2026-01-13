@@ -1,10 +1,25 @@
 # 🎉 MetaExtract Advanced Analysis Integration - COMPLETE!
 
+## ⚠️ DEPRECATED - Images MVP Launch
+
+**This document describes the legacy advanced analysis system which is OBSOLETE for the Images MVP launch.**
+
+The Images MVP uses a simplified access model:
+
+- **Credit-based pricing**: Users purchase credit packs
+- **Access modes**: Trial (2 free), Paid (credits)
+- **No tier subscriptions**: Professional/Forensic/Enterprise tiers removed
+
+The advanced analysis API endpoints (`/api/extract/advanced`, `/api/forensic/*`) are disabled in production. The MVP focuses on core metadata extraction.
+
+---
+
 ## ✅ **Integration Status: READY FOR TESTING**
 
 All three priorities have been successfully implemented and integrated:
 
 ### **Priority 1: API Integration - ✅ COMPLETED**
+
 - ✅ 5 new advanced analysis API endpoints
 - ✅ Tier-based access control (Free → Professional → Forensic → Enterprise)
 - ✅ Python backend integration with comprehensive metadata engine
@@ -12,6 +27,7 @@ All three priorities have been successfully implemented and integrated:
 - ✅ Performance monitoring and processing indicators
 
 ### **Priority 2: Frontend Components - ✅ COMPLETED**
+
 - ✅ 5 new React components for advanced analysis display
 - ✅ Advanced results integration component
 - ✅ Tier-based feature gating in UI
@@ -20,6 +36,7 @@ All three priorities have been successfully implemented and integrated:
 - ✅ Professional forensic report generation
 
 ### **Priority 3: Local Testing Integration - ✅ COMPLETED**
+
 - ✅ Results page updated with advanced analysis tab
 - ✅ API endpoints connected to frontend components
 - ✅ Development server running successfully
@@ -31,12 +48,15 @@ All three priorities have been successfully implemented and integrated:
 ## 🚀 **How to Test the Integration**
 
 ### **1. Start the Development Server**
+
 ```bash
 PORT=3000 npm run dev
 ```
+
 Server will be available at: http://localhost:3000
 
 ### **2. Test API Endpoints**
+
 ```bash
 # Test server health
 curl http://localhost:3000/api/health
@@ -54,6 +74,7 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 ### **3. Test Frontend Integration**
 
 #### **Option A: Use the Main Application**
+
 1. Open http://localhost:3000 in your browser
 2. Upload a test file (use `test.jpg` for basic testing)
 3. Click the **"Advanced"** tab in the results page
@@ -64,12 +85,14 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
    - Forensic report generation
 
 #### **Option B: Use the Test Page**
+
 1. Open `test_frontend.html` in your browser
 2. Run the automated connectivity tests
 3. Upload files and test each feature individually
 4. Monitor the detailed test results
 
 ### **4. Test Different Tiers**
+
 - **Free Tier**: Should show upgrade prompts for advanced features
 - **Professional Tier**: Should allow advanced analysis and batch operations
 - **Forensic Tier**: Should allow all features except enterprise reports
@@ -79,43 +102,48 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 
 ## 📊 **Available Features by Tier**
 
-| Feature | Free | Professional | Forensic | Enterprise |
-|---------|------|-------------|----------|------------|
-| Basic Extraction | ✅ | ✅ | ✅ | ✅ |
-| Advanced Analysis | ❌ | ✅ | ✅ | ✅ |
-| Batch Comparison | ❌ | ✅ | ✅ | ✅ |
-| Timeline Reconstruction | ❌ | ✅ | ✅ | ✅ |
-| Forensic Reports | ❌ | ❌ | ❌ | ✅ |
-| API Access | ❌ | ❌ | ❌ | ✅ |
+| Feature                 | Free | Professional | Forensic | Enterprise |
+| ----------------------- | ---- | ------------ | -------- | ---------- |
+| Basic Extraction        | ✅   | ✅           | ✅       | ✅         |
+| Advanced Analysis       | ❌   | ✅           | ✅       | ✅         |
+| Batch Comparison        | ❌   | ✅           | ✅       | ✅         |
+| Timeline Reconstruction | ❌   | ✅           | ✅       | ✅         |
+| Forensic Reports        | ❌   | ❌           | ❌       | ✅         |
+| API Access              | ❌   | ❌           | ❌       | ✅         |
 
 ---
 
 ## 🔧 **Advanced Analysis Modules**
 
 ### **1. Steganography Detection**
+
 - LSB (Least Significant Bit) analysis
 - Frequency domain analysis using FFT
 - Entropy calculation and pattern detection
 - Visual attack detection for artifacts
 
 ### **2. Manipulation Detection**
+
 - JPEG compression analysis for re-compression detection
 - Noise pattern analysis across image regions
 - Edge inconsistency detection for splicing
 - Copy-move forgery detection
 
 ### **3. AI Content Detection**
+
 - Neural network pattern analysis
 - Metadata tampering detection
 - Suspicious generation patterns
 
 ### **4. Timeline Reconstruction**
+
 - Chronological event reconstruction from timestamps
 - Multi-source timestamp validation and correlation
 - Temporal gap detection and analysis
 - Chain of custody reconstruction
 
 ### **5. Metadata Comparison**
+
 - Side-by-side metadata comparison for multiple files
 - Field-by-field difference highlighting
 - Similarity scoring and pattern detection
@@ -126,6 +154,7 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 ## 📋 **API Endpoints**
 
 ### **Advanced Analysis Endpoints**
+
 - `POST /api/extract/advanced` - Single file with forensic analysis
 - `POST /api/compare/batch` - Multi-file metadata comparison
 - `POST /api/timeline/reconstruct` - Timeline reconstruction from multiple files
@@ -133,6 +162,7 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 - `POST /api/forensic/report` - Comprehensive forensic report generation
 
 ### **Existing Endpoints**
+
 - `POST /api/extract` - Basic metadata extraction
 - `POST /api/extract/batch` - Batch processing
 - `GET /api/tiers` - Tier configuration
@@ -143,12 +173,14 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 ## 🎯 **Testing Checklist**
 
 ### **Basic Functionality**
+
 - [ ] Server starts without errors
 - [ ] Health check endpoint responds
 - [ ] Basic file upload and extraction works
 - [ ] Results page displays correctly
 
 ### **Advanced Analysis**
+
 - [ ] Advanced analysis tab appears in results
 - [ ] Single file advanced analysis works
 - [ ] Forensic score calculation displays
@@ -156,6 +188,7 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 - [ ] Processing indicators work
 
 ### **Batch Operations**
+
 - [ ] Batch comparison accepts multiple files
 - [ ] Comparison results display correctly
 - [ ] Timeline reconstruction works
@@ -163,12 +196,14 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 - [ ] Export functionality works
 
 ### **Tier Access Control**
+
 - [ ] Free tier shows upgrade prompts
 - [ ] Professional tier allows advanced features
 - [ ] Enterprise tier allows forensic reports
 - [ ] Proper error messages for insufficient tier
 
 ### **User Experience**
+
 - [ ] File upload workflows are intuitive
 - [ ] Processing indicators show progress
 - [ ] Results are clearly displayed
@@ -182,6 +217,7 @@ curl "http://localhost:3000/api/forensic/capabilities?tier=professional"
 ### **Common Issues**
 
 #### **Server Won't Start**
+
 ```bash
 # Install missing dependencies
 npm install cookie-parser bcryptjs jsonwebtoken
@@ -192,6 +228,7 @@ PORT=3000 npm run dev
 ```
 
 #### **Python Import Errors**
+
 ```bash
 # Ensure virtual environment is activated
 source .venv/bin/activate  # or activate.bat on Windows
@@ -201,12 +238,14 @@ pip install -r requirements.txt
 ```
 
 #### **API Errors**
+
 - Check server logs for detailed error messages
 - Verify file paths and permissions
 - Ensure Python modules are importable
 - Check tier configuration matches API expectations
 
 #### **Frontend Issues**
+
 - Check browser console for JavaScript errors
 - Verify API endpoints are accessible
 - Check network tab for failed requests
@@ -217,6 +256,7 @@ pip install -r requirements.txt
 ## 🎉 **Success Metrics**
 
 ### **Integration Completed Successfully:**
+
 - ✅ 5 new API endpoints working
 - ✅ 5 new React components integrated
 - ✅ Tier-based access control implemented
@@ -227,6 +267,7 @@ pip install -r requirements.txt
 - ✅ Error handling and loading states implemented
 
 ### **Ready for Production:**
+
 - ✅ All tests passing
 - ✅ API endpoints stable
 - ✅ Frontend components responsive

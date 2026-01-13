@@ -454,6 +454,8 @@ def extract_h264_deep_analysis(stream: Dict, filepath: str) -> Dict[str, Any]:
     if bitrate:
         result["bit_rate_bps"] = int(bitrate)
         result["bit_rate_mbps"] = round(int(bitrate) / 1_000_000, 2)
+
+    extradata = stream.get("extradata")
     
     # Deep Bitstream Forensics (Phase 2 Enhancement)
     if BITSTREAM_PARSER_AVAILABLE and extradata:
@@ -479,7 +481,6 @@ def extract_h264_deep_analysis(stream: Dict, filepath: str) -> Dict[str, Any]:
         result["total_frames"] = int(nb_frames)
     
     # Attempt to parse SPS from extradata if available
-    extradata = stream.get("extradata")
     if extradata:
         try:
             sps_info = parse_h264_sps(extradata)

@@ -6,11 +6,27 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { advancedProtectionMiddleware } from './advanced-protection';
 import { threatIntelligenceService } from '../monitoring/production-validation';
 import { mlAnomalyDetector } from '../monitoring/ml-anomaly-detection';
 import { securityEventLogger } from '../monitoring/security-events';
 import { securityAlertManager } from '../monitoring/security-alerts';
+import {
+  analyzeFingerprint,
+  generateFingerprint,
+  trackFingerprint,
+} from '../monitoring/browser-fingerprint';
+
+type EnhancedProtectionMode = 'off' | 'monitor' | 'enforce';
+
+function resolveProtectionMode(): EnhancedProtectionMode {
+  const raw = (process.env.ENHANCED_PROTECTION_MODE || '').toLowerCase();
+  if (raw === 'off' || raw === 'monitor' || raw === 'enforce') {
+    return raw;
+  }
+
+  if (process.env.NODE_ENV === 'test') return 'off';
+  return process.env.NODE_ENV === 'production' ? 'enforce' : 'monitor';
+}
 
 // Enhanced protection configuration
 const ENHANCED_PROTECTION_CONFIG = {
@@ -19,6 +35,7 @@ const ENHANCED_PROTECTION_CONFIG = {
   BEHAVIORAL_ANALYSIS: true,
   ADVANCED_ML: true,
   REAL_TIME_UPDATES: true,
+  MODE: resolveProtectionMode(),
 
   // Risk thresholds
   CRITICAL_RISK_THRESHOLD: 85,
@@ -83,6 +100,10 @@ export async function enhancedProtectionMiddleware(
   next: NextFunction
 ): Promise<void> {
   try {
+    if (ENHANCED_PROTECTION_CONFIG.MODE === 'off') {
+      return next();
+    }
+
     // Skip if protection is disabled
     if (!shouldApplyProtection(req)) {
       return next();
@@ -239,7 +260,52 @@ async function gatherDeviceAnalysis(req: Request): Promise<any> {
       };
     }
 
-    return null;
+    const raw = (req as any).body?.fingerprintData ?? (req as any).body?.fingerprint;
+    let clientData: any = raw;
+    if (typeof raw === 'string') {
+      try {
+        clientData = JSON.parse(raw);
+      } catch {
+        clientData = undefined;
+      }
+    }
+
+    if (!clientData) return null;
+
+    const fingerprint = await generateFingerprint(req, clientData);
+    const analysis = await analyzeFingerprint(fingerprint);
+    const userId = (req as any).user?.id;
+    const fingerprintTracking = await trackFingerprint(fingerprint, userId);
+
+    (req as any).protectionResult = {
+      ...(req as any).protectionResult,
+      fingerprint,
+      fingerprintTracking,
+      fingerprintAnalysis: analysis,
+    };
+
+    await securityEventLogger.logEvent({
+      event: 'fingerprint_submitted',
+      severity: analysis.riskScore >= 80 ? 'high' : 'low',
+      timestamp: new Date(),
+      source: 'enhanced_protection',
+      ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+      userId,
+      details: {
+        fingerprintHash: fingerprint.fingerprintHash,
+        deviceId: fingerprint.deviceId,
+        confidence: fingerprint.confidence,
+        anomalies: fingerprint.anomalies,
+        analysis: {
+          riskScore: analysis.riskScore,
+          confidence: analysis.confidence,
+          anomalies: analysis.anomalies,
+        },
+        tracking: fingerprintTracking,
+      },
+    });
+
+    return { fingerprint, analysis, fingerprintTracking };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     console.warn('[EnhancedProtection] Device analysis failed:', error.message);
@@ -542,6 +608,11 @@ async function executeEnhancedProtectionAction(
       device: result.deviceAnalysis,
     },
   });
+
+  if (ENHANCED_PROTECTION_CONFIG.MODE === 'monitor') {
+    (req as any).enhancedProtectionMonitor = true;
+    return next();
+  }
 
   // Execute based on action
   switch (action) {
@@ -1034,6 +1105,7 @@ export async function getEnhancedProtectionStats(): Promise<any> {
       mlModel: mlStats,
       timestamp: new Date(),
       config: {
+        mode: ENHANCED_PROTECTION_CONFIG.MODE,
         thresholds: {
           critical: ENHANCED_PROTECTION_CONFIG.CRITICAL_RISK_THRESHOLD,
           high: ENHANCED_PROTECTION_CONFIG.HIGH_RISK_THRESHOLD,

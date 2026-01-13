@@ -410,12 +410,13 @@ router.post('/feedback', async (req: Request, res: Response) => {
 /**
  * WebSocket endpoint for real-time behavioral analysis
  */
-router.ws('/behavioral-stream', (ws, req) => {
+if (typeof (router as any).ws === 'function') {
+  (router as any).ws('/behavioral-stream', (ws: any, req: any) => {
   console.log(
     '[EnhancedProtection] Behavioral analysis WebSocket connection established'
   );
 
-  ws.on('message', async message => {
+  ws.on('message', async (message: any) => {
     try {
       const data = JSON.parse(message.toString());
 
@@ -463,7 +464,8 @@ router.ws('/behavioral-stream', (ws, req) => {
       '[EnhancedProtection] Behavioral analysis WebSocket connection closed'
     );
   });
-});
+  });
+}
 
 /**
  * Helper functions

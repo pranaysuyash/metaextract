@@ -64,6 +64,7 @@ export class MemStorage implements IStorage {
   private analyticsLog: ExtractionAnalytics[];
   private analyticsCache: CacheableAnalytics;
   private uiEvents: UiEvent[];
+  private securityEvents: any[];
 
   // Credit system
   private creditBalancesMap: Map<string, CreditBalance>;
@@ -95,6 +96,7 @@ export class MemStorage implements IStorage {
       cacheMaxAge: ANALYTICS_CACHE_MAX_AGE,
     };
     this.uiEvents = [];
+    this.securityEvents = [];
     this.creditBalancesMap = new Map();
     this.creditBalancesBySessionId = new Map();
     this.creditTransactionsList = [];
@@ -227,6 +229,63 @@ export class MemStorage implements IStorage {
     }
 
     return ordered.slice(0, limit);
+  }
+
+  async logSecurityEvent(event: any): Promise<void> {
+    this.securityEvents.push(event);
+  }
+
+  async getSecurityEvents(filters?: Record<string, any>): Promise<{
+    events: any[];
+    totalCount: number;
+    hasMore: boolean;
+  }> {
+    const startTime =
+      filters?.startTime instanceof Date ? filters.startTime : null;
+    const endTime = filters?.endTime instanceof Date ? filters.endTime : null;
+    const eventType =
+      typeof filters?.eventType === 'string' ? filters.eventType : null;
+    const severity =
+      typeof filters?.severity === 'string' ? filters.severity : null;
+    const ipAddress =
+      typeof filters?.ipAddress === 'string' ? filters.ipAddress : null;
+    const userId = typeof filters?.userId === 'string' ? filters.userId : null;
+    const limit = typeof filters?.limit === 'number' ? filters.limit : 50;
+    const offset = typeof filters?.offset === 'number' ? filters.offset : 0;
+
+    let results = [...this.securityEvents];
+    results.sort((a, b) => {
+      const ta = new Date(a?.timestamp ?? 0).getTime();
+      const tb = new Date(b?.timestamp ?? 0).getTime();
+      return tb - ta;
+    });
+
+    if (startTime) {
+      results = results.filter(e => new Date(e?.timestamp ?? 0) >= startTime);
+    }
+    if (endTime) {
+      results = results.filter(e => new Date(e?.timestamp ?? 0) <= endTime);
+    }
+    if (eventType) {
+      results = results.filter(e => e?.event === eventType);
+    }
+    if (severity) {
+      results = results.filter(e => e?.severity === severity);
+    }
+    if (ipAddress) {
+      results = results.filter(e => e?.ipAddress === ipAddress);
+    }
+    if (userId) {
+      results = results.filter(e => e?.userId === userId);
+    }
+
+    const totalCount = results.length;
+    const paged = results.slice(offset, offset + limit);
+    return {
+      events: paged,
+      totalCount,
+      hasMore: offset + limit < totalCount,
+    };
   }
 
   async getAnalyticsSummary(): Promise<AnalyticsSummary> {

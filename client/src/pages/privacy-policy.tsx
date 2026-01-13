@@ -61,7 +61,9 @@ export default function PrivacyPolicyPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading privacy policy...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading privacy policy...
+          </p>
         </div>
       </div>
     );
@@ -104,7 +106,11 @@ export default function PrivacyPolicyPage() {
               Last Updated: {new Date().toLocaleDateString()}
             </p>
           </div>
-          <Button onClick={handleDownload} variant="outline" className="flex items-center gap-2">
+          <Button
+            onClick={handleDownload}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
             <Download className="w-4 h-4" />
             Download
           </Button>
@@ -208,9 +214,10 @@ const defaultPrivacyPolicyContent = `
 
 <h3>File Data</h3>
 <ul>
-<li>Uploaded files are deleted immediately after processing</li>
+<li>Uploaded files are stored temporarily for processing and automatically deleted after 1 hour</li>
 <li>Metadata results are retained for 30 days unless you have an active subscription</li>
 <li>For subscribed users, data retention follows your selected plan</li>
+<li>Temporary files are removed by automated cleanup processes that run periodically</li>
 </ul>
 
 <h3>Account Data</h3>

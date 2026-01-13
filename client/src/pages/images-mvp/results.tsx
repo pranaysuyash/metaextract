@@ -39,7 +39,13 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -62,6 +68,29 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { trackImagesMvpEvent } from '@/lib/images-mvp-analytics';
+
+interface MakernoteDisplayField {
+  label: string;
+  value: string;
+  description?: string;
+}
+
+interface MakerNotesHighlight {
+  text: string;
+  category: string;
+}
+
+interface EnhancedMakerNotes {
+  raw: Record<string, unknown>;
+  enriched: {
+    manufacturer: string;
+    model: string;
+    deviceSpecific: Record<string, unknown>;
+    enrichmentLevel: 'full' | 'partial' | 'none';
+    displayFields: MakernoteDisplayField[];
+    highlights: MakerNotesHighlight[];
+  };
+}
 
 interface MvpMetadata {
   filename: string;
@@ -107,8 +136,16 @@ interface MvpMetadata {
   };
   _limited?: boolean;
   client_last_modified_iso?: string;
+  makernote?: EnhancedMakerNotes | null;
   registry_summary?: {
-    image?: { exif?: number; iptc?: number; xmp?: number };
+    image?: { exif?: number; iptc?: number; xmp?: number; makernote?: number };
+    makerNotes?: {
+      present: boolean;
+      manufacturer: string;
+      model: string;
+      enrichmentLevel: string;
+      highlights: MakerNotesHighlight[];
+    };
     [key: string]: unknown;
   };
   quality_metrics?: {
@@ -119,7 +156,7 @@ interface MvpMetadata {
   };
   processing_insights?: {
     total_fields_extracted?: number;
-    processing_time_ms?: number;
+    processing_ms?: number;
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -1080,7 +1117,10 @@ export default function ImagesMvpResults() {
                 <FileImage className="w-6 h-6 text-primary shrink-0" />
                 <span title={metadata.filename}>{metadata.filename}</span>
               </h1>
-              <p data-testid="key-field-mime-type" className="text-slate-400 text-sm font-mono mt-1 truncate">
+              <p
+                data-testid="key-field-mime-type"
+                className="text-slate-400 text-sm font-mono mt-1 truncate"
+              >
                 {metadata.filesize} • {metadata.mime_type}
               </p>
             </div>
@@ -1610,10 +1650,14 @@ export default function ImagesMvpResults() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const exifKeys = Object.keys(metadata.exif || {});
                       const hasMakerNotes =
-                        hasValue(metadata.exif?.MakerNote) ||
-                        exifKeys.some(k => k.toLowerCase().includes('maker'));
+                        (metadata.makernote?.enriched?.deviceSpecific &&
+                          Object.keys(
+                            metadata.makernote.enriched.deviceSpecific
+                          ).length > 0) ||
+                        (metadata.registry_summary?.makerNotes as any)?.present;
+
+                      const makerNotesInfo = metadata.makernote?.enriched;
                       const serial =
                         (metadata.exif?.BodySerialNumber as
                           | string
@@ -1639,10 +1683,41 @@ export default function ImagesMvpResults() {
 
                       return (
                         <ul className="space-y-3">
-                          {hasMakerNotes && (
-                            <li className="flex justify-between text-sm">
-                              <span className="text-slate-400">MakerNotes</span>
-                              <span className="text-red-400">Detected</span>
+                          {hasMakerNotes && makerNotesInfo && (
+                            <li className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-slate-400">
+                                  MakerNotes
+                                </span>
+                                <span className="text-emerald-400 capitalize">
+                                  {makerNotesInfo.manufacturer}
+                                </span>
+                              </div>
+                              {makerNotesInfo.deviceSpecific &&
+                                Object.keys(makerNotesInfo.deviceSpecific)
+                                  .length > 0 && (
+                                  <div className="pl-4 space-y-1">
+                                    {Object.entries(
+                                      makerNotesInfo.deviceSpecific
+                                    )
+                                      .slice(0, 5)
+                                      .map(([key, value]) => (
+                                        <div
+                                          key={key}
+                                          className="flex justify-between text-xs"
+                                        >
+                                          <span className="text-slate-500">
+                                            {key
+                                              .replace(/([A-Z])/g, ' $1')
+                                              .trim()}
+                                          </span>
+                                          <span className="text-slate-300 truncate max-w-[60%]">
+                                            {String(value).slice(0, 30)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                  </div>
+                                )}
                             </li>
                           )}
                           {hasValue(serial) && (
@@ -2379,7 +2454,9 @@ export default function ImagesMvpResults() {
                       <div>
                         Processing time:{' '}
                         {(
-                          metadata.processing_insights.processing_time_ms / 1000
+                          Number(
+                            metadata.processing_insights.processing_time_ms
+                          ) / 1000
                         ).toFixed(1)}
                         s
                       </div>

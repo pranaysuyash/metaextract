@@ -1,11 +1,28 @@
+/**
+ * ============================================================================
+ * OBSOLETE: Main Landing Page with Legacy Tier Pricing
+ * ============================================================================
+ *
+ * DEPRECATION NOTICE:
+ * This page is OBSOLETE for the Images MVP launch.
+ *
+ * The root route (/) now redirects to /images_mvp.
+ * This page is preserved for historical reference only.
+ *
+ * The Images MVP uses credit-based pricing (IMAGES_MVP_CREDIT_PACKS) instead of tier subscriptions.
+ * Do not use PRICING_TIERS or CREDIT_PACKS from this file for new features.
+ *
+ * ============================================================================
+ */
+
 import React, { useRef, useState, useEffect } from 'react';
 import { PublicLayout as Layout } from '@/components/public-layout';
 import { EnhancedUploadZone } from '@/components/enhanced-upload-zone';
-import {
-  PRICING_TIERS,
-  CREDIT_PACKS,
-  CREDIT_EXPLANATION,
-} from '@/lib/mockData';
+// import {
+//   PRICING_TIERS,
+//   CREDIT_PACKS,
+//   CREDIT_EXPLANATION,
+// } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -278,25 +295,27 @@ export default function Home() {
                 </h1>
 
                 <p className="text-base md:text-lg lg:text-xl text-slate-200 max-w-xl leading-relaxed mb-8">
-                    Courts, journalists, and security teams trust MetaExtract to
-                    uncover <span className="text-primary font-semibold">131,000+</span> hidden fields, detect AI-generated content, verify C2PA provenance, and
-                    preserve digital evidence.
-                  </p>
+                  Courts, journalists, and security teams trust MetaExtract to
+                  uncover{' '}
+                  <span className="text-primary font-semibold">131,000+</span>{' '}
+                  hidden fields, detect AI-generated content, verify C2PA
+                  provenance, and preserve digital evidence.
+                </p>
 
-                  <div className="flex flex-wrap gap-4 items-center mb-12">
-                    <div className="flex items-center gap-2 text-sm text-slate-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>AI Detection</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>C2PA Provenance</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>Bitstream Forensics</span>
-                    </div>
+                <div className="flex flex-wrap gap-4 items-center mb-12">
+                  <div className="flex items-center gap-2 text-sm text-slate-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>AI Detection</span>
                   </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>C2PA Provenance</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>Bitstream Forensics</span>
+                  </div>
+                </div>
 
                 <div className="flex gap-4 items-center">
                   <Button
@@ -456,9 +475,7 @@ export default function Home() {
                           <p className="text-xs font-mono">
                             test@metaextract.com
                           </p>
-                          <p className="text-xs font-mono">
-                            TestPassword123!
-                          </p>
+                          <p className="text-xs font-mono">TestPassword123!</p>
                         </div>
                         <div className="p-3 bg-white/5 rounded border border-white/10">
                           <p className="text-xs font-mono text-purple-400 mb-1">
@@ -478,14 +495,15 @@ export default function Home() {
                           <p className="text-xs font-mono">
                             admin@metaextract.com
                           </p>
-                          <p className="text-xs font-mono">
-                            AdminPassword123!
-                          </p>
+                          <p className="text-xs font-mono">AdminPassword123!</p>
                         </div>
                       </div>
                       <p className="text-xs text-slate-500">
                         If you don’t have these users in your DB yet, run{' '}
-                        <span className="font-mono">npm run seed:test-users</span>.
+                        <span className="font-mono">
+                          npm run seed:test-users
+                        </span>
+                        .
                       </p>
                     </div>
 
@@ -548,33 +566,34 @@ export default function Home() {
                   <Database className="w-32 h-32 text-primary -rotate-12 translate-x-10 -translate-y-10" />
                 </div>
 
-                  <div>
-                    <div className="flex items-center gap-2 mb-4 text-primary font-mono text-xs">
-                      <ScanLine className="w-4 h-4" />
-                      <span>DEEP_PACKET_INSPECTION</span>
-                    </div>
-                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                      131,000+ Fields
-                    </h3>
-                    <p className="text-slate-200 leading-relaxed max-w-md">
-                      7x more data than ExifTool. Our engine extracts deep bitstream
-                      forensics, C2PA provenance, AI-generation markers, and
-                      professional broadcast metadata for complete chain of custody.
-                    </p>
+                <div>
+                  <div className="flex items-center gap-2 mb-4 text-primary font-mono text-xs">
+                    <ScanLine className="w-4 h-4" />
+                    <span>DEEP_PACKET_INSPECTION</span>
                   </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                    131,000+ Fields
+                  </h3>
+                  <p className="text-slate-200 leading-relaxed max-w-md">
+                    7x more data than ExifTool. Our engine extracts deep
+                    bitstream forensics, C2PA provenance, AI-generation markers,
+                    and professional broadcast metadata for complete chain of
+                    custody.
+                  </p>
+                </div>
 
-                  <div className="mt-8 flex flex-wrap gap-2">
-                    {['C2PA', 'AI-DETECT', 'BITSTREAM', 'SMPTE/EBU'].map(
-                      (tag, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-white/10 text-[10px] font-mono text-slate-200 border border-white/20 rounded"
-                        >
-                          {tag}
-                        </span>
-                      )
-                    )}
-                  </div>
+                <div className="mt-8 flex flex-wrap gap-2">
+                  {['C2PA', 'AI-DETECT', 'BITSTREAM', 'SMPTE/EBU'].map(
+                    (tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-white/10 text-[10px] font-mono text-slate-200 border border-white/20 rounded"
+                      >
+                        {tag}
+                      </span>
+                    )
+                  )}
+                </div>
               </motion.div>
 
               {/* Center Column: Stacked */}
@@ -656,161 +675,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION 3: PRICING */}
-        <section className="relative py-20 bg-white/5 border-y border-white/5 overflow-hidden">
-          <div className="container mx-auto px-4 max-w-7xl">
-            <div className="flex items-end justify-between mb-12">
-              <div>
-                <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-2">
-                  ACCESS
-                </h2>
-                <p className="font-mono text-primary text-sm">{`// SELECT_TIER`}</p>
-              </div>
-              <div className="hidden md:block w-1/3 h-px bg-white/20"></div>
-            </div>
-
-            {/* Pricing Cards with Hover Expansion */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {PRICING_TIERS.map((tier, i) => (
-                <motion.div
-                  key={i}
-                  whileHover={{ y: -5 }}
-                  className={`relative p-6 flex flex-col h-[400px] transition-all duration-300 group ${tier.recommended ? 'bg-primary text-black' : 'bg-black border border-white/10 hover:border-white/30'}`}
-                >
-                  <div className="flex justify-between items-start mb-8">
-                    <h3
-                      className={`font-mono text-xl font-bold ${tier.recommended ? 'text-black' : 'text-white'}`}
-                    >
-                      {tier.name}
-                    </h3>
-                    {tier.recommended && (
-                      <Zap className="w-5 h-5 text-black animate-pulse" />
-                    )}
-                  </div>
-
-                  <div className="mb-auto">
-                    <div className="text-4xl font-bold mb-1 tracking-tighter">
-                      {tier.price}
-                      <span className="text-sm font-normal opacity-60">
-                        {tier.period}
-                      </span>
-                    </div>
-                    <p
-                      className={`text-xs ${tier.recommended ? 'text-black/80' : 'text-slate-300'} mb-6`}
-                    >
-                      {tier.description}
-                    </p>
-
-                    <ul className="space-y-3">
-                      {tier.features.map((feat, j) => (
-                        <li
-                          key={j}
-                          className="flex items-center gap-2 text-xs font-mono"
-                        >
-                          <div
-                            className={`w-1 h-1 ${tier.recommended ? 'bg-black' : 'bg-primary'}`}
-                          ></div>
-                          <span
-                            className={
-                              tier.recommended
-                                ? 'text-black/90'
-                                : 'text-slate-200'
-                            }
-                          >
-                            {feat}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <Button
-                    onClick={() => handleCheckout(tier.tier)}
-                    disabled={checkoutLoading === tier.tier}
-                    data-testid={`button-checkout-${tier.tier}`}
-                    className={`w-full mt-6 rounded-sm font-bold tracking-wide border ${tier.recommended ? 'bg-black text-white hover:bg-black/80 border-black' : 'bg-transparent text-white hover:bg-white hover:text-black border-white/20'}`}
-                  >
-                    {checkoutLoading === tier.tier ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />{' '}
-                        Processing...
-                      </>
-                    ) : (
-                      tier.cta
-                    )}
-                  </Button>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Adhoc Credits Strip */}
-            <div className="mt-20 border-t border-white/10 pt-10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/10 p-3 rounded">
-                    <CreditCard className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-white font-bold font-mono">
-                      PAY-AS-YOU-GO CREDITS
-                    </h4>
-                    <p className="text-slate-300 text-xs max-w-sm mb-2">
-                      No subscription required. Buy credits for one-off forensic
-                      extractions.
-                    </p>
-                    <p className="text-primary text-xs font-mono border-l-2 border-primary/30 pl-2">
-                      1 Credit = 1 Standard File Extraction{' '}
-                      <span className="text-slate-500">
-                        (Video = 3 Credits)
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 overflow-x-auto pb-4 md:pb-0">
-                  {CREDIT_PACKS.map((pack, i) => {
-                    const packKey = pack.name.toLowerCase() as
-                      | 'single'
-                      | 'batch'
-                      | 'bulk';
-                    const isLoading = creditPackLoading === packKey;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => handleCreditPurchase(pack.name)}
-                        disabled={isLoading}
-                        data-testid={`button-credits-${packKey}`}
-                        className="flex-shrink-0 bg-black border border-white/10 p-4 min-w-[160px] hover:border-primary/50 transition-colors cursor-pointer group text-left disabled:opacity-50"
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center justify-center h-full">
-                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-xs text-slate-300 mb-1">
-                              {pack.name}
-                            </div>
-                            <div className="text-xl font-bold text-white group-hover:text-primary">
-                              {pack.price}
-                            </div>
-                            <div className="text-[10px] text-slate-500 font-mono mt-1">
-                              {pack.credits} Credits
-                            </div>
-                            <div className="text-[10px] text-primary/80 font-mono mt-2 border-t border-white/10 pt-2">
-                              {pack.per_credit}
-                            </div>
-                          </>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
     </Layout>
   );

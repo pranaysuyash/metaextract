@@ -760,6 +760,33 @@ class PersonaInterpreter:
         except (ValueError, TypeError):
             return 0.0
 
+    def _format_exposure_mode(self, value: Any) -> str:
+        """Map EXIF ExposureProgram values to human-friendly names."""
+        programs = {
+            0: "Not Defined",
+            1: "Manual",
+            2: "Normal Program",
+            3: "Aperture Priority",
+            4: "Shutter Priority",
+            5: "Creative Program",
+            6: "Action Program",
+            7: "Portrait Mode",
+            8: "Landscape Mode",
+        }
+        if value is None:
+            return "unknown"
+        if isinstance(value, int):
+            return programs.get(value, f"Unknown ({value})")
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.isdigit():
+                try:
+                    return programs.get(int(stripped), f"Unknown ({stripped})")
+                except ValueError:
+                    pass
+            return stripped or "unknown"
+        return str(value)
+
     def _generate_key_findings(self) -> None:
         """Generate key findings summary for Sarah"""
         findings = []

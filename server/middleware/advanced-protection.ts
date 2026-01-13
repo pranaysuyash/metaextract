@@ -84,7 +84,16 @@ export async function advancedProtectionMiddleware(
     // Generate browser fingerprint
     let fingerprint: EnhancedFingerprint | undefined;
     if (PROTECTION_CONFIG.BROWSER_FINGERPRINTING) {
-      const clientData = req.body.fingerprintData; // Client-side fingerprint data
+      const clientDataRaw =
+        (req as any).body?.fingerprintData ?? (req as any).body?.fingerprint;
+      let clientData: any = clientDataRaw;
+      if (typeof clientDataRaw === 'string') {
+        try {
+          clientData = JSON.parse(clientDataRaw);
+        } catch {
+          clientData = undefined;
+        }
+      }
       fingerprint = await generateFingerprint(req, clientData);
     }
 

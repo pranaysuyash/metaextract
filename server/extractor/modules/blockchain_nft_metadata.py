@@ -55,9 +55,12 @@ def extract_blockchain_nft_metadata(filepath: str) -> Dict[str, Any]:
 
     Supports NFT metadata, smart contracts, wallet files, and blockchain data.
     """
-    result = {}
+    result: Dict[str, Any] = {}
 
     try:
+        if not Path(filepath).exists():
+            return {"blockchain_extraction_error": f"File not found: {filepath}"}
+
         file_ext = Path(filepath).suffix.lower()
         filename = Path(filepath).name.lower()
 
@@ -284,6 +287,10 @@ def _extract_smart_contract_source(filepath: str) -> Dict[str, Any]:
 
         file_ext = Path(filepath).suffix.lower()
 
+        # Defaults (tests expect explicit booleans)
+        for feature in ["onlyOwner", "require", "assert", "modifier"]:
+            source_data[f"contract_has_{feature.lower()}"] = False
+
         # Language detection
         if file_ext == '.sol':
             source_data['contract_language'] = 'Solidity'
@@ -460,7 +467,7 @@ def _extract_general_blockchain_properties(filepath: str) -> Dict[str, Any]:
 
 def _analyze_crypto_content(filepath: str) -> Dict[str, Any]:
     """Analyze file content for cryptocurrency addresses and tokens."""
-    analysis = {}
+    analysis: Dict[str, Any] = {"potential_token_amounts": 0}
 
     try:
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -480,6 +487,7 @@ def _analyze_crypto_content(filepath: str) -> Dict[str, Any]:
         token_patterns = [
             r'\b\d+\.\d{1,18}\b',  # ETH-like decimals
             r'\b\d{1,3}(?:,\d{3})*\.\d{1,8}\b',  # USD-like decimals
+            r'\b\d{10,}\b',  # Large integers (e.g., wei amounts)
         ]
 
         token_matches = []

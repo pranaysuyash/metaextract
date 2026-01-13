@@ -115,7 +115,7 @@ export const IMAGES_MVP_CREDIT_PACKS = {
       Number(process.env.IMAGES_MVP_STARTER_PRICE_CENTS ?? 400)
     ),
     name: 'Starter Pack',
-    description: '25 standard images',
+    description: '25 image analyses',
     productId: DODO_IMAGES_MVP_PRODUCTS.starter,
   },
   pro: {
@@ -125,7 +125,7 @@ export const IMAGES_MVP_CREDIT_PACKS = {
       Number(process.env.IMAGES_MVP_PRO_PRICE_CENTS ?? 1200)
     ),
     name: 'Pro Pack',
-    description: '100 standard images',
+    description: '100 image analyses',
     productId: DODO_IMAGES_MVP_PRODUCTS.pro,
   },
 } as const;

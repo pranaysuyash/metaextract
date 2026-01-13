@@ -47,6 +47,9 @@ def extract_ar_vr_metadata(filepath: str) -> Dict[str, Any]:
     result = {}
 
     try:
+        if not filepath or not Path(filepath).exists():
+            return {"ar_vr_extraction_error": f"File not found: {filepath}"}
+
         file_ext = Path(filepath).suffix.lower()
         filename = Path(filepath).name.lower()
 
@@ -375,7 +378,13 @@ def _extract_usd_metadata(filepath: str) -> Dict[str, Any]:
         lines = content.split('\n')
 
         # Count prims
-        prim_count = sum(1 for line in lines if line.strip().startswith('def ') or line.strip().startswith('over '))
+        prim_count = 0
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("def Material"):
+                continue
+            if stripped.startswith("def ") or stripped.startswith("over "):
+                prim_count += 1
         usd_data['usd_prim_count'] = prim_count
 
         # Look for upAxis

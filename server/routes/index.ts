@@ -3,20 +3,23 @@
  *
  * Central registration for all API routes.
  * Modular organization for better maintainability.
- * 
+ *
  * SECURITY NOTICE: Legacy extraction route disabled due to memory exhaustion vulnerability
  * See: https://github.com/your-org/metaextract/security/advisories/001
+ *
+ * NOTE: The Images MVP uses credit-based pricing instead of tier subscriptions.
  */
 
 import type { Express } from 'express';
 import type { Server } from 'http';
 import { registerImagesMvpRoutes } from './images-mvp';
-import { registerExtractionRoutes } from './extraction';
-import { registerForensicRoutes } from './forensic';
-import { registerMetadataRoutes } from './metadata';
-import { registerLLMFindingsRoutes } from './llm-findings';
+// import { registerExtractionRoutes } from './extraction';
+// import { registerForensicRoutes } from './forensic';
+// import { registerMetadataRoutes } from './metadata';
+// import { registerLLMFindingsRoutes } from './llm-findings';
 import { registerTierRoutes } from './tiers';
 import { registerAdminRoutes } from './admin';
+import { registerMonitoringRoutes } from './monitoring';
 import { registerPaymentRoutes } from '../payments';
 import { registerGeocodingRoutes } from './geocoding';
 import { registerOnboardingRoutes } from './onboarding';
@@ -25,6 +28,8 @@ import { registerBatchRoutes } from './batch';
 import { rateLimitManager } from '../rateLimitRedis';
 import { rateLimitAPI } from '../rateLimitMiddleware';
 import advancedProtectionRouter from './advanced-protection';
+import enhancedProtectionRouter from './enhanced-protection';
+import adminSecurityRouter from './admin-security';
 
 /**
  * Register all API routes on the Express app.
@@ -41,8 +46,15 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  if (process.env.IMAGES_MVP_ONLY === 'true') {
+  const isImagesMvpOnly = process.env.IMAGES_MVP_ONLY === 'true';
+
+  if (isImagesMvpOnly) {
     registerImagesMvpRoutes(app);
+
+    // Advanced protection routes (Phase 1 & 2 integration)
+    app.use('/api/protection', advancedProtectionRouter);
+    app.use('/api/enhanced-protection', enhancedProtectionRouter);
+    app.use('/api/admin', adminSecurityRouter);
 
     app.get('/api/health', (_req, res) => {
       res.json({
@@ -65,19 +77,28 @@ export async function registerRoutes(
   registerImagesMvpRoutes(app);
   // SECURITY: Legacy extraction route disabled for Images MVP launch
   // registerExtractionRoutes(app); // 🚨 CRITICAL: 2GB memory storage vulnerability
-  registerForensicRoutes(app);
-  registerMetadataRoutes(app);
-  registerLLMFindingsRoutes(app);
+
+  // SECURITY: Forensic routes disabled for MVP launch (memory risk from 2GB limit)
+  // registerForensicRoutes(app);
+
+  // SECURITY: Legacy routes disabled - not needed for Images MVP
+  // registerMetadataRoutes(app);
+  // registerLLMFindingsRoutes(app);
   registerTierRoutes(app);
+  registerMonitoringRoutes(app);
+  registerBatchRoutes(app);
+
+  // These routes are still needed for the overall platform
   registerAdminRoutes(app);
   registerPaymentRoutes(app);
   registerGeocodingRoutes(app);
   registerOnboardingRoutes(app);
   registerLegalComplianceRoutes(app);
-  registerBatchRoutes(app);
 
-  // Advanced protection routes (Phase 1 integration)
+  // Advanced protection routes (Phase 1 & 2 integration)
   app.use('/api/protection', advancedProtectionRouter);
+  app.use('/api/enhanced-protection', enhancedProtectionRouter);
+  app.use('/api/admin', adminSecurityRouter);
 
   return httpServer;
 }
@@ -86,5 +107,5 @@ export async function registerRoutes(
 export { registerExtractionRoutes } from './extraction';
 export { registerForensicRoutes } from './forensic';
 export { registerMetadataRoutes } from './metadata';
-export { registerTierRoutes } from './tiers';
+// Tiers routes DELETED
 export { registerAdminRoutes } from './admin';

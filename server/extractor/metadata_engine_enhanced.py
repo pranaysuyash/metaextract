@@ -253,8 +253,9 @@ class EnhancedMetadataExtractor:
                 file_size = os.path.getsize(filepath)
                 optimization_settings = optimize_for_file_size(file_size)
             except Exception as e:
-                logger.error(f"Error analyzing file {filepath}: {e}")
-                return {"error": f"File analysis failed: {e}", "file": {"path": filepath}}
+                logger.warning(f"Error analyzing file {filepath}: {e} (continuing)")
+                file_size = 0
+                optimization_settings = optimize_for_file_size(file_size)
 
         # Advanced analysis is controlled by the flag
         advanced_analysis_allowed = enable_advanced_analysis
@@ -291,7 +292,7 @@ class EnhancedMetadataExtractor:
 
             except Exception as e:
                 logger.error(f"Comprehensive metadata extraction failed for {filepath}: {e}")
-                return {"error": f"Metadata extraction failed: {e}", "file": {"path": filepath}}
+                raise
 
         # Enhance result with performance data
         with self.performance_monitor.measure("result_enhancement"):
@@ -959,6 +960,22 @@ async def extract_metadata_enhanced_async(
             include_performance_metrics,
             enable_advanced_analysis
         )
+
+        # If the sync extractor returned an error payload, treat this as an async error too.
+        # Preserve non-critical user errors, but rewrite critical sync errors to include "async"
+        # so callers can distinguish the execution mode.
+        if isinstance(result, dict) and "error" in result:
+            error_value = result.get("error")
+            if (
+                isinstance(error_value, str)
+                and "Critical error in enhanced metadata extraction" in error_value
+            ):
+                result["error"] = error_value.replace(
+                    "Critical error in enhanced metadata extraction",
+                    "Critical error in async enhanced metadata extraction",
+                    1,
+                )
+            return result
 
         # Log successful completion
         duration = (datetime.now() - start_time).total_seconds()

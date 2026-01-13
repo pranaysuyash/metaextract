@@ -58,53 +58,55 @@ def extract_pdf_metadata_complete(filepath: str) -> Dict[str, Any]:
     """
     result = {}
 
-    try:
-        # Use PyMuPDF for document structure analysis if available
-        if PYMUPDF_AVAILABLE:
+    # Use PyMuPDF for document structure analysis if available.
+    # Never let PyMuPDF issues block pypdf extraction (tests expect pypdf outlines).
+    if PYMUPDF_AVAILABLE:
+        doc = None
+        try:
             doc = fitz.open(filepath)
 
-            # Basic document properties
             result.update(_extract_basic_properties(doc))
-
-            # Page and layout information
             result.update(_extract_page_layout(doc))
-
-            # Annotations and interactive elements
             result.update(_extract_annotations(doc))
-
-            # Forms and AcroForms
             result.update(_extract_forms(doc))
-
-            # Bookmarks and outline
             result.update(_extract_bookmarks(doc))
-
-            # Embedded files and multimedia
             result.update(_extract_embedded_content(doc))
-
-            # Digital signatures
             result.update(_extract_digital_signatures(doc))
-
-            # Accessibility features
             result.update(_extract_accessibility(doc))
+        except Exception as e:
+            logger.warning(f"PyMuPDF extraction error for {filepath}: {e}")
+            result["pymupdf_extraction_error"] = str(e)
+        finally:
+            try:
+                if doc is not None:
+                    doc.close()
+            except Exception:
+                pass
+    else:
+        result["pymupdf_not_available"] = True
 
-            doc.close()
-        else:
-            result['pymupdf_not_available'] = True
-
-        # Use pypdf for XMP and additional metadata if available
-        if PYPDF_AVAILABLE:
+    # Use pypdf for XMP and additional metadata if available.
+    if PYPDF_AVAILABLE:
+        try:
             reader = PdfReader(filepath)
             result.update(_extract_xmp_metadata(reader))
             result.update(_extract_security_info(reader))
             result.update(_extract_pypdf_annotations(reader))
             result.update(_extract_pypdf_forms(reader))
             result.update(_extract_pypdf_outlines(reader))
-        else:
-            result['pypdf_not_available'] = True
+        except Exception as e:
+            logger.warning(f"pypdf extraction error for {filepath}: {e}")
+            result["pypdf_extraction_error"] = str(e)
+    else:
+        result["pypdf_not_available"] = True
 
-    except Exception as e:
-        logger.warning(f"Error extracting PDF metadata from {filepath}: {e}")
-        result['pdf_extraction_error'] = str(e)
+    # Backward-compatible aggregate error key used by older tests/callers.
+    if "pdf_extraction_error" not in result:
+        aggregate_error = result.get("pymupdf_extraction_error") or result.get(
+            "pypdf_extraction_error"
+        )
+        if aggregate_error:
+            result["pdf_extraction_error"] = aggregate_error
 
     return result
 
@@ -124,7 +126,8 @@ def _extract_basic_properties(doc) -> Dict[str, Any]:
         'pdf_modification_date': metadata.get('modDate', ''),
         'pdf_keywords': metadata.get('keywords', ''),
         'pdf_page_count': len(doc),
-        'pdf_format_version': doc.version,
+        # PyMuPDF versions differ; avoid hard failure on missing attrs.
+        'pdf_format_version': getattr(doc, 'version', None),
         'pdf_is_encrypted': doc.is_encrypted,
         'pdf_is_repaired': doc.is_repaired,
         'pdf_needs_pass': doc.needs_pass,
@@ -564,7 +567,7 @@ def get_pdf_complete_field_count() -> int:
     accessibility_fields = 3  # from _extract_accessibility
     xmp_fields = 8  # approximate from _extract_xmp_metadata
     security_fields = 4  # from _extract_security_info
-    pypdf_fields = 12  # annotations + forms + outlines (pypdf)
+    pypdf_fields = 11  # annotations + forms + outlines (pypdf) (approx)
 
     return basic_fields + page_layout_fields + annotation_fields + form_fields + \
            bookmark_fields + embedded_fields + signature_fields + accessibility_fields + \

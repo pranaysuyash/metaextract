@@ -5,6 +5,13 @@ import * as fsSync from 'fs';
 import { normalizeTier } from '@shared/tierConfig';
 import type { AuthRequest } from '../auth';
 import { isPathSafe } from '../security-utils';
+import {
+  enrichMakerNotes,
+  hasMakerNotes,
+  getMakerNotesHighlights,
+  formatMakerNotesForDisplay,
+  type MakerNotesEnrichment,
+} from './makernotes';
 
 // Get the server directory - resolve from project root
 // During tests, use process.cwd() which is the project root
@@ -281,6 +288,29 @@ export interface EmailMetadata {
   [key: string]: any;
 }
 
+export interface MakernoteDisplayField {
+  label: string;
+  value: string;
+  description?: string;
+}
+
+export interface MakerNotesHighlight {
+  text: string;
+  category: string;
+}
+
+export interface EnhancedMakerNotes {
+  raw: Record<string, any>;
+  enriched: {
+    manufacturer: string;
+    model: string;
+    deviceSpecific: Record<string, any>;
+    enrichmentLevel: 'full' | 'partial' | 'none';
+    displayFields: MakernoteDisplayField[];
+    highlights: MakerNotesHighlight[];
+  };
+}
+
 export interface FrontendMetadataResponse {
   filename: string;
   filesize: string;
@@ -301,7 +331,7 @@ export interface FrontendMetadataResponse {
   audio: Record<string, any> | null;
   pdf: Record<string, any> | null;
   svg: Record<string, any> | null;
-  makernote: Record<string, any> | null;
+  makernote: EnhancedMakerNotes | null;
   iptc: Record<string, any> | null;
   xmp: Record<string, any> | null;
   normalized?: Record<string, any> | null;
@@ -316,7 +346,6 @@ export interface FrontendMetadataResponse {
   };
   forensic_analysis_integration?: Record<string, any> | null;
   persona_interpretation?: PersonaInterpretation;
-  // Email and Communication metadata
   email: EmailMetadata | null;
   [key: string]: any;
 }
@@ -338,9 +367,10 @@ export function getSessionId(req: AuthRequest): string | null {
     typeof req.body?.session_id === 'string' ? req.body.session_id : null;
   const querySession =
     typeof req.query?.session_id === 'string' ? req.query.session_id : null;
+  const headers = (req as any)?.headers ?? {};
   const headerSession =
-    typeof req.headers['x-session-id'] === 'string'
-      ? req.headers['x-session-id']
+    typeof headers['x-session-id'] === 'string'
+      ? headers['x-session-id']
       : null;
   return bodySession || querySession || headerSession || null;
 }
@@ -448,6 +478,12 @@ export function transformMetadataForFrontend(
     location_embedded: !!cleanedGps,
   };
 
+  const makerNotesEnrichment = enrichMakerNotes({ exif: exifData } as any);
+  const hasMakerNotesData = hasMakerNotes({ exif: exifData } as any);
+  const makerNotesCount = Object.keys(
+    makerNotesEnrichment.deviceSpecific
+  ).length;
+
   const registrySummary = {
     image: {
       exif: exifData ? Object.keys(exifData).length : 0,
@@ -457,8 +493,16 @@ export function transformMetadataForFrontend(
       perceptual_hashes: raw.perceptual_hashes
         ? Object.keys(raw.perceptual_hashes).length
         : 0,
+      makernote: makerNotesCount,
     },
     email: raw.email ? Object.keys(raw.email).length - 1 : 0,
+    makerNotes: {
+      present: hasMakerNotesData,
+      manufacturer: makerNotesEnrichment.manufacturer,
+      model: makerNotesEnrichment.model,
+      enrichmentLevel: makerNotesEnrichment.enrichmentLevel,
+      highlights: getMakerNotesHighlights(makerNotesEnrichment),
+    },
   };
 
   return {
@@ -490,7 +534,17 @@ export function transformMetadataForFrontend(
     audio: raw.audio,
     pdf: raw.pdf,
     svg: raw.svg,
-    makernote: raw.makernote,
+    makernote: {
+      raw: raw.makernote || {},
+      enriched: {
+        manufacturer: makerNotesEnrichment.manufacturer,
+        model: makerNotesEnrichment.model,
+        deviceSpecific: makerNotesEnrichment.deviceSpecific,
+        enrichmentLevel: makerNotesEnrichment.enrichmentLevel,
+        displayFields: formatMakerNotesForDisplay(makerNotesEnrichment),
+        highlights: getMakerNotesHighlights(makerNotesEnrichment),
+      },
+    },
     iptc: iptcData,
     xmp: xmpData,
     normalized: raw.normalized,

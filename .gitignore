@@ -61,6 +61,9 @@ tests/scientific-test-datasets/scientific-test-datasets/
 test_datasets/
 tests/persona-files/
 tests/fixtures/*.jpg
+tests/fixtures/*.jpeg
+tests/fixtures/*.png
+tests/fixtures/*.webp
 *.nc
 *.h5
 *.hdf5

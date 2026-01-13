@@ -60,17 +60,18 @@ export async function getSecurityEvents(
       return { events: [], totalCount: 0, hasMore: false };
     }
     const raw = await storage.getSecurityEvents(filters);
-    if (!raw || Array.isArray(raw)) {
-      // Defensive fallback if storage returns unexpected shape
-      return { events: [], totalCount: 0, hasMore: false };
+    if (!raw) return { events: [], totalCount: 0, hasMore: false };
+
+    if (Array.isArray(raw)) {
+      const events = raw as SecurityEvent[];
+      return { events, totalCount: events.length, hasMore: false };
     }
 
-    const result = raw as {
+    return raw as {
       events: SecurityEvent[];
       totalCount: number;
       hasMore: boolean;
     };
-    return result;
   } catch (error) {
     console.error('[SecurityLogger] Failed to get security events:', error);
     return {

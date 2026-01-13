@@ -92,9 +92,10 @@ export function generateClientToken(): string {
  * Returns null if invalid or expired
  */
 export function verifyClientToken(
-  token: string
+  token: unknown
 ): { clientId: string; expiry: number } | null {
   try {
+    if (typeof token !== 'string' || token.length === 0) return null;
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 

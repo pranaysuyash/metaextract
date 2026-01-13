@@ -14,6 +14,11 @@ import { serveStatic } from './static';
 import { createServer } from 'http';
 import { db } from './db';
 import expressWs from 'express-ws';
+import { productionAllowlistMiddleware } from './middleware/production-allowlist';
+import {
+  cleanupOrphanedTempFiles,
+  startPeriodicCleanup,
+} from './startup-cleanup';
 
 const app = express();
 const httpServer = createServer(app);
@@ -40,6 +45,9 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Production allowlist middleware - must be before route registration
+app.use(productionAllowlistMiddleware);
 
 // Auth middleware - attaches user to request if authenticated
 // Use mock auth if database is not available
@@ -107,6 +115,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Startup: Clean up orphaned temp files
+  try {
+    log('Starting temp file cleanup...');
+    const cleanupResult = await cleanupOrphanedTempFiles();
+    if (cleanupResult.totalFilesRemoved > 0) {
+      log(`Removed ${cleanupResult.totalFilesRemoved} orphaned temp files`);
+    } else {
+      log('No orphaned temp files to clean');
+    }
+  } catch (error) {
+    console.error('Startup cleanup failed:', error);
+  }
+
   // Register auth routes - use mock auth if database is not available
   const isDatabaseAvailable = !!db;
   if (isDatabaseAvailable) {
@@ -128,13 +149,13 @@ app.use((req, res, next) => {
       message: `The endpoint ${req.originalUrl} does not exist`,
       availableEndpoints: [
         'GET /api/auth/me',
-        'POST /api/auth/register', 
+        'POST /api/auth/register',
         'POST /api/auth/login',
         'POST /api/auth/logout',
         'GET /api/extract/health',
         'POST /api/extract',
-        'POST /api/extract/batch'
-      ]
+        'POST /api/extract/batch',
+      ],
     });
   });
 
@@ -172,6 +193,11 @@ app.use((req, res, next) => {
         },
         () => {
           log(`serving on ${host}:${portToUse}`);
+
+          // Start periodic temp cleanup (every hour in production)
+          if (process.env.NODE_ENV === 'production') {
+            startPeriodicCleanup(60 * 60 * 1000);
+          }
         }
       )
       .on('error', (err: any) => {

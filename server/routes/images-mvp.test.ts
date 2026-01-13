@@ -419,6 +419,39 @@ describe('Images MVP API Tests', () => {
   });
 
   describe('POST /api/images_mvp/extract', () => {
+    it('should return a quote with schedule + breakdown (pricing contract)', async () => {
+      const response = await request(app)
+        .post('/api/images_mvp/quote')
+        .send({
+          files: [
+            {
+              id: 'file_1',
+              name: 'test.jpg',
+              mime: 'image/jpeg',
+              sizeBytes: 8,
+              width: 100,
+              height: 100,
+            },
+          ],
+          ops: { embedding: true, ocr: false, forensics: false },
+        })
+        .expect(200);
+
+      expect(response.body).toHaveProperty('quoteId');
+      expect(response.body).toHaveProperty('creditsTotal', 4);
+      expect(response.body).toHaveProperty('schedule');
+      expect(response.body.schedule).toMatchObject({
+        base: 1,
+        embedding: 3,
+        ocr: 5,
+        forensics: 4,
+      });
+      expect(response.body.perFile?.file_1).toMatchObject({
+        creditsTotal: 4,
+        breakdown: { base: 1, embedding: 3, ocr: 0, forensics: 0, mp: 0 },
+      });
+    });
+
     it('should reject non-image files', async () => {
       const response = await request(app)
         .post('/api/images_mvp/extract')
@@ -496,11 +529,54 @@ describe('Images MVP API Tests', () => {
       expect(response.body.access.trial_granted).toBe(false);
       expect(storage.useCredits).toHaveBeenCalledWith(
         'bal_1',
-        1,
+        4,
         expect.stringContaining('Extraction'),
         expect.any(String)
       );
       expect(extractMetadataWithPython).toHaveBeenCalled();
+    });
+
+    it('should charge quoted credit cost when quote_id + client_file_id provided', async () => {
+      // Trial exhausted
+      const dbClient = getDatabase() as any;
+      (dbClient.limit as jest.Mock).mockResolvedValue([{ uses: 2 }]);
+      (storage.getOrCreateCreditBalance as jest.Mock).mockResolvedValue({
+        id: 'bal_1',
+        credits: 50,
+      });
+
+      const quoteResponse = await request(app)
+        .post('/api/images_mvp/quote')
+        .send({
+          files: [
+            {
+              id: 'file_1',
+              name: 'test.jpg',
+              mime: 'image/jpeg',
+              sizeBytes: 8,
+              width: 100,
+              height: 100,
+            },
+          ],
+          ops: { embedding: true, ocr: true, forensics: false },
+        })
+        .expect(200);
+
+      await request(app)
+        .post('/api/images_mvp/extract?session_id=sess_1')
+        .field('trial_email', 'useduser@example.com')
+        .field('quote_id', quoteResponse.body.quoteId)
+        .field('client_file_id', 'file_1')
+        .attach('file', Buffer.from('fake jpg'), 'test.jpg')
+        .expect(200);
+
+      // base(1)+embedding(3)+ocr(5)=9 credits for a standard sized image
+      expect(storage.useCredits).toHaveBeenCalledWith(
+        'bal_1',
+        9,
+        expect.stringContaining('Extraction'),
+        expect.any(String)
+      );
     });
 
     it('should allow authenticated users to use account credits without session id', async () => {

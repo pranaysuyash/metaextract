@@ -4,6 +4,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
 import { getDatabase, isDatabaseConnected } from '../db';
@@ -29,6 +30,7 @@ import {
 import { requireAuth } from '../auth';
 import { getOrSetSessionId } from '../utils/session-id';
 import { freeQuotaMiddleware } from '../middleware/free-quota';
+import { enhancedProtectionMiddleware } from '../middleware/enhanced-protection';
 import {
   generateClientToken,
   verifyClientToken,
@@ -36,7 +38,25 @@ import {
   incrementUsage,
   handleQuotaExceeded,
 } from '../utils/free-quota-enforcement';
-import { IMAGES_MVP_CREDIT_PACKS, DODO_IMAGES_MVP_PRODUCTS } from '../payments';
+import {
+  calculateDeviceRiskScore,
+  getPreviousAttempts,
+  getSessionAge,
+} from '../utils/risk-calculator';
+import {
+  handleEnhancedQuotaExceeded,
+  getRecentSecurityEvents,
+  getSecurityStats,
+} from '../utils/enhanced-quota-handler';
+import { IMAGES_MVP_CREDIT_PACKS } from '../payments';
+import {
+  IMAGES_MVP_CREDIT_SCHEDULE,
+  type ImagesMvpQuoteOps,
+  computeMp,
+  computeImagesMvpCreditsTotal,
+  resolveMpBucket,
+  resolveSizeBucketFromBytes,
+} from '@shared/imagesMvpPricing';
 
 // WebSocket progress tracking
 interface ProgressConnection {
@@ -57,6 +77,71 @@ const IMAGES_MVP_QUOTES = new Map<string, any>();
 const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY;
 const IS_TEST_MODE = process.env.DODO_ENV !== 'live';
 
+const computeCreditsTotal = computeImagesMvpCreditsTotal;
+
+function parseBooleanField(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(normalized);
+  }
+  return false;
+}
+
+function parseOpsFromRequest(body: any): ImagesMvpQuoteOps {
+  const opsRaw = body?.ops ?? body ?? {};
+  return {
+    embedding:
+      typeof opsRaw.embedding === 'boolean'
+        ? opsRaw.embedding
+        : body?.op_embedding != null
+          ? parseBooleanField(body.op_embedding)
+          : true,
+    ocr:
+      typeof opsRaw.ocr === 'boolean'
+        ? opsRaw.ocr
+        : body?.op_ocr != null
+          ? parseBooleanField(body.op_ocr)
+          : false,
+    forensics:
+      typeof opsRaw.forensics === 'boolean'
+        ? opsRaw.forensics
+        : body?.op_forensics != null
+          ? parseBooleanField(body.op_forensics)
+          : false,
+  };
+}
+
+async function computeSizeCreditsFromUpload(
+  file: Express.Multer.File
+): Promise<{
+  mp: number | null;
+  mpBucket: string;
+  mpCredits: number;
+  warning?: string;
+}> {
+  try {
+    const meta = await sharp(file.buffer).metadata();
+    const mp = computeMp(meta.width ?? null, meta.height ?? null);
+    const bucket = resolveMpBucket(mp);
+    return {
+      mp,
+      mpBucket: bucket.label,
+      mpCredits: bucket.credits,
+      warning: bucket.warning,
+    };
+  } catch {
+    const bucket = resolveSizeBucketFromBytes(file.size);
+    return {
+      mp: null,
+      mpBucket: bucket.label,
+      mpCredits: bucket.credits,
+      warning: 'Dimensions unavailable; using size-based bucket estimate.',
+    };
+  }
+}
+
 function getDodoClient() {
   const key = process.env.DODO_PAYMENTS_API_KEY;
   if (!key) return null;
@@ -76,10 +161,13 @@ function broadcastProgress(
   const connections = activeConnections.get(sessionId);
   if (!connections || connections.length === 0) return;
 
+  const normalizedProgress = Math.min(100, Math.max(0, progress));
   const progressData = {
     type: 'progress',
     sessionId,
-    progress: Math.min(100, Math.max(0, progress)),
+    // Backward/forward compatible fields (client expects `percentage`)
+    progress: normalizedProgress,
+    percentage: normalizedProgress,
     message,
     stage: stage || 'processing',
     timestamp: Date.now(),
@@ -417,29 +505,132 @@ export function registerImagesMvpRoutes(app: Express) {
   app.post('/api/images_mvp/quote', async (req: Request, res: Response) => {
     try {
       const rawFiles = Array.isArray(req.body?.files) ? req.body.files : [];
-      const ops: any = {
-        embedding:
-          typeof req.body?.ops?.embedding === 'boolean'
-            ? req.body.ops.embedding
-            : true,
-        ocr: typeof req.body?.ops?.ocr === 'boolean' ? req.body.ops.ocr : false,
-        forensics:
-          typeof req.body?.ops?.forensics === 'boolean'
-            ? req.body.ops.forensics
-            : false,
-      };
+      const ops = parseOpsFromRequest(req.body);
 
-      // Simple credit calc: each file costs 1 credit, OCR adds +1 per file when enabled
-      const creditsTotal = rawFiles.reduce((sum: number, f: any) => {
-        const base = 1;
-        const ocrCost = ops.ocr ? 1 : 0;
-        return sum + base + ocrCost;
-      }, 0);
+      const MAX_FILES = 10;
+      const MAX_BYTES = 100 * 1024 * 1024;
+
+      const perFileCredits: Record<string, number> = {};
+      const perFileById: Record<
+        string,
+        {
+          id: string;
+          accepted: boolean;
+          reason?: string;
+          detected_type?: string | null;
+          creditsTotal?: number;
+          breakdown?: any;
+          mp?: number | null;
+          mpBucket?: string | null;
+          warnings?: string[];
+        }
+      > = {};
+
+      let creditsTotal = 0;
+      const limitedFiles = rawFiles.slice(0, MAX_FILES);
+      for (const file of limitedFiles) {
+        const fileId = typeof file?.id === 'string' ? file.id : null;
+        if (!fileId) continue;
+
+        const mp = computeMp(file?.width ?? null, file?.height ?? null);
+        const bucket = resolveMpBucket(mp);
+
+        const name = typeof file?.name === 'string' ? file.name : '';
+        const mime = typeof file?.mime === 'string' ? file.mime : null;
+        const sizeBytes =
+          typeof file?.sizeBytes === 'number' ? file.sizeBytes : 0;
+        const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
+
+        let accepted = true;
+        let reason: string | undefined;
+        if (sizeBytes > MAX_BYTES) {
+          accepted = false;
+          reason = 'file_too_large';
+        } else {
+          const mimeOk = !mime || SUPPORTED_IMAGE_MIMES.has(mime);
+          const extOk = !ext || SUPPORTED_IMAGE_EXTENSIONS.has(ext);
+          if (!mimeOk && !extOk) {
+            accepted = false;
+            reason = 'unsupported_type';
+          }
+        }
+
+        const warnings: string[] = [];
+        if (bucket.warning) warnings.push(bucket.warning);
+        if (!accepted && reason) warnings.push(reason);
+
+        if (accepted) {
+          const { creditsTotal: fileCreditsTotal, breakdown } =
+            computeCreditsTotal(ops, bucket.credits);
+
+          creditsTotal += fileCreditsTotal;
+          perFileCredits[fileId] = fileCreditsTotal;
+          perFileById[fileId] = {
+            id: fileId,
+            accepted: true,
+            detected_type: mime,
+            creditsTotal: fileCreditsTotal,
+            breakdown,
+            mp,
+            mpBucket: bucket.label,
+            warnings,
+          };
+        } else {
+          perFileById[fileId] = {
+            id: fileId,
+            accepted: false,
+            reason,
+            detected_type: mime,
+            mp,
+            mpBucket: bucket.label,
+            warnings,
+          };
+        }
+      }
 
       const quoteId = crypto.randomUUID();
-      IMAGES_MVP_QUOTES.set(quoteId, { files: rawFiles, ops, creditsTotal, createdAt: Date.now() });
+      const expiresAt = Date.now() + 15 * 60 * 1000;
+      IMAGES_MVP_QUOTES.set(quoteId, {
+        files: limitedFiles,
+        ops,
+        creditsTotal,
+        perFileCredits,
+        perFile: perFileById,
+        createdAt: Date.now(),
+        expiresAt,
+        schedule: IMAGES_MVP_CREDIT_SCHEDULE,
+      });
 
-      res.json({ quoteId, creditsTotal });
+      const perFileArray = Object.values(perFileById);
+      const standardCreditsPerImage =
+        IMAGES_MVP_CREDIT_SCHEDULE.base + IMAGES_MVP_CREDIT_SCHEDULE.embedding;
+
+      res.json({
+        quoteId,
+        creditsTotal,
+        perFile: perFileById,
+        schedule: IMAGES_MVP_CREDIT_SCHEDULE,
+        // Backward-compatible shape used by older Images MVP client:
+        limits: {
+          maxBytes: MAX_BYTES,
+          allowedMimes: Array.from(SUPPORTED_IMAGE_MIMES),
+          maxFiles: MAX_FILES,
+        },
+        creditSchedule: {
+          ...IMAGES_MVP_CREDIT_SCHEDULE,
+          standardCreditsPerImage,
+        },
+        quote: {
+          perFile: perFileArray,
+          totalCredits: creditsTotal,
+          standardEquivalents:
+            standardCreditsPerImage > 0
+              ? Math.ceil(creditsTotal / standardCreditsPerImage)
+              : null,
+        },
+        expiresAt: new Date(expiresAt).toISOString(),
+        warnings: [],
+      });
     } catch (error) {
       console.error('ImagesMVP quote error:', error);
       res.status(500).json({ error: 'Failed to create quote' });
@@ -730,7 +921,9 @@ export function registerImagesMvpRoutes(app: Express) {
 
         // Fallback: parse cookie header if express cookie parsing not present in test env
         if (!rawSessionId && typeof req.headers?.cookie === 'string') {
-          const match = req.headers.cookie.match(/metaextract_session_id=([^;\s]+)/);
+          const match = req.headers.cookie.match(
+            /metaextract_session_id=([^;\s]+)/
+          );
           if (match) rawSessionId = match[1];
         }
 
@@ -755,8 +948,10 @@ export function registerImagesMvpRoutes(app: Express) {
 
         // Use the namespaced ID for looking up balance
         const namespacedSessionId = getImagesMvpBalanceId(rawSessionId);
-        const balance =
-          await storage.getOrCreateCreditBalance(namespacedSessionId, undefined);
+        const balance = await storage.getOrCreateCreditBalance(
+          namespacedSessionId,
+          undefined
+        );
 
         res.json({
           credits: balance.credits,
@@ -793,7 +988,9 @@ export function registerImagesMvpRoutes(app: Express) {
         // If user is authenticated, use their user balance; otherwise sessionId required
         let namespacedSessionId: string;
         if ((req as any).user?.id) {
-          namespacedSessionId = getImagesMvpBalanceId(`user:${(req as any).user.id}`);
+          namespacedSessionId = getImagesMvpBalanceId(
+            `user:${(req as any).user.id}`
+          );
         } else {
           if (!sessionId) {
             return res.status(400).json({ error: 'Session ID required' });
@@ -801,8 +998,10 @@ export function registerImagesMvpRoutes(app: Express) {
           namespacedSessionId = getImagesMvpBalanceId(sessionId);
         }
 
-        const balance =
-          await storage.getOrCreateCreditBalance(namespacedSessionId, undefined);
+        const balance = await storage.getOrCreateCreditBalance(
+          namespacedSessionId,
+          undefined
+        );
         const packInfo =
           IMAGES_MVP_CREDIT_PACKS[pack as keyof typeof IMAGES_MVP_CREDIT_PACKS];
 
@@ -876,10 +1075,18 @@ export function registerImagesMvpRoutes(app: Express) {
           return res.json({ transferred: 0 });
         }
 
-        const toBalance = await storage.getOrCreateCreditBalance(toKey, authReq.user.id);
+        const toBalance = await storage.getOrCreateCreditBalance(
+          toKey,
+          authReq.user.id
+        );
 
         const amount = fromBalance.credits;
-        await storage.transferCredits(fromBalance.id, toBalance.id, amount, `Claimed from ${fromKey}`);
+        await storage.transferCredits(
+          fromBalance.id,
+          toBalance.id,
+          amount,
+          `Claimed from ${fromKey}`
+        );
 
         res.json({ transferred: amount });
       } catch (error) {
@@ -908,6 +1115,7 @@ export function registerImagesMvpRoutes(app: Express) {
         next();
       });
     },
+    enhancedProtectionMiddleware,
     async (req: Request, res: Response) => {
       const startTime = Date.now();
       let tempPath: string | null = null;
@@ -915,9 +1123,6 @@ export function registerImagesMvpRoutes(app: Express) {
       let creditBalanceId: string | null = null;
       let useTrial = false;
       let chargeCredits = false;
-
-      // Fixed cost for MVP
-      const creditCost = 1;
 
       try {
         if (!req.file) {
@@ -935,6 +1140,56 @@ export function registerImagesMvpRoutes(app: Express) {
           // Return a 403 with clear unsupported file type response for security
           return sendUnsupportedFileTypeError(res, 'File type not permitted');
         }
+
+        // Determine pricing inputs (quote overrides request ops).
+        const quoteId = req.body?.quote_id;
+        const clientFileId = req.body?.client_file_id;
+
+        let ops = parseOpsFromRequest(req.body);
+        let quotedCreditCost: number | null = null;
+
+        if (quoteId) {
+          const quote = IMAGES_MVP_QUOTES.get(quoteId);
+          if (quote && typeof quote.ops === 'object') {
+            ops = {
+              embedding: !!quote.ops.embedding,
+              ocr: !!quote.ops.ocr,
+              forensics: !!quote.ops.forensics,
+            };
+          }
+          if (clientFileId && quote?.perFileCredits?.[clientFileId] != null) {
+            const candidate = Number(quote.perFileCredits[clientFileId]);
+            if (Number.isFinite(candidate) && candidate > 0) {
+              quotedCreditCost = candidate;
+            }
+          }
+        }
+
+        // Compute size bucket from either quoted dimensions (preferred) or from upload buffer.
+        let mpCredits = 0;
+        let mpCreditsResolved = false;
+        if (quoteId && clientFileId) {
+          const quote = IMAGES_MVP_QUOTES.get(quoteId);
+          const quotedFile = Array.isArray(quote?.files)
+            ? quote.files.find((f: any) => f?.id === clientFileId)
+            : null;
+          if (quotedFile) {
+            const mp = computeMp(
+              quotedFile.width ?? null,
+              quotedFile.height ?? null
+            );
+            const bucket = resolveMpBucket(mp);
+            mpCredits = bucket.credits;
+            mpCreditsResolved = true;
+          }
+        }
+        if (!mpCreditsResolved) {
+          const size = await computeSizeCreditsFromUpload(req.file);
+          mpCredits = size.mpCredits;
+        }
+
+        const { creditsTotal } = computeCreditsTotal(ops, mpCredits);
+        const creditCost = quotedCreditCost ?? creditsTotal;
 
         const trialEmail = normalizeEmail(
           req.body?.trial_email ?? req.body?.access_email
@@ -974,8 +1229,10 @@ export function registerImagesMvpRoutes(app: Express) {
 
           if (sessionId) {
             const namespacedSessionId = getImagesMvpBalanceId(sessionId);
-            const balance =
-              await storage.getOrCreateCreditBalance(namespacedSessionId, undefined);
+            const balance = await storage.getOrCreateCreditBalance(
+              namespacedSessionId,
+              undefined
+            );
             creditBalanceId = balance?.id ?? null;
 
             if (!balance || balance.credits < creditCost) {
@@ -989,7 +1246,10 @@ export function registerImagesMvpRoutes(app: Express) {
             // Authenticated user - use account credits
             const userId = (req as any).user.id as string;
             const namespaced = getImagesMvpBalanceId(`user:${userId}`);
-            const balance = await storage.getOrCreateCreditBalance(namespaced, userId);
+            const balance = await storage.getOrCreateCreditBalance(
+              namespaced,
+              userId
+            );
             creditBalanceId = balance?.id ?? null;
 
             if (!balance || balance.credits < creditCost) {
@@ -1037,17 +1297,7 @@ export function registerImagesMvpRoutes(app: Express) {
           );
         }
 
-        // Respect any quote-provided ops (like OCR off)
-        const quoteId = req.body?.quote_id;
-        let runOcr = true;
-        if (quoteId) {
-          const quote = IMAGES_MVP_QUOTES.get(quoteId);
-          if (quote && typeof quote.ops === 'object') {
-            runOcr = !!quote.ops.ocr;
-          }
-        }
-
-        const extractorOptions = { ocr: runOcr, maxDim: 2048 };
+        const extractorOptions = { ocr: ops.ocr, maxDim: 2048 };
 
         const rawMetadata = await extractMetadataWithPython(
           tempPath,
@@ -1255,8 +1505,8 @@ export function registerImagesMvpRoutes(app: Express) {
 
           if (currentCount >= 2) {
             // CONFIG.FREE_LIMIT
-            // Quota exceeded - show appropriate response
-            await handleQuotaExceeded(req, res, decoded.clientId, ip);
+            // Quota exceeded - use enhanced risk-based escalation
+            await handleEnhancedQuotaExceeded(req, res, decoded.clientId, ip);
             return;
           }
 

@@ -1,28 +1,31 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/lib/auth";
-import { OnboardingProvider } from "@/lib/onboarding";
-import { ThemeProvider } from "@/lib/theme-provider";
-import { TutorialOverlay, useTutorialOverlay } from "@/components/tutorial-overlay";
-import { ContextAdapterProvider } from "@/context/ContextAdapter";
-import { ErrorBoundary } from "@/components/error-boundary";
-import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
-import Results from "@/pages/results";
-import ResultsV2 from "@/pages/results-v2";
-import ImagesMvpLanding from "@/pages/images-mvp";
-import ImagesMvpResults from "@/pages/images-mvp/results";
-import ImagesMvpCreditsSuccess from "@/pages/images-mvp/credits-success";
-import ImagesMvpAnalytics from "@/pages/images-mvp/analytics";
-import DashboardImproved from "@/pages/dashboard-improved";
-import CheckoutSuccess from "@/pages/checkout-success";
-import CreditsSuccess from "@/pages/credits-success";
-import PrivacyPolicy from "@/pages/privacy-policy";
-import TermsOfService from "@/pages/terms-of-service";
-import GDPRCompliance from "@/pages/gdpr-compliance";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { queryClient } from './lib/queryClient';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider, useAuth } from '@/lib/auth';
+import { OnboardingProvider } from '@/lib/onboarding';
+import { ThemeProvider } from '@/lib/theme-provider';
+import {
+  TutorialOverlay,
+  useTutorialOverlay,
+} from '@/components/tutorial-overlay';
+import { ContextAdapterProvider } from '@/context/ContextAdapter';
+import { ErrorBoundary } from '@/components/error-boundary';
+import NotFound from '@/pages/not-found';
+import Home from '@/pages/home';
+import Results from '@/pages/results';
+import ResultsV2 from '@/pages/results-v2';
+import ImagesMvpLanding from '@/pages/images-mvp';
+import ImagesMvpResults from '@/pages/images-mvp/results';
+import ImagesMvpCreditsSuccess from '@/pages/images-mvp/credits-success';
+import ImagesMvpAnalytics from '@/pages/images-mvp/analytics';
+import DashboardImproved from '@/pages/dashboard-improved';
+import CheckoutSuccess from '@/pages/checkout-success';
+import CreditsSuccess from '@/pages/credits-success';
+import PrivacyPolicy from '@/pages/privacy-policy';
+import TermsOfService from '@/pages/terms-of-service';
+import GDPRCompliance from '@/pages/gdpr-compliance';
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -64,7 +67,7 @@ function AppRouter() {
 
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Navigate to="/images_mvp" replace />} />
           <Route
             path="/settings"
             element={
@@ -73,7 +76,10 @@ function AppRouter() {
               </ProtectedRoute>
             }
           />
-          <Route path="/dashboard" element={<Navigate to="/settings" replace />} />
+          <Route
+            path="/dashboard"
+            element={<Navigate to="/settings" replace />}
+          />
           <Route path="/results" element={<Results />} />
           <Route path="/results-v2" element={<ResultsV2 />} />
           <Route
@@ -94,12 +100,30 @@ function AppRouter() {
           />
           <Route path="/images_mvp" element={<ImagesMvpLanding />} />
           <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
-          <Route path="/images_mvp/credits/success" element={<ImagesMvpCreditsSuccess />} />
-          <Route path="/images_mvp/analytics" element={<ImagesMvpAnalytics />} />
-          <Route path="/images-mvp" element={<Navigate to="/images_mvp" replace />} />
-          <Route path="/images-mvp/results" element={<Navigate to="/images_mvp/results" replace />} />
-          <Route path="/images-mvp/credits/success" element={<Navigate to="/images_mvp/credits/success" replace />} />
-          <Route path="/images-mvp/analytics" element={<Navigate to="/images_mvp/analytics" replace />} />
+          <Route
+            path="/images_mvp/credits/success"
+            element={<ImagesMvpCreditsSuccess />}
+          />
+          <Route
+            path="/images_mvp/analytics"
+            element={<ImagesMvpAnalytics />}
+          />
+          <Route
+            path="/images-mvp"
+            element={<Navigate to="/images_mvp" replace />}
+          />
+          <Route
+            path="/images-mvp/results"
+            element={<Navigate to="/images_mvp/results" replace />}
+          />
+          <Route
+            path="/images-mvp/credits/success"
+            element={<Navigate to="/images_mvp/credits/success" replace />}
+          />
+          <Route
+            path="/images-mvp/analytics"
+            element={<Navigate to="/images_mvp/analytics" replace />}
+          />
 
           {/* Legal Compliance Routes */}
           <Route path="/privacy" element={<PrivacyPolicy />} />

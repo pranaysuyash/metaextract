@@ -136,7 +136,16 @@ export interface IStorage {
 
   // Security / monitoring helpers
   logSecurityEvent?(event: any): Promise<void>;
-  getSecurityEvents?(filters?: Record<string, any>): Promise<any[]>;
+  getSecurityEvents?(
+    filters?: Record<string, any>
+  ): Promise<
+    | any[]
+    | {
+        events: any[];
+        totalCount: number;
+        hasMore: boolean;
+      }
+  >;
 
   // Fingerprint storage helpers
   storeFingerprint?(fingerprint: any): Promise<void>;

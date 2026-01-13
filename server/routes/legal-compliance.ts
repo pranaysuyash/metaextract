@@ -1,6 +1,6 @@
 /**
  * Legal Compliance Routes for MetaExtract
- * 
+ *
  * Handles legal compliance endpoints including:
  * - Privacy policy
  * - Terms of service
@@ -86,9 +86,10 @@ We use your information for the following purposes:
 ## Data Retention and Deletion
 
 ### File Data
-- Uploaded files are deleted immediately after processing
+- Uploaded files are stored temporarily for processing and automatically deleted after 1 hour
 - Metadata results are retained for 30 days unless you have an active subscription
 - For subscribed users, data retention follows your selected plan
+- Temporary files are removed by automated cleanup processes that run periodically
 
 ### Account Data
 - Account information is retained as long as your account remains active
@@ -235,11 +236,18 @@ Address: [Company Address]
 
 async function handleGDPRAccessRequest(userId: string): Promise<any> {
   // Retrieve all personal data associated with the user (guarding for optional storage implementations)
-  const userData = typeof storage.getUserById === 'function' ? await storage.getUserById(userId) : null;
-  const creditBalance = typeof storage.getCreditBalance === 'function' ? await storage.getCreditBalance(userId) : null;
-  const extractionHistory = typeof storage.getExtractionHistoryByUser === 'function'
-    ? await storage.getExtractionHistoryByUser(userId, 100)
-    : [];
+  const userData =
+    typeof storage.getUserById === 'function'
+      ? await storage.getUserById(userId)
+      : null;
+  const creditBalance =
+    typeof storage.getCreditBalance === 'function'
+      ? await storage.getCreditBalance(userId)
+      : null;
+  const extractionHistory =
+    typeof storage.getExtractionHistoryByUser === 'function'
+      ? await storage.getExtractionHistoryByUser(userId, 100)
+      : [];
 
   return {
     userData: userData
@@ -262,16 +270,23 @@ async function handleGDPRErasureRequest(userId: string): Promise<void> {
   if (typeof storage.anonymizeUserData === 'function') {
     await storage.anonymizeUserData(userId);
   } else {
-    console.warn('[GDPR] anonymizeUserData not implemented on storage - skipping');
+    console.warn(
+      '[GDPR] anonymizeUserData not implemented on storage - skipping'
+    );
   }
 }
 
-async function handleGDPRRectificationRequest(userId: string, updates: any): Promise<void> {
+async function handleGDPRRectificationRequest(
+  userId: string,
+  updates: any
+): Promise<void> {
   // Update user data as requested
   if (typeof storage.updateUserProfile === 'function') {
     await storage.updateUserProfile(userId, updates);
   } else {
-    console.warn('[GDPR] updateUserProfile not implemented on storage - skipping');
+    console.warn(
+      '[GDPR] updateUserProfile not implemented on storage - skipping'
+    );
   }
 }
 
@@ -284,75 +299,93 @@ export function registerLegalComplianceRoutes(app: Express): void {
   const legalRateLimiter = rateLimitAPI();
 
   // Privacy Policy
-  app.get('/api/legal/privacy', legalRateLimiter, (_req: Request, res: Response) => {
-    res.json({
-      version: PRIVACY_POLICY_VERSION,
-      lastUpdated: PRIVACY_POLICY_LAST_UPDATED,
-      content: privacyPolicyContent,
-    });
-  });
+  app.get(
+    '/api/legal/privacy',
+    legalRateLimiter,
+    (_req: Request, res: Response) => {
+      res.json({
+        version: PRIVACY_POLICY_VERSION,
+        lastUpdated: PRIVACY_POLICY_LAST_UPDATED,
+        content: privacyPolicyContent,
+      });
+    }
+  );
 
   // Terms of Service
-  app.get('/api/legal/terms', legalRateLimiter, (_req: Request, res: Response) => {
-    res.json({
-      version: TERMS_OF_SERVICE_VERSION,
-      lastUpdated: TERMS_OF_SERVICE_LAST_UPDATED,
-      content: termsOfServiceContent,
-    });
-  });
+  app.get(
+    '/api/legal/terms',
+    legalRateLimiter,
+    (_req: Request, res: Response) => {
+      res.json({
+        version: TERMS_OF_SERVICE_VERSION,
+        lastUpdated: TERMS_OF_SERVICE_LAST_UPDATED,
+        content: termsOfServiceContent,
+      });
+    }
+  );
 
   // GDPR Compliance Requests (authenticated users only)
-  app.post('/api/legal/gdpr', authenticateToken, legalRateLimiter, async (req: Request, res: Response) => {
-    try {
-      const validationResult = gdprRequestSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: validationResult.error.flatten().fieldErrors,
+  app.post(
+    '/api/legal/gdpr',
+    authenticateToken,
+    legalRateLimiter,
+    async (req: Request, res: Response) => {
+      try {
+        const validationResult = gdprRequestSchema.safeParse(req.body);
+        if (!validationResult.success) {
+          return res.status(400).json({
+            error: 'Validation failed',
+            details: validationResult.error.flatten().fieldErrors,
+          });
+        }
+
+        const { requestType, reason } = validationResult.data;
+        const userId = (req as any).user.id;
+
+        let result;
+        switch (requestType) {
+          case 'access':
+            result = await handleGDPRAccessRequest(userId);
+            break;
+          case 'rectification':
+            // For rectification, we need the updates in the request
+            if (!req.body.updates) {
+              return res
+                .status(400)
+                .json({ error: 'Updates required for rectification request' });
+            }
+            await handleGDPRRectificationRequest(userId, req.body.updates);
+            result = { success: true, message: 'Data rectification completed' };
+            break;
+          case 'erasure':
+            await handleGDPRErasureRequest(userId);
+            result = { success: true, message: 'Data erasure completed' };
+            break;
+          case 'portability':
+            result = await handleGDPRAccessRequest(userId);
+            break;
+          default:
+            return res.status(400).json({ error: 'Invalid request type' });
+        }
+
+        res.json({
+          success: true,
+          requestType,
+          result,
         });
+      } catch (error) {
+        console.error('GDPR request error:', error);
+        res.status(500).json({ error: 'GDPR request failed' });
       }
-
-      const { requestType, reason } = validationResult.data;
-      const userId = (req as any).user.id;
-
-      let result;
-      switch (requestType) {
-        case 'access':
-          result = await handleGDPRAccessRequest(userId);
-          break;
-        case 'rectification':
-          // For rectification, we need the updates in the request
-          if (!req.body.updates) {
-            return res.status(400).json({ error: 'Updates required for rectification request' });
-          }
-          await handleGDPRRectificationRequest(userId, req.body.updates);
-          result = { success: true, message: 'Data rectification completed' };
-          break;
-        case 'erasure':
-          await handleGDPRErasureRequest(userId);
-          result = { success: true, message: 'Data erasure completed' };
-          break;
-        case 'portability':
-          result = await handleGDPRAccessRequest(userId);
-          break;
-        default:
-          return res.status(400).json({ error: 'Invalid request type' });
-      }
-
-      res.json({
-        success: true,
-        requestType,
-        result,
-      });
-    } catch (error) {
-      console.error('GDPR request error:', error);
-      res.status(500).json({ error: 'GDPR request failed' });
     }
-  });
+  );
 
   // Data Processing Agreement (DPA)
-  app.get('/api/legal/dpa', legalRateLimiter, (_req: Request, res: Response) => {
-    const dpaContent = `
+  app.get(
+    '/api/legal/dpa',
+    legalRateLimiter,
+    (_req: Request, res: Response) => {
+      const dpaContent = `
 # Data Processing Agreement (DPA)
 
 **Effective Date:** ${new Date().toISOString().split('T')[0]}
@@ -398,16 +431,20 @@ Controller has the right to audit Processor's compliance with this DPA annually.
 This DPA remains in effect as long as personal data is processed on behalf of Controller.
     `;
 
-    res.json({
-      version: '1.0.0',
-      lastUpdated: new Date().toISOString().split('T')[0],
-      content: dpaContent,
-    });
-  });
+      res.json({
+        version: '1.0.0',
+        lastUpdated: new Date().toISOString().split('T')[0],
+        content: dpaContent,
+      });
+    }
+  );
 
   // Cookie Policy
-  app.get('/api/legal/cookies', legalRateLimiter, (_req: Request, res: Response) => {
-    const cookiePolicyContent = `
+  app.get(
+    '/api/legal/cookies',
+    legalRateLimiter,
+    (_req: Request, res: Response) => {
+      const cookiePolicyContent = `
 # Cookie Policy for MetaExtract
 
 **Last Updated:** ${new Date().toISOString().split('T')[0]}
@@ -445,16 +482,20 @@ You can control and manage cookies in several ways:
 We may update this cookie policy periodically. Continued use of our service constitutes acceptance of any changes.
     `;
 
-    res.json({
-      version: '1.0.0',
-      lastUpdated: new Date().toISOString().split('T')[0],
-      content: cookiePolicyContent,
-    });
-  });
+      res.json({
+        version: '1.0.0',
+        lastUpdated: new Date().toISOString().split('T')[0],
+        content: cookiePolicyContent,
+      });
+    }
+  );
 
   // Acceptable Use Policy
-  app.get('/api/legal/aup', legalRateLimiter, (_req: Request, res: Response) => {
-    const aupContent = `
+  app.get(
+    '/api/legal/aup',
+    legalRateLimiter,
+    (_req: Request, res: Response) => {
+      const aupContent = `
 # Acceptable Use Policy for MetaExtract
 
 **Last Updated:** ${new Date().toISOString().split('T')[0]}
@@ -481,12 +522,13 @@ Violations of this policy may result in:
 If you discover a violation of this policy, please report it to: abuse@metaextract.com
     `;
 
-    res.json({
-      version: '1.0.0',
-      lastUpdated: new Date().toISOString().split('T')[0],
-      content: aupContent,
-    });
-  });
+      res.json({
+        version: '1.0.0',
+        lastUpdated: new Date().toISOString().split('T')[0],
+        content: aupContent,
+      });
+    }
+  );
 
   console.log('✅ Legal compliance routes registered');
 }
