@@ -1068,4 +1068,9 @@ export function registerAuthRoutes(app: Express) {
 }
 
 // Backwards-compatible re-exports from auth-enhanced
-export { authenticateToken, authenticateRefreshToken, loginLimiter, apiLimiter } from './auth-enhanced';
+export {
+  authenticateToken,
+  authenticateRefreshToken,
+  loginLimiter,
+  apiLimiter,
+} from './auth-enhanced';

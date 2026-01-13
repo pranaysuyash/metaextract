@@ -22,11 +22,11 @@ const DODO_WEBHOOK_SECRET =
 const IS_TEST_MODE = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live';
 
 function getDodoClient() {
-  const apiKey =
-    process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
-  const env = (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
-    ? 'test_mode'
-    : 'live_mode';
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY || process.env.DOOD_API_KEY;
+  const env =
+    (process.env.DODO_ENV || process.env.DOOD_ENV) !== 'live'
+      ? 'test_mode'
+      : 'live_mode';
   if (!apiKey) return null;
 
   const cacheKey = `${apiKey}:${env}`;
@@ -166,17 +166,19 @@ const processedWebhooks = new Map<string, number>();
 // Clean up old entries every 1 hour (webhooks expire after 5 min anyway)
 // In tests, avoid keeping the event loop alive (Jest sets JEST_WORKER_ID).
 if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
-  const timer = setInterval(() => {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    for (const [webhookId, processedTime] of processedWebhooks.entries()) {
-      if (processedTime < oneHourAgo) {
-        processedWebhooks.delete(webhookId);
+  const timer = setInterval(
+    () => {
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+      for (const [webhookId, processedTime] of processedWebhooks.entries()) {
+        if (processedTime < oneHourAgo) {
+          processedWebhooks.delete(webhookId);
+        }
       }
-    }
-  }, 60 * 60 * 1000);
+    },
+    60 * 60 * 1000
+  );
   timer.unref?.();
 }
-
 
 // ============================================================================
 // Route Registration
@@ -287,7 +289,8 @@ export function registerPaymentRoutes(app: Express) {
       if (!authReq.user?.id) {
         return res.status(401).json({
           error: 'Authentication required',
-          message: 'Please sign in to purchase credits so they are available across devices.',
+          message:
+            'Please sign in to purchase credits so they are available across devices.',
         });
       }
 
@@ -361,7 +364,8 @@ export function registerPaymentRoutes(app: Express) {
       } else {
         // If no sessionId was provided, still use a stable cookie session id.
         const cookieSessionId = getOrSetSessionId(req, res);
-        const legacy = await storage.getCreditBalanceBySessionId(cookieSessionId);
+        const legacy =
+          await storage.getCreditBalanceBySessionId(cookieSessionId);
         balanceKey = legacy
           ? cookieSessionId
           : getCoreBalanceKeyForSession(cookieSessionId);
@@ -392,7 +396,9 @@ export function registerPaymentRoutes(app: Express) {
       }
 
       const cookieSessionId = getOrSetSessionId(req, res);
-      const fromKey = (await storage.getCreditBalanceBySessionId(cookieSessionId))
+      const fromKey = (await storage.getCreditBalanceBySessionId(
+        cookieSessionId
+      ))
         ? cookieSessionId
         : getCoreBalanceKeyForSession(cookieSessionId);
       const toKey = getCoreBalanceKeyForUser(authReq.user.id);
@@ -487,7 +493,9 @@ export function registerPaymentRoutes(app: Express) {
             ? Number(req.body.credits)
             : 100;
       if (!Number.isFinite(amount) || amount <= 0) {
-        return res.status(400).json({ error: 'credits must be a positive number' });
+        return res
+          .status(400)
+          .json({ error: 'credits must be a positive number' });
       }
 
       let balanceKey: string;
@@ -495,7 +503,8 @@ export function registerPaymentRoutes(app: Express) {
         balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
       } else {
         const cookieSessionId = getOrSetSessionId(req, res);
-        const legacy = await storage.getCreditBalanceBySessionId(cookieSessionId);
+        const legacy =
+          await storage.getCreditBalanceBySessionId(cookieSessionId);
         balanceKey = legacy
           ? cookieSessionId
           : getCoreBalanceKeyForSession(cookieSessionId);

@@ -357,16 +357,18 @@ export async function handleQuotaExceeded(
     // Respond based on abuse score
     if (abuseScore > CONFIG.ABUSE_SCORE_THRESHOLD) {
       // High abuse score - require CAPTCHA (treat as quota exceeded for now)
-      return sendQuotaExceededError(
+      sendQuotaExceededError(
         res,
         'Free limit reached on this device. Complete verification to continue.'
       );
+      return;
     } else {
       // Normal quota exceeded - show paywall
-      return sendQuotaExceededError(
+      sendQuotaExceededError(
         res,
         'Free limit reached on this device. Purchase credits to continue.'
       );
+      return;
     }
   } catch (error) {
     console.error('Quota exceeded handling error:', error);

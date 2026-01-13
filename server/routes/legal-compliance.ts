@@ -234,19 +234,23 @@ Address: [Company Address]
 // ============================================================================
 
 async function handleGDPRAccessRequest(userId: string): Promise<any> {
-  // Retrieve all personal data associated with the user
-  const userData = await storage.getUserById(userId);
-  const creditBalance = await storage.getCreditBalance(userId);
-  const extractionHistory = await storage.getExtractionHistory(userId, { limit: 100 });
-  
+  // Retrieve all personal data associated with the user (guarding for optional storage implementations)
+  const userData = typeof storage.getUserById === 'function' ? await storage.getUserById(userId) : null;
+  const creditBalance = typeof storage.getCreditBalance === 'function' ? await storage.getCreditBalance(userId) : null;
+  const extractionHistory = typeof storage.getExtractionHistoryByUser === 'function'
+    ? await storage.getExtractionHistoryByUser(userId, 100)
+    : [];
+
   return {
-    userData: {
-      id: userData.id,
-      email: userData.email,
-      username: userData.username,
-      createdAt: userData.createdAt,
-      updatedAt: userData.updatedAt,
-    },
+    userData: userData
+      ? {
+          id: userData.id,
+          email: userData.email,
+          username: userData.username,
+          createdAt: userData.createdAt,
+          updatedAt: (userData as any).updatedAt ?? null,
+        }
+      : null,
     creditData: creditBalance,
     extractionHistory,
     timestamp: new Date().toISOString(),
@@ -255,12 +259,20 @@ async function handleGDPRAccessRequest(userId: string): Promise<any> {
 
 async function handleGDPRErasureRequest(userId: string): Promise<void> {
   // Anonymize or delete user data according to retention policies
-  await storage.anonymizeUserData(userId);
+  if (typeof storage.anonymizeUserData === 'function') {
+    await storage.anonymizeUserData(userId);
+  } else {
+    console.warn('[GDPR] anonymizeUserData not implemented on storage - skipping');
+  }
 }
 
 async function handleGDPRRectificationRequest(userId: string, updates: any): Promise<void> {
   // Update user data as requested
-  await storage.updateUserProfile(userId, updates);
+  if (typeof storage.updateUserProfile === 'function') {
+    await storage.updateUserProfile(userId, updates);
+  } else {
+    console.warn('[GDPR] updateUserProfile not implemented on storage - skipping');
+  }
 }
 
 // ============================================================================
@@ -268,14 +280,8 @@ async function handleGDPRRectificationRequest(userId: string, updates: any): Pro
 // ============================================================================
 
 export function registerLegalComplianceRoutes(app: Express): void {
-  // Rate limit for legal endpoints
-  const legalRateLimiter = rateLimitAPI({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests for legal pages, please try again later',
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
+  // Rate limit for legal endpoints (use default API settings)
+  const legalRateLimiter = rateLimitAPI();
 
   // Privacy Policy
   app.get('/api/legal/privacy', legalRateLimiter, (_req: Request, res: Response) => {

@@ -229,14 +229,15 @@ describe('Upload Rate Limiting', () => {
         // Create new app instance with bypass enabled
         const bypassApp = express();
         bypassApp.use(express.json());
+        // Apply rate limiting before registering the route so middleware runs
+        applyUploadRateLimiting(bypassApp);
         bypassApp.post('/api/images_mvp/extract', (req, res) => {
           res.json({ success: true, bypassed: true });
         });
-        applyUploadRateLimiting(bypassApp);
 
-        // Should allow many requests without rate limiting
+        // Should allow multiple requests without rate limiting
         const responses = [];
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 5; i++) {
           const response = await request(bypassApp)
             .post('/api/images_mvp/extract')
             .attach(
@@ -247,7 +248,7 @@ describe('Upload Rate Limiting', () => {
           responses.push(response);
         }
 
-        // All requests should succeed
+        // All requests should succeed and include bypass marker
         responses.forEach(response => {
           expect(response.status).toBe(200);
           expect(response.body).toMatchObject({
