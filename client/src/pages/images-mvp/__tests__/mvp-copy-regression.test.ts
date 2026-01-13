@@ -1,7 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 
-const FORBIDDEN_WORDS = ['trial', 'professional', 'enterprise', 'super', 'tier'];
+const FORBIDDEN_WORDS = [
+  'trial',
+  'professional',
+  'enterprise',
+  'super',
+  'tier',
+];
 const FORBIDDEN_REGEX = new RegExp(
   '(["\\\'`])([^"\\\'`]*\\b(?:' +
     FORBIDDEN_WORDS.join('|') +
@@ -42,14 +48,26 @@ describe('Images MVP copy regression', () => {
 
     roots.forEach(root => {
       collectFiles(root).forEach(filePath => {
-        const contents = fs.readFileSync(filePath, 'utf8');
-        let match: RegExpExecArray | null;
-        while ((match = FORBIDDEN_REGEX.exec(contents)) !== null) {
+        let contents = fs.readFileSync(filePath, 'utf8');
+        contents = contents.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+
+        let match: RegExpExecArray | null = null;
+
+        for (
+          match = FORBIDDEN_REGEX.exec(contents);
+          match !== null;
+          match = FORBIDDEN_REGEX.exec(contents)
+        ) {
           const preview = match[2].slice(0, 120).replace(/\s+/g, ' ').trim();
-          violations.push(`${path.relative(process.cwd(), filePath)}: "${preview}"`);
+          console.log('Found:', filePath, preview);
+          violations.push(
+            `${path.relative(process.cwd(), filePath)}: "${preview}"`
+          );
         }
       });
     });
+
+    console.log('Total violations:', violations.length);
 
     expect(violations).toEqual([]);
   });

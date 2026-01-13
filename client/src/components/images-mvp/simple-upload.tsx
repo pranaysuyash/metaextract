@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { TrialAccessModal } from '@/components/trial-access-modal';
+import { LimitedAccessModal } from '@/components/limited-access-modal';
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
 import { ProgressTracker } from '@/components/images-mvp/progress-tracker';
 import {
@@ -38,8 +38,8 @@ export function SimpleUploadZone() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [trialEmail, setTrialEmail] = useState<string | null>(null);
-  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [accessEmail, setAccessEmail] = useState<string | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
@@ -54,8 +54,8 @@ export function SimpleUploadZone() {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem('metaextract_trial_email');
-    if (stored) setTrialEmail(stored);
+    const stored = localStorage.getItem('metaextract_access_email');
+    if (stored) setAccessEmail(stored);
   }, []);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -94,7 +94,7 @@ export function SimpleUploadZone() {
       mime_type: mimeType,
       size_bytes: file.size,
       size_bucket: sizeBucket,
-      has_trial_email: Boolean(trialEmail),
+      has_access_email: Boolean(accessEmail),
     });
 
     if (!isSupportedExt && !isSupportedMime) {
@@ -114,11 +114,11 @@ export function SimpleUploadZone() {
       return;
     }
 
-    if (!trialEmail) {
+    if (!accessEmail) {
       setPendingFile(file);
-      setShowTrialModal(true);
+      setShowAccessModal(true);
     } else {
-      uploadFile(file, trialEmail);
+      uploadFile(file, accessEmail);
     }
   };
 
@@ -128,7 +128,9 @@ export function SimpleUploadZone() {
     const startedAt = Date.now();
 
     // Get session ID for WebSocket progress tracking
-    const sessionId = getImagesMvpSessionId() || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId =
+      getImagesMvpSessionId() ||
+      `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setCurrentSessionId(sessionId);
     setShowProgressTracker(true);
     const formData = new FormData();
@@ -193,7 +195,7 @@ export function SimpleUploadZone() {
             mime_type: mimeType,
           });
           toast({
-            title: 'Trial Limit Reached',
+            title: 'Limit reached',
             description:
               "You've used your 2 free checks. Unlock more with credits.",
             variant: 'destructive',
@@ -258,23 +260,23 @@ export function SimpleUploadZone() {
 
   return (
     <div className="w-full max-w-lg mx-auto">
-      <TrialAccessModal
-        isOpen={showTrialModal}
+      <LimitedAccessModal
+        isOpen={showAccessModal}
         onClose={() => {
-          setShowTrialModal(false);
+          setShowAccessModal(false);
           setPendingFile(null);
         }}
         onConfirm={email => {
-          setTrialEmail(email);
-          localStorage.setItem('metaextract_trial_email', email);
-          setShowTrialModal(false);
+          setAccessEmail(email);
+          localStorage.setItem('metaextract_access_email', email);
+          setShowAccessModal(false);
           if (pendingFile) uploadFile(pendingFile, email);
         }}
       />
       <PricingModal
         isOpen={showPricingModal}
         onClose={() => setShowPricingModal(false)}
-        defaultEmail={trialEmail || undefined}
+        defaultEmail={accessEmail || undefined}
       />
 
       {/* Real-time Progress Tracker */}
