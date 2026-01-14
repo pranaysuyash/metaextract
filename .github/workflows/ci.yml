@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main, master, develop]
   schedule:
-    - cron: '0 3 * * *'  # nightly at 03:00 UTC
+    - cron: '0 3 * * *' # nightly at 03:00 UTC
 
 # Sensor jobs (security/integration/e2e) are allowed to run on PRs, non-main refs, and scheduled runs (nightly)
 

@@ -31,7 +31,7 @@ done
 
 if [ "$FRONTEND" -eq 1 ]; then
   echo "== Frontend =="
-  npm ci --prefer-offline --no-audit
+  # Assumes workflow already ran `npm ci` — verify script only runs checks
   npm run check
   npm run lint
   npm run test:ci
@@ -40,10 +40,14 @@ fi
 
 if [ "$BACKEND" -eq 1 ]; then
   echo "== Backend =="
-  python -m pip install --upgrade pip
-  python -m pip install uv
-  # Use frozen sync; try dev group then fall back
-  uv sync --frozen --dev || uv sync --frozen
-  uv run ruff check . || true
-  uv run pytest -q
+  # Assumes workflow already installed deps via `uv sync` — verify script only runs checks/tests
+  if [ -d server ]; then
+    pushd server >/dev/null
+    uv run ruff check . || true
+    uv run pytest -q
+    popd >/dev/null
+  else
+    uv run ruff check . || true
+    uv run pytest -q
+  fi
 fi
