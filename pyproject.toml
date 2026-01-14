@@ -13,6 +13,9 @@ dependencies = [
     "pytest-asyncio",
     "requests",
     "psutil",
+    "scikit-learn",
+    "opencv-python",
+    "pydicom",
 ]
 
 [dependency-groups]
