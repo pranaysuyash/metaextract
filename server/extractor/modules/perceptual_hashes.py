@@ -3,6 +3,8 @@ Perceptual Hashing Module
 Visual similarity detection using multiple hash algorithms
 """
 
+from __future__ import annotations
+
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import base64
@@ -10,25 +12,15 @@ import io
 import os
 
 
-try:
-    from PIL import Image
-    import imagehash
-    phash = imagehash.phash
-    dhash = imagehash.dhash
-    ahash = imagehash.average_hash
-    whash = imagehash.whash
-    average_hash = imagehash.average_hash
-    blockhash = imagehash.average_hash
-    IMAGEHASH_AVAILABLE = True
-except ImportError:
-    Image = None
-    phash = None
-    dhash = None
-    ahash = None
-    whash = None
-    average_hash = None
-    blockhash = None
-    IMAGEHASH_AVAILABLE = True
+from PIL import Image, ImageOps
+import imagehash
+phash = imagehash.phash
+dhash = imagehash.dhash
+ahash = imagehash.average_hash
+whash = imagehash.whash
+average_hash = imagehash.average_hash
+blockhash = imagehash.average_hash
+IMAGEHASH_AVAILABLE = True
 
 
 def _load_image_for_compute(filepath: str, max_dim: int = 2048) -> Image.Image:

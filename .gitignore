@@ -29,6 +29,9 @@ npm-debug.log*
 *.swp
 *.swo
 
+# AI Assistant Instructions
+.github/copilot-instructions.md
+
 # OS
 .DS_Store
 Thumbs.db
@@ -47,6 +50,10 @@ temp/
 tmp_ocr/
 *.tmp
 .deps/
+
+# Backup files
+package-lock.json.bak
+*.bak
 
 # Test coverage
 coverage/

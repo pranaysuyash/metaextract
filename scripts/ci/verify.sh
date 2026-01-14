@@ -31,7 +31,7 @@ done
 
 if [ "$FRONTEND" -eq 1 ]; then
   echo "== Frontend =="
-  # Assumes workflow already ran `npm ci` — verify script only runs checks
+  npm ci --prefer-offline --no-audit
   npm run check
   npm run lint
   npm run test:ci
@@ -40,14 +40,7 @@ fi
 
 if [ "$BACKEND" -eq 1 ]; then
   echo "== Backend =="
-  # Assumes workflow already installed deps via `uv sync` — verify script only runs checks/tests
-  if [ -d server ]; then
-    pushd server >/dev/null
-    uv run ruff check . || true
-    uv run pytest -q
-    popd >/dev/null
-  else
-    uv run ruff check . || true
-    uv run pytest -q
-  fi
+  # Assumes CI already performed dependency sync; only run checks/tests
+  uv run ruff check . || true
+  uv run pytest -q
 fi

@@ -6,4 +6,24 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "torch>=2.9.1",
+    "pillow",
+    "numpy",
+    "ImageHash",
+    "memory-profiler",
+    "pytest-asyncio",
+    "requests",
+    "psutil",
+    "scikit-learn",
+    "opencv-python",
+    "pydicom",
+    "PyMuPDF",
+    "pypdf",
+    "astropy",
+    "netcdf4",
+]
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "pytest",
 ]
