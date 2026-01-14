@@ -71,6 +71,8 @@ jobs:
   frontend:
     name: Frontend (Node 20)
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -111,7 +113,7 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
-        if: ${{ always() && (secrets.CODECOV_TOKEN != '') && (steps.check_coverage_frontend.outputs.found == 'true') }}
+        if: ${{ always() && (env.CODECOV_TOKEN != '') && (steps.check_coverage_frontend.outputs.found == 'true') }}
         continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
@@ -126,6 +128,8 @@ jobs:
   backend:
     name: Backend (Python 3.11)
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
       matrix:
         python-version: ['3.11']
@@ -194,7 +198,7 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
-        if: ${{ always() && (secrets.CODECOV_TOKEN != '') && (steps.check_coverage_backend.outputs.found == 'true') }}
+        if: ${{ always() && (env.CODECOV_TOKEN != '') && (steps.check_coverage_backend.outputs.found == 'true') }}
         continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
