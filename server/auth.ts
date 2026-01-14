@@ -5,10 +5,7 @@
  * - User registration with email/password
  * - Login with JWT session tokens
  * - Session validation middleware
- *
- * @deprecated Tier enforcement based on subscription status is being phased out.
- * Tier-related functionality (requireTier, getEffectiveTier, /api/auth/update-tier) is marked as deprecated
- * and will be removed in a future release.
+ * - Tier enforcement based on subscription status
  */
 
 import type { Express, Request, Response, NextFunction } from 'express';
@@ -122,11 +119,8 @@ export interface AuthUser {
   id: string;
   email: string;
   username: string;
-  /** @deprecated Tier system is being phased out */
   tier: string;
-  /** @deprecated Subscription tracking is being phased out */
   subscriptionStatus: string | null;
-  /** @deprecated Subscription tracking is being phased out */
   subscriptionId: string | null;
 }
 
@@ -175,19 +169,6 @@ type ResetTokenRecord = {
   expiresAt: number;
 };
 const inMemoryResetTokens = new Map<string, ResetTokenRecord>();
-
-// Cleanup expired tokens from in-memory store every 5 minutes
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, value] of inMemoryResetTokens.entries()) {
-      if (value.expiresAt < now) {
-        inMemoryResetTokens.delete(key);
-      }
-    }
-  },
-  5 * 60 * 1000
-);
 
 function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -316,7 +297,6 @@ export function requireAuth(
 }
 
 /**
- * @deprecated Tiering system is being phased out. This middleware will be removed in a future release.
  * Require specific tier - returns 403 if user's tier is insufficient
  */
 export function requireTier(...allowedTiers: string[]) {
@@ -342,7 +322,6 @@ export function requireTier(...allowedTiers: string[]) {
 }
 
 /**
- * @deprecated Tiering system is being phased out. This function will be removed in a future release.
  * Get effective tier for a request
  * - Authenticated users: use their subscription tier
  * - Unauthenticated users: "enterprise" tier (full access)
@@ -464,6 +443,13 @@ export function registerAuthRoutes(app: Express) {
         let userId: string | null = null;
         let expiresAtMs: number | null = null;
         let tokenRowId: string | null = null;
+
+        // Security: Ensure token is a string and not empty
+        if (!token || typeof token !== 'string' || token.length < 10) {
+          return res
+            .status(400)
+            .json({ error: 'Invalid or expired reset token' });
+        }
 
         try {
           const result = await db.execute(sql`
@@ -726,10 +712,8 @@ export function registerAuthRoutes(app: Express) {
         }
       }
 
-      // @deprecated Tier override system is being phased out and has been disabled
-      // Previously: Tier override is DISABLED by default and requires explicit environment variable
+      // Tier override is DISABLED by default and requires explicit environment variable
       // This should NEVER be enabled in production
-      /*
       const allowTierOverride =
         process.env.ALLOW_TIER_OVERRIDE === 'true' &&
         process.env.NODE_ENV === 'development';
@@ -743,7 +727,6 @@ export function registerAuthRoutes(app: Express) {
           .set({ tier: overrideTier, subscriptionStatus: 'active' })
           .where(eq(users.id, user.id));
       }
-      */
 
       // ✅ Create AuthUser with subscription-aware tier
       const authUser: AuthUser = {
@@ -818,6 +801,43 @@ export function registerAuthRoutes(app: Express) {
           return res.status(401).json({ error: 'Authentication required' });
         }
 
+        const token = generateUserCSRFToken(req.user.id);
+
+        // Set CSRF token in cookie for client-side access
+        res.cookie('csrf_token', token, {
+          httpOnly: false, // Allow client-side JavaScript to read for AJAX requests
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 60 * 60 * 1000, // 1 hour
+        });
+
+        res.json({
+          token,
+          expiresAt: Date.now() + 60 * 60 * 1000,
+        });
+      } catch (error) {
+        console.error('CSRF token generation error:', error);
+        res.status(500).json({
+          error: 'Failed to generate CSRF token',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // CSRF Token Generation
+  // -------------------------------------------------------------------------
+  app.get(
+    '/api/auth/csrf-token',
+    authMiddleware,
+    async (req: AuthRequest, res: Response) => {
+      try {
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Generate user-specific CSRF token
         const token = generateUserCSRFToken(req.user.id);
 
         // Set CSRF token in cookie for client-side access
@@ -968,9 +988,7 @@ export function registerAuthRoutes(app: Express) {
 
   // -------------------------------------------------------------------------
   // Update User Tier (Called by webhook handlers)
-  // @deprecated Tiering system is being phased out. This endpoint will be removed in a future release.
   // -------------------------------------------------------------------------
-  /*
   app.post(
     '/api/auth/update-tier',
     authMiddleware,
@@ -982,7 +1000,7 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
-      // Only allow admin users or user themselves to update tiers
+      // Only allow admin users or the user themselves to update tiers
       const { userId, tier, subscriptionId, subscriptionStatus } = req.body;
 
       // ✅ Validate required fields (single check, not duplicate)
@@ -1017,7 +1035,6 @@ export function registerAuthRoutes(app: Express) {
       }
     }
   );
-  */
 
   // -------------------------------------------------------------------------
   // Email Verification
@@ -1044,6 +1061,10 @@ export function registerAuthRoutes(app: Express) {
       await handleRevokeAllSessions(req, res);
     }
   );
+
+  app.post('/api/auth/logout', async (req: Request, res: Response) => {
+    await handleLogoutWithRevocation(req, res);
+  });
 }
 
 // Backwards-compatible re-exports from auth-enhanced
