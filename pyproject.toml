@@ -18,6 +18,8 @@ dependencies = [
     "pydicom",
     "PyMuPDF",
     "pypdf",
+    "astropy",
+    "netcdf4",
 ]
 
 [dependency-groups]
