@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main, master, develop]
   schedule:
-    - cron: '0 3 * * *'  # nightly at 03:00 UTC
+    - cron: '0 3 * * *' # nightly at 03:00 UTC
   workflow_dispatch:
 
 # Sensor jobs (security/integration/e2e) are allowed to run on PRs, non-main refs, and scheduled runs (nightly)
@@ -22,7 +22,7 @@ jobs:
   pr-guards:
     name: PR Guards
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout repository
@@ -35,7 +35,7 @@ jobs:
         continue-on-error: true
         run: bash scripts/ci/check-branch-name.sh
         env:
-          BRANCH_NAME: ${{ github.head_ref }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
       - name: Branch name note
         if: always()
@@ -45,19 +45,21 @@ jobs:
       - name: LOC churn guard
         run: bash scripts/ci/check-pr-loc.sh
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref || github.ref_name }}
 
       - name: PR size guard
         run: bash scripts/ci/check-pr-size.sh
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref || github.ref_name }}
 
       - name: Backend change guard (advisory)
         id: backend-guard
         continue-on-error: true
         run: bash scripts/ci/check-backend-changes.sh
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref || github.ref_name }}
+
+
 
       - name: Backend guard note
         if: always()
@@ -169,7 +171,7 @@ jobs:
   security:
     name: Security Checks
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main' }}
 
     steps:
       - name: Checkout repository
@@ -203,7 +205,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main' }}
     needs: [frontend, backend]
 
     steps:
@@ -248,7 +250,7 @@ jobs:
   e2e-smoke:
     name: E2E Smoke (Images MVP)
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main' }}
     needs: [frontend]
 
     steps:
