@@ -48,6 +48,10 @@ tmp_ocr/
 *.tmp
 .deps/
 
+# Backup files
+package-lock.json.bak
+*.bak
+
 # Test coverage
 coverage/
 .nyc_output/
