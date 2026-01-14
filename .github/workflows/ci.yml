@@ -130,12 +130,15 @@ jobs:
             pyproject.toml
             requirements.txt
 
-      - name: Install test tooling (uv)
+      - name: Setup uv (astral)
+        uses: astral-sh/setup-uv@v7
+        with:
+          cache: true
+
+      - name: Sync dependencies (uv.lock)
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install uv
-          # Sync pinned dependencies, prefer dev groups if available
-          uv sync --frozen --dev || uv sync --frozen
+          # Fail if uv.lock is stale; install all extras and dev groups deterministically
+          uv sync --locked --all-extras --dev
           uv --version
 
       - name: Verify backend
@@ -151,7 +154,7 @@ jobs:
 
       - name: Run Phase 2 tests (fast)
         run: |
-          pytest -q tests/test_phase2_video.py tests/test_phase2_container.py tests/test_phase2_audio.py || true
+          uv run pytest -q tests/test_phase2_video.py tests/test_phase2_container.py tests/test_phase2_audio.py || true
 
       - name: Upload coverage to Codecov
         if: always()

@@ -3,6 +3,7 @@
 ## Overview
 
 This system prevents accidental file truncations and suspicious deletions that can occur during:
+
 - AI agent refactoring (the most common cause)
 - Merge conflict resolution
 - Large file edits
@@ -11,12 +12,14 @@ This system prevents accidental file truncations and suspicious deletions that c
 ## Installation
 
 ### Quick Install
+
 ```bash
 # From project root
 bash .githooks/install-hooks.sh
 ```
 
 ### Manual Install
+
 ```bash
 # Copy hooks to .git/hooks
 cp .githooks/pre-commit .git/hooks/pre-commit
@@ -30,15 +33,18 @@ chmod +x .git/hooks/pre-commit
 These will **prevent the commit** from proceeding:
 
 #### Empty File Detection
+
 - **Trigger**: File that had content becomes 0 lines
 - **Example**: `comprehensive_metadata_engine.py` (3,801 → 0 lines)
 
 #### Severe Truncation
-- **Trigger**: File > 500 lines becomes < 50 lines  
+
+- **Trigger**: File > 500 lines becomes < 50 lines
 - **Example**: `db.ts` (1,127 → 3 lines)
 - **Threshold**: File reduced to < 50 lines when it was > 500 lines
 
 #### Massive Deletion
+
 - **Trigger**: > 80% of file deleted
 - **Example**: File loses 3,700+ out of 3,800 lines (97% deletion)
 
@@ -47,12 +53,14 @@ These will **prevent the commit** from proceeding:
 These will **warn but allow** the commit after a 3-second delay:
 
 #### Significant Deletion
+
 - **Trigger**: > 50% of file deleted
 - **Example**: File goes from 1,000 → 400 lines (60% reduction)
 
 ## Hook Output Examples
 
 ### ✅ No Issues
+
 ```bash
 🔍 Running pre-commit regression checks...
 
@@ -62,6 +70,7 @@ These will **warn but allow** the commit after a 3-second delay:
 ```
 
 ### ❌ Critical Issue (Blocked)
+
 ```bash
 🔍 Running pre-commit regression checks...
 
@@ -96,6 +105,7 @@ To bypass this check (NOT RECOMMENDED):
 ```
 
 ### ⚠️ Warning (Allowed with Delay)
+
 ```bash
 🔍 Running pre-commit regression checks...
 
@@ -134,9 +144,11 @@ SUSPICIOUS_RATIO=80       # Error if > 80% deleted
 ## Common Scenarios
 
 ### Scenario 1: AI Agent Truncation (Most Common)
+
 **What happened**: AI tried to edit a large file but truncated it instead, leaving a comment like "rest of file will be preserved"
 
 **Detection**:
+
 ```
 ❌ CRITICAL: Large file severely truncated
    File: comprehensive_metadata_engine.py
@@ -144,6 +156,7 @@ SUSPICIOUS_RATIO=80       # Error if > 80% deleted
 ```
 
 **Resolution**:
+
 ```bash
 # Restore the file
 git checkout HEAD -- server/extractor/comprehensive_metadata_engine.py
@@ -153,9 +166,11 @@ git show bc9c57d:server/extractor/comprehensive_metadata_engine.py > server/extr
 ```
 
 ### Scenario 2: Legitimate Large Refactor
+
 **What happened**: You actually want to delete/refactor a large portion of a file
 
 **Detection**:
+
 ```
 ⚠️  WARNING: Significant deletion
    File: old-implementation.ts
@@ -163,6 +178,7 @@ git show bc9c57d:server/extractor/comprehensive_metadata_engine.py > server/extr
 ```
 
 **Resolution**:
+
 ```bash
 # Review the changes carefully
 git diff --cached old-implementation.ts
@@ -172,9 +188,11 @@ git diff --cached old-implementation.ts
 ```
 
 ### Scenario 3: File Replacement
+
 **What happened**: Replacing implementation with newer, smaller version
 
 **Options**:
+
 1. **Split the commit**: Delete old file, add new file separately
 2. **Bypass hook**: Use `--no-verify` with good commit message
 3. **Adjust thresholds**: Lower `DELETION_THRESHOLD` temporarily
@@ -182,6 +200,7 @@ git diff --cached old-implementation.ts
 ## Bypassing the Hook
 
 ### When to Bypass
+
 - ✅ Intentional large refactoring
 - ✅ Replacing implementation with better approach
 - ✅ Removing deprecated code
@@ -189,6 +208,7 @@ git diff --cached old-implementation.ts
 - ❌ **Never** bypass if you're unsure why files changed
 
 ### How to Bypass
+
 ```bash
 # Skip all pre-commit hooks
 git commit --no-verify -m "Intentional refactor"
@@ -202,6 +222,7 @@ mv .git/hooks/pre-commit.disabled .git/hooks/pre-commit
 ## Testing the Hook
 
 ### Test 1: Simulate Truncation
+
 ```bash
 # Create a large test file
 seq 1 1000 > test-large.txt
@@ -216,6 +237,7 @@ git commit -m "Test truncation"
 ```
 
 ### Test 2: Simulate Warning
+
 ```bash
 # Create file with 200 lines
 seq 1 200 > test-medium.txt
@@ -232,6 +254,7 @@ git commit -m "Test warning"
 ## Troubleshooting
 
 ### Hook Not Running
+
 ```bash
 # Check if hook is installed
 ls -la .git/hooks/pre-commit
@@ -244,14 +267,17 @@ chmod +x .git/hooks/pre-commit
 ```
 
 ### Hook Running Slowly
+
 - The hook only checks **modified** files > 100 lines
 - Typical runtime: < 1 second for 10-20 files
 - If slow, increase `MIN_LINES_TO_CHECK` threshold
 
 ### False Positives
+
 **Problem**: Hook blocks legitimate changes
 
 **Solutions**:
+
 1. Review the specific file: `git diff --cached <file>`
 2. Adjust thresholds in `.githooks/pre-commit`
 3. Use `--no-verify` with detailed commit message
@@ -273,13 +299,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Need full history
-      
+          fetch-depth: 0 # Need full history
+
       - name: Run regression check
         run: |
           # Get changed files in PR
           git diff --name-only origin/main...HEAD > changed_files.txt
-          
+
           # Run similar checks
           bash .githooks/pre-commit
 ```
@@ -287,12 +313,15 @@ jobs:
 ## Maintenance
 
 ### Regular Reviews
+
 - Monthly: Review hook effectiveness
 - After incidents: Adjust thresholds if needed
 - Team feedback: Gather developer feedback on false positives
 
 ### Updating Thresholds
+
 Based on your codebase:
+
 - **Large codebase**: Increase `MIN_LINES_TO_CHECK` to 200-500
 - **Strict protection**: Lower `DELETION_THRESHOLD` to 30-40%
 - **Lenient**: Increase `CRITICAL_SIZE` to 100
@@ -300,6 +329,7 @@ Based on your codebase:
 ## Best Practices
 
 ### For Developers
+
 1. ✅ **Always review hook output** - Don't blindly bypass
 2. ✅ **Use `git diff --cached`** - Check what's actually staged
 3. ✅ **Smaller commits** - Easier to review and less likely to trigger
@@ -307,6 +337,7 @@ Based on your codebase:
 5. ❌ **Never auto-commit** large refactors without review
 
 ### For AI Agents
+
 1. **Limit edit scope** - Edit small sections at a time
 2. **Verify line counts** - Check file size before and after
 3. **Use replace tools carefully** - Include sufficient context
@@ -328,6 +359,7 @@ git log --all --grep="Significant deletion" --oneline
 ## Support
 
 If you encounter issues:
+
 1. Check this documentation
 2. Review `.githooks/pre-commit` script
 3. Test with `git commit --no-verify` to isolate issue
