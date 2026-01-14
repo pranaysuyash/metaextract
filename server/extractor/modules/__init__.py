@@ -28,15 +28,31 @@ from .svg import extract_svg_metadata, get_svg_field_count
 from .psd import extract_psd_metadata, get_psd_field_count
 
 # Perceptual Hashing and Fingerprinting
-from .perceptual_hashes import (
-    extract_perceptual_hashes,
-    extract_image_fingerprint,
-    generate_thumbnail,
-    compare_images,
-    find_duplicates,
-    calculate_similarity,
-    get_perceptual_hash_field_count
-)
+try:
+    from .perceptual_hashes import (
+        extract_perceptual_hashes,
+        extract_image_fingerprint,
+        generate_thumbnail,
+        compare_images,
+        find_duplicates,
+        calculate_similarity,
+        get_perceptual_hash_field_count
+    )
+except Exception:
+    def extract_perceptual_hashes(*args, **kwargs):
+        raise RuntimeError("perceptual_hashes module not available (missing optional dependencies)")
+    def extract_image_fingerprint(*args, **kwargs):
+        raise RuntimeError("perceptual_hashes module not available (missing optional dependencies)")
+    def generate_thumbnail(*args, **kwargs):
+        raise RuntimeError("perceptual_hashes module not available (missing optional dependencies)")
+    def compare_images(*args, **kwargs):
+        raise RuntimeError("perceptual_hashes module not available (missing optional dependencies)")
+    def find_duplicates(*args, **kwargs):
+        raise RuntimeError("perceptual_hashes module not available (missing optional dependencies)")
+    def calculate_similarity(*args, **kwargs):
+        raise RuntimeError("perceptual_hashes module not available (missing optional dependencies)")
+    def get_perceptual_hash_field_count():
+        return 0
 
 # Metadata Storage Database
 from .metadata_db import (

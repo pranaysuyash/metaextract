@@ -310,6 +310,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Python and backend dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python deps (uv sync)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv
+          uv sync --locked --dev || uv sync --locked
+
+      - name: Start backend server (background)
+        run: |
+          PYTHON_EXECUTABLE=$PWD/.venv/bin/python3 HOST=127.0.0.1 PORT=3000 NODE_ENV=development npm run dev:server &
+          echo "Waiting for backend to respond on /api/extract/health..."
+          for i in {1..60}; do
+            if curl -sSf http://127.0.0.1:3000/api/extract/health >/dev/null; then
+              echo "backend up"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not start in time"
+          curl -v http://127.0.0.1:3000/api/extract/health || true
+          exit 1
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
