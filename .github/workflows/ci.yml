@@ -1,10 +1,15 @@
 name: CI
-
+# Trigger re-run: no-op change to force workflow revalidation
 on:
   push:
     branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
+  schedule:
+    - cron: '0 3 * * *' # nightly at 03:00 UTC
+  workflow_dispatch:
+
+# Sensor jobs (security/integration/e2e) are allowed to run on PRs, non-main refs, and scheduled runs (nightly)
 
 env:
   NODE_VERSION: '20'
@@ -17,7 +22,7 @@ jobs:
   pr-guards:
     name: PR Guards
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout repository
@@ -26,30 +31,46 @@ jobs:
           fetch-depth: 0
 
       - name: Validate branch name
+        id: branch_name
+        continue-on-error: true
         run: bash scripts/ci/check-branch-name.sh
         env:
-          BRANCH_NAME: ${{ github.head_ref }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+      - name: Branch name note
+        if: always()
+        run: |
+          echo "Note: branch name enforcement is advisory in solo setup. See step 'branch_name' for details."
 
       - name: LOC churn guard
         run: bash scripts/ci/check-pr-loc.sh
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref || github.ref_name }}
 
       - name: PR size guard
         run: bash scripts/ci/check-pr-size.sh
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref || github.ref_name }}
 
-      - name: Backend change guard
+      - name: Backend change guard (advisory)
+        id: backend-guard
+        continue-on-error: true
         run: bash scripts/ci/check-backend-changes.sh
         env:
-          BASE_REF: origin/${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref || github.ref_name }}
+
+      - name: Backend guard note
+        if: always()
+        run: |
+          echo "Note: backend path changes are advisory in a solo repo. See backend-guard step for details."
   # =========================================================================
   # Frontend Build and Test
   # =========================================================================
   frontend:
     name: Frontend (Node 20)
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -63,7 +84,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit
 
       - name: Check TypeScript compilation
         run: npm run check
@@ -77,8 +98,21 @@ jobs:
       - name: Build (client + server bundle)
         run: npm run build
 
+      - name: Verify frontend
+        run: bash scripts/ci/verify.sh --frontend
+
+      - name: Check frontend coverage file
+        id: check_coverage_frontend
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ always() && (env.CODECOV_TOKEN != '') && (steps.check_coverage_frontend.outputs.found == 'true') }}
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           files: coverage/lcov.info
@@ -92,6 +126,8 @@ jobs:
   backend:
     name: Backend (Python 3.11)
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
       matrix:
         python-version: ['3.11']
@@ -109,25 +145,59 @@ jobs:
             pyproject.toml
             requirements.txt
 
-      - name: Install test tooling
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest ruff
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Run linter
+      - name: Sync backend deps (locked, dev group)
+        shell: bash
         run: |
-          ruff check . || true
+          set -euo pipefail
+          PYDIR="."
+          # If project lives in server/, adjust automatically:
+          if [ -f server/pyproject.toml ]; then PYDIR="server"; fi
+          cd "$PYDIR"
+          uv sync --locked --group dev
+          uv --version
+          # Validate environment contains expected tools
+          uv run python -c "import sys; print(sys.executable)"
+          uv run ruff --version
+          uv run pytest --version
 
-      - name: Run tests (unit)
+      - name: Lint
+        shell: bash
         run: |
-          pytest -q
+          set -euo pipefail
+          PYDIR="."
+          if [ -f server/pyproject.toml ]; then PYDIR="server"; fi
+          cd "$PYDIR"
+          # Report lint findings but do not fail CI here — keep CI deterministic and let tests run
+          uv run ruff check . || true
+
+      - name: Tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYDIR="."
+          if [ -f server/pyproject.toml ]; then PYDIR="server"; fi
+          cd "$PYDIR"
+          uv run pytest -q
 
       - name: Run Phase 2 tests (fast)
         run: |
           pytest -q tests/test_phase2_video.py tests/test_phase2_container.py tests/test_phase2_audio.py || true
 
+      - name: Check backend coverage file
+        id: check_coverage_backend
+        run: |
+          if [ -f ./coverage/lcov.info ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ always() && (env.CODECOV_TOKEN != '') && (steps.check_coverage_backend.outputs.found == 'true') }}
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage/lcov.info
@@ -141,6 +211,9 @@ jobs:
   security:
     name: Security Checks
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main' }}
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -160,6 +233,7 @@ jobs:
         run: npm audit --audit-level=high || true
 
       - name: Run Snyk security scan
+        if: ${{ env.SNYK_TOKEN != '' }}
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -173,6 +247,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main' }}
     needs: [frontend, backend]
 
     steps:
@@ -198,7 +273,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest
+          # Prefer deterministic sync when pyproject exists
+          if [ -f pyproject.toml ]; then
+            python -m pip install uv
+            uv sync --frozen --dev || uv sync --frozen
+          else
+            python -m pip install pytest
+          fi
           npm ci
 
       - name: Run integration tests
@@ -211,6 +292,7 @@ jobs:
   e2e-smoke:
     name: E2E Smoke (Images MVP)
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main' }}
     needs: [frontend]
 
     steps:
