@@ -7,6 +7,7 @@ on:
     branches: [main, master, develop]
   schedule:
     - cron: '0 3 * * *'  # nightly at 03:00 UTC
+  workflow_dispatch:
 
 # Sensor jobs (security/integration/e2e) are allowed to run on PRs, non-main refs, and scheduled runs (nightly)
 
