@@ -40,10 +40,7 @@ fi
 
 if [ "$BACKEND" -eq 1 ]; then
   echo "== Backend =="
-  python -m pip install --upgrade pip
-  python -m pip install uv
-  # Use frozen sync; try dev group then fall back
-  uv sync --frozen --dev || uv sync --frozen
+  # Assumes CI already performed dependency sync; only run checks/tests
   uv run ruff check . || true
   uv run pytest -q
 fi
