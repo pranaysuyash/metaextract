@@ -35,16 +35,7 @@ Implementation of fixes from comprehensive file audit of server/auth.ts.
 
 **Rationale**: Tiering system is being retired. All tier-related functionality is now marked as deprecated but preserved for backward compatibility during transition period.
 
-### 3. Fixed CSRF Token Cookie Security
-
-**Priority: 1 - Critical**
-
-- Changed `httpOnly` from `false` to `true` for `csrf_token` cookie
-- Added comment explaining security rationale: "Prevent XSS from accessing the token"
-- Token still returned in JSON response body for frontend access
-- **Impact**: Prevents XSS attacks from stealing CSRF tokens from cookies
-
-### 4. Fixed Duplicate Token Length Validation
+### 3. Duplicate Token Length Validation Removed
 
 **Priority: 2 - Correctness**
 
@@ -70,7 +61,6 @@ Implementation of fixes from comprehensive file audit of server/auth.ts.
 - ✅ TypeScript compilation passes (`npx tsc --noEmit --skipLibCheck`)
 - ✅ No duplicate route registrations verified
 - ✅ All tiering code properly marked as deprecated
-- ✅ CSRF token cookie security improved
 - ✅ Cleanup job implemented for in-memory token storage
 
 ## Next Steps
