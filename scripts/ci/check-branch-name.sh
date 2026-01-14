@@ -19,9 +19,9 @@ if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ]; then
   exit 1
 fi
 
-if [[ ! "$BRANCH_NAME" =~ ^(feat|chore)/[a-z0-9._-]+$ ]]; then
+if [[ ! "$BRANCH_NAME" =~ ^(feat|chore|audit|fix|hotfix)/[a-z0-9._-]+$ ]]; then
   echo "FAIL: branch name '$BRANCH_NAME' does not match required pattern."
-  echo "Expected: feat/<area>-<change> or chore/<area>-<change>"
+  echo "Expected: feat/<area>-<change>, chore/<area>-<change>, or audit/<reason>"
   exit 1
 fi
 
