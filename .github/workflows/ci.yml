@@ -101,8 +101,18 @@ jobs:
       - name: Verify frontend
         run: bash scripts/ci/verify.sh --frontend
 
+      - name: Check frontend coverage file
+        id: check_coverage_frontend
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ always() && (secrets.CODECOV_TOKEN != '') && (steps.check_coverage_frontend.outputs.found == 'true') }}
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           files: coverage/lcov.info
@@ -174,8 +184,18 @@ jobs:
         run: |
           pytest -q tests/test_phase2_video.py tests/test_phase2_container.py tests/test_phase2_audio.py || true
 
+      - name: Check backend coverage file
+        id: check_coverage_backend
+        run: |
+          if [ -f ./coverage/lcov.info ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ always() && (secrets.CODECOV_TOKEN != '') && (steps.check_coverage_backend.outputs.found == 'true') }}
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage/lcov.info
