@@ -16,6 +16,8 @@ dependencies = [
     "scikit-learn",
     "opencv-python",
     "pydicom",
+    "PyMuPDF",
+    "pypdf",
 ]
 
 [dependency-groups]
