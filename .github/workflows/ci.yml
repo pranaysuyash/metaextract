@@ -156,7 +156,8 @@ jobs:
           # If project lives in server/, adjust automatically:
           if [ -f server/pyproject.toml ]; then PYDIR="server"; fi
           cd "$PYDIR"
-          uv sync --locked --group dev
+          # Install primary (runtime) deps plus dev/test deps from the lockfile
+          uv sync --locked
           uv --version
           # Validate environment contains expected tools
           uv run python -c "import sys; print(sys.executable)"
