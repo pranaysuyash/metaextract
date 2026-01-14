@@ -58,11 +58,6 @@ jobs:
         run: bash scripts/ci/check-backend-changes.sh
         env:
           BASE_REF: origin/${{ github.base_ref || github.ref_name }}
-
-      - name: Backend guard note
-        if: always()
-        run: |
-          echo "Note: backend path changes are advisory in a solo repo. See backend-guard step for details."
   # =========================================================================
   # Frontend Build and Test
   # =========================================================================

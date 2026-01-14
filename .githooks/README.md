@@ -22,12 +22,12 @@ This system prevents the **exact regression that happened to your codebase** whe
 
 Runs automatically before each commit and checks for:
 
-| Issue | Threshold | Action |
-|-------|-----------|--------|
-| **Empty file** | File becomes 0 lines | 🚫 Block commit |
-| **Severe truncation** | File > 500 lines becomes < 50 lines | 🚫 Block commit |
-| **Massive deletion** | > 80% of file deleted | 🚫 Block commit |
-| **Significant deletion** | > 50% of file deleted | ⚠️ Warn (allows commit after 3s) |
+| Issue                    | Threshold                           | Action                           |
+| ------------------------ | ----------------------------------- | -------------------------------- |
+| **Empty file**           | File becomes 0 lines                | 🚫 Block commit                  |
+| **Severe truncation**    | File > 500 lines becomes < 50 lines | 🚫 Block commit                  |
+| **Massive deletion**     | > 80% of file deleted               | 🚫 Block commit                  |
+| **Significant deletion** | > 50% of file deleted               | ⚠️ Warn (allows commit after 3s) |
 
 ### Example Output
 
@@ -121,15 +121,16 @@ SUSPICIOUS_RATIO=80       # Block if > 80% deleted
 ## What Changed
 
 ### Before (Empty Placeholders)
+
 - `animated-theme-provider.tsx` - 0 lines
 - `dashboard-layout.tsx` - 0 lines
 
 ### After (Fully Implemented)
+
 - `animated-theme-provider.tsx` - 130 lines ✅
   - Smooth theme transitions
   - System preference detection
   - localStorage persistence
-  
 - `dashboard-layout.tsx` - 172 lines ✅
   - Responsive sidebar
   - Breadcrumb navigation
@@ -138,6 +139,7 @@ SUSPICIOUS_RATIO=80       # Block if > 80% deleted
 ## Documentation
 
 See [docs/GIT_HOOKS_DOCUMENTATION.md](../docs/GIT_HOOKS_DOCUMENTATION.md) for:
+
 - Detailed configuration options
 - Troubleshooting guide
 - CI/CD integration
@@ -159,6 +161,7 @@ git log --oneline | grep "WARNING"
 ## Support
 
 If the hook blocks legitimate changes:
+
 1. Review: `git diff --cached <file>`
 2. Verify intentional: Check file history
 3. Bypass if certain: `git commit --no-verify`
