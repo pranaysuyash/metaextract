@@ -163,6 +163,13 @@ The repo’s evidence-tight workflows are stored in `doc/AUDIT_REMEDIATION_WORKF
 - If the user invokes a workflow **with an explicit version**, follow that version exactly.
 - Always honor required artifacts (e.g. `docs/audit/...` during audits).
 
+### Canonical UI review prompts
+
+UI review/audit/spec workflows are stored in `doc/UI_REVIEW_WORKFLOWS.md`.
+
+- If the user invokes UI review **without a version** (e.g. “do a UI audit”), use the **versionless alias mapping** in `doc/UI_REVIEW_WORKFLOWS.md` and state which version you are applying.
+- If the user invokes UI review **with an explicit version**, follow that version exactly.
+
 ### Ticketing / tracking (summary)
 
 Canonical rules and templates live in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`. Summary:

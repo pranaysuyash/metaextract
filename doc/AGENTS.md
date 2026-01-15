@@ -91,3 +91,13 @@ Versionless calls must use the canonical mapping in `doc/AUDIT_REMEDIATION_WORKF
 - `post-merge validation` (uses canonical post-merge prompt)
 
 Explicit version calls must be followed exactly (e.g., `Audit v1.5.1`, `Implementation v1.6.1`).
+
+### UI Review Triggers
+
+For UI work (review/audit/spec), use the canonical prompts in `doc/UI_REVIEW_WORKFLOWS.md`.
+
+Treat any of the following as an explicit request to switch modes; versionless calls must use the alias mapping in `doc/UI_REVIEW_WORKFLOWS.md` and state which version was applied:
+- `ui review` / `ux review` / `ui audit`
+- `repo-aware ui audit` / `repo ui auditor`
+- `ui deep dive` / `ui file audit` / `audit this component`
+- `ui change spec` / `spec this ui change`
