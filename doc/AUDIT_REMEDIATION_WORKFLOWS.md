@@ -2,6 +2,22 @@
 
 This file stores the canonical prompt text and workflow for running **Audit v1.5.1**, **Implementation v1.6.1**, **PR Review v1.6.1**, **Verification v1.2**, and related workflows in this repo.
 
+## Versionless Aliases (Call Without Version)
+
+If the user asks for a workflow without specifying a version (e.g. “run an audit”), interpret it as the current canonical version in this file:
+
+- `Audit` / `File audit` / `Comprehensive file audit` -> **Audit v1.5.1**
+- `Remediation` / `Implementation` -> **Implementation v1.6.1**
+- `PR review` / `Review PR` -> **PR Review v1.6.1**
+- `Verify` / `Verification` -> **Verification v1.2**
+- `Hardening` -> **Hardening v1.1**
+- `Out-of-scope triage` / `Triage` -> **OUT-OF-SCOPE TRIAGE + NEXT-AUDIT QUEUE v1.0**
+- `Merge conflict resolution` -> **Merge Conflict Resolution v1.2**
+- `Post-merge validation` -> **Post-Merge Validation v1.0**
+
+If the user specifies an explicit version, follow that version exactly.
+If the user does not specify a version, the agent must state which canonical version it is applying at the top of the response.
+
 Operational note (to avoid internal contradictions across prompts):
 - `docs/WORKLOG_TICKETS.md` is the single source of truth for **ticketing/tracking**.
 - Workflow-required artifacts (e.g. `docs/audit/...`) are still mandatory for audits and are not considered “ticketing docs”.
