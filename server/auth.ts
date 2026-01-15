@@ -532,110 +532,114 @@ export function registerAuthRoutes(app: Express) {
   // -------------------------------------------------------------------------
   // Register
   // -------------------------------------------------------------------------
-  app.post('/api/auth/register', async (req: Request, res: Response) => {
-    try {
-      // Validate input
-      const validation = registerSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: validation.error.flatten().fieldErrors,
-        });
-      }
-
-      const { email, username, password } = validation.data;
-
-      // Check if db is available
-      if (!db) {
-        return res.status(503).json({
-          error: 'Database not available',
-          message: 'Please configure DATABASE_URL for user registration',
-        });
-      }
-
-      // Check if email already exists
-      const existingEmail = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-      if (existingEmail.length > 0) {
-        return res.status(409).json({
-          error: 'Email already registered',
-          code: 'EMAIL_EXISTS',
-        });
-      }
-
-      // Check if username already exists
-      const existingUsername = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-      if (existingUsername.length > 0) {
-        return res.status(409).json({
-          error: 'Username already taken',
-          code: 'USERNAME_EXISTS',
-        });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-      // Create user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email,
-          username,
-          password: hashedPassword,
-          tier: 'enterprise',
-          subscriptionStatus: 'none',
-        })
-        .returning();
-
-      // ✅ Use helper to create AuthUser
-      const authUser = createAuthUser(newUser);
-      const token = generateToken(authUser);
-
-      // ✅ Use helper to set cookie
-      setAuthCookie(res, token);
-
-      // Create initial credit balance for new user
+  app.post(
+    '/api/auth/register',
+    apiLimiter,
+    async (req: Request, res: Response) => {
       try {
-        await db.insert(creditBalances).values({
-          userId: newUser.id,
-          sessionId: `credits:core:user:${newUser.id}`,
-          credits: 0, // New users start with 0 credits
-        });
-      } catch (creditError) {
-        console.error(
-          'Could not create initial credit balance for user:',
-          creditError
-        );
-        // Continue registration even if credit balance creation fails
-      }
+        // Validate input
+        const validation = registerSchema.safeParse(req.body);
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Validation failed',
+            details: validation.error.flatten().fieldErrors,
+          });
+        }
 
-      res.status(201).json({
-        success: true,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          username: newUser.username,
-          tier: newUser.tier,
-          credits: 0, // New users start with 0 credits
-        },
-        token,
-      });
-    } catch (error: unknown) {
-      console.error('Registration error:', error);
-      const status = isDatabaseConnectionError(error) ? 503 : 500;
-      res.status(status).json({
-        error: 'Registration failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+        const { email, username, password } = validation.data;
+
+        // Check if db is available
+        if (!db) {
+          return res.status(503).json({
+            error: 'Database not available',
+            message: 'Please configure DATABASE_URL for user registration',
+          });
+        }
+
+        // Check if email already exists
+        const existingEmail = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+        if (existingEmail.length > 0) {
+          return res.status(409).json({
+            error: 'Email already registered',
+            code: 'EMAIL_EXISTS',
+          });
+        }
+
+        // Check if username already exists
+        const existingUsername = await db
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+        if (existingUsername.length > 0) {
+          return res.status(409).json({
+            error: 'Username already taken',
+            code: 'USERNAME_EXISTS',
+          });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        // Create user
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            email,
+            username,
+            password: hashedPassword,
+            tier: 'enterprise',
+            subscriptionStatus: 'none',
+          })
+          .returning();
+
+        // ✅ Use helper to create AuthUser
+        const authUser = createAuthUser(newUser);
+        const token = generateToken(authUser);
+
+        // ✅ Use helper to set cookie
+        setAuthCookie(res, token);
+
+        // Create initial credit balance for new user
+        try {
+          await db.insert(creditBalances).values({
+            userId: newUser.id,
+            sessionId: `credits:core:user:${newUser.id}`,
+            credits: 0, // New users start with 0 credits
+          });
+        } catch (creditError) {
+          console.error(
+            'Could not create initial credit balance for user:',
+            creditError
+          );
+          // Continue registration even if credit balance creation fails
+        }
+
+        res.status(201).json({
+          success: true,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            username: newUser.username,
+            tier: newUser.tier,
+            credits: 0, // New users start with 0 credits
+          },
+          token,
+        });
+      } catch (error: unknown) {
+        console.error('Registration error:', error);
+        const status = isDatabaseConnectionError(error) ? 503 : 500;
+        res.status(status).json({
+          error: 'Registration failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     }
-  });
+  );
 
   // -------------------------------------------------------------------------
   // Login
