@@ -53,9 +53,9 @@ pytest tests/ -k "test_name" -v
 
 ## Agent Guidelines
 
-**Python Execution:** Always use existing `.venv`. Never create new venvs.
+**Python Execution:** Always use existing `.venv` (find via `ls -la` or `which python3`). Never create new venvs.
 
-**Python Package Management:** Prefer `uv` for installs when available (e.g. `uv pip install -r requirements.txt`), and run Python via `.venv/bin/python3`.
+**Python Package Management:** Prefer `uv` for installs when available (e.g. `uv pip install -r requirements.txt`), and run Python via `.venv/bin/python3` (never system Python).
 
 **Code Quality:** No tech debt. Before deleting code for issue resolution, implement missing or wrong code properly instead of removing functionality.
 

@@ -24,7 +24,7 @@ Operational note (to avoid internal contradictions across prompts):
 
 Repo hygiene (always on):
 - Before committing: always run `git add -A` (multi-agent staging discipline).
-- Python: always use the existing `.venv` and prefer `uv` for dependency installs (`uv pip install -r requirements.txt`).
+- Python: always use the existing `.venv` (find via `ls -la` or `which python3`) and prefer `uv` for dependency installs (`uv pip install -r requirements.txt`).
 
 ---
 

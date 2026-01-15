@@ -179,7 +179,7 @@ Canonical rules and templates live in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`. Summ
 
 ## Gotchas
 
-- **Python environment**: Always use existing `.venv` (never create new venv), activate with `source .venv/bin/activate`
+- **Python environment**: Always use existing `.venv` (find via `ls -la` or `which python3`), activate with `source .venv/bin/activate` (never create new venvs)
 - **Python executable**: Always use `.venv/bin/python3`, never system Python
 - **Python packages**: Prefer `uv` for installs when available (e.g. `uv pip install -r requirements.txt`)
 - **Git hygiene**: Always run `git add -A` before commits to avoid leaving untracked/unstaged files
