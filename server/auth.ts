@@ -200,6 +200,19 @@ function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+/**
+ * Sanitize email for logging - masks the local part to prevent PII exposure
+ * Example: "user@example.com" -> "u***@example.com"
+ */
+function sanitizeEmailForLog(email: string): string {
+  const atIndex = email.indexOf('@');
+  if (atIndex <= 0) return '***';
+  const local = email.substring(0, atIndex);
+  const domain = email.substring(atIndex);
+  if (local.length <= 1) return local + '***' + domain;
+  return local[0] + '***' + domain;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -693,8 +706,7 @@ export function registerAuthRoutes(app: Express) {
 
         console.log('User registered:', {
           userId: newUser.id,
-          email: newUser.email,
-          username: newUser.username,
+          email: sanitizeEmailForLog(newUser.email),
           ip: req.ip,
         });
 
@@ -890,8 +902,7 @@ export function registerAuthRoutes(app: Express) {
 
       console.log('User logged in:', {
         userId: user.id,
-        email: user.email,
-        username: user.username,
+        email: sanitizeEmailForLog(user.email),
         ip: req.ip,
       });
     } catch (error: unknown) {
