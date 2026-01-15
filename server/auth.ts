@@ -34,6 +34,7 @@ import {
 import {
   handleLogoutWithRevocation,
   handleRevokeAllSessions,
+  isTokenBlacklisted,
 } from './utils/session-revocation';
 import { apiLimiter } from './auth-enhanced';
 
@@ -249,6 +250,11 @@ function generateToken(user: AuthUser): string {
 }
 
 export function verifyToken(token: string): AuthUser | null {
+  // Check if token is blacklisted first (session revocation)
+  if (isTokenBlacklisted(token)) {
+    return null;
+  }
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET!) as AuthUser;
     return decoded;
