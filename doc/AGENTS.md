@@ -67,7 +67,7 @@ pytest tests/ -k "test_name" -v
 
 ## Audit / Remediation Workflow Prompts
 
-When a user explicitly asks for one of these workflows (by name/version), follow the **exact prompt structure and hard rules** in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`:
+When a user asks for any of these workflows (by name or generically, e.g. “run an audit”), follow the **exact prompt structure and hard rules** in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`:
 
 - **Audit v1.5.1**: one file only; discovery-first; evidence labeling; mandatory `docs/audit/` artifact.
 - **Implementation v1.6.1**: findings-driven; minimal scope; tests or deterministic verification for HIGH/MED; PR + VERIFIER PACK.
@@ -77,12 +77,17 @@ Ticketing/tracking is always append-only in `docs/WORKLOG_TICKETS.md` (audit art
 
 ### Trigger Phrases (Mode Switch)
 
-Treat any of the following as an explicit request to switch into that workflow and follow it verbatim:
-- `Audit v1.5.1`
-- `Implementation v1.6.1`
-- `PR Review v1.6.1`
-- `Verification v1.2`
-- `Hardening v1.1`
-- `Merge Conflict Resolution v1.2`
-- `Post-Merge Validation v1.0`
-- `OUT-OF-SCOPE TRIAGE + NEXT-AUDIT QUEUE v1.0`
+Treat any of the following as an explicit request to switch into that workflow and follow it verbatim.
+
+Versionless calls must use the canonical mapping in `doc/AUDIT_REMEDIATION_WORKFLOWS.md` and the response must state which version was applied.
+
+- `audit` / `file audit` / `comprehensive file audit` (uses canonical Audit version)
+- `remediation` / `implementation` (uses canonical Implementation version)
+- `pr review` / `review pr` (uses canonical PR Review version)
+- `verify` / `verification` (uses canonical Verification version)
+- `hardening` (uses canonical Hardening version)
+- `out-of-scope triage` / `triage` (uses canonical triage version)
+- `merge conflict resolution` (uses canonical conflict prompt)
+- `post-merge validation` (uses canonical post-merge prompt)
+
+Explicit version calls must be followed exactly (e.g., `Audit v1.5.1`, `Implementation v1.6.1`).
