@@ -29,9 +29,6 @@ npm-debug.log*
 *.swp
 *.swo
 
-# AI Assistant Instructions
-.github/copilot-instructions.md
-
 # OS
 .DS_Store
 Thumbs.db

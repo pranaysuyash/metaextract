@@ -64,3 +64,25 @@ pytest tests/ -k "test_name" -v
 - **ALWAYS use `git add -A` before committing** (standard practice to avoid leaving untracked/modified files behind). This ensures all changes—staged and unstaged—are included in the commit, preventing workflow fragmentation across agent sessions.
 - Alternative: Explicitly run `git stash push -u` if you need to preserve work without committing (keeps working tree clean).
 - Never run destructive git/cleanup commands (e.g. `git clean`, `git reset --hard`, deleting files/folders) unless the user explicitly asks for it.
+
+## Audit / Remediation Workflow Prompts
+
+When a user explicitly asks for one of these workflows (by name/version), follow the **exact prompt structure and hard rules** in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`:
+
+- **Audit v1.5.1**: one file only; discovery-first; evidence labeling; mandatory `docs/audit/` artifact.
+- **Implementation v1.6.1**: findings-driven; minimal scope; tests or deterministic verification for HIGH/MED; PR + VERIFIER PACK.
+- **PR Review v1.6.1** / **Verification v1.2** / **Hardening v1.1** / **Out-of-scope triage v1.0**: run as written.
+
+Ticketing/tracking is always append-only in `docs/WORKLOG_TICKETS.md` (audit artifacts in `docs/audit/` are still required for audits).
+
+### Trigger Phrases (Mode Switch)
+
+Treat any of the following as an explicit request to switch into that workflow and follow it verbatim:
+- `Audit v1.5.1`
+- `Implementation v1.6.1`
+- `PR Review v1.6.1`
+- `Verification v1.2`
+- `Hardening v1.1`
+- `Merge Conflict Resolution v1.2`
+- `Post-Merge Validation v1.0`
+- `OUT-OF-SCOPE TRIAGE + NEXT-AUDIT QUEUE v1.0`
