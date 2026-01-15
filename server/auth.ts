@@ -179,7 +179,7 @@ type ResetTokenRecord = {
 const inMemoryResetTokens = new Map<string, ResetTokenRecord>();
 
 // Cleanup expired tokens from in-memory store every 5 minutes
-setInterval(
+const resetTokenCleanupInterval = setInterval(
   () => {
     const now = Date.now();
     for (const [key, value] of inMemoryResetTokens.entries()) {
@@ -190,6 +190,10 @@ setInterval(
   },
   5 * 60 * 1000
 );
+
+// Cleanup interval on server shutdown to prevent memory leaks
+process.on('SIGTERM', () => clearInterval(resetTokenCleanupInterval));
+process.on('SIGINT', () => clearInterval(resetTokenCleanupInterval));
 
 function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -853,6 +857,9 @@ export function registerAuthRoutes(app: Express) {
         // Set CSRF token in cookie for client-side access
         res.cookie('csrf_token', token, {
           httpOnly: false, // Allow client-side JavaScript to read for AJAX requests
+          // SECURITY NOTE: httpOnly: false allows CSRF token to be read via XSS attacks.
+          // This is a trade-off to enable AJAX requests without requiring a separate token fetch.
+          // In production, ensure no XSS vulnerabilities exist to mitigate this risk.
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           maxAge: 60 * 60 * 1000, // 1 hour
