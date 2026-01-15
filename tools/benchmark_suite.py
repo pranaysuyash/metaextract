@@ -351,13 +351,27 @@ class MetaExtractBenchmark:
         
         # Calculate statistics
         import statistics
-        
-        throughput = (len(self.results) / total_time) * 60 if total_time > 0 else 0
-        
-        # Memory efficiency: MB peak per 100MB of file
-        avg_file_size = statistics.mean([r.file_size_mb for r in self.results])
-        avg_peak_memory = statistics.mean(peak_memories)
-        memory_efficiency = (avg_peak_memory / avg_file_size * 100) if avg_file_size > 0 else 0
+        import math
+
+        # Handle edge case: no results
+        if not self.results:
+            logger.error("No results to aggregate!")
+            return None
+
+        # Calculate throughput with guard against zero/negative time
+        total_time_safe = total_time if total_time > 0 else float('inf')
+        throughput = (len(self.results) / total_time_safe) * 60 if total_time_safe != float('inf') else float('inf')
+
+        # Calculate memory efficiency with proper NaN handling for zero file sizes
+        all_file_sizes = [r.file_size_mb for r in self.results]
+        avg_file_size = statistics.mean(all_file_sizes) if all_file_sizes else 0
+        avg_peak_memory = statistics.mean(peak_memories) if peak_memories else 0
+
+        # Use NaN to clearly indicate undefined efficiency rather than masking with 0
+        if avg_file_size > 0:
+            memory_efficiency = (avg_peak_memory / avg_file_size * 100)
+        else:
+            memory_efficiency = float('nan')  # Undefined for zero-size files
         
         failure_breakdown = {}
         for result in failed:
@@ -385,13 +399,24 @@ class MetaExtractBenchmark:
     
     def save_results(self, results: BenchmarkResults, output_path: str = None):
         """Save benchmark results to JSON"""
-        
+
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_path = f"benchmark_results_{timestamp}.json"
-        
+
         output_path = Path(output_path)
-        
+
+        # Prevent path traversal attacks by validating the resolved path
+        resolved_path = output_path.resolve()
+        current_dir = Path.cwd().resolve()
+
+        # Allow only paths within current directory
+        try:
+            resolved_path.relative_to(current_dir)
+        except ValueError:
+            logger.error(f"Output path escapes current directory: {output_path}")
+            raise ValueError(f"Invalid output path: {output_path} would write outside allowed directory")
+
         # Convert dataclass to dict
         data = {
             'suite_name': results.suite_name,
