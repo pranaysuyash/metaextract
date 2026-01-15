@@ -22,6 +22,10 @@ Operational note (to avoid internal contradictions across prompts):
 - `docs/WORKLOG_TICKETS.md` is the single source of truth for **ticketing/tracking**.
 - Workflow-required artifacts (e.g. `docs/audit/...`) are still mandatory for audits and are not considered “ticketing docs”.
 
+Repo hygiene (always on):
+- Before committing: always run `git add -A` (multi-agent staging discipline).
+- Python: always use the existing `.venv` and prefer `uv` for dependency installs (`uv pip install -r requirements.txt`).
+
 ---
 
 Audit v1.5.1

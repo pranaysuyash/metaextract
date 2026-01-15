@@ -181,7 +181,8 @@ Canonical rules and templates live in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`. Summ
 
 - **Python environment**: Always use existing `.venv` (never create new venv), activate with `source .venv/bin/activate`
 - **Python executable**: Always use `.venv/bin/python3`, never system Python
-- **Git hygiene**: Use `git add -A` before commits to avoid leaving untracked files
+- **Python packages**: Prefer `uv` for installs when available (e.g. `uv pip install -r requirements.txt`)
+- **Git hygiene**: Always run `git add -A` before commits to avoid leaving untracked/unstaged files
 - **Access modes**: Device-free shows high-value data but redacts GPS/sensitive fields
 - **Engine tiers**: "free" vs "super" (internal parameter), separate from user access modes
 - **File validation**: Reject executables, scripts, documents at upload time

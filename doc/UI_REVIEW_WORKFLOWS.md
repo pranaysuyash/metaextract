@@ -14,6 +14,10 @@ If the user asks for a workflow without specifying a version, interpret it as th
 If the user specifies an explicit version, follow that version exactly.
 If the user does not specify a version, the agent must state which canonical version it is applying at the top of the response.
 
+Repo hygiene (always on for repo-aware work):
+- Before committing: always run `git add -A`.
+- Python: always use the existing `.venv` and prefer `uv` for installs (`uv pip install -r requirements.txt`).
+
 ---
 
 ### 1) Generic UI Reviewer (project-level, multi-surface)
@@ -591,4 +595,3 @@ QUALITY BAR
 
 END
 ```
-
