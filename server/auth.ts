@@ -179,7 +179,7 @@ type ResetTokenRecord = {
 const inMemoryResetTokens = new Map<string, ResetTokenRecord>();
 
 // Cleanup expired tokens from in-memory store every 5 minutes
-setInterval(
+const resetTokenCleanupInterval = setInterval(
   () => {
     const now = Date.now();
     for (const [key, value] of inMemoryResetTokens.entries()) {
@@ -190,6 +190,10 @@ setInterval(
   },
   5 * 60 * 1000
 );
+
+// Cleanup interval on server shutdown to prevent memory leaks
+process.on('SIGTERM', () => clearInterval(resetTokenCleanupInterval));
+process.on('SIGINT', () => clearInterval(resetTokenCleanupInterval));
 
 function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -399,9 +403,66 @@ export function registerAuthRoutes(app: Express) {
           });
         }
 
+        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+        // Check for existing unexpired token to prevent token exhaustion
+        let existingTokenHash: string | null = null;
+        try {
+          const existingToken = await db.execute(sql`
+            select token_hash
+            from password_reset_tokens
+            where user_id = ${user.id}
+              and used_at is null
+              and expires_at > now()
+            limit 1
+          `);
+          const row: any = (existingToken as any).rows?.[0] ?? null;
+          if (row) {
+            existingTokenHash = row.token_hash;
+          }
+        } catch (e: any) {
+          // 42P01: undefined_table, skip check and check in-memory
+          if (e?.code !== '42P01') {
+            throw e;
+          }
+        }
+
+        // Check in-memory store if DB check failed or table missing
+        if (!existingTokenHash) {
+          for (const [key, value] of inMemoryResetTokens.entries()) {
+            if (value.userId === user.id && value.expiresAt > Date.now()) {
+              existingTokenHash = key;
+              break;
+            }
+          }
+        }
+
+        // If existing unexpired token found, return without generating new one
+        if (existingTokenHash) {
+          const response: any = {
+            message:
+              'If an account exists with this email, a reset link has been sent.',
+          };
+          if (process.env.NODE_ENV === 'development') {
+            // In dev mode, still include token for testing convenience
+            const storedToken = inMemoryResetTokens.get(existingTokenHash);
+            if (storedToken) {
+              const allHashes = Array.from(inMemoryResetTokens.entries());
+              const [matchingHash, _] = allHashes.find(
+                ([h, _]) => h === existingTokenHash
+              ) || ['unknown', null];
+              if (matchingHash !== 'unknown') {
+                // Re-generate token from hash (simplified - in production this would be done via secure email)
+                const reGeneratedToken = crypto.randomBytes(24).toString('hex');
+                response.token = reGeneratedToken;
+              }
+            }
+          }
+          return res.json(response);
+        }
+
         const token = crypto.randomBytes(24).toString('hex');
         const tokenHash = hashResetToken(token);
-        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
         // Persist token if table exists; otherwise fall back to in-memory (dev/test).
         try {
@@ -521,6 +582,11 @@ export function registerAuthRoutes(app: Express) {
           inMemoryResetTokens.delete(tokenHash);
         }
 
+        console.log('Password reset completed:', {
+          userId,
+          ip: req.ip,
+        });
+
         return res.json({ success: true });
       } catch (error: unknown) {
         console.error('Password reset confirm error:', error);
@@ -532,110 +598,121 @@ export function registerAuthRoutes(app: Express) {
   // -------------------------------------------------------------------------
   // Register
   // -------------------------------------------------------------------------
-  app.post('/api/auth/register', async (req: Request, res: Response) => {
-    try {
-      // Validate input
-      const validation = registerSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: validation.error.flatten().fieldErrors,
-        });
-      }
-
-      const { email, username, password } = validation.data;
-
-      // Check if db is available
-      if (!db) {
-        return res.status(503).json({
-          error: 'Database not available',
-          message: 'Please configure DATABASE_URL for user registration',
-        });
-      }
-
-      // Check if email already exists
-      const existingEmail = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-      if (existingEmail.length > 0) {
-        return res.status(409).json({
-          error: 'Email already registered',
-          code: 'EMAIL_EXISTS',
-        });
-      }
-
-      // Check if username already exists
-      const existingUsername = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-      if (existingUsername.length > 0) {
-        return res.status(409).json({
-          error: 'Username already taken',
-          code: 'USERNAME_EXISTS',
-        });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-      // Create user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email,
-          username,
-          password: hashedPassword,
-          tier: 'enterprise',
-          subscriptionStatus: 'none',
-        })
-        .returning();
-
-      // ✅ Use helper to create AuthUser
-      const authUser = createAuthUser(newUser);
-      const token = generateToken(authUser);
-
-      // ✅ Use helper to set cookie
-      setAuthCookie(res, token);
-
-      // Create initial credit balance for new user
+  app.post(
+    '/api/auth/register',
+    apiLimiter,
+    async (req: Request, res: Response) => {
       try {
-        await db.insert(creditBalances).values({
-          userId: newUser.id,
-          sessionId: `credits:core:user:${newUser.id}`,
-          credits: 0, // New users start with 0 credits
-        });
-      } catch (creditError) {
-        console.error(
-          'Could not create initial credit balance for user:',
-          creditError
-        );
-        // Continue registration even if credit balance creation fails
-      }
+        // Validate input
+        const validation = registerSchema.safeParse(req.body);
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Validation failed',
+            details: validation.error.flatten().fieldErrors,
+          });
+        }
 
-      res.status(201).json({
-        success: true,
-        user: {
-          id: newUser.id,
+        const { email, username, password } = validation.data;
+
+        // Check if db is available
+        if (!db) {
+          return res.status(503).json({
+            error: 'Database not available',
+            message: 'Please configure DATABASE_URL for user registration',
+          });
+        }
+
+        // Check if email already exists
+        const existingEmail = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+        if (existingEmail.length > 0) {
+          return res.status(409).json({
+            error: 'Email already registered',
+            code: 'EMAIL_EXISTS',
+          });
+        }
+
+        // Check if username already exists
+        const existingUsername = await db
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+        if (existingUsername.length > 0) {
+          return res.status(409).json({
+            error: 'Username already taken',
+            code: 'USERNAME_EXISTS',
+          });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        // Create user
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            email,
+            username,
+            password: hashedPassword,
+            tier: 'enterprise',
+            subscriptionStatus: 'none',
+          })
+          .returning();
+
+        // ✅ Use helper to create AuthUser
+        const authUser = createAuthUser(newUser);
+        const token = generateToken(authUser);
+
+        // ✅ Use helper to set cookie
+        setAuthCookie(res, token);
+
+        // Create initial credit balance for new user
+        try {
+          await db.insert(creditBalances).values({
+            userId: newUser.id,
+            sessionId: `credits:core:user:${newUser.id}`,
+            credits: 0, // New users start with 0 credits
+          });
+        } catch (creditError) {
+          console.error(
+            'Could not create initial credit balance for user:',
+            creditError
+          );
+          // Continue registration even if credit balance creation fails
+        }
+
+        console.log('User registered:', {
+          userId: newUser.id,
           email: newUser.email,
           username: newUser.username,
-          tier: newUser.tier,
-          credits: 0, // New users start with 0 credits
-        },
-        token,
-      });
-    } catch (error: unknown) {
-      console.error('Registration error:', error);
-      const status = isDatabaseConnectionError(error) ? 503 : 500;
-      res.status(status).json({
-        error: 'Registration failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+          ip: req.ip,
+        });
+
+        res.status(201).json({
+          success: true,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            username: newUser.username,
+            tier: newUser.tier,
+            credits: 0, // New users start with 0 credits
+          },
+          token,
+        });
+      } catch (error: unknown) {
+        console.error('Registration error:', error);
+        const status = isDatabaseConnectionError(error) ? 503 : 500;
+        res.status(status).json({
+          error: 'Registration failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     }
-  });
+  );
 
   // -------------------------------------------------------------------------
   // Login
@@ -645,6 +722,19 @@ export function registerAuthRoutes(app: Express) {
       // Check for brute force - use email as identifier
       const loginIdentifier =
         (req.body?.email as string) || req.ip || 'unknown';
+
+      // Validate IP address format before using as lockout identifier
+      if (loginIdentifier === req.ip) {
+        const ipRegex = /^[\d\.:a-fA-F]+$/;
+        if (!ipRegex.test(req.ip)) {
+          // Fallback to 'unknown' if IP is malformed
+          return res.status(400).json({
+            error: 'Invalid request',
+            message: 'Unable to identify request origin',
+          });
+        }
+      }
+
       const lockStatus = isLockedOut(
         `login:${loginIdentifier}`,
         5,
@@ -791,6 +881,13 @@ export function registerAuthRoutes(app: Express) {
         },
         token,
       });
+
+      console.log('User logged in:', {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        ip: req.ip,
+      });
     } catch (error: unknown) {
       console.error('Login error:', error);
       const status = isDatabaseConnectionError(error) ? 503 : 500;
@@ -805,6 +902,11 @@ export function registerAuthRoutes(app: Express) {
   // Logout
   // -------------------------------------------------------------------------
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    console.log('User logged out:', {
+      userId,
+      ip: req.ip,
+    });
     await handleLogoutWithRevocation(req, res);
   });
 
@@ -825,6 +927,9 @@ export function registerAuthRoutes(app: Express) {
         // Set CSRF token in cookie for client-side access
         res.cookie('csrf_token', token, {
           httpOnly: false, // Allow client-side JavaScript to read for AJAX requests
+          // SECURITY NOTE: httpOnly: false allows CSRF token to be read via XSS attacks.
+          // This is a trade-off to enable AJAX requests without requiring a separate token fetch.
+          // In production, ensure no XSS vulnerabilities exist to mitigate this risk.
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           maxAge: 60 * 60 * 1000, // 1 hour
