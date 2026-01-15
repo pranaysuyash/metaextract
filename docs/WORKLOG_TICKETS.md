@@ -55,3 +55,53 @@ Next actions:
 
 Risks/notes:
 - No visual artifacts provided; UX findings are grounded in code + strings and some items will remain Unknown without screenshots/video.
+
+---
+## TCK-20260115-002 :: Audit — server/cacheMiddleware.ts
+Type: AUDIT
+Owner: assistant
+Created: 2026-01-15 23:14 IST
+Status: IN_PROGRESS
+
+Scope contract:
+- In-scope:
+  - One-file audit: `server/cacheMiddleware.ts`
+  - Evidence from repo files opened + commands run
+- Out-of-scope:
+  - Auditing route registration and auth gating (unless it is inside `server/cacheMiddleware.ts`)
+  - Implementing fixes
+- Behavior change allowed: NO
+
+Targets:
+- Repo: metaextract
+- File(s): server/cacheMiddleware.ts
+- Branch/PR: main
+- Range: Unknown
+
+Inputs:
+- Prompt used: Audit (versionless alias; canonical Audit v1.5.1)
+- Source artifacts:
+  - Audit report: `docs/audit/server__cacheMiddleware.ts.md` (created)
+  - Findings list: CACHEMW-001..CACHEMW-006
+  - Bot/CI signals: None
+
+Plan (high level, not patches):
+- Run mandatory discovery and capture raw evidence.
+- Record findings with invariants and scoped patch plan.
+- Queue adjacent cache files for follow-up audits.
+
+Execution log (append-only):
+- 2026-01-15 23:14 IST Ran tracking/history discovery | Evidence: `git ls-files -- server/cacheMiddleware.ts`, `git status --porcelain -- server/cacheMiddleware.ts`, `git log -n 20 --follow -- server/cacheMiddleware.ts`
+- 2026-01-15 23:14 IST Ran inbound/outbound discovery | Evidence: `rg -n --hidden --no-ignore -S "from './cacheMiddleware'" server .`, `rg -n --hidden --no-ignore -S "cacheManager|CacheStrategy" server client .`
+- 2026-01-15 23:14 IST Performed file read for audit | Evidence: `sed -n '1,560p' server/cacheMiddleware.ts`
+- 2026-01-15 23:14 IST Wrote audit artifact | Evidence: `docs/audit/server__cacheMiddleware.ts.md`
+
+Status updates (append-only):
+- 2026-01-15 23:14 IST Status -> IN_PROGRESS (audit started)
+
+Next actions:
+1) Commit and push `docs/audit/server__cacheMiddleware.ts.md` + ticket update.
+2) Next audits (one-file each): `server/cache/metadata-cache.ts`, `server/cache/cache-config.ts`, `server/cache/extraction-cache.ts`, `server/cache/geocoding-cache.ts`, `server/cacheExamples.ts`.
+
+Risks/notes:
+- `X-Cache-Key` header echo risk depends on whether any endpoints include sensitive query params; this is Unknown without auditing route surfaces and request patterns.
