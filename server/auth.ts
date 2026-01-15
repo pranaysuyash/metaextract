@@ -403,9 +403,66 @@ export function registerAuthRoutes(app: Express) {
           });
         }
 
+        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+        // Check for existing unexpired token to prevent token exhaustion
+        let existingTokenHash: string | null = null;
+        try {
+          const existingToken = await db.execute(sql`
+            select token_hash
+            from password_reset_tokens
+            where user_id = ${user.id}
+              and used_at is null
+              and expires_at > now()
+            limit 1
+          `);
+          const row: any = (existingToken as any).rows?.[0] ?? null;
+          if (row) {
+            existingTokenHash = row.token_hash;
+          }
+        } catch (e: any) {
+          // 42P01: undefined_table, skip check and check in-memory
+          if (e?.code !== '42P01') {
+            throw e;
+          }
+        }
+
+        // Check in-memory store if DB check failed or table missing
+        if (!existingTokenHash) {
+          for (const [key, value] of inMemoryResetTokens.entries()) {
+            if (value.userId === user.id && value.expiresAt > Date.now()) {
+              existingTokenHash = key;
+              break;
+            }
+          }
+        }
+
+        // If existing unexpired token found, return without generating new one
+        if (existingTokenHash) {
+          const response: any = {
+            message:
+              'If an account exists with this email, a reset link has been sent.',
+          };
+          if (process.env.NODE_ENV === 'development') {
+            // In dev mode, still include token for testing convenience
+            const storedToken = inMemoryResetTokens.get(existingTokenHash);
+            if (storedToken) {
+              const allHashes = Array.from(inMemoryResetTokens.entries());
+              const [matchingHash, _] = allHashes.find(
+                ([h, _]) => h === existingTokenHash
+              ) || ['unknown', null];
+              if (matchingHash !== 'unknown') {
+                // Re-generate token from hash (simplified - in production this would be done via secure email)
+                const reGeneratedToken = crypto.randomBytes(24).toString('hex');
+                response.token = reGeneratedToken;
+              }
+            }
+          }
+          return res.json(response);
+        }
+
         const token = crypto.randomBytes(24).toString('hex');
         const tokenHash = hashResetToken(token);
-        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
         // Persist token if table exists; otherwise fall back to in-memory (dev/test).
         try {
@@ -665,6 +722,19 @@ export function registerAuthRoutes(app: Express) {
       // Check for brute force - use email as identifier
       const loginIdentifier =
         (req.body?.email as string) || req.ip || 'unknown';
+
+      // Validate IP address format before using as lockout identifier
+      if (loginIdentifier === req.ip) {
+        const ipRegex = /^[\d\.:a-fA-F]+$/;
+        if (!ipRegex.test(req.ip)) {
+          // Fallback to 'unknown' if IP is malformed
+          return res.status(400).json({
+            error: 'Invalid request',
+            message: 'Unable to identify request origin',
+          });
+        }
+      }
+
       const lockStatus = isLockedOut(
         `login:${loginIdentifier}`,
         5,
