@@ -4,7 +4,6 @@
  */
 
 import { Request, Response } from 'express';
-import crypto from 'crypto';
 import { db } from '../db';
 import { userSessions } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -14,32 +13,44 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
 
-// In-memory token blacklist (use Redis in production)
-const tokenBlacklist = new Set<string>();
-
-// Session token storage for revocation
-const sessionTokens = new Map<
-  string,
-  { token: string; userId: string; expiresAt: number }
->();
-
 const REVOCATION_CONFIG = {
   BLACKLIST_CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour
   MAX_BLACKLIST_SIZE: 10000,
+  BLACKLIST_TTL_DAYS: 7,
 };
+
+let cleanupTimer: NodeJS.Timeout | null = null;
+
+type BlacklistedToken = { token: string; expiresAt: number };
+const tokenBlacklist = new Map<string, BlacklistedToken>();
+
+/**
+ * Validate JWT format
+ */
+function isValidJWTFormat(token: string): boolean {
+  const parts = token.split('.');
+  return parts.length === 3 && parts.every(part => part.length > 0);
+}
 
 /**
  * Add token to blacklist
  */
-export function addToBlacklist(token: string): void {
-  if (token && token.length > 20) {
-    // Basic validation
-    tokenBlacklist.add(token);
+export function addToBlacklist(token: string, expiresAt?: Date): void {
+  if (!token || token.length <= 20 || token.length > 5000) {
+    return;
+  }
 
-    // Clean up old tokens if blacklist gets too large
-    if (tokenBlacklist.size > REVOCATION_CONFIG.MAX_BLACKLIST_SIZE) {
-      cleanupBlacklist();
-    }
+  if (!isValidJWTFormat(token)) {
+    return;
+  }
+
+  const expiry =
+    expiresAt?.getTime() ||
+    Date.now() + REVOCATION_CONFIG.BLACKLIST_TTL_DAYS * 24 * 60 * 60 * 1000;
+  tokenBlacklist.set(token, { token, expiresAt: expiry });
+
+  if (tokenBlacklist.size > REVOCATION_CONFIG.MAX_BLACKLIST_SIZE) {
+    cleanupBlacklist();
   }
 }
 
@@ -54,10 +65,19 @@ export function isTokenBlacklisted(token: string): boolean {
  * Cleanup old tokens from blacklist
  */
 function cleanupBlacklist(): void {
-  // Remove oldest tokens (simple FIFO approach)
-  const tokensToRemove = Array.from(tokenBlacklist).slice(0, 1000);
-  for (const token of tokensToRemove) {
-    tokenBlacklist.delete(token);
+  const now = Date.now();
+
+  for (const [token, data] of tokenBlacklist.entries()) {
+    if (data.expiresAt < now) {
+      tokenBlacklist.delete(token);
+    }
+  }
+
+  if (tokenBlacklist.size > REVOCATION_CONFIG.MAX_BLACKLIST_SIZE) {
+    const tokensToRemove = Array.from(tokenBlacklist.entries()).slice(0, 1000);
+    for (const [token, _] of tokensToRemove) {
+      tokenBlacklist.delete(token);
+    }
   }
 }
 
@@ -66,19 +86,14 @@ function cleanupBlacklist(): void {
  */
 export async function revokeAllUserSessions(userId: string): Promise<void> {
   try {
-    // Delete all sessions from database
-    await db.delete(userSessions).where(eq(userSessions.userId, userId));
-
-    // Remove from in-memory storage
-    for (const [sessionId, session] of sessionTokens.entries()) {
-      if (session.userId === userId) {
-        sessionTokens.delete(sessionId);
-      }
-    }
+    await db.transaction(async (tx: any) => {
+      await tx.delete(userSessions).where(eq(userSessions.userId, userId));
+    });
 
     console.log(`Revoked all sessions for user: ${userId}`);
   } catch (error) {
     console.error('Error revoking user sessions:', error);
+    throw error;
   }
 }
 
@@ -87,32 +102,11 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
  */
 export async function revokeSession(sessionId: string): Promise<void> {
   try {
-    // Delete from database
     await db.delete(userSessions).where(eq(userSessions.sessionId, sessionId));
-
-    // Remove from in-memory storage
-    sessionTokens.delete(sessionId);
-
     console.log(`Revoked session: ${sessionId}`);
   } catch (error) {
     console.error('Error revoking session:', error);
   }
-}
-
-/**
- * Store session token for potential revocation
- */
-export function storeSessionToken(
-  sessionId: string,
-  token: string,
-  userId: string,
-  expiresAt: Date
-): void {
-  sessionTokens.set(sessionId, {
-    token,
-    userId,
-    expiresAt: expiresAt.getTime(),
-  });
 }
 
 /**
@@ -122,20 +116,13 @@ export async function cleanupExpiredSessions(): Promise<void> {
   try {
     const now = new Date();
 
-    // Clean up database
-    await db
-      .delete(userSessions)
-      .where(sql`${userSessions.expiresAt} < ${now}`);
+    await db.transaction(async (tx: any) => {
+      await tx
+        .delete(userSessions)
+        .where(sql`${userSessions.expiresAt} < ${now}`);
+    });
 
-    // Clean up in-memory storage
-    for (const [sessionId, session] of sessionTokens.entries()) {
-      if (new Date() > new Date(session.expiresAt)) {
-        sessionTokens.delete(sessionId);
-      }
-    }
-
-    // Clean up blacklist periodically
-    setTimeout(
+    cleanupTimer = setTimeout(
       () => cleanupBlacklist(),
       REVOCATION_CONFIG.BLACKLIST_CLEANUP_INTERVAL
     );
@@ -224,3 +211,19 @@ export async function handleRevokeAllSessions(
     });
   }
 }
+
+process.on('SIGTERM', () => {
+  if (cleanupTimer) {
+    clearTimeout(cleanupTimer);
+    cleanupTimer = null;
+  }
+});
+
+process.on('SIGINT', () => {
+  if (cleanupTimer) {
+    clearTimeout(cleanupTimer);
+    cleanupTimer = null;
+  }
+});
+
+cleanupExpiredSessions();

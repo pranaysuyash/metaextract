@@ -157,7 +157,11 @@ if (accessMode === 'paid' && credits < requiredCredits) {
 
 ### Canonical workflow prompts
 
-The repo’s evidence-tight workflows (Audit v1.5.1, Implementation v1.6.1, PR Review v1.6.1, Verification v1.2, Hardening v1.1, triage) are stored in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`. When the user invokes one by name/version, follow it verbatim (including required artifacts like `docs/audit/...` during audits).
+The repo’s evidence-tight workflows are stored in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`.
+
+- If the user invokes a workflow **without a version** (e.g. “run an audit”), use the **versionless alias mapping** in `doc/AUDIT_REMEDIATION_WORKFLOWS.md` and state which version you are applying.
+- If the user invokes a workflow **with an explicit version**, follow that version exactly.
+- Always honor required artifacts (e.g. `docs/audit/...` during audits).
 
 ### Ticketing / tracking (summary)
 
