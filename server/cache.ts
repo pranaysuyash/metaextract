@@ -20,9 +20,21 @@ export interface CacheConfig {
   evictionPolicy: string; // Redis eviction policy
 }
 
+// CACHE-001: Validate Redis URL in production - do not fall back to localhost
+function getRedisUrl(): string {
+  const url = process.env.REDIS_URL;
+  if (!url && process.env.NODE_ENV === 'production') {
+    console.warn(
+      '⚠️ REDIS_URL not set in production - caching will be disabled'
+    );
+    return ''; // Empty URL will cause cache to be disabled
+  }
+  return url || 'redis://localhost:6379';
+}
+
 export const DEFAULT_CACHE_CONFIG: CacheConfig = {
-  enabled: process.env.REDIS_CACHE_ENABLED !== 'false',
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  enabled: process.env.REDIS_CACHE_ENABLED !== 'false' && !!getRedisUrl(),
+  url: getRedisUrl(),
   defaultTTL: 300, // 5 minutes default
   maxMemory: '256mb',
   evictionPolicy: 'allkeys-lru',
@@ -253,9 +265,25 @@ export class CacheManager {
     }
 
     try {
-      const keys = await this.client.keys(pattern);
+      // CACHE-002: Use SCAN instead of KEYS to avoid blocking Redis
+      const keys: string[] = [];
+      let cursor: number | string = 0;
+      do {
+        const result = await this.client.scan(String(cursor), {
+          MATCH: pattern,
+          COUNT: 100,
+        });
+        cursor = result.cursor;
+        keys.push(...result.keys);
+      } while (Number(cursor) !== 0);
+
       if (keys.length > 0) {
-        await this.client.del(keys);
+        // Delete in batches to avoid blocking
+        const batchSize = 100;
+        for (let i = 0; i < keys.length; i += batchSize) {
+          const batch = keys.slice(i, i + batchSize);
+          await this.client.del(batch);
+        }
         this.metrics.incrementInvalidation(keys.length);
         return keys.length;
       }
