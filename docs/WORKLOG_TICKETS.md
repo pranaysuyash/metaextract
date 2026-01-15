@@ -43,6 +43,8 @@ Execution log (append-only):
 - 2026-01-15 22:46 IST Opened Images MVP landing/upload/results flows | Evidence: `sed -n '1,260p' client/src/pages/images-mvp/index.tsx`, `sed -n '1,260p' client/src/components/images-mvp/simple-upload.tsx`, `sed -n '300,430p' client/src/pages/images-mvp/results.tsx`
 - 2026-01-15 22:46 IST Identified broken marketing/pricing links | Evidence: `rg -n "marketingRoot\\s*=|pricingLink\\s*=|logoTarget\\s*=" client/src/components/public-layout.tsx` (marketingRoot=`/home`), `rg -n "navigate\\('/#pricing'\\)" client/src/pages/images-mvp/results.tsx`
 - 2026-01-15 22:46 IST Captured commit ref for audit | Evidence: `git rev-parse --abbrev-ref HEAD`=`audit/tools__benchmark_suite/fixes`, `git rev-parse HEAD`=`da52d67c431f35d7e902dce8fa5034760102788a`
+- 2026-01-15 22:58 IST Implemented Images MVP-only navigation + recovery states | Evidence: edited `client/src/components/public-layout.tsx`, `client/src/pages/images-mvp/index.tsx`, `client/src/pages/images-mvp/results.tsx`, `client/src/App.tsx`
+- 2026-01-15 22:58 IST Ran targeted Images MVP tests | Evidence: `npm test -- --runTestsByPath client/src/__tests__/images-mvp.hook.test.tsx client/src/__tests__/images-mvp.device-free.test.tsx client/src/pages/images-mvp/__tests__/mvp-copy-regression.test.ts` (PASS)
 
 Status updates (append-only):
 - 2026-01-15 22:44 IST Status -> IN_PROGRESS (started Phase A discovery)

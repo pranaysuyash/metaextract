@@ -13,7 +13,6 @@ import {
 import { ContextAdapterProvider } from '@/context/ContextAdapter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import NotFound from '@/pages/not-found';
-import Home from '@/pages/home';
 import Results from '@/pages/results';
 import ResultsV2 from '@/pages/results-v2';
 import ImagesMvpLanding from '@/pages/images-mvp';
@@ -82,6 +81,7 @@ function AppRouter() {
           />
           <Route path="/results" element={<Results />} />
           <Route path="/results-v2" element={<ResultsV2 />} />
+          <Route path="/home" element={<Navigate to="/images_mvp" replace />} />
           <Route
             path="/checkout/success"
             element={

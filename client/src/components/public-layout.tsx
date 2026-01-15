@@ -45,10 +45,10 @@ export function PublicLayout({
     location.pathname === '/credits' ||
     location.pathname === '/settings';
   const effectiveShowFooter = showFooter && !isAppRoute;
-  const marketingRoot = '/home';
-  const logoTarget = isAuthenticated ? '/images_mvp' : marketingRoot;
-  const pricingLink = isImagesMvp ? '/images_mvp?pricing=1' : `${marketingRoot}#pricing`;
-  const featuresLink = `${marketingRoot}#features`;
+  const imagesMvpRoot = '/images_mvp';
+  const logoTarget = imagesMvpRoot;
+  const pricingLink = `${imagesMvpRoot}?pricing=1`;
+  const featuresLink = `${imagesMvpRoot}#features`;
 
   const openLogin = () => {
     setAuthModalMode('login');
@@ -97,10 +97,10 @@ export function PublicLayout({
                     Pricing
                   </Link>
                   <Link
-                    to="/docs"
+                    to="/privacy"
                     className="text-sm text-slate-200 hover:text-white transition-colors"
                   >
-                    Docs
+                    Privacy
                   </Link>
                 </nav>
               )}
@@ -173,9 +173,9 @@ export function PublicLayout({
                     <Button
                       variant="ghost"
                       className="justify-start px-2 text-sm text-slate-200 hover:text-white hover:bg-white/10"
-                      onClick={() => handleMobileNavigate('/docs')}
+                      onClick={() => handleMobileNavigate('/privacy')}
                     >
-                      Docs
+                      Privacy
                     </Button>
                   </nav>
                 )}
@@ -231,7 +231,7 @@ export function PublicLayout({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {/* Brand */}
               <div className="space-y-4">
-                <Link to={marketingRoot} className="flex items-center gap-2">
+                <Link to={imagesMvpRoot} className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
                     <span className="text-black font-bold text-sm">M</span>
                   </div>
@@ -266,18 +266,10 @@ export function PublicLayout({
                   </li>
                   <li>
                     <Link
-                      to="/docs"
+                      to="/privacy"
                       className="hover:text-white transition-colors"
                     >
-                      Documentation
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/api"
-                      className="hover:text-white transition-colors"
-                    >
-                      API
+                      Privacy
                     </Link>
                   </li>
                 </ul>
@@ -289,26 +281,10 @@ export function PublicLayout({
                 <ul className="space-y-2 text-sm text-slate-200">
                   <li>
                     <Link
-                      to="/about"
+                      to="/terms"
                       className="hover:text-white transition-colors"
                     >
-                      About
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/blog"
-                      className="hover:text-white transition-colors"
-                    >
-                      Blog
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/contact"
-                      className="hover:text-white transition-colors"
-                    >
-                      Contact
+                      Terms
                     </Link>
                   </li>
                 </ul>
@@ -336,10 +312,10 @@ export function PublicLayout({
                   </li>
                   <li>
                     <Link
-                      to="/security"
+                      to="/gdpr"
                       className="hover:text-white transition-colors"
                     >
-                      Security
+                      GDPR
                     </Link>
                   </li>
                 </ul>

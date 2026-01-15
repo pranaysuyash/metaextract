@@ -25,7 +25,7 @@ import {
   FileJson,
   FileText,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import { PricingModal } from '@/components/images-mvp/pricing-modal';
@@ -171,9 +171,13 @@ const DENSITY_STORAGE_KEY = 'images_mvp_density';
 
 export default function ImagesMvpResults() {
   const [metadata, setMetadata] = useState<MvpMetadata | null>(null);
-  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'empty'>(
-    'loading'
-  );
+  const [loadState, setLoadState] = useState<
+    'loading' | 'ready' | 'empty' | 'processing' | 'fail'
+  >('loading');
+  const [errorInfo, setErrorInfo] = useState<{
+    status?: number;
+    message?: string;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<TabValue>('privacy');
   const [rawSearch, setRawSearch] = useState('');
   const [showOverlayText, setShowOverlayText] = useState(false);
@@ -184,6 +188,7 @@ export default function ImagesMvpResults() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const purposePromptLogged = useRef(false);
   const formatHintLogged = useRef(false);
@@ -191,8 +196,35 @@ export default function ImagesMvpResults() {
   const resultsLogged = useRef(false);
 
   useEffect(() => {
+    const pricingFlag = searchParams.get('pricing') || searchParams.get('credits');
+    if (!pricingFlag) return;
+    setShowPricingModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('pricing');
+    next.delete('credits');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
     const stored = sessionStorage.getItem('currentMetadata');
     if (!stored) {
+      const status = sessionStorage.getItem('images_mvp_status');
+      if (status === 'processing') {
+        setLoadState('processing');
+        return;
+      }
+      if (status === 'fail') {
+        const raw = sessionStorage.getItem('images_mvp_error');
+        if (raw) {
+          try {
+            setErrorInfo(JSON.parse(raw));
+          } catch {
+            setErrorInfo({ message: 'Upload failed' });
+          }
+        }
+        setLoadState('fail');
+        return;
+      }
       setLoadState('empty');
       return;
     }
@@ -202,7 +234,7 @@ export default function ImagesMvpResults() {
     } catch {
       setLoadState('empty');
     }
-  }, [navigate]);
+  }, []);
 
   const isTabValue = (value: string): value is TabValue =>
     value === 'privacy' ||
@@ -358,6 +390,100 @@ export default function ImagesMvpResults() {
     );
   }
 
+  if (loadState === 'processing') {
+    return (
+      <Layout showHeader={true} showFooter={true}>
+        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <Card className="bg-[#11121a] border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-primary" />
+                  Still processing
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Your last analysis is still running. Return to the upload page
+                  to monitor progress.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <Button
+                  className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                  onClick={() => navigate('/images_mvp')}
+                >
+                  Return to upload
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  onClick={() => {
+                    sessionStorage.removeItem('images_mvp_error');
+                    sessionStorage.setItem('images_mvp_status', 'idle');
+                    setLoadState('empty');
+                  }}
+                >
+                  Clear status
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loadState === 'fail') {
+    return (
+      <Layout showHeader={true} showFooter={true}>
+        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <Card className="bg-[#11121a] border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-red-300" />
+                  Analysis failed
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  {errorInfo?.message || 'We could not process your last upload.'}
+                  {typeof errorInfo?.status === 'number'
+                    ? ` (Error ${errorInfo.status})`
+                    : ''}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <Button
+                  className="w-full bg-[#6366f1] hover:bg-[#5855eb] text-white"
+                  onClick={() => navigate('/images_mvp')}
+                >
+                  Try again
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
+                  onClick={() => setShowPricingModal(true)}
+                >
+                  View credits
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-white/10 text-slate-400 hover:text-white hover:bg-white/5"
+                  onClick={() => {
+                    sessionStorage.removeItem('images_mvp_error');
+                    sessionStorage.setItem('images_mvp_status', 'idle');
+                    setErrorInfo(null);
+                    setLoadState('empty');
+                  }}
+                >
+                  Clear error
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (loadState === 'empty' || !metadata) {
     return (
       <Layout showHeader={true} showFooter={true}>
@@ -385,9 +511,9 @@ export default function ImagesMvpResults() {
                 <Button
                   variant="outline"
                   className="w-full border-white/20 text-slate-300 hover:text-white hover:bg-white/10"
-                  onClick={() => navigate('/#pricing')}
+                  onClick={() => navigate('/images_mvp?pricing=1')}
                 >
-                  Learn about plans
+                  View credits
                 </Button>
               </CardContent>
             </Card>

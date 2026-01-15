@@ -94,7 +94,7 @@ export default function ImagesMvpLanding() {
 
             {/* Features / "Why check?" Section - Only show for logged-out users */}
             {!isAuthenticated && (
-                <section className="py-24 border-t border-white/5 bg-white/[0.02]" aria-labelledby="features-heading">
+                <section id="features" className="py-24 border-t border-white/5 bg-white/[0.02]" aria-labelledby="features-heading">
                     <div className="container mx-auto px-4 max-w-5xl">
                         <h2 id="features-heading" className="sr-only">Key Features</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
