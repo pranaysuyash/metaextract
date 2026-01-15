@@ -521,6 +521,11 @@ export function registerAuthRoutes(app: Express) {
           inMemoryResetTokens.delete(tokenHash);
         }
 
+        console.log('Password reset completed:', {
+          userId,
+          ip: req.ip,
+        });
+
         return res.json({ success: true });
       } catch (error: unknown) {
         console.error('Password reset confirm error:', error);
@@ -618,6 +623,13 @@ export function registerAuthRoutes(app: Express) {
           );
           // Continue registration even if credit balance creation fails
         }
+
+        console.log('User registered:', {
+          userId: newUser.id,
+          email: newUser.email,
+          username: newUser.username,
+          ip: req.ip,
+        });
 
         res.status(201).json({
           success: true,
@@ -795,6 +807,13 @@ export function registerAuthRoutes(app: Express) {
         },
         token,
       });
+
+      console.log('User logged in:', {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        ip: req.ip,
+      });
     } catch (error: unknown) {
       console.error('Login error:', error);
       const status = isDatabaseConnectionError(error) ? 503 : 500;
@@ -809,6 +828,11 @@ export function registerAuthRoutes(app: Express) {
   // Logout
   // -------------------------------------------------------------------------
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    console.log('User logged out:', {
+      userId,
+      ip: req.ip,
+    });
     await handleLogoutWithRevocation(req, res);
   });
 
