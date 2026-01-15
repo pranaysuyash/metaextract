@@ -259,7 +259,29 @@ if (process.env.NODE_ENV === 'development') {
 | AUTH-004 | Switch to structured logger with PII redaction | Verify production logs don't contain email |
 | AUTH-005 | Add startup assertion that NODE_ENV=production in prod | Review deployment configuration |
 
-**Priority for next remediation PR**: AUTH-004 (logging), AUTH-002 (DB migration check)
+**Priority for next remediation PR**: AUTH-002 (DB migration check)
+
+---
+
+## Remediation Log
+
+### 2026-01-15: AUTH-004 Fix (PII in Logs)
+
+**Commit**: `ec59108`
+**Branch**: `audit/auth/logging-pii-fix`
+**Status**: FIXED
+
+**Changes**:
+- Added `sanitizeEmailForLog()` helper function (lines 203-214)
+- Applied sanitization to `User registered` log (line 708)
+- Applied sanitization to `User logged in` log (line 904)
+- Removed `username` from log output (not needed for debugging)
+
+**Tests added**: `server/auth-sanitization.test.ts` (4 test cases)
+
+**Behavior change**: NO - internal logging only, no caller-visible changes
+
+---
 
 **Next audit queue**:
 1. `server/auth-enhanced.ts` (rate limiting, token management)
