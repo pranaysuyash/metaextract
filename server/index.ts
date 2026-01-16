@@ -12,7 +12,7 @@ import {
 } from './auth-mock';
 import { serveStatic } from './static';
 import { createServer } from 'http';
-import { db } from './db';
+import { db, isDatabaseConnected } from './db';
 import expressWs from 'express-ws';
 import { productionAllowlistMiddleware } from './middleware/production-allowlist';
 import {
@@ -51,7 +51,8 @@ app.use(productionAllowlistMiddleware);
 
 // Auth middleware - attaches user to request if authenticated
 // Use mock auth if database is not available
-const isDatabaseAvailable = !!db;
+// IMPORTANT: Do not rely on truthiness of the Proxy export; check real connectivity
+const isDatabaseAvailable = isDatabaseConnected();
 if (isDatabaseAvailable) {
   app.use(authMiddleware);
   log('Using database authentication system');
@@ -129,7 +130,7 @@ app.use((req, res, next) => {
   }
 
   // Register auth routes - use mock auth if database is not available
-  const isDatabaseAvailable = !!db;
+  const isDatabaseAvailable = isDatabaseConnected();
   if (isDatabaseAvailable) {
     registerAuthRoutes(app);
     log('Registered database authentication routes');
