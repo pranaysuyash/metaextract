@@ -31,6 +31,7 @@ import { requireAuth } from '../auth';
 import { getOrSetSessionId } from '../utils/session-id';
 import { freeQuotaMiddleware } from '../middleware/free-quota';
 import { enhancedProtectionMiddleware } from '../middleware/enhanced-protection';
+import { createRateLimiter } from '../middleware/rateLimit';
 import {
   generateClientToken,
   verifyClientToken,
@@ -241,11 +242,45 @@ function cleanupConnections(sessionId: string) {
   }
 }
 
+// Use disk storage to avoid memory exhaustion under heavy load
+// Memory storage would hold entire file buffers until GC, risking OOM with concurrent uploads
+const UPLOAD_TEMP_DIR = '/tmp/metaextract-uploads';
+
+// Ensure upload directory exists at startup (sync is fine here, happens once)
+let uploadDirReady = false;
+
+const diskStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    // Create directory if not done yet (multer callbacks must be sync)
+    if (!uploadDirReady) {
+      fs.mkdir(UPLOAD_TEMP_DIR, { recursive: true })
+        .then(() => {
+          uploadDirReady = true;
+          cb(null, UPLOAD_TEMP_DIR);
+        })
+        .catch(err => cb(err as Error, UPLOAD_TEMP_DIR));
+    } else {
+      cb(null, UPLOAD_TEMP_DIR);
+    }
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${crypto.randomUUID()}`;
+    const ext = path.extname(file.originalname);
+    cb(null, `upload-${uniqueSuffix}${ext}`);
+  },
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: diskStorage,
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB Limit for images
   },
+});
+
+// Rate limiter for analytics endpoints - prevent abuse/DOS
+const analyticsRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute window
+  keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown',
 });
 
 const SUPPORTED_IMAGE_MIMES = new Set([
@@ -463,6 +498,7 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/analytics/track',
+    analyticsRateLimiter,
     async (req: Request, res: Response) => {
       try {
         const event = typeof req.body?.event === 'string' ? req.body.event : '';
@@ -638,6 +674,7 @@ export function registerImagesMvpRoutes(app: Express) {
   });
   app.get(
     '/api/images_mvp/analytics/report',
+    analyticsRateLimiter,
     async (req: Request, res: Response) => {
       try {
         const periodQuery =
@@ -1129,15 +1166,21 @@ export function registerImagesMvpRoutes(app: Express) {
           return sendInvalidRequestError(res, 'No file uploaded');
         }
 
-        // Enforce file type
+        // Enforce file type - SECURITY: require BOTH mime AND extension to match
+        // This prevents attacks like uploading malware.exe with mime image/jpeg
         const mimeType = req.file.mimetype;
         const fileExt = path.extname(req.file.originalname).toLowerCase();
         const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
         const isSupportedExt = fileExt
           ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
           : false;
-        if (!isSupportedMime && !isSupportedExt) {
-          // Return a 403 with clear unsupported file type response for security
+        
+        // Require BOTH mime type AND extension to be valid (AND logic, not OR)
+        if (!isSupportedMime || !isSupportedExt) {
+          // Clean up the uploaded temp file before rejecting
+          if (req.file.path) {
+            cleanupTempFile(req.file.path).catch(() => {});
+          }
           return sendUnsupportedFileTypeError(res, 'File type not permitted');
         }
 
@@ -1266,13 +1309,8 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Proceed with Extraction
-        const tempDir = '/tmp/metaextract';
-        await fs.mkdir(tempDir, { recursive: true });
-        tempPath = path.join(
-          tempDir,
-          `${Date.now()}-${crypto.randomUUID()}-${req.file.originalname}`
-        );
-        await fs.writeFile(tempPath, req.file.buffer);
+        // With disk storage, file is already on disk at req.file.path
+        tempPath = req.file.path;
 
         // Send initial progress update
         if (sessionId) {
@@ -1434,14 +1472,28 @@ export function registerImagesMvpRoutes(app: Express) {
           .catch(console.error);
 
         // 2. ✅ Charge credits - MUST await before responding (critical for billing)
+        // Note: useCredits is atomic (uses WHERE credits >= amount) so it returns null
+        // if another concurrent request already consumed the credits.
         if (chargeCredits && creditBalanceId) {
           try {
-            await storage.useCredits(
+            const txn = await storage.useCredits(
               creditBalanceId,
               creditCost,
               `Extraction: ${fileExtension} (Images MVP)`,
               mimeType
             );
+            // useCredits returns null if balance was insufficient (race condition protection)
+            if (txn === null) {
+              console.warn(
+                `Credit deduction failed for balance ${creditBalanceId}: insufficient credits (possible race condition)`
+              );
+              return res.status(402).json({
+                error: 'Insufficient credits',
+                message:
+                  'Credits were consumed by another request. Please refresh your balance.',
+                requiresRefresh: true,
+              });
+            }
           } catch (error) {
             console.error('Failed to charge credits:', error);
             return res.status(402).json({

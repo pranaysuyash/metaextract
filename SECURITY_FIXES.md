@@ -208,3 +208,82 @@ const burstRateLimit = rateLimit({
 - Update API documentation
 - Notify API consumers
 - Document security rationale
+
+---
+
+## Phase 2: Credit System & Infrastructure Hardening
+
+**Date:** January 16, 2026  
+**Status:** ✅ COMPLETED  
+**Priority:** 🔴 CRITICAL
+
+### Issue 1: Credit Double-Spending Vulnerability
+
+**File:** `server/routes/images-mvp.ts:1436-1467`  
+**Vulnerability:** `useCredits` return value not checked - race condition allowed free extractions  
+**Impact:** Users could get extractions without paying by sending concurrent requests  
+**CVSS Score:** 8.1 (High - Financial Loss)
+
+**Root Cause:** The `useCredits()` function returns `null` when balance is insufficient (atomic DB check), but the return value was not being validated. Two concurrent requests could both pass the initial balance check, do the extraction work, and when `useCredits` was called, only one would succeed but both had already received results.
+
+**Fix Applied:**
+```typescript
+const txn = await storage.useCredits(/* ... */);
+if (txn === null) {
+  return res.status(402).json({
+    error: 'Insufficient credits',
+    message: 'Credits were consumed by another request. Please refresh your balance.',
+    requiresRefresh: true,
+  });
+}
+```
+
+### Issue 2: Webhook Idempotency Not Persistent
+
+**File:** `server/payments.ts:164`  
+**Vulnerability:** Webhook deduplication stored in memory Map - lost on restart  
+**Impact:** Server restart during webhook retry window → double credit grants  
+**CVSS Score:** 7.5 (High - Financial Loss)
+
+**Fix Applied:**
+- Added `processed_webhooks` table to database schema
+- Replaced in-memory Map with database-backed `isWebhookProcessed()` / `markWebhookProcessed()`
+- Webhooks now persist across restarts with 24-hour retention
+
+**Migration:** `config/migrations/0001_add_processed_webhooks.sql`
+
+### Issue 3: Memory Exhaustion via Multer Memory Storage
+
+**File:** `server/routes/images-mvp.ts:244`  
+**Vulnerability:** 100MB files held in memory until GC  
+**Impact:** 10 concurrent uploads = 1GB RAM; potential OOM under load  
+**CVSS Score:** 6.5 (Medium - Availability)
+
+**Fix Applied:**
+```typescript
+const diskStorage = multer.diskStorage({
+  destination: '/tmp/metaextract-uploads',
+  filename: (req, file, cb) => { /* unique filename */ }
+});
+const upload = multer({ storage: diskStorage, limits: { fileSize: 100 * 1024 * 1024 } });
+```
+
+### Issue 4: Credit Grant Race Condition (FALSE POSITIVE)
+
+**File:** `server/storage/db.ts:839-1100`  
+**Reported:** Race condition between checking and consuming grants  
+**Actual:** Already protected with atomic `WHERE remaining >= amount` and transaction wrapping  
+**Status:** No fix needed - existing code is correct
+
+### Verification
+
+```bash
+npm test -- --testPathPattern="images-mvp|payments"
+# Result: 36 passed, 0 failed
+```
+
+### Deployment Steps
+
+1. Run migration: `psql $DATABASE_URL -f config/migrations/0001_add_processed_webhooks.sql`
+2. Deploy updated code
+3. Monitor logs for "Credit deduction failed" and "Webhook already processed" messages

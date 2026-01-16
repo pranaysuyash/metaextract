@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { queryClient } from './lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -13,18 +14,29 @@ import {
 import { ContextAdapterProvider } from '@/context/ContextAdapter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import NotFound from '@/pages/not-found';
-import Results from '@/pages/results';
-import ResultsV2 from '@/pages/results-v2';
-import ImagesMvpLanding from '@/pages/images-mvp';
-import ImagesMvpResults from '@/pages/images-mvp/results';
-import ImagesMvpCreditsSuccess from '@/pages/images-mvp/credits-success';
-import ImagesMvpAnalytics from '@/pages/images-mvp/analytics';
-import DashboardImproved from '@/pages/dashboard-improved';
-import CheckoutSuccess from '@/pages/checkout-success';
-import CreditsSuccess from '@/pages/credits-success';
-import PrivacyPolicy from '@/pages/privacy-policy';
-import TermsOfService from '@/pages/terms-of-service';
-import GDPRCompliance from '@/pages/gdpr-compliance';
+
+// Code-split large page components for faster initial load
+const Results = React.lazy(() => import('@/pages/results'));
+const ResultsV2 = React.lazy(() => import('@/pages/results-v2'));
+const ImagesMvpLanding = React.lazy(() => import('@/pages/images-mvp'));
+const ImagesMvpResults = React.lazy(() => import('@/pages/images-mvp/results'));
+const ImagesMvpCreditsSuccess = React.lazy(() => import('@/pages/images-mvp/credits-success'));
+const ImagesMvpAnalytics = React.lazy(() => import('@/pages/images-mvp/analytics'));
+const DashboardImproved = React.lazy(() => import('@/pages/dashboard-improved'));
+const CheckoutSuccess = React.lazy(() => import('@/pages/checkout-success'));
+const CreditsSuccess = React.lazy(() => import('@/pages/credits-success'));
+const PrivacyPolicy = React.lazy(() => import('@/pages/privacy-policy'));
+const TermsOfService = React.lazy(() => import('@/pages/terms-of-service'));
+const GDPRCompliance = React.lazy(() => import('@/pages/gdpr-compliance'));
+
+// Loading fallback for lazy-loaded routes
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#0B0C10] flex items-center justify-center">
+      <div className="text-white">Loading...</div>
+    </div>
+  );
+}
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -65,6 +77,7 @@ function AppRouter() {
       </a>
 
       <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Navigate to="/images_mvp" replace />} />
           <Route
@@ -132,6 +145,7 @@ function AppRouter() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
 
       {/* Tutorial Overlay */}

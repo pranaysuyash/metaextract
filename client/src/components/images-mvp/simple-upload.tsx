@@ -48,6 +48,9 @@ export function SimpleUploadZone() {
     null
   );
   const [quoteLoading, setQuoteLoading] = useState(false);
+  
+  // Ref for aborting uploads when user navigates away or selects new file
+  const uploadAbortRef = useRef<XMLHttpRequest | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const openedFromQueryRef = useRef(false);
@@ -177,9 +180,9 @@ export function SimpleUploadZone() {
       if (credits >= 1) {
         if (!pendingFileId) {
           toast({
-            title: 'Quote expired',
+            title: 'File validation expired',
             description:
-              'Quote expired or file changed. Re-select the file to refresh.',
+              'Please select your file again to continue.',
             variant: 'destructive',
           });
           return;
@@ -192,17 +195,18 @@ export function SimpleUploadZone() {
         );
         if (!refreshed) {
           toast({
-            title: 'Quote refresh failed',
+            title: 'File validation failed',
             description:
-              'Please select the file again to generate a fresh quote.',
+              'Please select the file again to continue.',
             variant: 'destructive',
           });
           return;
         }
         setShowPricingModal(false);
         toast({
-          title: 'Credits available',
-          description: 'Ready to analyze. Click Analyze to continue.',
+          title: 'Credits added successfully',
+          description: `You now have ${credits} upload${credits !== 1 ? 's' : ''} available.`,
+          variant: 'default',
         });
       }
     } catch {
@@ -235,6 +239,16 @@ export function SimpleUploadZone() {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Cleanup: abort pending upload when component unmounts
+  useEffect(() => {
+    return () => {
+      if (uploadAbortRef.current) {
+        uploadAbortRef.current.abort();
+        uploadAbortRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -377,8 +391,8 @@ export function SimpleUploadZone() {
         reason: 'quote_failed',
       });
       toast({
-        title: 'Quote failed',
-        description: 'We could not price this file. Please try again.',
+        title: 'Unable to process file',
+        description: "We couldn't validate this file. Please check the file format and try again.",
         variant: 'destructive',
       });
       setPendingFile(null);
@@ -414,8 +428,8 @@ export function SimpleUploadZone() {
   const uploadFile = async (file: File) => {
     if (!quoteData || !pendingFileId) {
       toast({
-        title: 'Quote required',
-        description: 'Please select the file again to get a fresh quote.',
+        title: 'File validation needed',
+        description: 'Please select your file again to continue.',
         variant: 'destructive',
       });
       return;
@@ -465,8 +479,15 @@ export function SimpleUploadZone() {
     });
 
     try {
+      // Abort any previous upload in progress
+      if (uploadAbortRef.current) {
+        uploadAbortRef.current.abort();
+        uploadAbortRef.current = null;
+      }
+      
       const data = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        uploadAbortRef.current = xhr;
 
         xhr.upload.onprogress = event => {
           if (event.lengthComputable) {
@@ -476,6 +497,7 @@ export function SimpleUploadZone() {
         };
 
         xhr.onload = () => {
+          uploadAbortRef.current = null;
           let responseData;
           try {
             responseData = xhr.responseText
@@ -492,9 +514,9 @@ export function SimpleUploadZone() {
               typeof responseData?.error === 'string'
                 ? responseData.error
                 : responseData?.error?.message ||
-                  responseData?.message ||
-                  xhr.responseText ||
-                  'Extraction failed';
+                responseData?.message ||
+                xhr.responseText ||
+                'Extraction failed';
 
             reject({
               status: xhr.status,
@@ -504,7 +526,15 @@ export function SimpleUploadZone() {
           }
         };
 
-        xhr.onerror = () => reject({ message: 'Network error' });
+        xhr.onerror = () => {
+          uploadAbortRef.current = null;
+          reject({ message: 'Network error' });
+        };
+        
+        xhr.onabort = () => {
+          uploadAbortRef.current = null;
+          reject({ message: 'Upload cancelled', aborted: true });
+        };
 
         xhr.open('POST', '/api/images_mvp/extract');
         xhr.send(formData);
@@ -579,8 +609,8 @@ export function SimpleUploadZone() {
           mime_type: mimeType,
         });
         toast({
-          title: 'Free checks used',
-          description: 'Buy credits to continue analyzing images.',
+          title: 'Free uploads used',
+          description: 'You\'ve used your free uploads. Purchase credits to continue.',
           variant: 'destructive',
         });
         if (!showPricingModal && !pricingDismissed) {
@@ -600,18 +630,19 @@ export function SimpleUploadZone() {
         errorMessage === 'Network error'
       ) {
         toast({
-          title: 'Backend unavailable',
-          description:
-            'API is not reachable. Start the server with `npm run dev:server`.',
+          title: 'Service unavailable',
+          description: import.meta.env.DEV
+            ? 'Backend server not running. Start with `npm run dev:server`'
+            : 'Service temporarily unavailable. Please try again in a few moments.',
           variant: 'destructive',
         });
         return;
       }
       if (body?.code && String(body.code).startsWith('QUOTE_')) {
         toast({
-          title: 'Quote expired',
+          title: 'File validation expired',
           description:
-            'Quote expired or file changed. Re-select the file to refresh.',
+            'Please select your file again to continue.',
           variant: 'destructive',
         });
         setPendingFile(null);
@@ -631,8 +662,8 @@ export function SimpleUploadZone() {
       }
       if (status === 415) {
         toast({
-          title: 'Unsupported file type',
-          description: 'Unsupported file type. Please upload a supported image.',
+          title: 'File type not supported',
+          description: 'Please upload a JPG, PNG, GIF, WebP, HEIC, TIFF, or BMP image instead.',
           variant: 'destructive',
         });
         return;
@@ -648,8 +679,10 @@ export function SimpleUploadZone() {
         return;
       }
       toast({
-        title: 'Error',
-        description: errorMessage,
+        title: 'Upload failed',
+        description: errorMessage.length > 100 || errorMessage.includes('Error:')
+          ? 'We couldn\'t upload your file. Please try again or contact support if this continues.'
+          : errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -737,14 +770,14 @@ export function SimpleUploadZone() {
             ? 'Tap to select image'
             : 'Upload image drop zone. Drag and drop a file here or click to browse.'
         }
-          className={cn(
-            'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
-            isUploading
-              ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
-              : isDragActive
-                ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
-                : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
-          )}
+        className={cn(
+          'relative block w-full border-2 border-dashed rounded-lg sm:rounded-xl p-6 sm:p-12 text-center transition-all cursor-pointer overflow-hidden group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-black min-h-[200px] sm:min-h-auto touch-manipulation select-none active:scale-[0.98]',
+          isUploading
+            ? 'border-primary/40 bg-black/40 backdrop-blur-sm'
+            : isDragActive
+              ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
+              : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
+        )}
 
       >
         <input
@@ -873,7 +906,7 @@ export function SimpleUploadZone() {
                   ))}
                 </div>
               )}
-              
+
               {/* User-friendly breakdown */}
               <div className="grid gap-1.5 text-sm">
                 <div className="flex justify-between items-center">
@@ -882,7 +915,7 @@ export function SimpleUploadZone() {
                     {activeQuoteEntry.breakdown.base + activeQuoteEntry.breakdown.embedding} credits
                   </span>
                 </div>
-                
+
                 {activeQuoteEntry.breakdown.ocr > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Text scan</span>
@@ -891,7 +924,7 @@ export function SimpleUploadZone() {
                     </span>
                   </div>
                 )}
-                
+
                 {activeQuoteEntry.breakdown.mp > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Large image fee</span>
@@ -900,9 +933,9 @@ export function SimpleUploadZone() {
                     </span>
                   </div>
                 )}
-                
+
                 <div className="h-px bg-white/10 my-1"></div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-white font-medium">Total</span>
                   <span className="text-white font-bold text-base">

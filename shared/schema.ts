@@ -607,3 +607,12 @@ export type InsertBatchJob = z.infer<typeof insertBatchJobSchema>;
 export type BatchJob = typeof batchJobs.$inferSelect;
 export type InsertBatchResult = z.infer<typeof insertBatchResultSchema>;
 export type BatchResult = typeof batchResults.$inferSelect;
+
+// Webhook idempotency tracking - persists across server restarts
+export const processedWebhooks = pgTable('processed_webhooks', {
+  id: varchar('id').primaryKey(), // webhook ID from payment provider
+  processedAt: timestamp('processed_at').notNull().defaultNow(),
+  eventType: text('event_type'),
+});
+
+export type ProcessedWebhook = typeof processedWebhooks.$inferSelect;

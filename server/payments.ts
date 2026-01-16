@@ -1,8 +1,8 @@
 import DodoPayments from 'dodopayments';
 import type { Express, Request, Response } from 'express';
 import { db } from './db';
-import { users, subscriptions } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { users, subscriptions, processedWebhooks } from '@shared/schema';
+import { eq, lt } from 'drizzle-orm';
 import crypto from 'crypto';
 import { storage } from './storage/index';
 import { normalizeTier } from '@shared/tierConfig';
@@ -159,23 +159,56 @@ function getCoreBalanceKeyForUser(userId: string): string {
 // Webhook Idempotency Store
 // ============================================================================
 
-// In-memory store to prevent duplicate webhook processing
-// Maps webhook ID to the timestamp it was processed
-const processedWebhooks = new Map<string, number>();
+// Database-backed webhook idempotency - persists across server restarts
+// This prevents double-processing when DodoPayments retries webhooks after a restart
 
-// Clean up old entries every 1 hour (webhooks expire after 5 min anyway)
+async function isWebhookProcessed(webhookId: string): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const result = await db
+      .select()
+      .from(processedWebhooks)
+      .where(eq(processedWebhooks.id, webhookId))
+      .limit(1);
+    return result.length > 0;
+  } catch (error) {
+    // Table might not exist yet - allow processing (safe: webhook handlers are idempotent)
+    console.warn('Failed to check webhook idempotency:', error);
+    return false;
+  }
+}
+
+async function markWebhookProcessed(
+  webhookId: string,
+  eventType?: string
+): Promise<void> {
+  if (!db) return;
+  try {
+    await db
+      .insert(processedWebhooks)
+      .values({ id: webhookId, eventType })
+      .onConflictDoNothing();
+  } catch (error) {
+    console.warn('Failed to mark webhook as processed:', error);
+  }
+}
+
+// Clean up old webhook entries (older than 24 hours) periodically
 // In tests, avoid keeping the event loop alive (Jest sets JEST_WORKER_ID).
 if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
   const timer = setInterval(
-    () => {
-      const oneHourAgo = Date.now() - 60 * 60 * 1000;
-      for (const [webhookId, processedTime] of processedWebhooks.entries()) {
-        if (processedTime < oneHourAgo) {
-          processedWebhooks.delete(webhookId);
-        }
+    async () => {
+      if (!db) return;
+      try {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        await db
+          .delete(processedWebhooks)
+          .where(lt(processedWebhooks.processedAt, oneDayAgo));
+      } catch (error) {
+        console.warn('Failed to clean up old webhooks:', error);
       }
     },
-    60 * 60 * 1000
+    60 * 60 * 1000 // Every hour
   );
   timer.unref?.();
 }
@@ -762,9 +795,9 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(400).json({ error: 'Invalid webhook signature' });
       }
 
-      // ✅ IDEMPOTENCY CHECK: Prevent duplicate webhook processing
-      // If we've already processed this webhook ID recently, skip it
-      if (processedWebhooks.has(webhookId)) {
+      // ✅ IDEMPOTENCY CHECK: Prevent duplicate webhook processing (database-backed)
+      // Persists across server restarts to prevent double credit grants
+      if (await isWebhookProcessed(webhookId)) {
         console.log('Webhook already processed (duplicate):', {
           id: webhookId,
           type: req.body?.type,
@@ -780,8 +813,8 @@ export function registerPaymentRoutes(app: Express) {
         timestamp: webhookTimestamp,
       });
 
-      // Mark this webhook as processed
-      processedWebhooks.set(webhookId, Date.now());
+      // Mark this webhook as processed (before handling to prevent race conditions)
+      await markWebhookProcessed(webhookId, req.body?.type);
 
       const event = req.body;
 

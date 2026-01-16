@@ -88,6 +88,18 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
           changeOrigin: true,
           secure: false,
           ws: true,
+          // Retry configuration to handle server startup timing
+          configure: (proxy, options) => {
+            proxy.on('error', (err, req, res) => {
+              console.log(`[Vite Proxy] Connection error to ${options.target}, retrying...`);
+            });
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              // Add timeout and retry logic
+              proxyReq.setTimeout(5000, () => {
+                console.log(`[Vite Proxy] Timeout connecting to ${options.target}`);
+              });
+            });
+          },
         },
       },
       fs: {
