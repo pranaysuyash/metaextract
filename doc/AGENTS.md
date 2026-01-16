@@ -22,11 +22,12 @@ pytest tests/ -k "test_name" -v
 **Dev server:** `npm run dev` (Express + Vite on :5173)
 
 ### Server process management (important)
+
 - Never kill the global Node runtime (e.g., avoid `killall node`).
 - To restart, only stop the dev servers: terminate the terminal/task running `npm run dev`.
 - If a port is stuck, kill by port instead of all Node (macOS):
-	- `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9` (Vite)
-	- `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9` (Express)
+  - `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9` (Vite)
+  - `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9` (Express)
 - This prevents disrupting other Node-based tools (linters, scripts, debuggers).
 
 ## Architecture
@@ -70,6 +71,7 @@ pytest tests/ -k "test_name" -v
 **Issue Resolution:** Prioritize fixing/implementing over deletion. Understand root cause before modifying code.
 
 ## Multi-agent safety (non-negotiable)
+
 - Assume multiple agents may be working simultaneously; do not delete or discard work you did not create.
 - Do not remove git worktrees, branches, or files created by other agents unless the user explicitly instructs you to.
 - If you discover work in another branch/worktree (especially untracked files):
@@ -116,6 +118,7 @@ Explicit version calls must be followed exactly (e.g., `Audit v1.5.1`, `Implemen
 For UI work (review/audit/spec), use the canonical prompts in `doc/UI_REVIEW_WORKFLOWS.md`.
 
 Treat any of the following as an explicit request to switch modes; versionless calls must use the alias mapping in `doc/UI_REVIEW_WORKFLOWS.md` and state which version was applied:
+
 - `ui review` / `ux review` / `ui audit`
 - `repo-aware ui audit` / `repo ui auditor`
 - `ui deep dive` / `ui file audit` / `audit this component`

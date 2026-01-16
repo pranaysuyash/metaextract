@@ -19,8 +19,20 @@ import {
 } from '@/lib/images-mvp-quote';
 import { useAuth } from '@/lib/auth';
 import { generateBrowserFingerprint } from '@/lib/browser-fingerprint';
+import {
+  showFileValidationError,
+  showFileRejectionError,
+  showFileTypeError,
+  showSecurityError,
+  showUploadError,
+  showServiceError,
+  showPaywallError,
+  showCreditsAdded,
+  showSuccessMessage,
+} from '@/lib/toast-helpers';
+import { UploadErrorBoundary } from '@/components/images-mvp/upload-error-boundary';
 
-export function SimpleUploadZone() {
+function SimpleUploadZoneInternal() {
   const { isAuthenticated } = useAuth();
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -48,7 +60,7 @@ export function SimpleUploadZone() {
     null
   );
   const [quoteLoading, setQuoteLoading] = useState(false);
-  
+
   // Ref for aborting uploads when user navigates away or selects new file
   const uploadAbortRef = useRef<XMLHttpRequest | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -62,8 +74,9 @@ export function SimpleUploadZone() {
     typeof quoteData?.limits?.maxBytes === 'number'
       ? quoteData.limits.maxBytes
       : null;
-  const fingerprintPromiseRef =
-    useRef<Promise<Record<string, unknown>> | null>(null);
+  const fingerprintPromiseRef = useRef<Promise<Record<string, unknown>> | null>(
+    null
+  );
 
   const getFingerprintData = useCallback(async () => {
     try {
@@ -84,7 +97,10 @@ export function SimpleUploadZone() {
       }
       const fp = await fingerprintPromiseRef.current;
       try {
-        sessionStorage.setItem('metaextract_fingerprint_v1', JSON.stringify(fp));
+        sessionStorage.setItem(
+          'metaextract_fingerprint_v1',
+          JSON.stringify(fp)
+        );
       } catch {
         // Ignore cache failures
       }
@@ -108,20 +124,21 @@ export function SimpleUploadZone() {
   ): Promise<{ width: number; height: number } | null> => {
     try {
       const objectUrl = URL.createObjectURL(file);
-      const result = await new Promise<{ width: number; height: number } | null>(
-        resolve => {
-          const img = new Image();
-          img.onload = () => {
-            resolve({ width: img.width, height: img.height });
-            URL.revokeObjectURL(objectUrl);
-          };
-          img.onerror = () => {
-            resolve(null);
-            URL.revokeObjectURL(objectUrl);
-          };
-          img.src = objectUrl;
-        }
-      );
+      const result = await new Promise<{
+        width: number;
+        height: number;
+      } | null>(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          resolve({ width: img.width, height: img.height });
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.onerror = () => {
+          resolve(null);
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
+      });
       return result;
     } catch {
       return null;
@@ -179,12 +196,7 @@ export function SimpleUploadZone() {
         typeof data?.credits === 'number' ? (data.credits as number) : 0;
       if (credits >= 1) {
         if (!pendingFileId) {
-          toast({
-            title: 'File validation expired',
-            description:
-              'Please select your file again to continue.',
-            variant: 'destructive',
-          });
+          showFileValidationError(toast, 'expired');
           return;
         }
         const refreshed = await requestQuote(
@@ -194,20 +206,11 @@ export function SimpleUploadZone() {
           quoteOps
         );
         if (!refreshed) {
-          toast({
-            title: 'File validation failed',
-            description:
-              'Please select the file again to continue.',
-            variant: 'destructive',
-          });
+          showFileValidationError(toast, 'failed');
           return;
         }
         setShowPricingModal(false);
-        toast({
-          title: 'Credits added successfully',
-          description: `You now have ${credits} upload${credits !== 1 ? 's' : ''} available.`,
-          variant: 'default',
-        });
+        showCreditsAdded(toast, credits);
       }
     } catch {
       // Best-effort only
@@ -240,7 +243,7 @@ export function SimpleUploadZone() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+
   // Cleanup: abort pending upload when component unmounts
   useEffect(() => {
     return () => {
@@ -253,7 +256,8 @@ export function SimpleUploadZone() {
 
   useEffect(() => {
     if (openedFromQueryRef.current) return;
-    const pricingFlag = searchParams.get('pricing') || searchParams.get('credits');
+    const pricingFlag =
+      searchParams.get('pricing') || searchParams.get('credits');
     if (!pricingFlag) return;
     openedFromQueryRef.current = true;
     setShowPricingModal(true);
@@ -323,7 +327,8 @@ export function SimpleUploadZone() {
   }, []);
 
   const activeQuoteEntry =
-    quoteData?.quote?.perFile?.find(entry => entry.id === pendingFileId) ?? null;
+    quoteData?.quote?.perFile?.find(entry => entry.id === pendingFileId) ??
+    null;
 
   const handleOpsToggle = (key: keyof ImagesMvpQuoteOps) => {
     const nextOps = { ...quoteOps, [key]: !quoteOps[key] };
@@ -390,11 +395,7 @@ export function SimpleUploadZone() {
         size_bucket: sizeBucket,
         reason: 'quote_failed',
       });
-      toast({
-        title: 'Unable to process file',
-        description: "We couldn't validate this file. Please check the file format and try again.",
-        variant: 'destructive',
-      });
+      showFileValidationError(toast, 'processing');
       setPendingFile(null);
       setPendingFileId(null);
       return;
@@ -408,16 +409,14 @@ export function SimpleUploadZone() {
         size_bucket: sizeBucket,
         reason: fileQuote.reason || 'unsupported_format',
       });
-      toast({
-        title: 'Upload blocked',
-        description:
-          fileQuote.reason === 'file_too_large'
-            ? 'File exceeds the maximum size limit.'
-            : fileQuote.reason === 'megapixels_exceed_limit'
-              ? 'Image resolution exceeds the supported limit.'
-              : 'Unsupported file type.',
-        variant: 'destructive',
-      });
+      const reason = !fileQuote.accepted
+        ? fileQuote.reason === 'file_too_large'
+          ? ('too_large' as const)
+          : fileQuote.reason === 'megapixels_exceed_limit'
+            ? ('megapixels' as const)
+            : ('unsupported' as const)
+        : ('unsupported' as const);
+      showFileRejectionError(toast, reason);
       setPendingFile(null);
       setPendingFileId(null);
       setQuoteData(null);
@@ -427,11 +426,7 @@ export function SimpleUploadZone() {
 
   const uploadFile = async (file: File) => {
     if (!quoteData || !pendingFileId) {
-      toast({
-        title: 'File validation needed',
-        description: 'Please select your file again to continue.',
-        variant: 'destructive',
-      });
+      showFileValidationError(toast, 'validation');
       return;
     }
 
@@ -484,7 +479,7 @@ export function SimpleUploadZone() {
         uploadAbortRef.current.abort();
         uploadAbortRef.current = null;
       }
-      
+
       const data = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         uploadAbortRef.current = xhr;
@@ -514,9 +509,9 @@ export function SimpleUploadZone() {
               typeof responseData?.error === 'string'
                 ? responseData.error
                 : responseData?.error?.message ||
-                responseData?.message ||
-                xhr.responseText ||
-                'Extraction failed';
+                  responseData?.message ||
+                  xhr.responseText ||
+                  'Extraction failed';
 
             reject({
               status: xhr.status,
@@ -530,7 +525,7 @@ export function SimpleUploadZone() {
           uploadAbortRef.current = null;
           reject({ message: 'Network error' });
         };
-        
+
         xhr.onabort = () => {
           uploadAbortRef.current = null;
           reject({ message: 'Upload cancelled', aborted: true });
@@ -608,11 +603,7 @@ export function SimpleUploadZone() {
           extension,
           mime_type: mimeType,
         });
-        toast({
-          title: 'Free uploads used',
-          description: 'You\'ve used your free uploads. Purchase credits to continue.',
-          variant: 'destructive',
-        });
+        showPaywallError(toast);
         if (!showPricingModal && !pricingDismissed) {
           setShowPricingModal(true);
           setPaywallShownAt(Date.now());
@@ -629,20 +620,13 @@ export function SimpleUploadZone() {
         errorMessage.toLowerCase().includes('failed to fetch') ||
         errorMessage === 'Network error'
       ) {
-        toast({
-          title: 'Service unavailable',
-          description: import.meta.env.DEV
-            ? 'Backend server not running. Start with `npm run dev:server`'
-            : 'Service temporarily unavailable. Please try again in a few moments.',
-          variant: 'destructive',
-        });
+        showServiceError(toast, import.meta.env.DEV);
         return;
       }
       if (body?.code && String(body.code).startsWith('QUOTE_')) {
         toast({
           title: 'File validation expired',
-          description:
-            'Please select your file again to continue.',
+          description: 'Please select your file again to continue.',
           variant: 'destructive',
         });
         setPendingFile(null);
@@ -661,30 +645,14 @@ export function SimpleUploadZone() {
         return;
       }
       if (status === 415) {
-        toast({
-          title: 'File type not supported',
-          description: 'Please upload a JPG, PNG, GIF, WebP, HEIC, TIFF, or BMP image instead.',
-          variant: 'destructive',
-        });
+        showFileTypeError(toast, status);
         return;
       }
       if (status === 403) {
-        toast({
-          title: 'Upload blocked',
-          description:
-            body?.message ||
-            'For security reasons, this file type is not permitted.',
-          variant: 'destructive',
-        });
+        showSecurityError(toast, body?.message);
         return;
       }
-      toast({
-        title: 'Upload failed',
-        description: errorMessage.length > 100 || errorMessage.includes('Error:')
-          ? 'We couldn\'t upload your file. Please try again or contact support if this continues.'
-          : errorMessage,
-        variant: 'destructive',
-      });
+      showUploadError(toast, errorMessage, import.meta.env.DEV);
     } finally {
       setIsUploading(false);
     }
@@ -778,7 +746,6 @@ export function SimpleUploadZone() {
               ? 'border-primary bg-primary/5 bg-black/20 backdrop-blur-sm'
               : 'border-white/10 bg-black/20 backdrop-blur-sm hover:border-primary/50 hover:bg-white/5'
         )}
-
       >
         <input
           id="mvp-upload"
@@ -828,8 +795,8 @@ export function SimpleUploadZone() {
                     : ''}
                   {!isAuthenticated && (
                     <span className="text-primary text-xs font-mono mt-1 block">
-                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
-                      free checks (no signup)
+                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />
+                      2 free checks (no signup)
                     </span>
                   )}
                 </>
@@ -838,13 +805,12 @@ export function SimpleUploadZone() {
                   Supports JPG, PNG, HEIC, WebP
                   {maxBytesDisplay
                     ? ` (max ${Math.round(maxBytesDisplay / (1024 * 1024))} MB)`
-                    : ''}
-                  {' '}
+                    : ''}{' '}
                   <br className="hidden sm:block" />
                   {!isAuthenticated && (
                     <span className="text-primary text-xs font-mono mt-1 block">
-                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />2
-                      free checks (no signup)
+                      <Zap className="w-3 h-3 inline mr-1" aria-hidden="true" />
+                      2 free checks (no signup)
                     </span>
                   )}
                 </>
@@ -865,7 +831,10 @@ export function SimpleUploadZone() {
         <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-left overflow-hidden">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-white truncate" title={pendingFile.name}>
+              <div
+                className="text-sm font-semibold text-white truncate"
+                title={pendingFile.name}
+              >
                 {pendingFile.name}
               </div>
               <div className="text-[11px] text-slate-400">
@@ -891,28 +860,33 @@ export function SimpleUploadZone() {
           {activeQuoteEntry?.accepted && activeQuoteEntry.breakdown && (
             <div className="mt-3 space-y-2 text-xs text-slate-300">
               {/* Size badge - only show if not standard */}
-              {activeQuoteEntry.mpBucket && activeQuoteEntry.mpBucket !== 'standard' && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
-                    {activeQuoteEntry.mpBucket === 'large' ? 'Large image' : activeQuoteEntry.mpBucket}
-                  </span>
-                  {activeQuoteEntry.warnings?.map(warning => (
-                    <span
-                      key={warning}
-                      className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
-                    >
-                      {warning}
+              {activeQuoteEntry.mpBucket &&
+                activeQuoteEntry.mpBucket !== 'standard' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">
+                      {activeQuoteEntry.mpBucket === 'large'
+                        ? 'Large image'
+                        : activeQuoteEntry.mpBucket}
                     </span>
-                  ))}
-                </div>
-              )}
+                    {activeQuoteEntry.warnings?.map(warning => (
+                      <span
+                        key={warning}
+                        className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-200"
+                      >
+                        {warning}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
               {/* User-friendly breakdown */}
               <div className="grid gap-1.5 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-300">Base scan</span>
                   <span className="text-white font-semibold">
-                    {activeQuoteEntry.breakdown.base + activeQuoteEntry.breakdown.embedding} credits
+                    {activeQuoteEntry.breakdown.base +
+                      activeQuoteEntry.breakdown.embedding}{' '}
+                    credits
                   </span>
                 </div>
 
@@ -957,14 +931,13 @@ export function SimpleUploadZone() {
               />
               <span className="select-none">
                 Detect overlaid text{' '}
-                <span className="text-slate-400">
-                  (+5 credits)
-                </span>
+                <span className="text-slate-400">(+5 credits)</span>
               </span>
             </label>
             {ocrAutoApplied && (
               <div className="text-[11px] text-emerald-300 pl-6">
-                OCR turned on automatically (looks like a GPS/map screenshot). Toggle off if not needed.
+                OCR turned on automatically (looks like a GPS/map screenshot).
+                Toggle off if not needed.
               </div>
             )}
           </div>
@@ -1000,5 +973,21 @@ export function SimpleUploadZone() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * SimpleUploadZone wrapped in error boundary for resilience
+ */
+export function SimpleUploadZone() {
+  return (
+    <UploadErrorBoundary
+      onError={(error, errorInfo) => {
+        // Log to monitoring service if available
+        console.error('Upload zone error:', error, errorInfo);
+      }}
+    >
+      <SimpleUploadZoneInternal />
+    </UploadErrorBoundary>
   );
 }

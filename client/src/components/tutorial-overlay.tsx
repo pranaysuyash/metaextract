@@ -29,6 +29,7 @@ import {
 import { useOnboarding } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { showUploadError, showSuccessMessage } from '@/lib/toast-helpers';
 
 // ============================================================================
 // Types
@@ -211,12 +212,10 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
           'Please complete the required action before continuing'
         );
         setIsValidating(false);
-        toast({
-          title: 'Action Required',
-          description:
-            'Please complete the highlighted action before moving to the next step',
-          variant: 'destructive',
-        });
+        showUploadError(
+          toast,
+          'Please complete the highlighted action before moving to the next step'
+        );
         return;
       }
 
@@ -230,11 +229,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     });
 
     // Show success feedback
-    toast({
-      title: 'Step Complete!',
-      description: `${currentStep.title} completed successfully`,
-      duration: 2000,
-    });
+    showSuccessMessage(
+      toast,
+      'Step Complete!',
+      `${currentStep.title} completed successfully`
+    );
 
     setValidationError(null);
   }, [currentStep, completeStep, toast]);
@@ -247,11 +246,7 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     if (prevIndex >= 0) {
       // Note: This would need to be implemented in the onboarding context
       // The context should handle updating progress; for now we show feedback.
-      toast({
-        title: 'Going Back',
-        description: 'Returning to previous step',
-        duration: 2000,
-      });
+      showSuccessMessage(toast, 'Going Back', 'Returning to previous step');
     }
   }, [session, currentPath, toast]);
 
@@ -260,11 +255,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
 
     await skipStep(currentStep.id, 'user-skip');
 
-    toast({
-      title: 'Step Skipped',
-      description: 'You can always come back to this later',
-      duration: 2000,
-    });
+    showSuccessMessage(
+      toast,
+      'Step Skipped',
+      'You can always come back to this later'
+    );
 
     setValidationError(null);
   }, [currentStep, skipStep, toast]);
@@ -280,11 +275,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     // Complete the entire onboarding
     await completeOnboarding();
 
-    toast({
-      title: 'Congratulations! 🎉',
-      description: "You've completed the onboarding tutorial",
-      duration: 3000,
-    });
+    showSuccessMessage(
+      toast,
+      'Congratulations! 🎉',
+      "You've completed the onboarding tutorial"
+    );
 
     onClose();
   }, [currentStep, completeStep, completeOnboarding, onClose, toast]);
@@ -293,22 +288,18 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     setIsPaused(true);
     await pauseOnboarding();
 
-    toast({
-      title: 'Tutorial Paused',
-      description: 'Resume anytime from where you left off',
-      duration: 2000,
-    });
+    showSuccessMessage(
+      toast,
+      'Tutorial Paused',
+      'Resume anytime from where you left off'
+    );
   }, [pauseOnboarding, toast]);
 
   const handleResume = useCallback(async () => {
     setIsPaused(false);
     await resumeOnboarding();
 
-    toast({
-      title: 'Tutorial Resumed',
-      description: "Let's continue!",
-      duration: 2000,
-    });
+    showSuccessMessage(toast, 'Tutorial Resumed', "Let's continue!");
   }, [resumeOnboarding, toast]);
 
   const handleRestart = useCallback(async () => {
@@ -317,11 +308,11 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
     // Restart the onboarding from the beginning
     await startOnboarding(session.userProfile);
 
-    toast({
-      title: 'Tutorial Restarted',
-      description: 'Starting from the beginning',
-      duration: 2000,
-    });
+    showSuccessMessage(
+      toast,
+      'Tutorial Restarted',
+      'Starting from the beginning'
+    );
 
     setIsPaused(false);
     setValidationError(null);

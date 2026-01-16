@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { FileJson, FileSpreadsheet, Download, Loader2 } from 'lucide-react';
+import { showSuccessMessage, showUploadError } from '@/lib/toast-helpers';
 
 interface BatchResult {
   id: string;
@@ -47,11 +48,12 @@ export const BatchExportDialog: React.FC<BatchExportDialogProps> = ({
 
   const handleExport = async () => {
     setIsExporting(true);
-    
+
     try {
-      const dataToExport = exportScope === 'selected' && selectedFiles.length > 0
-        ? results.filter(result => selectedFiles.includes(result.id))
-        : results;
+      const dataToExport =
+        exportScope === 'selected' && selectedFiles.length > 0
+          ? results.filter(result => selectedFiles.includes(result.id))
+          : results;
 
       if (exportFormat === 'json') {
         // Export as JSON
@@ -67,18 +69,28 @@ export const BatchExportDialog: React.FC<BatchExportDialogProps> = ({
         URL.revokeObjectURL(url);
       } else {
         // Export as CSV
-        const headers = ['Filename', 'Status', 'Fields Extracted', 'File Size (KB)', 'File Type', 'Extraction Date', 'Processing Time (ms)'];
+        const headers = [
+          'Filename',
+          'Status',
+          'Fields Extracted',
+          'File Size (KB)',
+          'File Type',
+          'Extraction Date',
+          'Processing Time (ms)',
+        ];
         const csvContent = [
           headers.join(','),
-          ...dataToExport.map(result => [
-            `"${result.filename}"`,
-            result.status,
-            result.fieldsExtracted,
-            Math.round(result.fileSize / 1024),
-            `"${result.fileType}"`,
-            `"${new Date(result.extractionDate).toISOString()}"`,
-            result.processingTime || ''
-          ].join(','))
+          ...dataToExport.map(result =>
+            [
+              `"${result.filename}"`,
+              result.status,
+              result.fieldsExtracted,
+              Math.round(result.fileSize / 1024),
+              `"${result.fileType}"`,
+              `"${new Date(result.extractionDate).toISOString()}"`,
+              result.processingTime || '',
+            ].join(',')
+          ),
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -92,27 +104,25 @@ export const BatchExportDialog: React.FC<BatchExportDialogProps> = ({
         URL.revokeObjectURL(url);
       }
 
-      toast({
-        title: 'Export Complete',
-        description: `${dataToExport.length} results exported as ${exportFormat.toUpperCase()}`,
-      });
-      
+      showSuccessMessage(
+        toast,
+        'Export Complete',
+        `${dataToExport.length} results exported as ${exportFormat.toUpperCase()}`
+      );
+
       onOpenChange(false);
     } catch (error) {
       console.error('Export error:', error);
-      toast({
-        title: 'Export Failed',
-        description: 'An error occurred while exporting the results.',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'An error occurred while exporting the results.');
     } finally {
       setIsExporting(false);
     }
   };
 
-  const exportableCount = exportScope === 'selected' && selectedFiles.length > 0 
-    ? selectedFiles.length 
-    : results.length;
+  const exportableCount =
+    exportScope === 'selected' && selectedFiles.length > 0
+      ? selectedFiles.length
+      : results.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +130,8 @@ export const BatchExportDialog: React.FC<BatchExportDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Export Batch Results</DialogTitle>
           <DialogDescription>
-            Choose the format and scope for exporting your batch processing results.
+            Choose the format and scope for exporting your batch processing
+            results.
           </DialogDescription>
         </DialogHeader>
 
@@ -177,7 +188,8 @@ export const BatchExportDialog: React.FC<BatchExportDialogProps> = ({
               <Badge variant="secondary">{exportableCount}</Badge>
             </div>
             <div className="mt-2 text-slate-400">
-              Format: <span className="text-white">{exportFormat.toUpperCase()}</span>
+              Format:{' '}
+              <span className="text-white">{exportFormat.toUpperCase()}</span>
             </div>
           </div>
         </div>

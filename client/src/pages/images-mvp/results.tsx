@@ -67,6 +67,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccessMessage, showUploadError } from '@/lib/toast-helpers';
 import { trackImagesMvpEvent } from '@/lib/images-mvp-analytics';
 
 interface MakernoteDisplayField {
@@ -196,7 +197,8 @@ export default function ImagesMvpResults() {
   const resultsLogged = useRef(false);
 
   useEffect(() => {
-    const pricingFlag = searchParams.get('pricing') || searchParams.get('credits');
+    const pricingFlag =
+      searchParams.get('pricing') || searchParams.get('credits');
     if (!pricingFlag) return;
     setShowPricingModal(true);
     const next = new URLSearchParams(searchParams);
@@ -444,7 +446,8 @@ export default function ImagesMvpResults() {
                   Analysis failed
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  {errorInfo?.message || 'We could not process your last upload.'}
+                  {errorInfo?.message ||
+                    'We could not process your last upload.'}
                   {typeof errorInfo?.status === 'number'
                     ? ` (Error ${errorInfo.status})`
                     : ''}
@@ -979,21 +982,18 @@ export default function ImagesMvpResults() {
   const handleCopySummary = async () => {
     try {
       await navigator.clipboard?.writeText(buildSummaryLines());
-      toast({
-        title: 'Summary copied',
-        description: 'Highlights copied to your clipboard.',
-      });
+      showSuccessMessage(
+        toast,
+        'Summary copied',
+        'Highlights copied to your clipboard.'
+      );
       trackEvent('summary_copied', {
         filetype: metadata.filetype,
         mime_type: metadata.mime_type,
         purpose: purpose || 'unset',
       });
     } catch {
-      toast({
-        title: 'Unable to copy',
-        description: 'Clipboard access was blocked by your browser.',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'Clipboard access was blocked by your browser.');
     }
   };
 

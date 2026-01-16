@@ -12,6 +12,7 @@ import { Loader2, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
 import { AuthModal } from '@/components/auth-modal';
+import { showUploadError } from '@/lib/toast-helpers';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -71,11 +72,7 @@ export function PricingModal({
         );
         setPacks(packEntries);
       } catch {
-        toast({
-          title: 'Unable to load pricing',
-          description: 'Please try again in a moment.',
-          variant: 'destructive',
-        });
+        showUploadError(toast, 'Please try again in a moment.');
       } finally {
         setLoadingPacks(false);
       }
@@ -133,22 +130,16 @@ export function PricingModal({
       );
       if (!opened) {
         setPendingCheckoutUrl(data.checkout_url);
-        toast({
-          title: 'Popup blocked',
-          description:
-            'Allow popups for this site, then click “Open Checkout”.',
-          variant: 'destructive',
-        });
+        showUploadError(
+          toast,
+          'Allow popups for this site, then click "Open Checkout".'
+        );
         return;
       }
 
       onClose();
     } catch (error: any) {
-      toast({
-        title: 'Payment failed',
-        description: error?.message || 'Unable to start checkout.',
-        variant: 'destructive',
-      });
+      showUploadError(toast, error?.message || 'Unable to start checkout.');
     } finally {
       setPurchaseLoading(null);
     }
@@ -175,7 +166,7 @@ export function PricingModal({
       />
       <DialogContent
         className="sm:max-w-[520px] p-0 overflow-hidden bg-[#0A0A0A] border border-white/10 shadow-2xl text-white"
-        onOpenAutoFocus={(event) => {
+        onOpenAutoFocus={event => {
           event.preventDefault();
           setTimeout(() => {
             const emailInput = document.getElementById('pricing-email');
@@ -204,99 +195,102 @@ export function PricingModal({
         </div>
 
         <div className="p-6 space-y-5">
-        {pendingCheckoutUrl && (
-          <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-            <div className="text-sm font-semibold text-white">
-              Open Checkout
-            </div>
-            <div className="text-xs text-slate-300 mt-1">
-              Your browser blocked the checkout popup. Enable popups, then click
-              below.
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Button
-                className="bg-primary text-black hover:bg-primary/90 font-semibold"
-                onClick={() => {
-                  const opened = window.open(
-                    pendingCheckoutUrl,
-                    '_blank',
-                    'noopener,noreferrer'
-                  );
-                  if (opened) onClose();
-                }}
-              >
+          {pendingCheckoutUrl && (
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-sm font-semibold text-white">
                 Open Checkout
-              </Button>
-              <Button
-                variant="outline"
-                className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
-                onClick={() => setPendingCheckoutUrl(null)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-        {isLocalhost && (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
-            <div className="text-xs text-amber-200">
-              Local dev uses Dodo test mode. No real money is charged.
-            </div>
-          </div>
-        )}
-        <div className="space-y-2">
-          <label htmlFor="pricing-email" className="text-xs font-medium text-slate-200">
-            Email (optional)
-          </label>
-          <input
-            id="pricing-email"
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="name@example.com"
-            autoComplete="email"
-            className="w-full px-3 py-2 bg-[#1A1A1A] border border-white/10 rounded-md text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
-          />
-        </div>
-
-        {loadingPacks ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {sortedPacks.map(pack => (
-              <div
-                key={pack.id}
-                className="border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-white">
-                    {pack.name}
-                  </div>
-                  <div className="text-xs text-slate-200">
-                    {pack.description}
-                  </div>
-                  <div className="text-xs text-primary mt-1">
-                    {pack.credits} credits
-                  </div>
-                </div>
+              </div>
+              <div className="text-xs text-slate-300 mt-1">
+                Your browser blocked the checkout popup. Enable popups, then
+                click below.
+              </div>
+              <div className="mt-3 flex gap-2">
                 <Button
-                  onClick={() => handlePurchase(pack.id)}
-                  disabled={!!purchaseLoading}
                   className="bg-primary text-black hover:bg-primary/90 font-semibold"
+                  onClick={() => {
+                    const opened = window.open(
+                      pendingCheckoutUrl,
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
+                    if (opened) onClose();
+                  }}
                 >
-                  {purchaseLoading === pack.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    pack.priceDisplay
-                  )}
+                  Open Checkout
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-white/20 text-slate-200 hover:text-white hover:bg-white/10"
+                  onClick={() => setPendingCheckoutUrl(null)}
+                >
+                  Cancel
                 </Button>
               </div>
-            ))}
+            </div>
+          )}
+          {isLocalhost && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+              <div className="text-xs text-amber-200">
+                Local dev uses Dodo test mode. No real money is charged.
+              </div>
+            </div>
+          )}
+          <div className="space-y-2">
+            <label
+              htmlFor="pricing-email"
+              className="text-xs font-medium text-slate-200"
+            >
+              Email (optional)
+            </label>
+            <input
+              id="pricing-email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              autoComplete="email"
+              className="w-full px-3 py-2 bg-[#1A1A1A] border border-white/10 rounded-md text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+            />
           </div>
-        )}
-      </div>
+
+          {loadingPacks ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {sortedPacks.map(pack => (
+                <div
+                  key={pack.id}
+                  className="border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-white">
+                      {pack.name}
+                    </div>
+                    <div className="text-xs text-slate-200">
+                      {pack.description}
+                    </div>
+                    <div className="text-xs text-primary mt-1">
+                      {pack.credits} credits
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handlePurchase(pack.id)}
+                    disabled={!!purchaseLoading}
+                    className="bg-primary text-black hover:bg-primary/90 font-semibold"
+                  >
+                    {purchaseLoading === pack.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      pack.priceDisplay
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

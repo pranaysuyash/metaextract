@@ -12,6 +12,7 @@ Operational note (process management):
 When restarting the dev environment, stop only the running dev servers (Vite on :5173, Express on :3000). Do not kill the global Node process (avoid `killall node`). Prefer stopping the `npm run dev` task/terminal or, if a port is stuck, kill by port.
 
 ## Multi-agent safety (non-negotiable)
+
 - Assume multiple agents may be working simultaneously; do not delete or discard work you did not create.
 - Do not remove git worktrees, branches, or files created by other agents unless the user explicitly instructs you to.
 - If you discover work in another branch/worktree (especially untracked files):

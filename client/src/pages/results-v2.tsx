@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccessMessage, showUploadError } from '@/lib/toast-helpers';
 import {
   KeyFindings,
   KeyFindingsCompact,
@@ -11,10 +12,10 @@ import {
   type ProgressiveDisclosureData,
 } from '@/components/v2-results/ProgressiveDisclosure';
 import {
-    ActionsToolbar,
-    ActionsToolbarCompact,
-    ExpertView,
-  } from '@/components/v2-results';
+  ActionsToolbar,
+  ActionsToolbarCompact,
+  ExpertView,
+} from '@/components/v2-results';
 
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, FileText, Cpu, Smartphone } from 'lucide-react';
@@ -81,10 +82,7 @@ export default function ResultsV2() {
         try {
           metadataData = JSON.parse(stored);
           console.log('[ResultsV2] Loaded from sessionStorage');
-          toast({
-            title: 'Using last result',
-            description: 'Loaded from memory.',
-          });
+          showSuccessMessage(toast, 'Using last result', 'Loaded from memory.');
         } catch (e) {
           console.error('[ResultsV2] Failed to parse sessionStorage', e);
         }
@@ -143,35 +141,78 @@ export default function ResultsV2() {
           : undefined;
 
       // Extract forensic analysis data if available
-      const forensicAnalysis = metadata.steganography_analysis || metadata.manipulation_detection || metadata.ai_detection
-        ? {
-            steganography: metadata.steganography_analysis ? {
-              detected: metadata.steganography_analysis.suspicious_score > 0.3,
-              confidence: Math.round((metadata.steganography_analysis.suspicious_score || 0) * 100),
-              methodsChecked: metadata.steganography_analysis.methods_checked || ['LSB Analysis', 'FFT Analysis'],
-              findings: metadata.steganography_analysis.findings || [],
-              details: metadata.steganography_analysis.analysis_details,
-            } : undefined,
-            manipulation: metadata.manipulation_detection ? {
-              detected: metadata.manipulation_detection.manipulation_probability > 0.5,
-              confidence: Math.round((metadata.manipulation_detection.manipulation_probability || 0) * 100),
-              indicators: metadata.manipulation_detection.indicators?.map((indicator: any) => ({
-                type: indicator.type || 'Manipulation',
-                severity: indicator.severity || (indicator.confidence > 0.7 ? 'high' : indicator.confidence > 0.4 ? 'medium' : 'low'),
-                description: indicator.description || 'Manipulation detected',
-                confidence: Math.round((indicator.confidence || 0) * 100),
-              })) || [],
-              originalityScore: metadata.manipulation_detection.originality_score ? Math.round(metadata.manipulation_detection.originality_score * 100) : undefined,
-            } : undefined,
-            aiDetection: metadata.ai_detection ? {
-              aiGenerated: metadata.ai_detection.ai_probability > 0.7,
-              confidence: Math.round((metadata.ai_detection.ai_probability || 0) * 100),
-              modelHints: metadata.ai_detection.model_hints || [],
-              detectionMethods: metadata.ai_detection.detection_methods || ['Neural Network Analysis'],
-            } : undefined,
-            authenticityScore: metadata.advanced_analysis?.forensic_score || metadata.forensic_score || 100,
-          }
-        : undefined;
+      const forensicAnalysis =
+        metadata.steganography_analysis ||
+        metadata.manipulation_detection ||
+        metadata.ai_detection
+          ? {
+              steganography: metadata.steganography_analysis
+                ? {
+                    detected:
+                      metadata.steganography_analysis.suspicious_score > 0.3,
+                    confidence: Math.round(
+                      (metadata.steganography_analysis.suspicious_score || 0) *
+                        100
+                    ),
+                    methodsChecked: metadata.steganography_analysis
+                      .methods_checked || ['LSB Analysis', 'FFT Analysis'],
+                    findings: metadata.steganography_analysis.findings || [],
+                    details: metadata.steganography_analysis.analysis_details,
+                  }
+                : undefined,
+              manipulation: metadata.manipulation_detection
+                ? {
+                    detected:
+                      metadata.manipulation_detection.manipulation_probability >
+                      0.5,
+                    confidence: Math.round(
+                      (metadata.manipulation_detection
+                        .manipulation_probability || 0) * 100
+                    ),
+                    indicators:
+                      metadata.manipulation_detection.indicators?.map(
+                        (indicator: any) => ({
+                          type: indicator.type || 'Manipulation',
+                          severity:
+                            indicator.severity ||
+                            (indicator.confidence > 0.7
+                              ? 'high'
+                              : indicator.confidence > 0.4
+                                ? 'medium'
+                                : 'low'),
+                          description:
+                            indicator.description || 'Manipulation detected',
+                          confidence: Math.round(
+                            (indicator.confidence || 0) * 100
+                          ),
+                        })
+                      ) || [],
+                    originalityScore: metadata.manipulation_detection
+                      .originality_score
+                      ? Math.round(
+                          metadata.manipulation_detection.originality_score *
+                            100
+                        )
+                      : undefined,
+                  }
+                : undefined,
+              aiDetection: metadata.ai_detection
+                ? {
+                    aiGenerated: metadata.ai_detection.ai_probability > 0.7,
+                    confidence: Math.round(
+                      (metadata.ai_detection.ai_probability || 0) * 100
+                    ),
+                    modelHints: metadata.ai_detection.model_hints || [],
+                    detectionMethods: metadata.ai_detection
+                      .detection_methods || ['Neural Network Analysis'],
+                  }
+                : undefined,
+              authenticityScore:
+                metadata.advanced_analysis?.forensic_score ||
+                metadata.forensic_score ||
+                100,
+            }
+          : undefined;
 
       // Extract advanced metadata (keep all original fields so advanced view is consistent)
       const advancedMetadata = {
@@ -207,22 +248,14 @@ export default function ResultsV2() {
         })
         .catch(err => {
           console.error('[ResultsV2] Failed to fetch by ID:', err);
-          toast({
-            title: 'Error loading result',
-            description: 'Could not load saved analysis.',
-            variant: 'destructive',
-          });
+          showUploadError(toast, 'Could not load saved analysis.');
           setIsLoading(false);
           // Redirect to home after showing error
           setTimeout(() => navigate('/'), 1500);
         });
     } else if (!metadata && !isLoading) {
       // No data available from any source
-      toast({
-        title: 'No metadata found',
-        description: 'Please upload a file first.',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'Please upload a file first.');
       setTimeout(() => navigate('/'), 900);
     }
   }, [resultId, metadata, isLoading, navigate, toast]);
@@ -409,48 +442,57 @@ export default function ResultsV2() {
               )}
             >
               {isMobile ? (
-                <ProgressiveDisclosureMobile 
-                  data={progressiveDisclosureData} 
-                  showForensicAnalysis={metadata?.tier === 'forensic' || metadata?.tier === 'enterprise' || metadata?.tier === 'professional' || import.meta.env.DEV}
+                <ProgressiveDisclosureMobile
+                  data={progressiveDisclosureData}
+                  showForensicAnalysis={
+                    metadata?.tier === 'forensic' ||
+                    metadata?.tier === 'enterprise' ||
+                    metadata?.tier === 'professional' ||
+                    import.meta.env.DEV
+                  }
                 />
               ) : (
-                <ProgressiveDisclosure 
-                  data={progressiveDisclosureData} 
-                  showForensicAnalysis={metadata?.tier === 'forensic' || metadata?.tier === 'enterprise' || metadata?.tier === 'professional' || import.meta.env.DEV}
+                <ProgressiveDisclosure
+                  data={progressiveDisclosureData}
+                  showForensicAnalysis={
+                    metadata?.tier === 'forensic' ||
+                    metadata?.tier === 'enterprise' ||
+                    metadata?.tier === 'professional' ||
+                    import.meta.env.DEV
+                  }
                 />
               )}
             </div>
           )}
 
-            {/* Actions Toolbar */}
-            <div
-              className={cn(
-                'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
-              )}
-            >
-              {isMobile ? (
-                <ActionsToolbarCompact
-                  filename={metadata.filename}
-                  metadata={metadata}
-                  className="m-4"
-                />
-              ) : (
-                <ActionsToolbar
-                  filename={metadata.filename}
-                  metadata={metadata}
-                  className="p-6"
-                />
-              )}
-            </div>
-
-            {/* Expert Registry View (v4.0 Launch Enhancement) */}
-            <ExpertView 
-              metadata={metadata} 
-              className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg"
-            />
+          {/* Actions Toolbar */}
+          <div
+            className={cn(
+              'bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg'
+            )}
+          >
+            {isMobile ? (
+              <ActionsToolbarCompact
+                filename={metadata.filename}
+                metadata={metadata}
+                className="m-4"
+              />
+            ) : (
+              <ActionsToolbar
+                filename={metadata.filename}
+                metadata={metadata}
+                className="p-6"
+              />
+            )}
           </div>
+
+          {/* Expert Registry View (v4.0 Launch Enhancement) */}
+          <ExpertView
+            metadata={metadata}
+            className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-lg"
+          />
         </div>
       </div>
-
+    </div>
   );
 }

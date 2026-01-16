@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { showUploadError } from '@/lib/toast-helpers';
 import { Layout } from '@/components/layout';
 import { PaymentModal } from '@/components/payment-modal';
 import { BurnedMetadataDisplay } from '@/components/burned-metadata-display';
@@ -300,11 +301,7 @@ export default function Results() {
   const handleDownload = () => {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata) {
-      toast({
-        title: 'Download Error',
-        description: 'No metadata available to download',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'No metadata available to download');
       return;
     }
 
@@ -325,11 +322,7 @@ export default function Results() {
   const handlePDFExport = () => {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata) {
-      toast({
-        title: 'Export Error',
-        description: 'No metadata available to export',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'No metadata available to export');
       return;
     }
 
@@ -500,11 +493,7 @@ export default function Results() {
     if (metadata) {
       setIsUnlocked(true);
     } else {
-      toast({
-        title: 'Payment Error',
-        description: 'No metadata available to unlock',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'No metadata available to unlock');
     }
   };
 
@@ -512,11 +501,7 @@ export default function Results() {
   const runAdvancedAnalysis = async () => {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata || !metadata.filename) {
-      toast({
-        title: 'Analysis Error',
-        description: 'No metadata available for analysis',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'No metadata available for analysis');
       return;
     }
 
@@ -1040,7 +1025,7 @@ export default function Results() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 items-center">
+                <div className="flex flex-wrap gap-3 items-center">
                   {typeof creditsRequired === 'number' && (
                     <div className="px-3 py-2 bg-white/5 border border-white/10 rounded text-xs text-slate-200 font-mono">
                       {typeof creditsCharged === 'number' && creditsCharged > 0
@@ -1055,23 +1040,40 @@ export default function Results() {
                       PROCESSING_ADVANCED_ANALYSIS...
                     </div>
                   )}
-                  <Button
-                    onClick={handleDownload}
-                    className={cn(
-                      'gap-2 font-mono text-xs tracking-wider',
-                      isUnlocked
-                        ? 'bg-emerald-600 hover:bg-emerald-700'
-                        : 'bg-primary hover:bg-primary/90 text-black'
-                    )}
-                    data-testid="button-download"
-                  >
-                    {isUnlocked ? (
+                  <div className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-slate-200 font-mono flex items-center gap-1">
+                    {isUnlocked ? <ShieldCheck className="w-3 h-3 text-emerald-500" /> : <Lock className="w-3 h-3 text-yellow-500" />}
+                    {isUnlocked ? 'Unlocked' : 'Locked'}
+                  </div>
+                  <div className="flex flex-col items-start gap-1">
+                    <Button
+                      onClick={handleDownload}
+                      disabled={!isUnlocked}
+                      className={cn(
+                        'gap-2 font-mono text-xs tracking-wider',
+                        isUnlocked
+                          ? 'bg-emerald-600 hover:bg-emerald-700'
+                          : 'bg-gray-600 cursor-not-allowed opacity-50'
+                      )}
+                      data-testid="button-download"
+                    >
                       <Download className="w-4 h-4" />
-                    ) : (
-                      <Lock className="w-4 h-4" />
+                      Download JSON
+                    </Button>
+                    {!isUnlocked && (
+                      <div className="text-xs text-slate-400 font-mono">
+                        Unlock to download full data
+                      </div>
                     )}
-                    {isUnlocked ? 'JSON' : 'UNLOCK_FULL_DATA'}
-                  </Button>
+                  </div>
+                  {!isUnlocked && (
+                    <Button
+                      onClick={() => setShowPayment(true)}
+                      className="gap-2 font-mono text-xs tracking-wider bg-primary hover:bg-primary/90 text-black"
+                    >
+                      <Lock className="w-4 h-4" />
+                      Unlock
+                    </Button>
+                  )}
                   {isUnlocked && (
                     <Button
                       onClick={handlePDFExport}
@@ -1226,7 +1228,7 @@ export default function Results() {
 
                   <Tabs defaultValue="all" className="flex-1 flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-white/10 bg-black/20 gap-4">
-                      <TabsList className="bg-white/5 border border-white/5 h-9 w-full md:w-auto">
+                      <TabsList className="bg-white/5 border border-white/5 h-9 w-full md:w-auto overflow-x-auto scrollbar-hide">
                         <TabsTrigger
                           value="all"
                           className="text-xs font-mono data-[state=active]:bg-primary data-[state=active]:text-black relative"
@@ -1292,11 +1294,11 @@ export default function Results() {
                         </TabsTrigger>
                       </TabsList>
 
-                      <div className="relative w-64">
+                      <div className="relative w-full md:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-3 w-3 text-slate-500" />
                         <input
                           type="text"
-                          placeholder="FILTER_FIELDS..."
+                          placeholder="Search metadata fields…"
                           className="w-full bg-black/40 border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-0 outline-none font-mono"
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
@@ -1542,6 +1544,7 @@ export default function Results() {
                                   ? 'enterprise'
                                   : metadata?.tier || 'free'
                               }
+                              isProcessingAdvanced={isProcessingAdvanced}
                               onUpgrade={() => setShowPayment(true)}
                               onRunAdvancedAnalysis={runAdvancedAnalysis}
                               onRunComparison={runComparison}

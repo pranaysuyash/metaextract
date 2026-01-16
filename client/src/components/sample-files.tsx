@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { showUploadError, showSuccessMessage } from '@/lib/toast-helpers';
 
 interface SampleFile {
   id: string;
@@ -117,11 +118,7 @@ export function SampleFiles({
       setSamples(data.samples);
     } catch (error) {
       console.error('Error fetching samples:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load sample files',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'Failed to load sample files');
     } finally {
       setLoading(false);
     }
@@ -157,20 +154,17 @@ export function SampleFiles({
       sessionStorage.setItem('currentMetadata', JSON.stringify(result));
       onSampleSelect(sample.id);
 
-      toast({
-        title: 'Sample processed',
-        description: `${sample.name} has been analyzed successfully`,
-      });
+      showSuccessMessage(
+        toast,
+        'Sample processed',
+        `${sample.name} has been analyzed successfully`
+      );
     } catch (error) {
       console.error('Error processing sample:', error);
-      toast({
-        title: 'Processing failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to process sample file',
-        variant: 'destructive',
-      });
+      showUploadError(
+        toast,
+        error instanceof Error ? error.message : 'Failed to process sample file'
+      );
     } finally {
       setProcessingId(null);
     }

@@ -12,6 +12,11 @@ import { Download, FileText, Share2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  showSuccessMessage,
+  showUploadError,
+  showFeatureComingSoon,
+} from '@/lib/toast-helpers';
 
 interface ActionsToolbarProps {
   filename: string;
@@ -26,7 +31,7 @@ export function ActionsToolbar({
   metadata,
   onCompare,
   onShare,
-  className
+  className,
 }: ActionsToolbarProps): React.ReactElement {
   const { toast } = useToast();
   const [copiedJson, setCopiedJson] = useState(false);
@@ -44,24 +49,18 @@ export function ActionsToolbar({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: 'Download started',
-        description: 'Metadata JSON file is being downloaded',
-      });
+      showSuccessMessage(
+        toast,
+        'Download started',
+        'Metadata JSON file is being downloaded'
+      );
     } catch (error) {
-      toast({
-        title: 'Export failed',
-        description: 'Could not export metadata',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'Could not export metadata');
     }
   };
 
   const handleExportPDF = () => {
-    toast({
-      title: 'PDF export coming soon',
-      description: 'PDF export functionality will be available shortly',
-    });
+    showFeatureComingSoon(toast, 'PDF export');
   };
 
   const handleCopyJSON = async () => {
@@ -69,34 +68,21 @@ export function ActionsToolbar({
       const dataStr = JSON.stringify(metadata, null, 2);
       await navigator.clipboard.writeText(dataStr);
       setCopiedJson(true);
-      toast({
-        title: 'Copied!',
-        description: 'Metadata copied to clipboard',
-      });
+      showSuccessMessage(toast, 'Copied!', 'Metadata copied to clipboard');
       setTimeout(() => setCopiedJson(false), 2000);
     } catch (error) {
-      toast({
-        title: 'Copy failed',
-        description: 'Could not copy to clipboard',
-        variant: 'destructive',
-      });
+      showUploadError(toast, 'Could not copy to clipboard');
     }
   };
 
   const handleCompare = () => {
     onCompare?.();
-    toast({
-      title: 'Compare functionality coming soon',
-      description: 'Compare with another file will be available soon',
-    });
+    showFeatureComingSoon(toast, 'Compare functionality');
   };
 
   const handleShare = () => {
     onShare?.();
-    toast({
-      title: 'Share functionality coming soon',
-      description: 'Share results will be available soon',
-    });
+    showFeatureComingSoon(toast, 'Share functionality');
   };
 
   return (
@@ -197,7 +183,7 @@ export function ActionsToolbarCompact({
   metadata,
   onCompare,
   onShare,
-  className
+  className,
 }: ActionsToolbarProps): React.ReactElement {
   const { toast } = useToast();
   const [copiedJson, setCopiedJson] = useState(false);

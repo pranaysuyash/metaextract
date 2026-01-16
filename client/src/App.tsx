@@ -13,6 +13,7 @@ import {
 } from '@/components/tutorial-overlay';
 import { ContextAdapterProvider } from '@/context/ContextAdapter';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { useToastKeyboardHandler } from '@/hooks/use-toast-keyboard-handler';
 import NotFound from '@/pages/not-found';
 
 // Code-split large page components for faster initial load
@@ -20,9 +21,15 @@ const Results = React.lazy(() => import('@/pages/results'));
 const ResultsV2 = React.lazy(() => import('@/pages/results-v2'));
 const ImagesMvpLanding = React.lazy(() => import('@/pages/images-mvp'));
 const ImagesMvpResults = React.lazy(() => import('@/pages/images-mvp/results'));
-const ImagesMvpCreditsSuccess = React.lazy(() => import('@/pages/images-mvp/credits-success'));
-const ImagesMvpAnalytics = React.lazy(() => import('@/pages/images-mvp/analytics'));
-const DashboardImproved = React.lazy(() => import('@/pages/dashboard-improved'));
+const ImagesMvpCreditsSuccess = React.lazy(
+  () => import('@/pages/images-mvp/credits-success')
+);
+const ImagesMvpAnalytics = React.lazy(
+  () => import('@/pages/images-mvp/analytics')
+);
+const DashboardImproved = React.lazy(
+  () => import('@/pages/dashboard-improved')
+);
 const CheckoutSuccess = React.lazy(() => import('@/pages/checkout-success'));
 const CreditsSuccess = React.lazy(() => import('@/pages/credits-success'));
 const PrivacyPolicy = React.lazy(() => import('@/pages/privacy-policy'));
@@ -59,6 +66,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRouter() {
   const { isOpen, close } = useTutorialOverlay();
+  // Enable keyboard handler for dismissing toasts via ESC key
+  useToastKeyboardHandler();
 
   return (
     <>
@@ -78,73 +87,76 @@ function AppRouter() {
 
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/images_mvp" replace />} />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <DashboardImproved />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={<Navigate to="/settings" replace />}
-          />
-          <Route path="/results" element={<Results />} />
-          <Route path="/results-v2" element={<ResultsV2 />} />
-          <Route path="/home" element={<Navigate to="/images_mvp" replace />} />
-          <Route
-            path="/checkout/success"
-            element={
-              <ProtectedRoute>
-                <CheckoutSuccess />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/credits/success"
-            element={
-              <ProtectedRoute>
-                <CreditsSuccess />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/images_mvp" element={<ImagesMvpLanding />} />
-          <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
-          <Route
-            path="/images_mvp/credits/success"
-            element={<ImagesMvpCreditsSuccess />}
-          />
-          <Route
-            path="/images_mvp/analytics"
-            element={<ImagesMvpAnalytics />}
-          />
-          <Route
-            path="/images-mvp"
-            element={<Navigate to="/images_mvp" replace />}
-          />
-          <Route
-            path="/images-mvp/results"
-            element={<Navigate to="/images_mvp/results" replace />}
-          />
-          <Route
-            path="/images-mvp/credits/success"
-            element={<Navigate to="/images_mvp/credits/success" replace />}
-          />
-          <Route
-            path="/images-mvp/analytics"
-            element={<Navigate to="/images_mvp/analytics" replace />}
-          />
+          <Routes>
+            <Route path="/" element={<Navigate to="/images_mvp" replace />} />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <DashboardImproved />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/settings" replace />}
+            />
+            <Route path="/results" element={<Results />} />
+            <Route path="/results-v2" element={<ResultsV2 />} />
+            <Route
+              path="/home"
+              element={<Navigate to="/images_mvp" replace />}
+            />
+            <Route
+              path="/checkout/success"
+              element={
+                <ProtectedRoute>
+                  <CheckoutSuccess />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/credits/success"
+              element={
+                <ProtectedRoute>
+                  <CreditsSuccess />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/images_mvp" element={<ImagesMvpLanding />} />
+            <Route path="/images_mvp/results" element={<ImagesMvpResults />} />
+            <Route
+              path="/images_mvp/credits/success"
+              element={<ImagesMvpCreditsSuccess />}
+            />
+            <Route
+              path="/images_mvp/analytics"
+              element={<ImagesMvpAnalytics />}
+            />
+            <Route
+              path="/images-mvp"
+              element={<Navigate to="/images_mvp" replace />}
+            />
+            <Route
+              path="/images-mvp/results"
+              element={<Navigate to="/images_mvp/results" replace />}
+            />
+            <Route
+              path="/images-mvp/credits/success"
+              element={<Navigate to="/images_mvp/credits/success" replace />}
+            />
+            <Route
+              path="/images-mvp/analytics"
+              element={<Navigate to="/images_mvp/analytics" replace />}
+            />
 
-          {/* Legal Compliance Routes */}
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/gdpr" element={<GDPRCompliance />} />
+            {/* Legal Compliance Routes */}
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/gdpr" element={<GDPRCompliance />} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </Suspense>
       </BrowserRouter>
 

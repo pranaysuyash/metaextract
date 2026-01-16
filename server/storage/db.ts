@@ -22,8 +22,11 @@ import {
   trialUsages,
   metadataResults,
   type MetadataResult,
+  imagesMvpQuotes,
+  type ImagesMvpQuote,
+  type InsertImagesMvpQuote,
 } from '@shared/schema';
-import { and, asc, desc, eq, gte, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, gt, lt, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
   IStorage,
@@ -1621,6 +1624,110 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting batch results:', error);
       throw new Error('Failed to delete batch results');
+    }
+  }
+
+  // ============================================================================
+  // Images MVP Quote Storage Methods
+  // ============================================================================
+
+  async createQuote(quote: InsertImagesMvpQuote): Promise<ImagesMvpQuote> {
+    try {
+      const [createdQuote] = await this.db
+        .insert(imagesMvpQuotes)
+        .values(quote)
+        .returning();
+      return createdQuote;
+    } catch (error) {
+      console.error('Error creating quote:', error);
+      throw new Error('Failed to create quote');
+    }
+  }
+
+  async getQuote(id: string): Promise<ImagesMvpQuote | undefined> {
+    try {
+      const [quote] = await this.db
+        .select()
+        .from(imagesMvpQuotes)
+        .where(eq(imagesMvpQuotes.id, id))
+        .limit(1);
+      return quote;
+    } catch (error) {
+      console.error('Error getting quote:', error);
+      return undefined;
+    }
+  }
+
+  async getQuoteBySessionId(sessionId: string): Promise<ImagesMvpQuote | undefined> {
+    try {
+      const [quote] = await this.db
+        .select()
+        .from(imagesMvpQuotes)
+        .where(
+          and(
+            eq(imagesMvpQuotes.sessionId, sessionId),
+            eq(imagesMvpQuotes.status, 'active'),
+            gt(imagesMvpQuotes.expiresAt, new Date())
+          )
+        )
+        .orderBy(desc(imagesMvpQuotes.createdAt))
+        .limit(1);
+      return quote;
+    } catch (error) {
+      console.error('Error getting quote by session ID:', error);
+      return undefined;
+    }
+  }
+
+  async updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void> {
+    try {
+      await this.db
+        .update(imagesMvpQuotes)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(imagesMvpQuotes.id, id));
+    } catch (error) {
+      console.error('Error updating quote:', error);
+      throw new Error('Failed to update quote');
+    }
+  }
+
+  async expireQuote(id: string): Promise<void> {
+    try {
+      await this.db
+        .update(imagesMvpQuotes)
+        .set({
+          status: 'expired',
+          updatedAt: new Date(),
+        })
+        .where(eq(imagesMvpQuotes.id, id));
+    } catch (error) {
+      console.error('Error expiring quote:', error);
+      throw new Error('Failed to expire quote');
+    }
+  }
+
+  async cleanupExpiredQuotes(): Promise<number> {
+    try {
+      const result = await this.db
+        .update(imagesMvpQuotes)
+        .set({
+          status: 'expired',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(imagesMvpQuotes.status, 'active'),
+            lt(imagesMvpQuotes.expiresAt, new Date())
+          )
+        );
+      
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error('Error cleaning up expired quotes:', error);
+      return 0;
     }
   }
 }

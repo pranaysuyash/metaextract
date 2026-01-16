@@ -24,6 +24,7 @@ import { EnhancedUploadZone } from '@/components/enhanced-upload-zone';
 //   CREDIT_EXPLANATION,
 // } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
+import { showUploadError } from '@/lib/toast-helpers';
 import {
   Card,
   CardContent,
@@ -159,14 +160,12 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Credit purchase error:', error);
-      toast({
-        title: 'Credit Purchase Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to start credit purchase',
-        variant: 'destructive',
-      });
+      showUploadError(
+        toast,
+        error instanceof Error
+          ? error.message
+          : 'Failed to start credit purchase'
+      );
     } finally {
       setCreditPackLoading(null);
     }
@@ -211,12 +210,10 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      toast({
-        title: 'Checkout Error',
-        description:
-          error instanceof Error ? error.message : 'Failed to start checkout',
-        variant: 'destructive',
-      });
+      showUploadError(
+        toast,
+        error instanceof Error ? error.message : 'Failed to start checkout'
+      );
     } finally {
       setCheckoutLoading(null);
     }
@@ -674,7 +671,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
       </div>
     </Layout>
   );

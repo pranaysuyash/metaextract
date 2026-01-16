@@ -17,6 +17,8 @@ import type {
   TrialUsage as SchemaTrialUsage,
   InsertTrialUsage as SchemaInsertTrialUsage,
   MetadataResult as SchemaMetadataResult,
+  ImagesMvpQuote as SchemaImagesMvpQuote,
+  InsertImagesMvpQuote as SchemaInsertImagesMvpQuote,
 } from '@shared/schema';
 
 export interface OnboardingStep {
@@ -455,6 +457,14 @@ export interface IStorage {
   ): Promise<void>;
   deleteBatchJob(jobId: string): Promise<void>;
   deleteBatchResults(batchId: string): Promise<void>;
+
+  // Images MVP Quote Storage
+  createQuote(quote: InsertImagesMvpQuote): Promise<ImagesMvpQuote>;
+  getQuote(id: string): Promise<ImagesMvpQuote | undefined>;
+  getQuoteBySessionId(sessionId: string): Promise<ImagesMvpQuote | undefined>;
+  updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void>;
+  expireQuote(id: string): Promise<void>;
+  cleanupExpiredQuotes(): Promise<number>;
 }
 
 export interface MetadataObjectRef extends ObjectInfo {}
@@ -487,6 +497,8 @@ export type InsertOnboardingSession = SchemaInsertOnboardingSession;
 export type TrialUsage = SchemaTrialUsage;
 export type InsertTrialUsage = SchemaInsertTrialUsage;
 export type MetadataResult = SchemaMetadataResult;
+export type ImagesMvpQuote = SchemaImagesMvpQuote;
+export type InsertImagesMvpQuote = SchemaInsertImagesMvpQuote;
 
 export interface AnalyticsSummary {
   totalExtractions: number;

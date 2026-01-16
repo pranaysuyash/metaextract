@@ -71,6 +71,25 @@ const activeConnections = new Map<string, ProgressConnection[]>();
 // Simple in-memory quote store for Images MVP quotes (tests rely on this)
 const IMAGES_MVP_QUOTES = new Map<string, any>();
 
+// Periodic cleanup of expired quotes (runs every 5 minutes)
+const QUOTE_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+function startQuoteCleanup() {
+  setInterval(async () => {
+    try {
+      const cleanedCount = await storage.cleanupExpiredQuotes();
+      if (cleanedCount > 0) {
+        console.log(`[ImagesMVP] Cleaned up ${cleanedCount} expired quotes`);
+      }
+    } catch (error) {
+      console.error('[ImagesMVP] Error cleaning up expired quotes:', error);
+    }
+  }, QUOTE_CLEANUP_INTERVAL);
+}
+
+// Start cleanup on module load
+startQuoteCleanup();
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -280,7 +299,7 @@ const upload = multer({
 // Rate limiter for analytics endpoints - prevent abuse/DOS
 const analyticsRateLimiter = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute window
-  keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown',
+  keyGenerator: req => req.ip || req.socket.remoteAddress || 'unknown',
 });
 
 const SUPPORTED_IMAGE_MIMES = new Set([
@@ -575,7 +594,9 @@ export function registerImagesMvpRoutes(app: Express) {
         const mime = typeof file?.mime === 'string' ? file.mime : null;
         const sizeBytes =
           typeof file?.sizeBytes === 'number' ? file.sizeBytes : 0;
-        const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
+        const ext = name.includes('.')
+          ? name.slice(name.lastIndexOf('.')).toLowerCase()
+          : '';
 
         let accepted = true;
         let reason: string | undefined;
@@ -625,16 +646,19 @@ export function registerImagesMvpRoutes(app: Express) {
       }
 
       const quoteId = crypto.randomUUID();
-      const expiresAt = Date.now() + 15 * 60 * 1000;
-      IMAGES_MVP_QUOTES.set(quoteId, {
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      const sessionId = getOrSetSessionId(req, res);
+
+      // Create persistent quote using storage system
+      await storage.createQuote({
+        sessionId,
         files: limitedFiles,
         ops,
         creditsTotal,
         perFileCredits,
         perFile: perFileById,
-        createdAt: Date.now(),
-        expiresAt,
         schedule: IMAGES_MVP_CREDIT_SCHEDULE,
+        expiresAt,
       });
 
       const perFileArray = Object.values(perFileById);
@@ -1138,6 +1162,26 @@ export function registerImagesMvpRoutes(app: Express) {
   // ---------------------------------------------------------------------------
   app.post(
     '/api/images_mvp/extract',
+    // Apply rate limiting first to prevent abuse
+    createRateLimiter({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 50, // Max 50 uploads per IP per 15 minutes
+      keyGenerator: (req: Request) =>
+        (req as any).user?.id
+          ? `user:${(req as any).user.id}`
+          : `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
+    } as any),
+    // Apply burst protection for anonymous users
+    createRateLimiter({
+      windowMs: 60 * 1000, // 1 minute
+      max: 10, // Max 10 uploads per minute
+      skip: (req: Request) => !!(req as any).user?.id, // Skip for authenticated users
+      keyGenerator: (req: Request) =>
+        `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
+    } as any),
+    // Enhanced protection BEFORE file upload - security validation
+    enhancedProtectionMiddleware,
+    // File upload middleware - only executes if protection passes
     (req: Request, res: Response, next: any) => {
       // Wrap multer to capture file size and other upload errors and translate to unified API errors
       upload.single('file')(req as any, res as any, (err: any) => {
@@ -1152,7 +1196,6 @@ export function registerImagesMvpRoutes(app: Express) {
         next();
       });
     },
-    enhancedProtectionMiddleware,
     async (req: Request, res: Response) => {
       const startTime = Date.now();
       let tempPath: string | null = null;
@@ -1174,7 +1217,7 @@ export function registerImagesMvpRoutes(app: Express) {
         const isSupportedExt = fileExt
           ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
           : false;
-        
+
         // Require BOTH mime type AND extension to be valid (AND logic, not OR)
         if (!isSupportedMime || !isSupportedExt) {
           // Clean up the uploaded temp file before rejecting
@@ -1192,16 +1235,23 @@ export function registerImagesMvpRoutes(app: Express) {
         let quotedCreditCost: number | null = null;
 
         if (quoteId) {
-          const quote = IMAGES_MVP_QUOTES.get(quoteId);
-          if (quote && typeof quote.ops === 'object') {
+          const quote = await storage.getQuote(quoteId);
+          if (quote && quote.ops && typeof quote.ops === 'object') {
+            const opsData = quote.ops as any;
             ops = {
-              embedding: !!quote.ops.embedding,
-              ocr: !!quote.ops.ocr,
-              forensics: !!quote.ops.forensics,
+              embedding: !!opsData.embedding,
+              ocr: !!opsData.ocr,
+              forensics: !!opsData.forensics,
             };
           }
-          if (clientFileId && quote?.perFileCredits?.[clientFileId] != null) {
-            const candidate = Number(quote.perFileCredits[clientFileId]);
+          if (
+            clientFileId &&
+            quote?.perFileCredits &&
+            (quote.perFileCredits as any)[clientFileId] != null
+          ) {
+            const candidate = Number(
+              (quote.perFileCredits as any)[clientFileId]
+            );
             if (Number.isFinite(candidate) && candidate > 0) {
               quotedCreditCost = candidate;
             }
@@ -1212,7 +1262,7 @@ export function registerImagesMvpRoutes(app: Express) {
         let mpCredits = 0;
         let mpCreditsResolved = false;
         if (quoteId && clientFileId) {
-          const quote = IMAGES_MVP_QUOTES.get(quoteId);
+          const quote = await storage.getQuote(quoteId);
           const quotedFile = Array.isArray(quote?.files)
             ? quote.files.find((f: any) => f?.id === clientFileId)
             : null;

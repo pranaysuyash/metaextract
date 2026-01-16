@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { LimitedAccessModal } from '@/components/limited-access-modal';
 import { validateUploadFile } from '@/lib/upload-guards';
+import { showUploadError, showSuccessMessage } from '@/lib/toast-helpers';
 
 // File validation configuration
 const FILE_CONFIG = {
@@ -201,12 +202,11 @@ export function UploadZone() {
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         if (files.length > 1) {
-          toast({
-            title: 'Multiple files detected',
-            description:
-              'Only the first file will be processed. Use batch upload for multiple files.',
-            variant: 'default',
-          });
+          showSuccessMessage(
+            toast,
+            'Multiple files detected',
+            'Only the first file will be processed. Use batch upload for multiple files.'
+          );
         }
         processFile(files[0]);
       }
@@ -235,11 +235,7 @@ export function UploadZone() {
         message: guard.message || 'File validation failed',
         canRetry: true,
       });
-      toast({
-        title: 'File Validation Failed',
-        description: guard.message,
-        variant: 'destructive',
-      });
+      showUploadError(toast, guard.message || 'File validation failed');
       return;
     }
 
@@ -350,11 +346,7 @@ export function UploadZone() {
         showPricingCTA: isPaymentIssue,
       });
 
-      toast({
-        title: 'Extraction Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      showUploadError(toast, errorMessage);
 
       setIsUploading(false);
       setUploadProgress(0);

@@ -15,10 +15,11 @@ If the user specifies an explicit version, follow that version exactly.
 If the user does not specify a version, the agent must state which canonical version it is applying at the top of the response.
 
 Repo hygiene (always on for repo-aware work):
+
 - Before committing: always run `git add -A`.
 - Python: always use the existing `.venv` (find via `ls -la` or `which python3`) and prefer `uv` for installs (`uv pip install -r requirements.txt`).
- - Process management: when restarting dev servers, stop only the Vite (5173) and Express (3000) processes (stop the `npm run dev` task/terminal or kill by port). Do not kill the entire Node runtime (avoid `killall node`).
- - Multi-agent safety: do not delete/remove other agents’ worktrees, branches, or untracked files. If unsure whether work belongs, commit it to a branch or add a `docs/` TODO/checklist and commit (never discard). Exception: never commit secrets/credentials.
+- Process management: when restarting dev servers, stop only the Vite (5173) and Express (3000) processes (stop the `npm run dev` task/terminal or kill by port). Do not kill the entire Node runtime (avoid `killall node`).
+- Multi-agent safety: do not delete/remove other agents’ worktrees, branches, or untracked files. If unsure whether work belongs, commit it to a branch or add a `docs/` TODO/checklist and commit (never discard). Exception: never commit secrets/credentials.
 
 ---
 
@@ -370,11 +371,11 @@ FINAL OUTPUT FORMAT
 
 ### Suggested approach (how these split in practice)
 
-* Start with **Generic UI Reviewer** on a set of screens. It outputs `deep_dive_plan`.
-* For each deep dive target:
-  * If the fix is in a specific component file, run **UI File Audit** on that file.
-  * If the fix requires adding a new element or new flow, run **UI Change Spec**.
-* If you want to enforce discipline, treat the JSON output as the contract, and only implement items with P0 to P2 unless you explicitly choose polish.
+- Start with **Generic UI Reviewer** on a set of screens. It outputs `deep_dive_plan`.
+- For each deep dive target:
+  - If the fix is in a specific component file, run **UI File Audit** on that file.
+  - If the fix requires adding a new element or new flow, run **UI Change Spec**.
+- If you want to enforce discipline, treat the JSON output as the contract, and only implement items with P0 to P2 unless you explicitly choose polish.
 
 ---
 

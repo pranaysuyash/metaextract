@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { validateUploadFile } from '@/lib/upload-guards';
+import { showUploadError, showSuccessMessage } from '@/lib/toast-helpers';
 import { analyzeFile, type FileAnalysis } from '@/utils/fileAnalysis';
 import {
   estimateProcessingTime,
@@ -408,11 +409,7 @@ export function EnhancedUploadZone({
       // Handle rejected files
       rejectedFiles.forEach(({ file, errors }) => {
         errors.forEach((error: any) => {
-          toast({
-            title: 'File rejected',
-            description: `${file.name}: ${error.message}`,
-            variant: 'destructive',
-          });
+          showUploadError(toast, `${file.name}: ${error.message}`);
         });
       });
 
@@ -434,11 +431,7 @@ export function EnhancedUploadZone({
       acceptedFiles.forEach(file => {
         const guard = validateUploadFile(file, guardConfig);
         if (!guard.ok) {
-          toast({
-            title: 'Upload blocked',
-            description: guard.message || 'Unsupported file.',
-            variant: 'destructive',
-          });
+          showUploadError(toast, guard.message || 'Unsupported file.');
           return;
         }
         preflightPassed.push(file);
@@ -634,10 +627,11 @@ export function EnhancedUploadZone({
         onResults(results);
       }
 
-      toast({
-        title: 'Processing complete',
-        description: `Successfully processed ${results.length} file${results.length > 1 ? 's' : ''}`,
-      });
+      showSuccessMessage(
+        toast,
+        'Processing complete',
+        `Successfully processed ${results.length} file${results.length > 1 ? 's' : ''}`
+      );
     } catch (error) {
       console.error('Processing error:', error);
 
@@ -650,12 +644,10 @@ export function EnhancedUploadZone({
         }))
       );
 
-      toast({
-        title: 'Processing failed',
-        description:
-          error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
+      showUploadError(
+        toast,
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      );
     } finally {
       setIsProcessing(false);
       abortControllerRef.current = null;

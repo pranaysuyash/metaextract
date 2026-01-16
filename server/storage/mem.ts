@@ -12,6 +12,8 @@ import {
   type InsertOnboardingSession,
   type TrialUsage,
   type InsertTrialUsage,
+  type ImagesMvpQuote,
+  type InsertImagesMvpQuote,
 } from '@shared/schema';
 import { randomUUID, createHash } from 'crypto';
 import {
@@ -82,6 +84,10 @@ export class MemStorage implements IStorage {
   // Metadata
   private metadataMap: Map<string, StoredMetadata & { metadata: any }>;
 
+  // Images MVP Quotes
+  private quotesMap: Map<string, ImagesMvpQuote>;
+  private quotesBySessionId: Map<string, string>; // sessionId -> quoteId
+
   // Lightweight cache + list storage (used by quota enforcement)
   private kvStore: Map<string, { value: string; expiresAt?: number }>;
   private listStore: Map<string, string[]>;
@@ -105,6 +111,8 @@ export class MemStorage implements IStorage {
     this.onboardingSessionsByUserId = new Map();
     this.trialUsagesMap = new Map();
     this.metadataMap = new Map();
+    this.quotesMap = new Map();
+    this.quotesBySessionId = new Map();
     this.kvStore = new Map();
     this.listStore = new Map();
     this.listExpiry = new Map();
@@ -1085,5 +1093,100 @@ export class MemStorage implements IStorage {
 
     // Remove from batch's result list
     this.batchResultsByBatchId.delete(batchId);
+  }
+
+  // ============================================================================
+  // Images MVP Quote Storage Methods
+  // ============================================================================
+
+  async createQuote(quote: InsertImagesMvpQuote): Promise<ImagesMvpQuote> {
+    const now = new Date();
+    const quoteId = randomUUID();
+    const createdQuote: ImagesMvpQuote = {
+      id: quoteId,
+      sessionId: quote.sessionId,
+      userId: quote.userId || null,
+      files: quote.files || [],
+      ops: quote.ops || {},
+      creditsTotal: quote.creditsTotal || 0,
+      perFileCredits: quote.perFileCredits || {},
+      perFile: quote.perFile || {},
+      schedule: quote.schedule || {},
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: quote.expiresAt,
+      usedAt: quote.usedAt || null,
+      status: quote.status || 'active',
+    };
+
+    this.quotesMap.set(quoteId, createdQuote);
+    
+    // Store session ID mapping for quick lookup
+    if (createdQuote.sessionId) {
+      this.quotesBySessionId.set(createdQuote.sessionId, quoteId);
+    }
+
+    return createdQuote;
+  }
+
+  async getQuote(id: string): Promise<ImagesMvpQuote | undefined> {
+    const quote = this.quotesMap.get(id);
+    
+    // Check if quote exists and is not expired
+    if (quote && quote.status === 'active' && new Date() < quote.expiresAt) {
+      return quote;
+    }
+    
+    return undefined;
+  }
+
+  async getQuoteBySessionId(sessionId: string): Promise<ImagesMvpQuote | undefined> {
+    const quoteId = this.quotesBySessionId.get(sessionId);
+    if (!quoteId) {
+      return undefined;
+    }
+
+    return this.getQuote(quoteId);
+  }
+
+  async updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void> {
+    const existingQuote = this.quotesMap.get(id);
+    if (!existingQuote) {
+      throw new Error('Quote not found');
+    }
+
+    const updatedQuote: ImagesMvpQuote = {
+      ...existingQuote,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.quotesMap.set(id, updatedQuote);
+  }
+
+  async expireQuote(id: string): Promise<void> {
+    const quote = this.quotesMap.get(id);
+    if (!quote) {
+      throw new Error('Quote not found');
+    }
+
+    quote.status = 'expired';
+    quote.updatedAt = new Date();
+    this.quotesMap.set(id, quote);
+  }
+
+  async cleanupExpiredQuotes(): Promise<number> {
+    let cleanedCount = 0;
+    const now = new Date();
+
+    for (const [id, quote] of this.quotesMap.entries()) {
+      if (quote.status === 'active' && now >= quote.expiresAt) {
+        quote.status = 'expired';
+        quote.updatedAt = now;
+        cleanedCount++;
+      }
+    }
+
+    return cleanedCount;
   }
 }

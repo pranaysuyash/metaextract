@@ -616,3 +616,66 @@ export const processedWebhooks = pgTable('processed_webhooks', {
 });
 
 export type ProcessedWebhook = typeof processedWebhooks.$inferSelect;
+
+// ============================================================================
+// Images MVP Quote Storage Schema
+// ============================================================================
+
+export const imagesMvpQuotes = pgTable('images_mvp_quotes', {
+  id: varchar('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  sessionId: text('session_id').notNull(),
+  userId: varchar('user_id').references(() => users.id),
+  files: jsonb('files')
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  ops: jsonb('ops')
+    .$type<{ embedding?: boolean; ocr?: boolean; forensics?: boolean }>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  creditsTotal: integer('credits_total').notNull().default(0),
+  perFileCredits: jsonb('per_file_credits')
+    .$type<Record<string, number>>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  perFile: jsonb('per_file')
+    .$type<
+      Record<
+        string,
+        {
+          id: string;
+          accepted: boolean;
+          detected_type?: string | null;
+          creditsTotal?: number;
+          mp?: number | null;
+          mpBucket?: string | null;
+          warnings?: string[];
+          reason?: string;
+          breakdown?: any;
+        }
+      >
+    >()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  schedule: jsonb('schedule')
+    .$type<Record<string, any>>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  status: varchar('status', { length: 20 }).notNull().default('active'), // active, used, expired
+});
+
+export const insertImagesMvpQuoteSchema = createInsertSchema(
+  imagesMvpQuotes
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertImagesMvpQuote = z.infer<typeof insertImagesMvpQuoteSchema>;
+export type ImagesMvpQuote = typeof imagesMvpQuotes.$inferSelect;

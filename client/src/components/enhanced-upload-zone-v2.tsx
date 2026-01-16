@@ -20,7 +20,7 @@ import {
   Info,
   Sparkles,
   Trophy,
-  Star
+  Star,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { showUploadError, showSuccessMessage } from '@/lib/toast-helpers';
 
 interface FileState {
   file: File;
@@ -62,13 +63,13 @@ interface EnhancedUploadZoneProps {
  * Provides an improved drag-and-drop interface with better UX, real-time feedback,
  * and detailed file analysis information.
  */
-export function EnhancedUploadZoneV2({ 
-  onResults, 
-  tier, 
-  maxFiles = 10, 
+export function EnhancedUploadZoneV2({
+  onResults,
+  tier,
+  maxFiles = 10,
   className,
   advanced = false,
-  showTierInfo = true
+  showTierInfo = true,
 }: EnhancedUploadZoneProps) {
   const [files, setFiles] = useState<FileState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,28 +77,31 @@ export function EnhancedUploadZoneV2({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file drop
-  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: any[]) => {
-    // Show toast for rejected files
-    if (fileRejections.length > 0) {
-      fileRejections.forEach(({ file, errors }) => {
-        toast({
-          title: `File Rejected: ${file.name}`,
-          description: errors.map((e: any) => e.message).join(', '),
-          variant: 'destructive',
+  const onDrop = useCallback(
+    async (acceptedFiles: File[], fileRejections: any[]) => {
+      // Show toast for rejected files
+      if (fileRejections.length > 0) {
+        fileRejections.forEach(({ file, errors }) => {
+          showUploadError(
+            toast,
+            `${file.name}: ${errors.map((e: any) => e.message).join(', ')}`
+          );
         });
-      });
-    }
+      }
 
-    // Process accepted files
-    const validTiers = ['free', 'professional', 'forensic', 'enterprise'] as const;
-    const tierKey = validTiers.includes(tier as (typeof validTiers)[number])
-      ? (tier as (typeof validTiers)[number])
-      : 'free';
+      // Process accepted files
+      const validTiers = [
+        'free',
+        'professional',
+        'forensic',
+        'enterprise',
+      ] as const;
+      const tierKey = validTiers.includes(tier as (typeof validTiers)[number])
+        ? (tier as (typeof validTiers)[number])
+        : 'free';
 
-    const newFiles = await Promise.all(
-      acceptedFiles
-        .slice(0, maxFiles - files.length)
-        .map(async (file) => {
+      const newFiles = await Promise.all(
+        acceptedFiles.slice(0, maxFiles - files.length).map(async file => {
           const id = `${Date.now()}-${Math.random()}`;
           const analysis = await analyzeFile(file);
           const estimate = estimateProcessingTime(file, tierKey);
@@ -112,26 +116,50 @@ export function EnhancedUploadZoneV2({
           };
           return newFile;
         })
-    );
+      );
 
-    if (newFiles.length > 0) {
-      setFiles(prev => [...prev, ...newFiles] as FileState[]);
-    }
+      if (newFiles.length > 0) {
+        setFiles(prev => [...prev, ...newFiles] as FileState[]);
+      }
 
-    if (files.length + newFiles.length >= maxFiles) {
-      toast({
-        title: 'Maximum files reached',
-        description: `You can only upload up to ${maxFiles} files at a time.`,
-      });
-    }
-  }, [files.length, maxFiles, tier, toast]);
+      if (files.length + newFiles.length >= maxFiles) {
+        showSuccessMessage(
+          toast,
+          'Maximum files reached',
+          `You can only upload up to ${maxFiles} files at a time.`
+        );
+      }
+    },
+    [files.length, maxFiles, tier, toast]
+  );
 
   // Configure dropzone
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.tiff', '.heic', '.heif'],
-      'video/*': ['.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.3gp'],
+      'image/*': [
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.gif',
+        '.webp',
+        '.bmp',
+        '.svg',
+        '.tiff',
+        '.heic',
+        '.heif',
+      ],
+      'video/*': [
+        '.mp4',
+        '.mov',
+        '.avi',
+        '.mkv',
+        '.wmv',
+        '.flv',
+        '.webm',
+        '.m4v',
+        '.3gp',
+      ],
       'audio/*': ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.wma'],
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
@@ -151,54 +179,69 @@ export function EnhancedUploadZoneV2({
     if (files.length === 0) return;
 
     setIsSubmitting(true);
-    
+
     try {
       // Simulate processing for demo purposes
       const updatedFiles = [...files];
-      
+
       for (let i = 0; i < updatedFiles.length; i++) {
         const fileState = updatedFiles[i];
-        
+
         // Update status to uploading
-        setFiles(prev => prev.map(f => 
-          f.id === fileState.id ? { ...f, status: 'uploading', progress: 10 } : f
-        ));
-        
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileState.id
+              ? { ...f, status: 'uploading', progress: 10 }
+              : f
+          )
+        );
+
         // Simulate upload progress
         for (let progress = 10; progress <= 60; progress += 10) {
           await new Promise(resolve => setTimeout(resolve, 200));
-          setFiles(prev => prev.map(f => 
-            f.id === fileState.id ? { ...f, progress } : f
-          ));
+          setFiles(prev =>
+            prev.map(f => (f.id === fileState.id ? { ...f, progress } : f))
+          );
         }
-        
+
         // Update status to processing
-        setFiles(prev => prev.map(f => 
-          f.id === fileState.id ? { ...f, status: 'processing', progress: 70 } : f
-        ));
-        
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileState.id
+              ? { ...f, status: 'processing', progress: 70 }
+              : f
+          )
+        );
+
         // Simulate processing
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // Update to complete
-        setFiles(prev => prev.map(f => 
-          f.id === fileState.id ? { ...f, status: 'complete', progress: 100, result: { fields: 1500 } } : f
-        ));
+        setFiles(prev =>
+          prev.map(f =>
+            f.id === fileState.id
+              ? {
+                  ...f,
+                  status: 'complete',
+                  progress: 100,
+                  result: { fields: 1500 },
+                }
+              : f
+          )
+        );
       }
-      
+
       // Call the results handler after all files are processed
       setTimeout(() => {
         onResults(updatedFiles.map(f => f.result));
         setIsSubmitting(false);
       }, 500);
-      
     } catch (error) {
       console.error('Submission error:', error);
-      toast({
-        title: 'Submission Error',
-        description: 'There was an error processing your files. Please try again.',
-        variant: 'destructive',
-      });
+      showUploadError(
+        toast,
+        'There was an error processing your files. Please try again.'
+      );
       setIsSubmitting(false);
     }
   };
@@ -213,7 +256,8 @@ export function EnhancedUploadZoneV2({
     const type = file.type.split('/')[0];
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    if (type === 'image') return <ImageIcon className="w-5 h-5" aria-hidden="true" />;
+    if (type === 'image')
+      return <ImageIcon className="w-5 h-5" aria-hidden="true" />;
     if (type === 'video') return <Video className="w-5 h-5" />;
     if (type === 'audio') return <Music className="w-5 h-5" />;
     if (ext === 'pdf') return <FileText className="w-5 h-5" />;
@@ -230,7 +274,11 @@ export function EnhancedUploadZoneV2({
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'complete':
-        return <Badge variant="default"><CheckCircle2 className="w-3 h-3 mr-1" /> Complete</Badge>;
+        return (
+          <Badge variant="default">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Complete
+          </Badge>
+        );
       case 'error':
         return <Badge variant="destructive">Error</Badge>;
       default:
@@ -253,40 +301,43 @@ export function EnhancedUploadZoneV2({
   };
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn('space-y-6', className)}>
       {/* Upload Area */}
-      <Card 
-        {...getRootProps()} 
+      <Card
+        {...getRootProps()}
         className={cn(
-          "border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer hover:border-primary/50",
-          isDragActive ? "border-primary bg-primary/5 scale-[1.02]" : "border-gray-300 dark:border-gray-600",
-          files.length > 0 ? "mt-0" : ""
+          'border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer hover:border-primary/50',
+          isDragActive
+            ? 'border-primary bg-primary/5 scale-[1.02]'
+            : 'border-gray-300 dark:border-gray-600',
+          files.length > 0 ? 'mt-0' : ''
         )}
       >
         <input {...getInputProps()} />
-        
+
         <div className="flex flex-col items-center justify-center gap-4">
           <motion.div
             animate={{ scale: isDragActive ? 1.1 : 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
           </motion.div>
-          
+
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">
               Drop files here or click to browse
             </h3>
             <p className="text-sm text-muted-foreground">
-              Support for images, videos, audio, PDFs, and more. Max file size: 200MB.
+              Support for images, videos, audio, PDFs, and more. Max file size:
+              200MB.
             </p>
           </div>
-          
-          <Button 
-            type="button" 
-            variant="outline" 
+
+          <Button
+            type="button"
+            variant="outline"
             className="mt-2"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               if (fileInputRef.current) {
                 fileInputRef.current.click();
@@ -308,12 +359,16 @@ export function EnhancedUploadZoneV2({
           <div className="flex items-start gap-3">
             <Star className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="font-medium text-foreground">Current Tier: {tier.toUpperCase()}</h4>
+              <h4 className="font-medium text-foreground">
+                Current Tier: {tier.toUpperCase()}
+              </h4>
               <p className="text-sm text-muted-foreground mt-1">
                 {tier === 'free' && 'Extract up to 50 metadata fields'}
                 {tier === 'starter' && 'Extract up to 200 metadata fields'}
-                {tier === 'pro' && 'Extract up to 7,000+ metadata fields including MakerNotes, IPTC, XMP'}
-                {tier === 'super' && 'Extract all 15,000+ metadata fields with advanced analysis'}
+                {tier === 'pro' &&
+                  'Extract up to 7,000+ metadata fields including MakerNotes, IPTC, XMP'}
+                {tier === 'super' &&
+                  'Extract all 15,000+ metadata fields with advanced analysis'}
               </p>
             </div>
           </div>
@@ -344,7 +399,7 @@ export function EnhancedUploadZoneV2({
             </div>
 
             <div className="grid gap-4">
-              {files.map((fileState) => (
+              {files.map(fileState => (
                 <motion.div
                   key={fileState.id}
                   layout
@@ -358,38 +413,48 @@ export function EnhancedUploadZoneV2({
                       <div className="text-primary">
                         {getFileIcon(fileState.file)}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{fileState.file.name}</p>
-                          {fileState.analysis && fileState.analysis.warnings && fileState.analysis.warnings.length > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <AlertCircle className="w-4 h-4 text-yellow-500" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{fileState.analysis.warnings.join(', ')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
+                          <p className="font-medium truncate">
+                            {fileState.file.name}
+                          </p>
+                          {fileState.analysis &&
+                            fileState.analysis.warnings &&
+                            fileState.analysis.warnings.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <AlertCircle className="w-4 h-4 text-yellow-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    {fileState.analysis.warnings.join(', ')}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                         </div>
-                        
+
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>{(fileState.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                          <span>
+                            {(fileState.file.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
                           <span>{fileState.file.type || 'Unknown type'}</span>
                           {fileState.estimate && (
                             <div className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              <span>{getProcessingEstimate(fileState.estimate)}</span>
+                              <span>
+                                {getProcessingEstimate(fileState.estimate)}
+                              </span>
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       {getStatusBadge(fileState.status)}
-                      
+
                       <Button
                         variant="ghost"
                         size="icon"
@@ -400,19 +465,22 @@ export function EnhancedUploadZoneV2({
                       </Button>
                     </div>
                   </div>
-                  
-                  {(fileState.status === 'uploading' || fileState.status === 'processing') && (
+
+                  {(fileState.status === 'uploading' ||
+                    fileState.status === 'processing') && (
                     <div className="mt-3">
                       <div className="flex justify-between text-sm mb-1">
                         <span>
-                          {fileState.status === 'uploading' ? 'Uploading...' : 'Processing...'}
+                          {fileState.status === 'uploading'
+                            ? 'Uploading...'
+                            : 'Processing...'}
                         </span>
                         <span>{fileState.progress}%</span>
                       </div>
                       <Progress value={fileState.progress} className="h-2" />
                     </div>
                   )}
-                  
+
                   {fileState.status === 'complete' && fileState.result && (
                     <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 rounded-md">
                       <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
@@ -423,12 +491,17 @@ export function EnhancedUploadZoneV2({
                       </div>
                     </div>
                   )}
-                  
-                  {fileState.analysis && fileState.analysis.suggestions && fileState.analysis.suggestions.length > 0 && (
-                    <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                      <p>Suggestions: {fileState.analysis.suggestions.join(', ')}</p>
-                    </div>
-                  )}
+
+                  {fileState.analysis &&
+                    fileState.analysis.suggestions &&
+                    fileState.analysis.suggestions.length > 0 && (
+                      <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                        <p>
+                          Suggestions:{' '}
+                          {fileState.analysis.suggestions.join(', ')}
+                        </p>
+                      </div>
+                    )}
                 </motion.div>
               ))}
             </div>
@@ -459,14 +532,14 @@ export function EnhancedUploadZoneV2({
                 Extract Metadata
               </>
             )}
-            
+
             {advanced && (
               <Badge variant="secondary" className="ml-2">
                 Advanced Mode
               </Badge>
             )}
           </Button>
-          
+
           <Button
             variant="outline"
             onClick={clearAllFiles}
@@ -490,10 +563,11 @@ export function EnhancedUploadZoneV2({
               <h4 className="font-medium">Best Results</h4>
             </div>
             <p className="text-sm text-muted-foreground">
-              Upload original files without compression for maximum metadata extraction.
+              Upload original files without compression for maximum metadata
+              extraction.
             </p>
           </div>
-          
+
           <div className="p-4 bg-muted/50 rounded-lg border">
             <div className="flex items-center gap-2 mb-2">
               <Info className="w-5 h-5 text-blue-500" />
@@ -503,7 +577,7 @@ export function EnhancedUploadZoneV2({
               JPG, PNG, TIFF, MP4, MOV, MP3, PDF, and 50+ other formats.
             </p>
           </div>
-          
+
           <div className="p-4 bg-muted/50 rounded-lg border">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="w-5 h-5 text-purple-500" />

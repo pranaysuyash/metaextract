@@ -27,6 +27,7 @@ import { registerLegalComplianceRoutes } from './legal-compliance';
 import { registerBatchRoutes } from './batch';
 import { rateLimitManager } from '../rateLimitRedis';
 import { rateLimitAPI } from '../rateLimitMiddleware';
+import { applyUploadRateLimiting } from '../middleware/upload-rate-limit';
 import advancedProtectionRouter from './advanced-protection';
 import enhancedProtectionRouter from './enhanced-protection';
 import adminSecurityRouter from './admin-security';
@@ -72,6 +73,9 @@ export async function registerRoutes(
 
   // Apply global API rate limiting to all /api routes
   app.use('/api', rateLimitAPI());
+
+  // Apply upload-specific rate limiting to images MVP extract endpoint
+  applyUploadRateLimiting(app);
 
   // Register route modules
   registerImagesMvpRoutes(app);

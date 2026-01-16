@@ -33,6 +33,7 @@ interface AdvancedResultsIntegrationProps {
 
   // UI state
   tier: string;
+  isProcessingAdvanced?: boolean;
   onUpgrade?: () => void;
   onRunAdvancedAnalysis?: () => void;
   onRunComparison?: (files: FileList) => void;
@@ -47,6 +48,7 @@ export function AdvancedResultsIntegration({
   timelineResult,
   forensicReport,
   tier,
+  isProcessingAdvanced = false,
   onUpgrade,
   onRunAdvancedAnalysis,
   onRunComparison,
@@ -152,10 +154,17 @@ export function AdvancedResultsIntegration({
                 <Button
                   size='sm'
                   onClick={onRunAdvancedAnalysis}
-                  disabled={isProcessing || !metadata}
+                  disabled={isProcessing || isProcessingAdvanced || !metadata}
                   className='w-full'
                 >
-                  {advancedAnalysis ? 'Re-analyze' : 'Analyze'}
+                  {isProcessingAdvanced ? (
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-3 h-3 animate-pulse" />
+                      Analyzing...
+                    </div>
+                  ) : (
+                    advancedAnalysis ? 'Re-analyze' : 'Analyze'
+                  )}
                 </Button>
               ) : (
                 <Button
