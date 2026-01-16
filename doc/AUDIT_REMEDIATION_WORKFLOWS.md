@@ -25,6 +25,7 @@ Operational note (to avoid internal contradictions across prompts):
 Repo hygiene (always on):
 - Before committing: always run `git add -A` (multi-agent staging discipline).
 - Python: always use the existing `.venv` (find via `ls -la` or `which python3`) and prefer `uv` for dependency installs (`uv pip install -r requirements.txt`).
+ - Process management: when restarting dev servers, terminate only the Vite (5173) and Express (3000) server processes. Prefer stopping the task/terminal running `npm run dev`, or kill by port if needed (macOS: `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9`, `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9`). Never use blanket commands like `killall node`.
 
 ---
 

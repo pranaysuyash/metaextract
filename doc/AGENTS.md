@@ -21,6 +21,14 @@ pytest tests/ -k "test_name" -v
 **Lint:** `npm run lint` | **Fix:** `npm run lint:fix`  
 **Dev server:** `npm run dev` (Express + Vite on :5173)
 
+### Server process management (important)
+- Never kill the global Node runtime (e.g., avoid `killall node`).
+- To restart, only stop the dev servers: terminate the terminal/task running `npm run dev`.
+- If a port is stuck, kill by port instead of all Node (macOS):
+	- `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9` (Vite)
+	- `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9` (Express)
+- This prevents disrupting other Node-based tools (linters, scripts, debuggers).
+
 ## Architecture
 
 **Full-stack monorepo:**

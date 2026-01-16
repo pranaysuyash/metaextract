@@ -34,6 +34,13 @@ uv pip install -r requirements.txt  # Use uv for package management
 npm run dev  # Concurrent client (5173) + server
 ```
 
+### Process management (dev servers only)
+- Do NOT kill the global Node process or unrelated node jobs. Avoid commands like `killall node`.
+- When you need a clean restart, stop only the running dev servers:
+  - Prefer stopping the VS Code task/terminal that runs `npm run dev`.
+  - If a port is stuck, kill by port (macOS example): `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9` and/or `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9`.
+- Rationale: other Node processes (tools, scripts, debuggers) may be active; only terminate the Vite (5173) and Express (3000) dev servers when restarting.
+
 ### Build & Test
 ```bash
 npm run build           # Production build

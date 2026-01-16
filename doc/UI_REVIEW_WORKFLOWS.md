@@ -17,6 +17,7 @@ If the user does not specify a version, the agent must state which canonical ver
 Repo hygiene (always on for repo-aware work):
 - Before committing: always run `git add -A`.
 - Python: always use the existing `.venv` (find via `ls -la` or `which python3`) and prefer `uv` for installs (`uv pip install -r requirements.txt`).
+ - Process management: when restarting dev servers, stop only the Vite (5173) and Express (3000) processes (stop the `npm run dev` task/terminal or kill by port). Do not kill the entire Node runtime (avoid `killall node`).
 
 ---
 
