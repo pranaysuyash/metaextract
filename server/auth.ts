@@ -743,7 +743,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Validate IP address format before using as lockout identifier
       if (loginIdentifier === req.ip) {
-        const ipRegex = /^[\d\.:a-fA-F]+$/;
+        const ipRegex = /^[\d.:a-fA-F]+$/;
         if (!ipRegex.test(req.ip)) {
           // Fallback to 'unknown' if IP is malformed
           return res.status(400).json({

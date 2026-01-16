@@ -115,3 +115,43 @@ Execution log (append-only):
 
 Status updates (append-only):
 - 2026-01-16 12:27 IST Status -> COMPLETE (cache audit batch completed; remediation pending)
+
+---
+## TCK-20260116-001 :: Audit — server/utils/optimized-extraction-helpers.ts
+Type: AUDIT
+Owner: assistant
+Created: 2026-01-16 12:30 IST
+Status: IN_PROGRESS
+
+Scope contract:
+- In-scope:
+  - One-file audit: `server/utils/optimized-extraction-helpers.ts`
+  - Evidence from repo files opened + commands run
+- Out-of-scope:
+  - Implementing fixes
+  - Auditing Python extractor internals (unless inside this file)
+- Behavior change allowed: NO
+
+Targets:
+- Repo: metaextract
+- File(s): server/utils/optimized-extraction-helpers.ts
+- Branch/PR: main
+- Range: Unknown
+
+Inputs:
+- Prompt used: Audit (versionless alias; canonical Audit v1.5.1)
+- Source artifacts:
+  - Audit report: pending (`docs/audit/server__utils__optimized-extraction-helpers.ts.md`)
+  - Findings list: pending
+  - Bot/CI signals: None
+
+Plan (high level, not patches):
+- Run mandatory discovery and capture raw evidence.
+- Record findings with invariants and scoped patch plan.
+
+Execution log (append-only):
+- 2026-01-16 12:30 IST Ticket created; starting mandatory discovery
+- 2026-01-16 12:31 IST Wrote audit artifact | Evidence: `docs/audit/server__utils__optimized-extraction-helpers.ts.md`
+
+Status updates (append-only):
+- 2026-01-16 12:31 IST Status -> COMPLETE (audit artifact created; remediation pending)
