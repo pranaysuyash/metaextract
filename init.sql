@@ -112,6 +112,22 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- User sessions table (session revocation and management)
+CREATE TABLE IF NOT EXISTS public.user_sessions (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL REFERENCES public.users(id),
+  session_id TEXT NOT NULL UNIQUE,
+  token_hash TEXT NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  user_agent TEXT,
+  ip_address TEXT,
+  revoked_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON public.user_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON public.user_sessions(expires_at);
+
 -- Credit balance tracking
 CREATE TABLE IF NOT EXISTS credit_balances (
   id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),

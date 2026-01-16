@@ -122,6 +122,36 @@ beforeAll(async () => {
     );
     const reg = res.rows[0]?.reg;
 
+    // Also ensure newer tables exist even if the DB was initialized previously.
+    // This prevents noisy errors when modules run background cleanup tasks.
+    const ensureUserSessionsTable = async (): Promise<void> => {
+      const t = await client.query(
+        "SELECT to_regclass('public.user_sessions') AS reg"
+      );
+      if (t.rows[0]?.reg) return;
+
+      await client.query('SET search_path TO public');
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS public.user_sessions (
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id VARCHAR NOT NULL REFERENCES public.users(id),
+          session_id TEXT NOT NULL UNIQUE,
+          token_hash TEXT NOT NULL,
+          expires_at TIMESTAMP NOT NULL,
+          user_agent TEXT,
+          ip_address TEXT,
+          revoked_at TIMESTAMP,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+      `);
+      await client.query(
+        'CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON public.user_sessions(user_id);'
+      );
+      await client.query(
+        'CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON public.user_sessions(expires_at);'
+      );
+    };
+
     if (!reg) {
       // Try to load and run init.sql from repo root, executing statements
       // one-by-one so we can report which statement (if any) fails.
@@ -185,6 +215,8 @@ beforeAll(async () => {
         return;
       }
     }
+
+    await ensureUserSessionsTable();
 
     // If we reach here, DB is ready
     (global as any).__TEST_DB_READY = true;

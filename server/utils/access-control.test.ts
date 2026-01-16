@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { trialUsages } from '@shared/schema';
 import { getDatabase } from '../db';
 import { storage } from '../storage/index';
@@ -14,6 +14,14 @@ import type { FrontendMetadataResponse } from './extraction-helpers';
 
 describe('AccessControl - Entitlement Resolver', () => {
   let mockReq: Partial<Request>;
+
+  async function ensureTestUserExists(userId: string): Promise<void> {
+    const db = getDatabase();
+    const email = `test+${userId}@example.com`;
+    await (db as any).execute(
+      sql`INSERT INTO public.users (id, email) VALUES (${userId}, ${email}) ON CONFLICT DO NOTHING`
+    );
+  }
 
   beforeEach(() => {
     mockReq = {
@@ -79,6 +87,7 @@ describe('AccessControl - Entitlement Resolver', () => {
     it('should allow authenticated user with credits', async () => {
       const userId = `user123-${randomUUID()}`;
       (mockReq as any).user = { id: userId };
+      await ensureTestUserExists(userId);
 
       const sessionId = `images_mvp:user:${userId}`;
       const balance = await storage.getOrCreateCreditBalance(sessionId, userId);
@@ -97,6 +106,7 @@ describe('AccessControl - Entitlement Resolver', () => {
     it('should block authenticated user with 0 credits', async () => {
       const userId = `user123-${randomUUID()}`;
       (mockReq as any).user = { id: userId };
+      await ensureTestUserExists(userId);
 
       const sessionId = `images_mvp:user:${userId}`;
       await storage.getOrCreateCreditBalance(sessionId, userId);
@@ -175,6 +185,7 @@ describe('AccessControl - Entitlement Resolver', () => {
     it('should prioritize paid over free when both available', async () => {
       const userId = `user123-${randomUUID()}`;
       (mockReq as any).user = { id: userId };
+      await ensureTestUserExists(userId);
 
       const sessionId = `images_mvp:user:${userId}`;
       const balance = await storage.getOrCreateCreditBalance(sessionId, userId);
