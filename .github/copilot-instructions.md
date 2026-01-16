@@ -41,6 +41,12 @@ npm run dev  # Concurrent client (5173) + server
   - If a port is stuck, kill by port (macOS example): `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9` and/or `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9`.
 - Rationale: other Node processes (tools, scripts, debuggers) may be active; only terminate the Vite (5173) and Express (3000) dev servers when restarting.
 
+### Multi-agent safety (do not discard work)
+- Assume multiple agents may be working simultaneously.
+- Do not delete/remove git worktrees, branches, or files created by other agents unless the user explicitly instructs you to.
+- If you find untracked work in another branch/worktree: commit it on that branch or copy it into `main` and commit it; if unsure, add a TODO/checklist doc under `docs/` and commit (never discard).
+- Exception: never commit secrets (e.g. `.env`, tokens, credentials).
+
 ### Build & Test
 ```bash
 npm run build           # Production build
