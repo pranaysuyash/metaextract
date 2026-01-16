@@ -105,3 +105,13 @@ Next actions:
 
 Risks/notes:
 - `X-Cache-Key` header echo risk depends on whether any endpoints include sensitive query params; this is Unknown without auditing route surfaces and request patterns.
+
+Execution log (append-only):
+- 2026-01-16 12:23 IST Ran one-file audit: `server/cache/cache-config.ts` | Evidence: `docs/audit/server__cache__cache-config.ts.md`
+- 2026-01-16 12:25 IST Ran one-file audit: `server/cache/geocoding-cache.ts` | Evidence: `docs/audit/server__cache__geocoding-cache.ts.md`
+- 2026-01-16 12:26 IST Ran one-file audit: `server/cacheExamples.ts` | Evidence: `docs/audit/server__cacheExamples.ts.md`
+- 2026-01-15 23:25 IST Ran one-file audit: `server/cache/metadata-cache.ts` | Evidence: `docs/audit/server__cache__metadata-cache.ts.md`
+- 2026-01-15 23:27 IST Ran one-file audit: `server/cache/extraction-cache.ts` | Evidence: `docs/audit/server__cache__extraction-cache.ts.md`
+
+Status updates (append-only):
+- 2026-01-16 12:27 IST Status -> COMPLETE (cache audit batch completed; remediation pending)
