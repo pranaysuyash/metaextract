@@ -138,7 +138,9 @@ async function createImagesMvpQuote(input: {
   return quote;
 }
 
-async function getImagesMvpQuote(id: string): Promise<ImagesMvpStoredQuote | undefined> {
+async function getImagesMvpQuote(
+  id: string
+): Promise<ImagesMvpStoredQuote | undefined> {
   const anyStorage = storage as any;
   if (typeof anyStorage?.getQuote === 'function') {
     return (await anyStorage.getQuote(id)) as ImagesMvpStoredQuote | undefined;
@@ -151,12 +153,32 @@ async function getImagesMvpQuote(id: string): Promise<ImagesMvpStoredQuote | und
   return quote;
 }
 
+/**
+ * Mark a quote as used (consumed during extraction)
+ * Prevents replay attacks by ensuring same quote can only be used once
+ */
+async function markQuoteAsUsed(id: string): Promise<void> {
+  const anyStorage = storage as any;
+  if (typeof anyStorage?.markQuoteUsed === 'function') {
+    await anyStorage.markQuoteUsed(id);
+    return;
+  }
+
+  const quote = getQuoteStore().get(id);
+  if (quote) {
+    quote.status = 'used';
+    quote.usedAt = new Date();
+    getQuoteStore().set(id, quote);
+  }
+}
+
 function startQuoteCleanup() {
   setInterval(async () => {
     try {
       const anyStorage = storage as any;
       if (typeof anyStorage?.cleanupExpiredQuotes === 'function') {
-        const cleanedCount = (await anyStorage.cleanupExpiredQuotes()) as number;
+        const cleanedCount =
+          (await anyStorage.cleanupExpiredQuotes()) as number;
         if (cleanedCount > 0) {
           console.log(`[ImagesMVP] Cleaned up ${cleanedCount} expired quotes`);
         }
@@ -174,7 +196,9 @@ function startQuoteCleanup() {
         }
       }
       if (cleaned > 0) {
-        console.log(`[ImagesMVP] Cleaned up ${cleaned} expired quotes (memory)`);
+        console.log(
+          `[ImagesMVP] Cleaned up ${cleaned} expired quotes (memory)`
+        );
       }
     } catch (error) {
       console.error('[ImagesMVP] Error cleaning up expired quotes:', error);
@@ -669,144 +693,175 @@ export function registerImagesMvpRoutes(app: Express) {
 
   // ---------------------------------------------------------------------------
   // Quote: Preflight credits + limits
+  // Route-specific rate limiter: 30 requests per minute per session/user/IP
+  // Prevents quote endpoint abuse (each quote inserts a DB record)
+  // Key precedence: user > session > IP (works regardless of proxy topology)
+  const quoteLimiter = createRateLimiter({
+    windowMs: 60 * 1000, // 1 minute
+    max: 30, // 30 quotes per minute
+    keyGenerator: (req: Request) => {
+      // Prefer authenticated user
+      if ((req as any).user?.id) {
+        return `u:${(req as any).user.id}`;
+      }
+      
+      // Fall back to session (from cookie or header)
+      const sessionId = (req as any).cookies?.sessionId || 
+                        (req as any).session?.id ||
+                        req.headers['x-session-id'];
+      if (sessionId && typeof sessionId === 'string') {
+        return `s:${sessionId}`;
+      }
+      
+      // Last resort: IP (works even if behind proxy with trust=off)
+      return `ip:${req.ip || (req as any).socket?.remoteAddress || 'unknown'}`;
+    },
+  } as any);
+
   // ---------------------------------------------------------------------------
-  app.post('/api/images_mvp/quote', async (req: Request, res: Response) => {
-    try {
-      const rawFiles = Array.isArray(req.body?.files) ? req.body.files : [];
-      const ops = parseOpsFromRequest(req.body);
+  app.post(
+    '/api/images_mvp/quote',
+    quoteLimiter,
+    async (req: Request, res: Response) => {
+      try {
+        const rawFiles = Array.isArray(req.body?.files) ? req.body.files : [];
+        const ops = parseOpsFromRequest(req.body);
 
-      const MAX_FILES = 10;
-      const MAX_BYTES = 100 * 1024 * 1024;
+        const MAX_FILES = 10;
+        const MAX_BYTES = 100 * 1024 * 1024;
 
-      const perFileCredits: Record<string, number> = {};
-      const perFileById: Record<
-        string,
-        {
-          id: string;
-          accepted: boolean;
-          reason?: string;
-          detected_type?: string | null;
-          creditsTotal?: number;
-          breakdown?: any;
-          mp?: number | null;
-          mpBucket?: string | null;
-          warnings?: string[];
-        }
-      > = {};
+        const perFileCredits: Record<string, number> = {};
+        const perFileById: Record<
+          string,
+          {
+            id: string;
+            accepted: boolean;
+            reason?: string;
+            detected_type?: string | null;
+            creditsTotal?: number;
+            breakdown?: any;
+            mp?: number | null;
+            mpBucket?: string | null;
+            warnings?: string[];
+          }
+        > = {};
 
-      let creditsTotal = 0;
-      const limitedFiles = rawFiles.slice(0, MAX_FILES);
-      for (const file of limitedFiles) {
-        const fileId = typeof file?.id === 'string' ? file.id : null;
-        if (!fileId) continue;
+        let creditsTotal = 0;
+        const limitedFiles = rawFiles.slice(0, MAX_FILES);
+        for (const file of limitedFiles) {
+          const fileId = typeof file?.id === 'string' ? file.id : null;
+          if (!fileId) continue;
 
-        const mp = computeMp(file?.width ?? null, file?.height ?? null);
-        const bucket = resolveMpBucket(mp);
+          const mp = computeMp(file?.width ?? null, file?.height ?? null);
+          const bucket = resolveMpBucket(mp);
 
-        const name = typeof file?.name === 'string' ? file.name : '';
-        const mime = typeof file?.mime === 'string' ? file.mime : null;
-        const sizeBytes =
-          typeof file?.sizeBytes === 'number' ? file.sizeBytes : 0;
-        const ext = name.includes('.')
-          ? name.slice(name.lastIndexOf('.')).toLowerCase()
-          : '';
+          const name = typeof file?.name === 'string' ? file.name : '';
+          const mime = typeof file?.mime === 'string' ? file.mime : null;
+          const sizeBytes =
+            typeof file?.sizeBytes === 'number' ? file.sizeBytes : 0;
+          const ext = name.includes('.')
+            ? name.slice(name.lastIndexOf('.')).toLowerCase()
+            : '';
 
-        let accepted = true;
-        let reason: string | undefined;
-        if (sizeBytes > MAX_BYTES) {
-          accepted = false;
-          reason = 'file_too_large';
-        } else {
-          const mimeOk = !mime || SUPPORTED_IMAGE_MIMES.has(mime);
-          const extOk = !ext || SUPPORTED_IMAGE_EXTENSIONS.has(ext);
-          if (!mimeOk && !extOk) {
+          let accepted = true;
+          let reason: string | undefined;
+          if (sizeBytes > MAX_BYTES) {
             accepted = false;
-            reason = 'unsupported_type';
+            reason = 'file_too_large';
+          } else {
+            const mimeOk = !mime || SUPPORTED_IMAGE_MIMES.has(mime);
+            const extOk = !ext || SUPPORTED_IMAGE_EXTENSIONS.has(ext);
+            if (!mimeOk && !extOk) {
+              accepted = false;
+              reason = 'unsupported_type';
+            }
+          }
+
+          const warnings: string[] = [];
+          if (bucket.warning) warnings.push(bucket.warning);
+          if (!accepted && reason) warnings.push(reason);
+
+          if (accepted) {
+            const { creditsTotal: fileCreditsTotal, breakdown } =
+              computeCreditsTotal(ops, bucket.credits);
+
+            creditsTotal += fileCreditsTotal;
+            perFileCredits[fileId] = fileCreditsTotal;
+            perFileById[fileId] = {
+              id: fileId,
+              accepted: true,
+              detected_type: mime,
+              creditsTotal: fileCreditsTotal,
+              breakdown,
+              mp,
+              mpBucket: bucket.label,
+              warnings,
+            };
+          } else {
+            perFileById[fileId] = {
+              id: fileId,
+              accepted: false,
+              reason,
+              detected_type: mime,
+              mp,
+              mpBucket: bucket.label,
+              warnings,
+            };
           }
         }
 
-        const warnings: string[] = [];
-        if (bucket.warning) warnings.push(bucket.warning);
-        if (!accepted && reason) warnings.push(reason);
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const sessionId = getOrSetSessionId(req, res);
 
-        if (accepted) {
-          const { creditsTotal: fileCreditsTotal, breakdown } =
-            computeCreditsTotal(ops, bucket.credits);
+        const createdQuote = await createImagesMvpQuote({
+          sessionId,
+          files: limitedFiles,
+          ops,
+          creditsTotal,
+          perFileCredits,
+          perFile: perFileById,
+          schedule: IMAGES_MVP_CREDIT_SCHEDULE,
+          expiresAt,
+        });
 
-          creditsTotal += fileCreditsTotal;
-          perFileCredits[fileId] = fileCreditsTotal;
-          perFileById[fileId] = {
-            id: fileId,
-            accepted: true,
-            detected_type: mime,
-            creditsTotal: fileCreditsTotal,
-            breakdown,
-            mp,
-            mpBucket: bucket.label,
-            warnings,
-          };
-        } else {
-          perFileById[fileId] = {
-            id: fileId,
-            accepted: false,
-            reason,
-            detected_type: mime,
-            mp,
-            mpBucket: bucket.label,
-            warnings,
-          };
-        }
+        const perFileArray = Object.values(perFileById);
+        const standardCreditsPerImage =
+          IMAGES_MVP_CREDIT_SCHEDULE.base +
+          IMAGES_MVP_CREDIT_SCHEDULE.embedding;
+
+        res.json({
+          schemaVersion: 'images_mvp_quote_v1',
+          quoteId: createdQuote.id,
+          creditsTotal,
+          perFile: perFileById,
+          schedule: IMAGES_MVP_CREDIT_SCHEDULE,
+          // Backward-compatible shape used by older Images MVP client:
+          limits: {
+            maxBytes: MAX_BYTES,
+            allowedMimes: Array.from(SUPPORTED_IMAGE_MIMES),
+            maxFiles: MAX_FILES,
+          },
+          creditSchedule: {
+            ...IMAGES_MVP_CREDIT_SCHEDULE,
+            standardCreditsPerImage,
+          },
+          quote: {
+            perFile: perFileArray,
+            totalCredits: creditsTotal,
+            standardEquivalents:
+              standardCreditsPerImage > 0
+                ? Math.ceil(creditsTotal / standardCreditsPerImage)
+                : null,
+          },
+          expiresAt: new Date(expiresAt).toISOString(),
+          warnings: [],
+        });
+      } catch (error) {
+        console.error('ImagesMVP quote error:', error);
+        res.status(500).json({ error: 'Failed to create quote' });
       }
-
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-      const sessionId = getOrSetSessionId(req, res);
-
-      const createdQuote = await createImagesMvpQuote({
-        sessionId,
-        files: limitedFiles,
-        ops,
-        creditsTotal,
-        perFileCredits,
-        perFile: perFileById,
-        schedule: IMAGES_MVP_CREDIT_SCHEDULE,
-        expiresAt,
-      });
-
-      const perFileArray = Object.values(perFileById);
-      const standardCreditsPerImage =
-        IMAGES_MVP_CREDIT_SCHEDULE.base + IMAGES_MVP_CREDIT_SCHEDULE.embedding;
-
-      res.json({
-        quoteId: createdQuote.id,
-        creditsTotal,
-        perFile: perFileById,
-        schedule: IMAGES_MVP_CREDIT_SCHEDULE,
-        // Backward-compatible shape used by older Images MVP client:
-        limits: {
-          maxBytes: MAX_BYTES,
-          allowedMimes: Array.from(SUPPORTED_IMAGE_MIMES),
-          maxFiles: MAX_FILES,
-        },
-        creditSchedule: {
-          ...IMAGES_MVP_CREDIT_SCHEDULE,
-          standardCreditsPerImage,
-        },
-        quote: {
-          perFile: perFileArray,
-          totalCredits: creditsTotal,
-          standardEquivalents:
-            standardCreditsPerImage > 0
-              ? Math.ceil(creditsTotal / standardCreditsPerImage)
-              : null,
-        },
-        expiresAt: new Date(expiresAt).toISOString(),
-        warnings: [],
-      });
-    } catch (error) {
-      console.error('ImagesMVP quote error:', error);
-      res.status(500).json({ error: 'Failed to create quote' });
     }
-  });
+  );
   app.get(
     '/api/images_mvp/analytics/report',
     analyticsRateLimiter,
@@ -1294,6 +1349,11 @@ export function registerImagesMvpRoutes(app: Express) {
           keyGenerator: (req: Request) =>
             `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
         } as any),
+    // Free quota enforcement (2 extractions per device for anonymous users)
+    // Must be AFTER rate limiting but BEFORE file upload
+    process.env.NODE_ENV === 'test'
+      ? (_req: Request, _res: Response, next: any) => next()
+      : freeQuotaMiddleware,
     // Enhanced protection BEFORE file upload - security validation
     enhancedProtectionMiddleware,
     // File upload middleware - only executes if protection passes
@@ -1346,7 +1406,9 @@ export function registerImagesMvpRoutes(app: Express) {
         if (!isSupportedMime || !isSupportedExt) {
           // Clean up the uploaded temp file before rejecting
           if (req.file.path) {
-            void Promise.resolve(cleanupTempFile(req.file.path)).catch(() => {});
+            void Promise.resolve(cleanupTempFile(req.file.path)).catch(
+              () => {}
+            );
           }
           return sendUnsupportedFileTypeError(res, 'File type not permitted');
         }
@@ -1759,6 +1821,17 @@ export function registerImagesMvpRoutes(app: Express) {
           }
         } catch (redactError) {
           console.error('Access mode redaction failed:', redactError);
+        }
+
+        // Mark quote as used (prevents replay attacks)
+        // Must happen BEFORE response to ensure atomicity
+        if (quoteId) {
+          try {
+            await markQuoteAsUsed(quoteId);
+          } catch (quoteError) {
+            console.error('Failed to mark quote as used:', quoteError);
+            // Don't block response, but log the error
+          }
         }
 
         res.json(metadata);

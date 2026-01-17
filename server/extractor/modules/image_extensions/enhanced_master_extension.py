@@ -78,7 +78,7 @@ class EnhancedMasterExtension(ImageExtensionBase):
                         "megapixels": round((img.width * img.height) / 1_000_000, 2),
                         "has_icc": hasattr(img, 'info') and 'icc_profile' in img.info,
                         "has_exif": hasattr(img, '_getexif'),
-                        "size_bytes": len(open(filepath, 'rb').read())
+                        "size_bytes": Path(filepath).stat().st_size
                     }
 
                     self._image_cache[filepath] = image_data
@@ -262,10 +262,15 @@ class EnhancedMasterExtension(ImageExtensionBase):
             cache_total = self._cache_hits + self._cache_misses
             cache_hit_rate = (self._cache_hits / cache_total * 100) if cache_total > 0 else 0
 
+            # Count real fields (excluding synthetic placeholders)
+            real_fields_count = self._count_real_fields(result.metadata)
+
             performance_data = {
                 "extraction_time_seconds": round(extraction_time, 4),
                 "fields_extracted": len(result.metadata),
+                "real_fields_extracted": real_fields_count,
                 "field_coverage_percent": round((len(result.metadata) / self.FIELD_COUNT) * 100, 1),
+                "real_data_percent": round((real_fields_count / self.FIELD_COUNT) * 100, 1) if real_fields_count > 0 else 0,
                 "extraction_method": "enhanced_master_parallel",
                 "extensions_used": ["complete_gps", "specialized_modules", "advanced_analysis", "perceptual_hashing"],
                 "performance_score": self._calculate_performance_score(result.metadata, extraction_time),
@@ -535,6 +540,178 @@ class EnhancedMasterExtension(ImageExtensionBase):
         except Exception as e:
             result.add_warning(f"Advanced analysis failed: {str(e)[:100]}")
 
+    def _count_real_fields(self, metadata: Dict[str, Any]) -> int:
+        """
+        Count only fields with real/meaningful data, excluding synthetic placeholders.
+        
+        A field is considered "real" if it contains:
+        - Non-empty strings (not 'unknown', 'N/A', etc.)
+        - Non-zero numbers (not 0 for fields that should have values)
+        - Non-empty dicts/lists with actual data
+        - Boolean True (indicating analysis was performed)
+        
+        Excludes:
+        - Synthetic module outputs with no real data
+        - Placeholder values like 'unknown', 'N/A', None, {}, []
+        - Fields that are just metadata about the extraction itself
+        """
+        real_count = 0
+        
+        # Core image properties that are always real
+        core_fields = ['format', 'mode', 'width', 'height', 'megapixels']
+        
+        for key, value in metadata.items():
+            # Skip extraction performance metadata
+            if key == 'extraction_performance':
+                continue
+                
+            # Core image properties are always real
+            if key in core_fields:
+                if value not in [None, 0, '', {}, []]:
+                    real_count += 1
+                    
+            # Check if this is a specialized module with synthetic data
+            elif isinstance(value, dict):
+                # Specialized modules that are likely synthetic
+                synthetic_modules = [
+                    'drone_telemetry', 'blockchain_provenance', 'healthcare_medical',
+                    'medical_imaging', 'astronomical_data', 'scientific_instruments',
+                    'advanced_video_analysis', 'advanced_audio_analysis', 'document_analysis',
+                    'multimedia_entertainment', 'industrial_manufacturing', 
+                    'transportation_logistics', 'education_academic', 'legal_compliance',
+                    'environmental_sustainability', 'gaming_entertainment',
+                    'emerging_technology', 'social_media_digital', 'scientific_research'
+                ]
+                
+                if key in synthetic_modules:
+                    # Check if this module has real data or just placeholders
+                    if self._module_has_real_data(value):
+                        real_count += 1  # Count the module as 1 real field
+                    # Otherwise, skip synthetic placeholders
+                    
+                elif key == 'exif':
+                    # EXIF data - count non-empty tags
+                    if isinstance(value, dict) and value:
+                        for tag, tag_value in value.items():
+                            # Skip internal tags like GPSInfo, ExifOffset
+                            if tag in ['GPSInfo', 'ExifOffset', 'MakerNote', 'UserComment']:
+                                continue
+                            if tag_value not in [None, '', 0, {}]:
+                                real_count += 1
+                                
+                elif key == 'gps':
+                    # GPS data - check for actual coordinates (altitude counts too)
+                    if isinstance(value, dict):
+                        has_coords = (
+                            value.get('latitude') is not None or 
+                            value.get('longitude') is not None or
+                            value.get('altitude') is not None
+                        )
+                        if has_coords:
+                            real_count += 1
+                            
+                elif key == 'perceptual_hashes':
+                    # Hashes are real if they exist
+                    if isinstance(value, dict) and value.get('perceptual_hash'):
+                        real_count += 1
+                        
+                elif key == 'image_quality_analysis':
+                    # Quality analysis - count it as real if it has basic info
+                    if isinstance(value, dict) and value:
+                        real_count += 1
+                            
+                elif key == 'ai_scene_recognition':
+                    # AI analysis - count as real if it has content
+                    if isinstance(value, dict) and value.get('analysis_available'):
+                        real_count += 1
+                            
+                elif key == 'ai_quality_assessment':
+                    # Quality assessment - count as real
+                    if isinstance(value, dict) and value.get('quality_level'):
+                        real_count += 1
+                            
+                elif key == 'ai_color_analysis':
+                    # Color analysis - minimal real content
+                    if isinstance(value, dict) and value.get('analysis_available'):
+                        real_count += 1
+                        
+                elif key == 'data_completeness':
+                    # Completeness score is real metadata
+                    if isinstance(value, dict) and value:
+                        real_count += 1
+                        
+                elif key == 'camera_data':
+                    # Camera data - count real camera info
+                    if isinstance(value, dict) and value:
+                        real_count += 1
+                            
+                elif key == 'iptc':
+                    # IPTC data
+                    if isinstance(value, dict) and value:
+                        real_count += 1
+                        
+                elif key == 'xmp':
+                    # XMP data
+                    if isinstance(value, dict) and value:
+                        real_count += 1
+                        
+                elif key == 'icc_profile':
+                    # ICC profile - real if it exists
+                    if isinstance(value, dict) and value.get('has_icc_profile'):
+                        real_count += 1
+                        
+                elif key == 'forensic':
+                    # Forensic data - count as real
+                    if isinstance(value, dict) and value.get('format'):
+                        real_count += 1
+                        
+                elif key == 'mobile_metadata':
+                    # Mobile metadata - count as real
+                    if isinstance(value, dict) and value:
+                        real_count += 1
+                        
+                elif key == 'geospatial_analysis':
+                    # Geospatial - count as real if it has data
+                    if isinstance(value, dict) and value.get('has_gps') is not None:
+                        real_count += 1
+                        
+                else:
+                    # Other dicts - check if they have real data
+                    if self._module_has_real_data(value):
+                        real_count += 1
+                        
+        return real_count
+    
+    def _module_has_real_data(self, module_data: Dict[str, Any]) -> bool:
+        """
+        Check if a module has real data or just synthetic placeholders.
+        """
+        if not isinstance(module_data, dict):
+            return False
+            
+        # Check for actual data indicators
+        real_indicators = [
+            'latitude', 'longitude', 'altitude',  # GPS data
+            'make', 'model', 'camera_settings',  # Camera data
+            'perceptual_hash', 'average_hash',  # Real hashes
+            'scene_type', 'quality_level',  # AI results
+            'color_temperature', 'dominant_colors',  # Color analysis
+            'flight_data',  # Real drone data
+        ]
+        
+        for indicator in real_indicators:
+            if indicator in module_data:
+                value = module_data[indicator]
+                if value not in [None, '', 0, {}, [], False, 'unknown', 'N/A']:
+                    return True
+        
+        # Check if fields_extracted is more than just base fields
+        fields_extracted = module_data.get('fields_extracted', 0)
+        if isinstance(fields_extracted, int) and fields_extracted > 5:
+            return True
+            
+        return False
+    
     def _calculate_performance_score(self, metadata: Dict[str, Any], extraction_time: float) -> float:
         """Calculate overall performance score"""
         try:

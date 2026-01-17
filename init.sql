@@ -327,3 +327,29 @@ BEGIN
   END IF;
 END
 $$;
+
+-- ============================================================================
+-- Images MVP Quote Storage Table
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS images_mvp_quotes (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id TEXT NOT NULL,
+  user_id VARCHAR REFERENCES users(id),
+  files JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ops JSONB NOT NULL DEFAULT '{}'::jsonb,
+  credits_total INTEGER NOT NULL DEFAULT 0,
+  per_file_credits JSONB NOT NULL DEFAULT '{}'::jsonb,
+  per_file JSONB NOT NULL DEFAULT '{}'::jsonb,
+  schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  status VARCHAR(20) NOT NULL DEFAULT 'active'
+);
+
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_session_id ON images_mvp_quotes(session_id);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_user_id ON images_mvp_quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_status ON images_mvp_quotes(status);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_expires_at ON images_mvp_quotes(expires_at);

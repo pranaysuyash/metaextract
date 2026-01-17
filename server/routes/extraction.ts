@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { spawn } from 'child_process';
+import { fileTypeFromBuffer } from 'file-type';
 import {
   PythonMetadataResponse,
   FrontendMetadataResponse,
@@ -72,6 +73,45 @@ const EXTRACTION_HEALTH_TIMEOUT_MS = Number(
     (process.env.NODE_ENV === 'test' ? 500 : 10000)
 );
 
+function guessMimeTypeFromFilename(filename: string): string | null {
+  const ext = path.extname(filename || '').toLowerCase();
+  const map: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.tif': 'image/tiff',
+    '.tiff': 'image/tiff',
+    '.heic': 'image/heic',
+    '.heif': 'image/heif',
+    '.avif': 'image/avif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.cur': 'image/x-icon',
+    '.icns': 'image/icns',
+    '.psd': 'image/vnd.adobe.photoshop',
+    '.psb': 'image/vnd.adobe.photoshop',
+    '.exr': 'image/x-exr',
+    '.jp2': 'image/jp2',
+    '.j2k': 'image/jp2',
+    '.jpf': 'image/jp2',
+    '.jpx': 'image/jpx',
+    '.jpm': 'image/jpm',
+    '.mj2': 'video/mj2',
+    '.jxl': 'image/jxl',
+    '.dds': 'image/vnd-ms.dds',
+    '.tga': 'image/x-tga',
+    '.pbm': 'image/x-portable-anymap',
+    '.pgm': 'image/x-portable-anymap',
+    '.ppm': 'image/x-portable-anymap',
+    '.pnm': 'image/x-portable-anymap',
+    '.hdr': 'image/vnd.radiance',
+  };
+  return map[ext] ?? null;
+}
+
 function getCoreBalanceKeyForSession(sessionId: string): string {
   return `credits:core:session:${sessionId}`;
 }
@@ -122,7 +162,14 @@ export function registerExtractionRoutes(app: Express): void {
         const requestedTier = (req.query.tier as string) || 'enterprise';
         const normalizedTier = normalizeTier(requestedTier);
         const pythonTier = toPythonTier(normalizedTier);
-        const mimeType = req.file.mimetype || 'application/octet-stream';
+        // Do not trust browser-provided mimetype for gating; detect from bytes when possible.
+        const detected = await fileTypeFromBuffer(req.file.buffer);
+        const guessed = guessMimeTypeFromFilename(req.file.originalname);
+        const mimeType =
+          detected?.mime ||
+          guessed ||
+          req.file.mimetype ||
+          'application/octet-stream';
         const tierConfig = getTierConfig(normalizedTier);
         // Credits + trial tracking use a stable cookie session id (shared across localhost ports).
         // Prefer an explicitly provided session id (query param or header). Do NOT auto-generate a new session id here

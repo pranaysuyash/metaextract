@@ -1497,6 +1497,34 @@ def extract_metadata(
             metadata_comparison=False,
         )
     mime_type = detect_mime_type(filepath)
+    ext = path.suffix.lower()
+
+    image_like_extensions = {
+        # Common raster
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tif", ".tiff", ".webp",
+        # Modern containers / codecs
+        ".heic", ".heif", ".avif",
+        # Adobe / pro
+        ".psd", ".psb",
+        # OpenEXR / HDR
+        ".exr",
+        # Vector
+        ".svg",
+        # Icons / misc containers
+        ".ico", ".icns",
+        # JPEG 2000 / JPEG XL
+        ".jp2", ".j2k", ".jpf", ".jpx", ".jpm", ".mj2", ".jxl",
+        # Netpbm family
+        ".pbm", ".pgm", ".ppm", ".pnm",
+        # Targa / DDS / Radiance HDR
+        ".tga", ".dds", ".hdr",
+        # Camera RAW (handled primarily via ExifTool)
+        ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".sr2", ".dng", ".orf", ".rw2", ".raf", ".pef",
+        ".x3f", ".rwl", ".iiq", ".3fr",
+        # Other image-like scientific containers (ExifTool can often read)
+        ".fits", ".fit", ".fts",
+    }
+    is_image_like_by_path = (mime_type and mime_type.startswith("image/")) or (ext in image_like_extensions)
     
     result = {
         "extraction_info": {
@@ -1538,17 +1566,140 @@ def extract_metadata(
     if tier_config.exiftool_enhanced and EXIFTOOL_AVAILABLE:
         exiftool_data = extract_with_exiftool(filepath)
         if exiftool_data: result["extraction_info"]["exiftool_used"] = True
-    
-    ext = path.suffix.lower()
+
+    is_image_like = is_image_like_by_path or (
+        isinstance(exiftool_data, dict)
+        and any(
+            isinstance(exiftool_data.get(k), dict) and len(exiftool_data.get(k) or {}) > 0
+            for k in ("image_container", "exif", "exif_ifd", "gps", "iptc", "xmp", "icc_profile", "makernote")
+        )
+    )
     
     # Images
-    if mime_type and mime_type.startswith("image"):
-        result["image"] = extract_image_properties(filepath)
+    if is_image_like:
+        result["image"] = extract_image_properties(filepath) if (mime_type and mime_type.startswith("image/")) else None
         if result["image"]:
             result["summary"]["width"] = result["image"].get("width")
             result["summary"]["height"] = result["image"].get("height")
 
-        if tier_config.thumbnails:
+        # Container-level format metadata (format-specific parsers; no placeholders)
+        try:
+            container_metadata = {}
+            if ext == ".png":
+                from .formats.png_chunks import extract_png_container_metadata
+
+                png_meta = extract_png_container_metadata(filepath)
+                if png_meta:
+                    container_metadata["png"] = png_meta
+            elif ext == ".gif":
+                from .formats.gif_structure import extract_gif_container_metadata
+
+                gif_meta = extract_gif_container_metadata(filepath)
+                if gif_meta:
+                    container_metadata["gif"] = gif_meta
+            elif ext == ".webp":
+                from .formats.webp_riff import extract_webp_container_metadata
+
+                webp_meta = extract_webp_container_metadata(filepath)
+                if webp_meta:
+                    container_metadata["webp"] = webp_meta
+            elif ext in (".jpg", ".jpeg"):
+                from .formats.jpeg_markers import extract_jpeg_container_metadata
+
+                jpg_meta = extract_jpeg_container_metadata(filepath)
+                if jpg_meta:
+                    container_metadata["jpeg"] = jpg_meta
+            elif ext in (".tif", ".tiff"):
+                from .formats.tiff_ifd import extract_tiff_container_metadata
+
+                tiff_meta = extract_tiff_container_metadata(filepath)
+                if tiff_meta:
+                    container_metadata["tiff"] = tiff_meta
+            elif ext == ".bmp":
+                from .formats.bmp_headers import extract_bmp_container_metadata
+
+                bmp_meta = extract_bmp_container_metadata(filepath)
+                if bmp_meta:
+                    container_metadata["bmp"] = bmp_meta
+            elif ext in (".psd", ".psb"):
+                from .formats.psd_structure import extract_psd_container_metadata
+
+                psd_meta = extract_psd_container_metadata(filepath)
+                if psd_meta:
+                    container_metadata["psd"] = psd_meta
+            elif ext in (".heic", ".heif", ".avif"):
+                from .formats.isobmff_boxes import extract_isobmff_box_metadata
+
+                bmff_meta = extract_isobmff_box_metadata(filepath)
+                if bmff_meta:
+                    container_metadata["isobmff"] = bmff_meta
+            elif ext in (".ico", ".cur"):
+                from .formats.ico_headers import extract_ico_container_metadata
+
+                ico_meta = extract_ico_container_metadata(filepath)
+                if ico_meta:
+                    container_metadata["ico"] = ico_meta
+            elif ext == ".icns":
+                from .formats.icns_structure import extract_icns_container_metadata
+
+                icns_meta = extract_icns_container_metadata(filepath)
+                if icns_meta:
+                    container_metadata["icns"] = icns_meta
+            elif ext in (".jp2", ".j2k", ".jpf", ".jpx", ".jpm", ".mj2"):
+                from .formats.jp2_boxes import extract_jp2_container_metadata
+
+                jp2_meta = extract_jp2_container_metadata(filepath)
+                if jp2_meta:
+                    container_metadata["jp2"] = jp2_meta
+            elif ext == ".jxl":
+                from .formats.jxl_signatures import extract_jxl_container_metadata
+
+                jxl_meta = extract_jxl_container_metadata(filepath)
+                if jxl_meta:
+                    container_metadata["jxl"] = jxl_meta
+                    if jxl_meta.get("container") == "isobmff":
+                        from .formats.isobmff_boxes import extract_isobmff_box_metadata
+
+                        bmff_meta = extract_isobmff_box_metadata(filepath)
+                        if bmff_meta:
+                            container_metadata["jxl"]["isobmff"] = bmff_meta
+            elif ext == ".dds":
+                from .formats.dds_header import extract_dds_container_metadata
+
+                dds_meta = extract_dds_container_metadata(filepath)
+                if dds_meta:
+                    container_metadata["dds"] = dds_meta
+            elif ext == ".tga":
+                from .formats.tga_header import extract_tga_container_metadata
+
+                tga_meta = extract_tga_container_metadata(filepath)
+                if tga_meta:
+                    container_metadata["tga"] = tga_meta
+            elif ext in (".pbm", ".pgm", ".ppm", ".pnm"):
+                from .formats.pnm_header import extract_pnm_container_metadata
+
+                pnm_meta = extract_pnm_container_metadata(filepath)
+                if pnm_meta:
+                    container_metadata["pnm"] = pnm_meta
+            elif ext == ".hdr":
+                from .formats.radiance_hdr import extract_radiance_hdr_container_metadata
+
+                hdr_meta = extract_radiance_hdr_container_metadata(filepath)
+                if hdr_meta:
+                    container_metadata["hdr"] = hdr_meta
+            elif ext == ".exr":
+                from .formats.exr_header import extract_exr_container_metadata
+
+                exr_meta = extract_exr_container_metadata(filepath)
+                if exr_meta:
+                    container_metadata["exr"] = exr_meta
+
+            if container_metadata:
+                result["container_metadata"] = container_metadata
+        except Exception as e:
+            logger.debug(f"Container metadata parsing failed: {e}")
+
+        if tier_config.thumbnails and result.get("image"):
             result["thumbnail"] = extract_thumbnail(filepath)
             embedded_thumbs = extract_embedded_thumbnails(filepath)
             if embedded_thumbs:
@@ -1559,7 +1710,7 @@ def extract_metadata(
             result["embedded_thumbnails"] = {"_locked": True}
             result["locked_fields"].append("embedded_thumbnails")
 
-        if tier_config.perceptual_hashes:
+        if tier_config.perceptual_hashes and result.get("image"):
             result["perceptual_hashes"] = extract_perceptual_hashes(filepath)
         else:
             result["perceptual_hashes"] = {"_locked": True}
@@ -2133,11 +2284,21 @@ def extract_metadata(
     except Exception as e:
         logger.debug(f"SVG metadata fallback failed: {e}")
     
-    def count_fields(obj):
-        if not isinstance(obj, dict): return 1 if obj is not None else 0
-        return sum(count_fields(v) for k, v in obj.items() if not k.startswith("_"))
-    
-    result["extraction_info"]["fields_extracted"] = count_fields(result)
+    try:
+        from .utils.field_counting import (
+            count_meaningful_fields,
+            DEFAULT_FIELD_COUNT_IGNORED_KEYS,
+        )
+        result["extraction_info"]["fields_extracted"] = count_meaningful_fields(
+            result, ignored_keys=set(DEFAULT_FIELD_COUNT_IGNORED_KEYS)
+        )
+    except Exception:
+        def count_fields(obj):
+            if not isinstance(obj, dict):
+                return 1 if obj is not None else 0
+            return sum(count_fields(v) for k, v in obj.items() if not k.startswith("_"))
+
+        result["extraction_info"]["fields_extracted"] = count_fields(result)
     result["extraction_info"]["locked_categories"] = len(result["locked_fields"])
     
     return result

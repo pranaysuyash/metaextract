@@ -12,9 +12,13 @@ import sys
 import os
 from pathlib import Path
 
-# Add the modules directory to the path to import image_extensions
-modules_dir = Path(__file__).parent
-sys.path.insert(0, str(modules_dir))
+# Ensure the full `extractor` package is importable for extensions that depend on it.
+modules_dir = Path(__file__).parent  # server/extractor/modules
+extractor_dir = modules_dir.parent   # server/extractor
+server_dir = extractor_dir.parent    # server
+for p in (str(server_dir), str(extractor_dir), str(modules_dir)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from image_extensions import (
     get_global_registry,

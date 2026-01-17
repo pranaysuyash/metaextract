@@ -358,6 +358,48 @@ export async function checkTempHealth(): Promise<{
 }
 
 /**
+ * Setup periodic cleanup for expired quotes (for production use)
+ * Prevents unbounded DB growth from quote records
+ */
+export function startQuoteCleanup(opts: {
+  cleanupExpiredQuotes: () => Promise<
+    number | { deleted?: number; cleanedCount?: number } | void
+  >;
+  intervalMs?: number;
+}): NodeJS.Timeout | null {
+  const intervalMs = opts.intervalMs ?? 5 * 60 * 1000; // 5 minutes default
+
+  const run = async () => {
+    const t0 = Date.now();
+    try {
+      const res = await opts.cleanupExpiredQuotes();
+      const deleted =
+        typeof res === 'number'
+          ? res
+          : ((res as any)?.deleted ?? (res as any)?.cleanedCount ?? 0);
+      const dur = Date.now() - t0;
+      console.log(`[quotes] cleanup ok deleted=${deleted} dur_ms=${dur}`);
+    } catch (e) {
+      const dur = Date.now() - t0;
+      console.error(`[quotes] cleanup failed dur_ms=${dur}:`, e);
+    }
+  };
+
+  // Run once on boot
+  void run();
+
+  // Schedule periodic cleanup
+  const timer = setInterval(() => void run(), intervalMs);
+
+  // Allow process to exit even if timer is active
+  if (typeof timer.unref === 'function') {
+    timer.unref();
+  }
+
+  return timer;
+}
+
+/**
  * Setup periodic cleanup (for production use)
  */
 export function startPeriodicCleanup(

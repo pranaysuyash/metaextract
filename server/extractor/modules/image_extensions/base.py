@@ -50,16 +50,24 @@ class ImageExtractionResult:
     def add_metadata(self, key: str, value: Any):
         """Add metadata field and increment counter with smart field counting"""
         self.metadata[key] = value
-        # Smart field counting - count nested fields in dictionaries
+        try:
+            from extractor.utils.field_counting import count_meaningful_fields
+        except Exception:
+            count_meaningful_fields = None
+
+        if count_meaningful_fields is not None:
+            self.fields_extracted += count_meaningful_fields({key: value})
+            return
+
+        # Fallback: shallow counting (legacy).
         if isinstance(value, dict):
-            # Count actual fields in the dictionary (excluding empty ones)
-            nested_count = sum(1 for v in value.values() if v is not None and v != {} and v != [])
-            self.fields_extracted += max(1, nested_count)  # At least 1 for the key itself
+            nested_count = sum(
+                1 for v in value.values() if v is not None and v != {} and v != []
+            )
+            self.fields_extracted += max(1, nested_count)
         elif isinstance(value, (list, tuple)) and value:
-            # Count list items if they're not empty
             self.fields_extracted += len([v for v in value if v is not None and v != {} and v != []])
         else:
-            # Single field
             self.fields_extracted += 1
 
     def add_metadata_dict(self, data: Dict[str, Any]):

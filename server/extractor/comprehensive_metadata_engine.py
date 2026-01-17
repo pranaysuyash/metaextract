@@ -207,6 +207,11 @@ def safe_extract_module(
         logger.info(f"Starting extraction with {module_name} for {filepath} (size: {file_size} bytes)")
         result = extraction_func(filepath, *args, **kwargs)
         duration = time.time() - start_time
+        if result is None:
+            logger.info(
+                f"No meaningful data produced by {module_name} in {duration:.3f}s for {filepath}"
+            )
+            return None
         logger.info(f"Successfully completed extraction with {module_name} in {duration:.3f}s for {filepath}")
         # Add performance metrics to result if it's a dict
         if isinstance(result, dict):
@@ -1897,8 +1902,30 @@ class DroneUAVEngine:
                 "white_balance": exif_data.get("WhiteBalance"),
                 "color_space": exif_data.get("ColorSpace")
             }
-        
-        return result if any(result[key] for key in ["flight_data", "camera_data", "gps_track", "sensor_data", "manufacturer_specific"]) else None
+
+        # Only return when we detect real signals. Avoid placeholder payloads such as
+        # `has_gps: false` and empty/null exposure settings.
+        manufacturer_specific = result.get("manufacturer_specific") or {}
+        if isinstance(manufacturer_specific, dict) and any(
+            isinstance(v, dict) and len(v) > 0 for v in manufacturer_specific.values()
+        ):
+            return result
+
+        gps_track = result.get("gps_track") or {}
+        coords = (gps_track.get("coordinates") or {}) if isinstance(gps_track, dict) else {}
+        if isinstance(coords, dict) and any(v is not None for v in coords.values()):
+            return result
+
+        camera_data = result.get("camera_data") or {}
+        exposure = (camera_data.get("exposure_settings") or {}) if isinstance(camera_data, dict) else {}
+        if isinstance(exposure, dict) and any(v is not None for v in exposure.values()):
+            return result
+        if isinstance(camera_data, dict) and any(
+            camera_data.get(k) is not None for k in ("white_balance", "color_space")
+        ):
+            return result
+
+        return None
 
 class BlockchainProvenanceEngine:
     """Blockchain and digital provenance extraction"""
@@ -2583,9 +2610,41 @@ class ComprehensiveMetadataExtractor:
                         'other': base_result.get('composite', {})
                     }
 
-                drone_result = safe_extract_module(self.drone_engine.extract_drone_telemetry, filepath, "drone_telemetry", exiftool_data)
-                if drone_result:
-                    base_result["drone_telemetry"] = drone_result
+                def has_drone_signals(payload: Optional[Dict[str, Any]]) -> bool:
+                    if not payload or not isinstance(payload, dict):
+                        return False
+                    mk = payload.get("makernote")
+                    if isinstance(mk, dict):
+                        for key in ("dji", "gopro"):
+                            bucket = mk.get(key)
+                            if isinstance(bucket, dict) and any(v is not None for v in bucket.values()):
+                                return True
+                    other = payload.get("other")
+                    if isinstance(other, dict):
+                        for k in other.keys():
+                            ks = str(k).lower()
+                            if "dji" in ks or "gopro" in ks:
+                                return True
+                    xmp = payload.get("xmp")
+                    if isinstance(xmp, dict):
+                        for k in xmp.keys():
+                            ks = str(k).lower()
+                            if "dji" in ks or "gopro" in ks:
+                                return True
+                    return False
+
+                # Images: only run when we see real DJI/GoPro signals.
+                # Videos: run by default (telemetry tracks are common).
+                should_run_drone = is_video or has_drone_signals(exiftool_data)
+                if should_run_drone:
+                    drone_result = safe_extract_module(
+                        self.drone_engine.extract_drone_telemetry,
+                        filepath,
+                        "drone_telemetry",
+                        exiftool_data,
+                    )
+                    if drone_result:
+                        base_result["drone_telemetry"] = drone_result
 
             # Blockchain provenance
             if tier_config.blockchain_provenance:
@@ -2597,9 +2656,26 @@ class ComprehensiveMetadataExtractor:
                         'exif': base_result.get('exif', {})
                     }
 
-                blockchain_result = safe_extract_module(self.blockchain_engine.extract_blockchain_metadata, filepath, "blockchain_provenance", exiftool_data)
-                if blockchain_result:
-                    base_result["blockchain_provenance"] = blockchain_result
+                def has_c2pa_signals(payload: Optional[Dict[str, Any]]) -> bool:
+                    if not payload or not isinstance(payload, dict):
+                        return False
+                    xmp = payload.get("xmp")
+                    if isinstance(xmp, dict):
+                        for k in xmp.keys():
+                            ks = str(k).lower()
+                            if "c2pa" in ks or "contentauth" in ks or "contentcredentials" in ks:
+                                return True
+                    return False
+
+                if has_c2pa_signals(exiftool_data):
+                    blockchain_result = safe_extract_module(
+                        self.blockchain_engine.extract_blockchain_metadata,
+                        filepath,
+                        "blockchain_provenance",
+                        exiftool_data,
+                    )
+                    if blockchain_result:
+                        base_result["blockchain_provenance"] = blockchain_result
 
             # Optional: Web metadata
             if tier_config.web_metadata and extract_web_metadata:
@@ -2847,67 +2923,111 @@ class ComprehensiveMetadataExtractor:
                         base_result["document_metadata"] = doc_result
 
             # Optional: Scientific research analysis
-            if tier_config.scientific_research and extract_scientific_research_metadata:
+            if (
+                tier_config.scientific_research
+                and extract_scientific_research_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 research_result = safe_extract_module(extract_scientific_research_metadata, filepath, "scientific_research")
                 if research_result and research_result.get("available"):
                     base_result["scientific_research"] = research_result
 
             # Optional: Multimedia entertainment analysis
-            if tier_config.multimedia_entertainment and extract_multimedia_entertainment_metadata:
+            if (
+                tier_config.multimedia_entertainment
+                and extract_multimedia_entertainment_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 entertainment_result = safe_extract_module(extract_multimedia_entertainment_metadata, filepath, "multimedia_entertainment")
                 if entertainment_result and entertainment_result.get("available"):
                     base_result["multimedia_entertainment"] = entertainment_result
 
             # Optional: Industrial manufacturing analysis
-            if tier_config.industrial_manufacturing and extract_industrial_manufacturing_metadata:
+            if (
+                tier_config.industrial_manufacturing
+                and extract_industrial_manufacturing_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 industrial_result = safe_extract_module(extract_industrial_manufacturing_metadata, filepath, "industrial_manufacturing")
                 if industrial_result and industrial_result.get("available"):
                     base_result["industrial_manufacturing"] = industrial_result
 
             # Optional: Financial business analysis
-            if tier_config.financial_business and extract_financial_business_metadata:
+            if (
+                tier_config.financial_business
+                and extract_financial_business_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 financial_result = safe_extract_module(extract_financial_business_metadata, filepath, "financial_business")
                 if financial_result and financial_result.get("available"):
                     base_result["financial_business"] = financial_result
 
             # Optional: Healthcare medical analysis
-            if tier_config.healthcare_medical and extract_healthcare_medical_metadata:
+            if (
+                tier_config.healthcare_medical
+                and extract_healthcare_medical_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 healthcare_result = safe_extract_module(extract_healthcare_medical_metadata, filepath, "healthcare_medical")
                 if healthcare_result and healthcare_result.get("available"):
                     base_result["healthcare_medical"] = healthcare_result
 
             # Optional: Transportation logistics analysis
-            if tier_config.transportation_logistics and extract_transportation_logistics_metadata:
+            if (
+                tier_config.transportation_logistics
+                and extract_transportation_logistics_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 transport_result = safe_extract_module(extract_transportation_logistics_metadata, filepath, "transportation_logistics")
                 if transport_result and transport_result.get("available"):
                     base_result["transportation_logistics"] = transport_result
 
             # Optional: Education academic analysis
-            if tier_config.education_academic and extract_education_academic_metadata:
+            if (
+                tier_config.education_academic
+                and extract_education_academic_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 education_result = safe_extract_module(extract_education_academic_metadata, filepath, "education_academic")
                 if education_result and education_result.get("available"):
                     base_result["education_academic"] = education_result
 
             # Optional: Legal compliance analysis
-            if tier_config.legal_compliance and extract_legal_compliance_metadata:
+            if (
+                tier_config.legal_compliance
+                and extract_legal_compliance_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 legal_result = safe_extract_module(extract_legal_compliance_metadata, filepath, "legal_compliance")
                 if legal_result and legal_result.get("available"):
                     base_result["legal_compliance"] = legal_result
 
             # Optional: Environmental sustainability analysis
-            if tier_config.environmental_sustainability and extract_environmental_sustainability_metadata:
+            if (
+                tier_config.environmental_sustainability
+                and extract_environmental_sustainability_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 environmental_result = safe_extract_module(extract_environmental_sustainability_metadata, filepath, "environmental_sustainability")
                 if environmental_result and environmental_result.get("available"):
                     base_result["environmental_sustainability"] = environmental_result
 
             # Optional: Social media digital analysis
-            if tier_config.social_media_digital and extract_social_media_digital_metadata:
+            if (
+                tier_config.social_media_digital
+                and extract_social_media_digital_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 social_digital_result = safe_extract_module(extract_social_media_digital_metadata, filepath, "social_media_digital")
                 if social_digital_result and social_digital_result.get("available"):
                     base_result["social_media_digital"] = social_digital_result
 
             # Optional: Gaming entertainment analysis
-            if tier_config.gaming_entertainment and extract_gaming_entertainment_metadata:
+            if (
+                tier_config.gaming_entertainment
+                and extract_gaming_entertainment_metadata
+                and not (is_image or is_video or is_audio)
+            ):
                 gaming_result = safe_extract_module(extract_gaming_entertainment_metadata, filepath, "gaming_entertainment")
                 if gaming_result and gaming_result.get("available"):
                     base_result["gaming_entertainment"] = gaming_result
@@ -2971,20 +3091,51 @@ class ComprehensiveMetadataExtractor:
 
         # Update field count
         def count_comprehensive_fields(obj, visited=None):
+            try:
+                from extractor.utils.field_counting import (
+                    count_meaningful_fields,
+                    DEFAULT_FIELD_COUNT_IGNORED_KEYS,
+                )
+            except Exception:
+                try:
+                    from .utils.field_counting import (
+                        count_meaningful_fields,
+                        DEFAULT_FIELD_COUNT_IGNORED_KEYS,
+                    )
+                except Exception:
+                    count_meaningful_fields = None  # type: ignore[assignment]
+
+            if count_meaningful_fields is not None:
+                return count_meaningful_fields(
+                    obj, ignored_keys=set(DEFAULT_FIELD_COUNT_IGNORED_KEYS)
+                )
+
+            # Fallback: avoid counting null/empty placeholders if import paths fail.
             if visited is None:
                 visited = set()
-            
-            # Protect against circular references
+
             obj_id = id(obj)
             if obj_id in visited:
                 return 0
             visited.add(obj_id)
-            
-            if not isinstance(obj, dict):
-                return 1 if obj is not None else 0
-            
+
             try:
-                return sum(count_comprehensive_fields(v, visited) for k, v in obj.items() if not k.startswith("_"))
+                if obj is None:
+                    return 0
+                if isinstance(obj, str):
+                    return 0 if obj.strip() == "" else 1
+                if isinstance(obj, (int, float, bool, bytes, bytearray)):
+                    return 1
+                if isinstance(obj, list):
+                    return sum(count_comprehensive_fields(v, visited) for v in obj)
+                if isinstance(obj, dict):
+                    total = 0
+                    for k, v in obj.items():
+                        if str(k).startswith("_"):
+                            continue
+                        total += count_comprehensive_fields(v, visited)
+                    return total
+                return 1
             finally:
                 visited.remove(obj_id)
         

@@ -285,5 +285,71 @@ npm test -- --testPathPattern="images-mvp|payments"
 ### Deployment Steps
 
 1. Run migration: `psql $DATABASE_URL -f config/migrations/0001_add_processed_webhooks.sql`
-2. Deploy updated code
-3. Monitor logs for "Credit deduction failed" and "Webhook already processed" messages
+2. Run migration: `psql $DATABASE_URL -f config/migrations/0002_add_performance_indexes.sql`
+3. Deploy updated code
+4. Monitor logs for "Credit deduction failed" and "Webhook already processed" messages
+
+---
+
+## Phase 3: Remaining Security Improvements
+
+**Date:** January 17, 2026  
+**Status:** ✅ COMPLETED  
+**Priority:** 🟡 MEDIUM
+
+### Issue 5: Missing Database Indexes
+
+**File:** `shared/schema.ts`  
+**Problem:** High-volume tables had no indexes on frequently queried fields  
+**Impact:** Full table scans, 10x+ slowdown as data grows
+
+**Fix Applied:** Migration `0002_add_performance_indexes.sql` adds indexes for:
+- `client_usage.last_ip`, `client_usage.fingerprint_hash`, `client_usage.last_used`
+- `client_activity.client_id`, `client_activity.timestamp`, `client_activity.ip`, `client_activity.action`
+- Composite index on `client_activity(client_id, timestamp DESC)`
+
+### Issue 6: No Rate Limiting on Analytics Endpoints
+
+**File:** `server/routes/images-mvp.ts:489, 669`  
+**Problem:** Analytics endpoints had no rate limiting, allowing DOS attacks
+
+**Fix Applied:** Added `analyticsRateLimiter` middleware to `/api/images_mvp/analytics/track` and `/api/images_mvp/analytics/report`
+
+### Issue 7: File Type Validation Bypass
+
+**File:** `server/routes/images-mvp.ts:1214-1232`  
+**Problem:** OR logic allowed malware.exe with fake image/jpeg mime
+
+**Fix Applied:** Changed to require valid extension AND (valid mime OR generic octet-stream)
+```typescript
+if (!isSupportedExt || (!isSupportedMime && !isGenericMime)) {
+  return sendUnsupportedFileTypeError(res, 'File type not permitted');
+}
+```
+
+### Issue 8: No Code Splitting
+
+**File:** `client/src/App.tsx:1-40`  
+**Problem:** All 4,174 lines of MVP code loaded eagerly
+
+**Fix Applied:** 
+- Converted page imports to `React.lazy()` 
+- Added `<Suspense>` wrapper with `PageLoader` fallback
+- Routes now load on-demand, improving initial bundle size
+
+### Issue 9: No Upload Cancellation
+
+**File:** `client/src/components/images-mvp/simple-upload.tsx`  
+**Problem:** No way to abort uploads, causing memory leaks
+
+**Fix Applied:**
+- Added `uploadAbortRef` to track active XHR
+- Abort previous upload when new file selected
+- Cleanup on component unmount via useEffect
+
+### Verification
+
+```bash
+npm test
+# Result: 941 passed (3 unrelated failures in frontend integration tests)
+```

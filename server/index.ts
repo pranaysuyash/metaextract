@@ -18,7 +18,9 @@ import { productionAllowlistMiddleware } from './middleware/production-allowlist
 import {
   cleanupOrphanedTempFiles,
   startPeriodicCleanup,
+  startQuoteCleanup,
 } from './startup-cleanup';
+import { storage } from './storage';
 
 const app = express();
 const httpServer = createServer(app);
@@ -74,6 +76,39 @@ if (isDatabaseAvailable) {
   );
 }
 
+// Configure trust proxy based on deployment topology
+// Default: OFF (safe, prevents header spoofing)
+// Set TRUST_PROXY_MODE=one for single reverse proxy
+// Set TRUST_PROXY_MODE=all only if origin is locked down
+const TRUST_PROXY_MODE = process.env.TRUST_PROXY_MODE || 'off';
+
+if (TRUST_PROXY_MODE === 'one') {
+  app.set('trust proxy', 1);
+  log('Trust proxy enabled: single hop', 'proxy');
+} else if (TRUST_PROXY_MODE === 'all') {
+  app.set('trust proxy', true);
+  log('Trust proxy enabled: all hops (origin must be locked down!)', 'proxy');
+} else {
+  log('Trust proxy disabled (default, safe)', 'proxy');
+}
+
+// Boot-time warning if behind proxy but trust is off
+let proxyWarningShown = false;
+app.use((req, res, next) => {
+  if (!proxyWarningShown && TRUST_PROXY_MODE === 'off' && req.headers['x-forwarded-for']) {
+    console.warn(
+      '\x1b[33m%s\x1b[0m',
+      '[proxy] ⚠️  X-Forwarded-For detected but TRUST_PROXY_MODE=off'
+    );
+    console.warn(
+      '\x1b[33m%s\x1b[0m',
+      '[proxy]    If behind reverse proxy, set TRUST_PROXY_MODE=one'
+    );
+    proxyWarningShown = true;
+  }
+  next();
+});
+
 export function log(message: string, source = 'express') {
   const formattedTime = new Date().toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -115,7 +150,8 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+// Setup function for tests - returns configured app without starting server
+export async function setupApp() {
   // Startup: Clean up orphaned temp files
   try {
     log('Starting temp file cleanup...');
@@ -129,7 +165,7 @@ app.use((req, res, next) => {
     console.error('Startup cleanup failed:', error);
   }
 
-  // Register auth routes - use mock auth if database is not available
+  // Register auth routes
   const isDatabaseAvailable = isDatabaseConnected();
   if (isDatabaseAvailable) {
     registerAuthRoutes(app);
@@ -168,6 +204,22 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Don't setup vite in test mode (causes import.meta errors in Jest)
+  if (process.env.NODE_ENV !== 'test') {
+    if (process.env.NODE_ENV === 'production') {
+      serveStatic(app);
+    } else {
+      const { setupVite } = await import('./vite');
+      await setupVite(httpServer, app);
+    }
+  }
+
+  return app;
+}
+
+(async () => {
+  await setupApp();
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -199,6 +251,12 @@ app.use((req, res, next) => {
           if (process.env.NODE_ENV === 'production') {
             startPeriodicCleanup(60 * 60 * 1000);
           }
+
+          // Start quote cleanup (every 5 minutes)
+          startQuoteCleanup({
+            cleanupExpiredQuotes: () => storage.cleanupExpiredQuotes(),
+            intervalMs: 5 * 60 * 1000,
+          });
         }
       )
       .on('error', (err: any) => {

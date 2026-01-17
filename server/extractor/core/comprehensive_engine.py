@@ -15,6 +15,7 @@ from .orchestrator import ExtractionOrchestrator
 from .caching_orchestrator import CachingExtractionOrchestrator
 from .base_engine import ExtractionContext
 from ..extractors.image_extractor import ImageExtractor
+from ..extractors.registry_image_extractor import RegistryImageExtractor, BaseEngineRegistryExtractor
 from ..exceptions.extraction_exceptions import MetaExtractException
 
 logger = logging.getLogger(__name__)
@@ -28,17 +29,31 @@ class NewComprehensiveMetadataExtractor:
     old monolithic engine to the new modular architecture.
     """
     
-    def __init__(self, enable_caching: bool = True):
-        """Initialize the new comprehensive extractor with caching support."""
+    def __init__(self, enable_caching: bool = True, use_registry: bool = True):
+        """Initialize the new comprehensive extractor with caching support.
+        
+        Args:
+            enable_caching: Whether to enable result caching
+            use_registry: Whether to use registry-based extraction for images
+        """
         self.enable_caching = enable_caching
+        self.use_registry = use_registry
         self.orchestrator = CachingExtractionOrchestrator(enable_caching=enable_caching)
         self._setup_extractors()
         self.logger = logging.getLogger(__name__)
     
     def _setup_extractors(self):
         """Set up the extractors for the orchestrator."""
-        # Add image extractor
-        self.orchestrator.add_extractor(ImageExtractor())
+        # Add image extractor (use registry if available)
+        if self.use_registry:
+            try:
+                self.orchestrator.add_extractor(BaseEngineRegistryExtractor())
+                logger.info("Using RegistryImageExtractor for image/* formats (48 categories, 300+ fields)")
+            except Exception as e:
+                logger.warning(f"Registry extractor failed, falling back: {e}")
+                self.orchestrator.add_extractor(ImageExtractor())
+        else:
+            self.orchestrator.add_extractor(ImageExtractor())
         
         # Add video extractor
         from ..extractors.video_extractor import VideoExtractor

@@ -142,32 +142,8 @@ export const TIER_CONFIGS: Record<TierName, TierConfig> = {
     priceLabel: '$19/month',
     billingPeriod: 'month',
     allowedFileTypes: [
-      // Standard images
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/tiff',
-      'image/bmp',
-      'image/heic',
-      'image/heif',
-      'image/svg+xml',
-      // RAW formats
-      'image/x-canon-cr2',
-      'image/x-canon-cr3',
-      'image/x-nikon-nef',
-      'image/x-nikon-nrw',
-      'image/x-sony-arw',
-      'image/x-sony-sr2',
-      'image/x-adobe-dng',
-      'image/x-olympus-orf',
-      'image/x-panasonic-rw2',
-      'image/x-panasonic-raw',
-      'image/x-fuji-raf',
-      'image/x-pentax-pef',
-      'image/x-leica-rwl',
-      'image/x-hasselblad-3fr',
-      'image/x-phaseone-iiq',
+      // All image types (including RAW + pro formats). Free remains restricted.
+      'image/*',
       // Documents
       'application/pdf',
       'application/msword',
@@ -506,9 +482,9 @@ export function getRequiredTierForFileType(mimeType: string): TierName {
     return 'professional';
   }
 
-  // SVG requires forensic
-  if (mimeType === 'image/svg+xml') {
-    return 'forensic';
+  // Any image type not allowed on Free requires Professional.
+  if (mimeType.startsWith('image/')) {
+    return isFileTypeAllowed('free', mimeType) ? 'free' : 'professional';
   }
 
   // Standard images are free

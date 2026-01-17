@@ -1,3 +1,5 @@
+export const IMAGES_MVP_QUOTE_SCHEMA_VERSION = 'images_mvp_quote_v1' as const;
+
 export type ImagesMvpQuoteOps = {
   embedding: boolean;
   ocr: boolean;
@@ -14,6 +16,7 @@ export type ImagesMvpQuoteFile = {
 };
 
 export type ImagesMvpQuoteResponse = {
+  schemaVersion: typeof IMAGES_MVP_QUOTE_SCHEMA_VERSION;
   limits: {
     maxBytes: number;
     allowedMimes: string[];
@@ -53,6 +56,21 @@ export type ImagesMvpQuoteResponse = {
   warnings: string[];
 };
 
+/**
+ * Validates that the quote response has the expected schema version.
+ * Throws an error if the version is unknown or missing.
+ */
+export function assertQuoteSchemaVersion(
+  x: any
+): asserts x is ImagesMvpQuoteResponse {
+  if (!x || x.schemaVersion !== IMAGES_MVP_QUOTE_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported quote schemaVersion: ${x?.schemaVersion || 'missing'}. ` +
+        `Expected: ${IMAGES_MVP_QUOTE_SCHEMA_VERSION}`
+    );
+  }
+}
+
 export async function fetchImagesMvpQuote(
   files: ImagesMvpQuoteFile[],
   ops: ImagesMvpQuoteOps
@@ -71,7 +89,12 @@ export async function fetchImagesMvpQuote(
     throw new Error(message || 'Failed to get quote');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Validate schema version before returning
+  assertQuoteSchemaVersion(data);
+
+  return data;
 }
 
 export function createDefaultQuoteOps(): ImagesMvpQuoteOps {
