@@ -13,6 +13,7 @@ Format-specific parsers for all major image types:
 - PSD: Resource fork parsing
 - SVG: XML metadata extraction
 - BMP: DIB header parsing
+- RAW: Camera-specific metadata (via ExifTool)
 
 Key Principles:
 1. Each parser extracts ONLY what the format supports
@@ -154,6 +155,14 @@ class ImageParserRegistry:
             self.register(FitsParser())
         except ImportError:
             logger.info("FITS parser not available")
+
+        # Try to import RAW parser (optional / dependency-gated)
+        try:
+            from .raw_parser import RawParser
+
+            self.register(RawParser())
+        except ImportError:
+            logger.info("RAW parser not available")
     
     def register(self, parser: FormatParser):
         """Register a format parser."""

@@ -14,6 +14,7 @@ When restarting the dev environment, stop only the running dev servers (Vite on 
 ## Multi-agent safety (non-negotiable)
 
 - Assume multiple agents may be working simultaneously; do not delete or discard work you did not create.
+- If another agent added something useful, it stays: do not remove/revert/delete it unless the user explicitly instructs you to (prefer integrating, documenting, or deprecating behind a flag).
 - Do not remove git worktrees, branches, or files created by other agents unless the user explicitly instructs you to.
 - If you discover work in another branch/worktree (especially untracked files):
   - Prefer committing it on that branch, then merging as requested.

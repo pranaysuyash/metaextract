@@ -19,7 +19,7 @@ Repo hygiene (always on for repo-aware work):
 - Before committing: always run `git add -A`.
 - Python: always use the existing `.venv` (find via `ls -la` or `which python3`) and prefer `uv` for installs (`uv pip install -r requirements.txt`).
 - Process management: when restarting dev servers, stop only the Vite (5173) and Express (3000) processes (stop the `npm run dev` task/terminal or kill by port). Do not kill the entire Node runtime (avoid `killall node`).
-- Multi-agent safety: do not delete/remove other agents’ worktrees, branches, or untracked files. If unsure whether work belongs, commit it to a branch or add a `docs/` TODO/checklist and commit (never discard). Exception: never commit secrets/credentials.
+- Multi-agent safety: do not delete/remove other agents’ worktrees, branches, or untracked files. If another agent added something useful, it stays (integrate/document/deprecate; don’t delete unless user explicitly instructs). If unsure whether work belongs, commit it to a branch or add a `docs/` TODO/checklist and commit (never discard). Exception: never commit secrets/credentials.
 
 ---
 
