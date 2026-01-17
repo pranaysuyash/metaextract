@@ -12,6 +12,7 @@ from server.extractor.formats.jxl_signatures import extract_jxl_container_metada
 from server.extractor.formats.pnm_header import extract_pnm_container_metadata
 from server.extractor.formats.psd_structure import extract_psd_container_metadata
 from server.extractor.formats.radiance_hdr import extract_radiance_hdr_container_metadata
+from server.extractor.formats.svg_xml import extract_svg_container_metadata
 from server.extractor.formats.tga_header import extract_tga_container_metadata
 from server.extractor.formats.tiff_ifd import extract_tiff_container_metadata
 from server.extractor.metadata_engine import extract_metadata
@@ -128,6 +129,16 @@ def test_radiance_hdr_parser_reads_resolution_line() -> None:
     assert meta["resolution"] == "-Y 2 +X 3"
 
 
+def test_svg_parser_extracts_dimensions_and_security_signals() -> None:
+    meta = extract_svg_container_metadata("test-data/test_svg.svg")
+    assert meta is not None
+    assert meta["format"] == "SVG"
+    assert meta["width"] == "10"
+    assert meta["height"] == "20"
+    assert meta["security"]["external_link_count"] == 1
+    assert meta["embedded_images"] == 1
+
+
 def test_engine_container_metadata_for_added_formats() -> None:
     out = extract_metadata("test-data/test_bmp.bmp", tier="free")
     assert "container_metadata" in out
@@ -136,3 +147,7 @@ def test_engine_container_metadata_for_added_formats() -> None:
     out2 = extract_metadata("test-data/test_ico.ico", tier="free")
     assert "container_metadata" in out2
     assert "ico" in out2["container_metadata"]
+
+    out3 = extract_metadata("test-data/test_svg.svg", tier="free")
+    assert "container_metadata" in out3
+    assert "svg" in out3["container_metadata"]

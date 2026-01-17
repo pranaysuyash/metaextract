@@ -1518,6 +1518,8 @@ def extract_metadata(
         ".pbm", ".pgm", ".ppm", ".pnm",
         # Targa / DDS / Radiance HDR
         ".tga", ".dds", ".hdr",
+        # Compressed SVG
+        ".svgz",
         # Camera RAW (handled primarily via ExifTool)
         ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".sr2", ".dng", ".orf", ".rw2", ".raf", ".pef",
         ".x3f", ".rwl", ".iiq", ".3fr",
@@ -1687,6 +1689,12 @@ def extract_metadata(
                 hdr_meta = extract_radiance_hdr_container_metadata(filepath)
                 if hdr_meta:
                     container_metadata["hdr"] = hdr_meta
+            elif ext in (".svg", ".svgz"):
+                from .formats.svg_xml import extract_svg_container_metadata
+
+                svg_meta = extract_svg_container_metadata(filepath)
+                if svg_meta:
+                    container_metadata["svg"] = svg_meta
             elif ext == ".exr":
                 from .formats.exr_header import extract_exr_container_metadata
 

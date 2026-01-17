@@ -151,7 +151,11 @@ app.use((req, res, next) => {
 });
 
 // Setup function for tests - returns configured app without starting server
-export async function setupApp() {
+// In testMode: returns { app, teardown }
+// Otherwise: returns app (via IIFE)
+export async function setupApp(opts?: { testMode?: boolean }): Promise<any> {
+  const isTestMode = opts?.testMode === true;
+
   // Startup: Clean up orphaned temp files
   try {
     log('Starting temp file cleanup...');
@@ -205,7 +209,7 @@ export async function setupApp() {
   });
 
   // Don't setup vite in test mode (causes import.meta errors in Jest)
-  if (process.env.NODE_ENV !== 'test') {
+  if (!isTestMode) {
     if (process.env.NODE_ENV === 'production') {
       serveStatic(app);
     } else {
@@ -214,11 +218,32 @@ export async function setupApp() {
     }
   }
 
-  return app;
+  // Teardown function for tests
+  const teardown = async () => {
+    // Close database connections if in test mode
+    if (isTestMode) {
+      try {
+        await db.close();
+      } catch (e) {
+        // Database already closed or not available
+      }
+    }
+  };
+
+  if (isTestMode) {
+    return { app, teardown };
+  }
+
+  return app as any;
 }
 
-(async () => {
-  await setupApp();
+// Only run server startup if not in test mode (environment variable)
+// Tests call setupApp() directly with testMode: true
+const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+
+if (!isTestEnvironment) {
+  (async () => {
+    await setupApp();
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
@@ -271,3 +296,4 @@ export async function setupApp() {
 
   startServer(port);
 })();
+}

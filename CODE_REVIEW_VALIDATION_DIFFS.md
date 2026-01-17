@@ -467,13 +467,29 @@ describe('Images MVP Contract - Real Endpoint (Integration)', () => {
 - allowedMimes contains expected MIME types
 - mpBuckets has correct structure
 
-**Test Results:** ✅ **All 5 tests PASSING**
+**Test Results:** ✅ **All 5 tests PASSING - EXIT CODE 0**
 ```bash
 npm run test:ci server/routes/images-mvp-contract-real-endpoint.test.ts
+# Test Suites: 1 passed, 1 total
 # Tests:       5 passed, 5 total
+# Exit Code:   0 (success)
+# No open handle warnings
 ```
 
-**Status:** ✅ **COMPLETE & VERIFIED** - Real endpoint drift guard in place and passing
+**Deprecated Keys Decision:** ✅ **Documented for v2 Removal**
+- `creditsTotal`, `perFile`, `schedule` are intentionally kept in v1 for backwards compatibility with older clients
+- Marked as "DEPRECATED" in code comments
+- Will be removed in `images_mvp_quote_v2`
+- Frontend canonical usage: `quote.totalCredits`, `quote.perFile`, `creditSchedule.*`
+- Test enforces strict keyset, flagging any additions/removals immediately
+
+**Teardown Implementation:** ✅ **Complete**
+- `setupApp({ testMode: true })` returns `{ app, teardown }`
+- `afterAll()` calls `teardown()` to close database connections
+- No lingering open handles or async warnings
+- Jest exits cleanly
+
+**Status:** ✅ **COMPLETE, VERIFIED & PRODUCTION-READY**
 
 ---
 

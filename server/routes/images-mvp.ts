@@ -832,10 +832,13 @@ export function registerImagesMvpRoutes(app: Express) {
         res.json({
           schemaVersion: 'images_mvp_quote_v1',
           quoteId: createdQuote.id,
+          // DEPRECATED: Legacy top-level keys for v0 client compatibility
+          // These will be removed in images_mvp_quote_v2
+          // Frontend should use: quote.totalCredits, quote.perFile, creditSchedule.* instead
           creditsTotal,
           perFile: perFileById,
           schedule: IMAGES_MVP_CREDIT_SCHEDULE,
-          // Backward-compatible shape used by older Images MVP client:
+          // Canonical v1 shape:
           limits: {
             maxBytes: MAX_BYTES,
             allowedMimes: Array.from(SUPPORTED_IMAGE_MIMES),

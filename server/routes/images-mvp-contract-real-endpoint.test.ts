@@ -15,10 +15,19 @@ import { describe, it, expect } from '@jest/globals';
 
 describe('Images MVP Contract - Real Endpoint (Integration)', () => {
   let app: any;
+  let teardown: (() => Promise<void>) | null = null;
 
   beforeAll(async () => {
     // Setup app with all routes registered
-    app = await setupApp();
+    const result = await setupApp({ testMode: true });
+    app = result.app;
+    teardown = result.teardown;
+  });
+
+  afterAll(async () => {
+    if (teardown) {
+      await teardown();
+    }
   });
   it('real /api/images_mvp/quote response matches contract v1', async () => {
     const response = await request(app)

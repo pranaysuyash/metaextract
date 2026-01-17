@@ -88,6 +88,7 @@ function guessMimeTypeFromFilename(filename: string): string | null {
     '.heif': 'image/heif',
     '.avif': 'image/avif',
     '.svg': 'image/svg+xml',
+    '.svgz': 'image/svg+xml',
     '.ico': 'image/x-icon',
     '.cur': 'image/x-icon',
     '.icns': 'image/icns',
@@ -108,6 +109,23 @@ function guessMimeTypeFromFilename(filename: string): string | null {
     '.ppm': 'image/x-portable-anymap',
     '.pnm': 'image/x-portable-anymap',
     '.hdr': 'image/vnd.radiance',
+
+    // Camera RAW (best-effort; actual decoding handled by Python/ExifTool)
+    '.cr2': 'image/x-canon-cr2',
+    '.cr3': 'image/x-canon-cr3',
+    '.nef': 'image/x-nikon-nef',
+    '.nrw': 'image/x-nikon-nrw',
+    '.arw': 'image/x-sony-arw',
+    '.sr2': 'image/x-sony-sr2',
+    '.dng': 'image/x-adobe-dng',
+    '.orf': 'image/x-olympus-orf',
+    '.rw2': 'image/x-panasonic-rw2',
+    '.raf': 'image/x-fuji-raf',
+    '.pef': 'image/x-pentax-pef',
+    '.rwl': 'image/x-leica-rwl',
+    '.3fr': 'image/x-hasselblad-3fr',
+    '.iiq': 'image/x-phaseone-iiq',
+    '.x3f': 'image/x-sigma-x3f',
   };
   return map[ext] ?? null;
 }
