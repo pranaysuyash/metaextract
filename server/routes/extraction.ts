@@ -109,6 +109,9 @@ function guessMimeTypeFromFilename(filename: string): string | null {
     '.ppm': 'image/x-portable-anymap',
     '.pnm': 'image/x-portable-anymap',
     '.hdr': 'image/vnd.radiance',
+    '.fits': 'application/fits',
+    '.fit': 'application/fits',
+    '.fts': 'application/fits',
 
     // Camera RAW (best-effort; actual decoding handled by Python/ExifTool)
     '.cr2': 'image/x-canon-cr2',

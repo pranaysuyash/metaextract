@@ -1587,6 +1587,24 @@ def extract_metadata(
         # Container-level format metadata (format-specific parsers; no placeholders)
         try:
             container_metadata = {}
+            tiff_container_exts = {
+                ".tif",
+                ".tiff",
+                # TIFF-based camera RAW (best-effort container parse)
+                ".dng",
+                ".cr2",
+                ".nef",
+                ".nrw",
+                ".arw",
+                ".sr2",
+                ".orf",
+                ".rw2",
+                ".raf",
+                ".pef",
+                ".rwl",
+                ".iiq",
+                ".3fr",
+            }
             if ext == ".png":
                 from .formats.png_chunks import extract_png_container_metadata
 
@@ -1611,12 +1629,19 @@ def extract_metadata(
                 jpg_meta = extract_jpeg_container_metadata(filepath)
                 if jpg_meta:
                     container_metadata["jpeg"] = jpg_meta
-            elif ext in (".tif", ".tiff"):
+            elif ext in tiff_container_exts:
                 from .formats.tiff_ifd import extract_tiff_container_metadata
 
                 tiff_meta = extract_tiff_container_metadata(filepath)
                 if tiff_meta:
                     container_metadata["tiff"] = tiff_meta
+                    if ext not in (".tif", ".tiff"):
+                        container_metadata["raw"] = {
+                            "available": True,
+                            "format": "RAW",
+                            "container_family": "TIFF",
+                            "extension": ext,
+                        }
             elif ext == ".bmp":
                 from .formats.bmp_headers import extract_bmp_container_metadata
 
@@ -1635,6 +1660,18 @@ def extract_metadata(
                 bmff_meta = extract_isobmff_box_metadata(filepath)
                 if bmff_meta:
                     container_metadata["isobmff"] = bmff_meta
+            elif ext == ".cr3":
+                from .formats.isobmff_boxes import extract_isobmff_box_metadata
+
+                bmff_meta = extract_isobmff_box_metadata(filepath)
+                if bmff_meta:
+                    container_metadata["isobmff"] = bmff_meta
+                    container_metadata["raw"] = {
+                        "available": True,
+                        "format": "RAW",
+                        "container_family": "ISOBMFF",
+                        "extension": ext,
+                    }
             elif ext in (".ico", ".cur"):
                 from .formats.ico_headers import extract_ico_container_metadata
 
@@ -1695,6 +1732,12 @@ def extract_metadata(
                 svg_meta = extract_svg_container_metadata(filepath)
                 if svg_meta:
                     container_metadata["svg"] = svg_meta
+            elif ext in (".fits", ".fit", ".fts"):
+                from .formats.fits_header import extract_fits_container_metadata
+
+                fits_meta = extract_fits_container_metadata(filepath)
+                if fits_meta:
+                    container_metadata["fits"] = fits_meta
             elif ext == ".exr":
                 from .formats.exr_header import extract_exr_container_metadata
 

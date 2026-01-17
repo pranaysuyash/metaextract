@@ -535,18 +535,39 @@ export const CREDIT_COSTS: Record<string, number> = {
   'image/webp': 1,
   'image/bmp': 1,
   'image/tiff': 1,
-
-  // RAW images (more processing)
+  'image/avif': 2,
   'image/heic': 2,
   'image/heif': 2,
+  'image/jxl': 2,
+  'image/jp2': 2,
+  'image/jpx': 2,
+  'image/jpm': 2,
+  'image/vnd.adobe.photoshop': 2,
+  'image/x-exr': 2,
+  'image/x-icon': 1,
+  'image/icns': 2,
+  'image/vnd-ms.dds': 2,
+  'image/x-tga': 2,
+  'image/x-portable-anymap': 1,
+  'image/vnd.radiance': 2,
+
+  // RAW images (more processing)
   'image/x-canon-cr2': 2,
   'image/x-canon-cr3': 2,
   'image/x-nikon-nef': 2,
+  'image/x-nikon-nrw': 2,
   'image/x-sony-arw': 2,
+  'image/x-sony-sr2': 2,
   'image/x-adobe-dng': 2,
   'image/x-olympus-orf': 2,
   'image/x-panasonic-rw2': 2,
+  'image/x-panasonic-raw': 2,
   'image/x-fuji-raf': 2,
+  'image/x-pentax-pef': 2,
+  'image/x-leica-rwl': 2,
+  'image/x-hasselblad-3fr': 2,
+  'image/x-phaseone-iiq': 2,
+  'image/x-sigma-x3f': 2,
 
   // Video (heavy processing)
   'video/mp4': 5,
@@ -564,6 +585,7 @@ export const CREDIT_COSTS: Record<string, number> = {
   // Documents
   'application/pdf': 2,
   'image/svg+xml': 1,
+  'application/fits': 2,
 
   // Default
   default: 2,

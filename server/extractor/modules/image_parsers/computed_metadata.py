@@ -408,3 +408,303 @@ def compute_all_metadata(filepath: str, width: int, height: int, format_name: st
         computed['icc_profile'] = icc_profile
     
     return computed
+
+
+def extract_additional_metadata(filepath: str, width: int, height: int, 
+                                format_name: str, mode: str) -> Dict[str, Any]:
+    """
+    Extract additional computed metadata:
+    - Aspect ratio classification
+    - Dominant colors (basic)
+    - Color space estimation
+    - Estimated quality for different use cases
+    """
+    additional = {}
+    
+    # Aspect ratio classification
+    if height > 0:
+        aspect_ratio = width / height
+        if 0.9 <= aspect_ratio <= 1.1:
+            aspect_class = "square"
+        elif aspect_ratio > 1.5:
+            aspect_class = "landscape"
+        elif aspect_ratio < 0.67:
+            aspect_class = "portrait"
+        else:
+            aspect_class = "standard"
+        
+        additional['aspect_ratio'] = round(aspect_ratio, 3)
+        additional['aspect_classification'] = aspect_class
+    
+    # Color space estimation based on mode and bit depth
+    if mode in ['RGB', 'RGBA']:
+        if 'A' in mode:
+            additional['color_space_estimation'] = 'sRGB (with alpha)'
+        else:
+            additional['color_space_estimation'] = 'sRGB'
+    elif mode == 'CMYK':
+        additional['color_space_estimation'] = 'CMYK'
+    elif mode == 'L':
+        additional['color_space_estimation'] = 'Grayscale'
+    elif mode == 'P':
+        additional['color_space_estimation'] = 'Indexed Color'
+    else:
+        additional['color_space_estimation'] = 'Unknown'
+    
+    # Use case recommendations
+    use_cases = []
+    total_pixels = width * height
+    
+    if total_pixels >= 8_000_000:
+        use_cases.extend(['web_display', 'social_media', 'printing'])
+    if total_pixels >= 20_000_000:
+        use_cases.extend(['large_printing', 'professional_use'])
+    if total_pixels >= 2_000_000:
+        use_cases.append('thumbnail')
+    
+    if mode in ['RGB', 'RGBA']:
+        use_cases.append('digital_display')
+    
+    if mode == 'P':
+        use_cases.append('web_graphics')
+    
+    if use_cases:
+        additional['recommended_use_cases'] = list(set(use_cases))
+    
+    # Estimated brightness (very basic)
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            # Convert to grayscale for brightness estimation
+            if img.mode != 'L':
+                gray = img.convert('L')
+            else:
+                gray = img
+            
+            # Sample-based brightness estimation
+            import numpy as np
+            arr = np.array(gray)
+            avg_brightness = float(np.mean(arr))
+            
+            if avg_brightness > 200:
+                brightness_class = "bright"
+            elif avg_brightness > 100:
+                brightness_class = "balanced"
+            elif avg_brightness > 50:
+                brightness_class = "dark"
+            else:
+                brightness_class = "very_dark"
+            
+            additional['brightness_estimate'] = {
+                'average': round(avg_brightness, 1),
+                'classification': brightness_class
+            }
+    except Exception:
+        pass
+    
+    # Transparency detection
+    has_transparency = mode in ['RGBA', 'LA', 'P', '1']
+    additional['has_transparency'] = has_transparency
+    
+    # Animation detection (for formats that support it)
+    is_animated = False
+    try:
+        from PIL import Image
+        with Image.open(filepath) as img:
+            n_frames = getattr(img, 'n_frames', 1)
+            is_animated = n_frames > 1
+            additional['frame_count'] = n_frames
+            additional['is_animated'] = is_animated
+    except Exception:
+        pass
+    
+    return additional
+
+
+def extract_entropy_analysis(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Perform basic entropy analysis on image.
+    High entropy = more information/complexity.
+    Low entropy = more uniform/simple.
+    """
+    try:
+        from PIL import Image
+        import numpy as np
+        
+        with Image.open(filepath) as img:
+            # Convert to grayscale for entropy calculation
+            if img.mode != 'L':
+                gray = img.convert('L')
+            else:
+                gray = img
+            
+            arr = np.array(gray)
+            
+            # Calculate histogram
+            hist, _ = np.histogram(arr, bins=256, range=(0, 256))
+            hist = hist / hist.sum()  # Normalize
+            
+            # Calculate entropy
+            entropy = -np.sum(hist * np.log2(hist + 1e-10))
+            
+            # Classify entropy
+            if entropy > 7.5:
+                entropy_class = "high_complexity"
+            elif entropy > 6.0:
+                entropy_class = "moderate_complexity"
+            elif entropy > 4.0:
+                entropy_class = "low_complexity"
+            else:
+                entropy_class = "very_uniform"
+            
+            return {
+                'entropy': round(entropy, 3),
+                'classification': entropy_class,
+                'analysis_available': True
+            }
+    except Exception as e:
+        logger.debug(f"Entropy analysis failed: {e}")
+    
+    return None
+
+
+def extract_format_features(format_name: str) -> Dict[str, Any]:
+    """
+    Return format-specific feature flags and capabilities.
+    """
+    format_features = {
+        'JPEG': {
+            'supports_exif': True,
+            'supports_iptc': True,
+            'supports_xmp': True,
+            'supports_gps': True,
+            'supports_icc': True,
+            'supports_transparency': False,
+            'supports_animation': False,
+            'supports_layers': False,
+            'compression': 'lossy',
+            'typical_extensions': ['.jpg', '.jpeg']
+        },
+        'PNG': {
+            'supports_exif': False,
+            'supports_iptc': False,
+            'supports_xmp': True,
+            'supports_gps': False,
+            'supports_icc': True,
+            'supports_transparency': True,
+            'supports_animation': True,
+            'supports_layers': False,
+            'compression': 'lossless',
+            'typical_extensions': ['.png', '.apng']
+        },
+        'GIF': {
+            'supports_exif': False,
+            'supports_iptc': False,
+            'supports_xmp': False,
+            'supports_gps': False,
+            'supports_icc': False,
+            'supports_transparency': True,
+            'supports_animation': True,
+            'supports_layers': False,
+            'compression': 'lossless',
+            'typical_extensions': ['.gif']
+        },
+        'WebP': {
+            'supports_exif': True,
+            'supports_iptc': True,
+            'supports_xmp': True,
+            'supports_gps': True,
+            'supports_icc': True,
+            'supports_transparency': True,
+            'supports_animation': True,
+            'supports_layers': False,
+            'compression': 'lossy/lossless',
+            'typical_extensions': ['.webp']
+        },
+        'BMP': {
+            'supports_exif': False,
+            'supports_iptc': False,
+            'supports_xmp': False,
+            'supports_gps': False,
+            'supports_icc': False,
+            'supports_transparency': False,
+            'supports_animation': False,
+            'supports_layers': False,
+            'compression': 'lossless',
+            'typical_extensions': ['.bmp', '.dib']
+        },
+        'TIFF': {
+            'supports_exif': True,
+            'supports_iptc': True,
+            'supports_xmp': True,
+            'supports_gps': True,
+            'supports_icc': True,
+            'supports_transparency': True,
+            'supports_animation': False,
+            'supports_layers': True,
+            'compression': 'lossless/lossy',
+            'typical_extensions': ['.tiff', '.tif', '.dng']
+        },
+        'HEIC': {
+            'supports_exif': True,
+            'supports_iptc': True,
+            'supports_xmp': True,
+            'supports_gps': True,
+            'supports_icc': True,
+            'supports_transparency': True,
+            'supports_animation': True,
+            'supports_layers': False,
+            'compression': 'lossy',
+            'typical_extensions': ['.heic', '.heif']
+        },
+        'AVIF': {
+            'supports_exif': True,
+            'supports_iptc': True,
+            'supports_xmp': True,
+            'supports_gps': True,
+            'supports_icc': True,
+            'supports_transparency': True,
+            'supports_animation': True,
+            'supports_layers': False,
+            'compression': 'lossy',
+            'typical_extensions': ['.avif']
+        },
+        'PSD': {
+            'supports_exif': True,
+            'supports_iptc': True,
+            'supports_xmp': True,
+            'supports_gps': False,
+            'supports_icc': True,
+            'supports_transparency': True,
+            'supports_animation': False,
+            'supports_layers': True,
+            'compression': 'lossless',
+            'typical_extensions': ['.psd', '.psb']
+        },
+        'SVG': {
+            'supports_exif': False,
+            'supports_iptc': False,
+            'supports_xmp': True,
+            'supports_gps': False,
+            'supports_icc': False,
+            'supports_transparency': True,
+            'supports_animation': False,
+            'supports_layers': False,
+            'compression': 'lossless',
+            'typical_extensions': ['.svg', '.svgz'],
+            'is_vector': True
+        }
+    }
+    
+    return format_features.get(format_name, {
+        'supports_exif': False,
+        'supports_iptc': False,
+        'supports_xmp': False,
+        'supports_gps': False,
+        'supports_icc': False,
+        'supports_transparency': False,
+        'supports_animation': False,
+        'supports_layers': False,
+        'compression': 'unknown',
+        'typical_extensions': []
+    })

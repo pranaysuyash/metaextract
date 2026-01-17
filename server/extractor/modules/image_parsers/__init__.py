@@ -151,6 +151,7 @@ class ImageParserRegistry:
         from .jpeg_parser import JpegParser
         from .png_parser import PngParser
         from .gif_parser import GifParser
+        from .bmp_parser import BmpParser
         from .webp_parser import WebpParser
         from .tiff_parser import TiffParser
         from .heic_parser import HeicParser
@@ -160,18 +161,25 @@ class ImageParserRegistry:
         self.register(JpegParser())
         self.register(PngParser())
         self.register(GifParser())
+        self.register(BmpParser())
         self.register(WebpParser())
         self.register(TiffParser())
         self.register(HeicParser())
         self.register(PsdParser())
         self.register(SvgParser())
         
-        # Try to import RAW parser (requires additional dependencies)
+        # Try to import specialized parsers
         try:
-            from .raw_parser import RawParser
-            self.register(RawParser())
+            from .dicom_parser import DicomParser
+            self.register(DicomParser())
         except ImportError:
-            logger.info("RAW parser not available (missing dependencies)")
+            logger.info("DICOM parser not available")
+        
+        try:
+            from .fits_parser import FitsParser
+            self.register(FitsParser())
+        except ImportError:
+            logger.info("FITS parser not available")
     
     def register(self, parser: FormatParser):
         """Register a format parser."""

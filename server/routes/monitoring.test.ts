@@ -141,14 +141,17 @@ describe('Monitoring Routes', () => {
     });
 
     test('should accept hoursBack parameter', async () => {
+      const startTime = Date.now();
       const response = await request(app)
         .get('/api/monitoring/abuse-detection')
         .query({ hoursBack: 12 })
-        .timeout(5000)
+        .timeout(2000)
         .expect(200);
 
+      const elapsedMs = Date.now() - startTime;
+      expect(elapsedMs).toBeLessThan(100); // Should respond quickly (< 100ms)
       expect(response.body.timeWindow).toBe('12 hours');
-    }, 10000);
+    }, 3000);
   });
 
   describe('GET /api/monitoring/metrics', () => {

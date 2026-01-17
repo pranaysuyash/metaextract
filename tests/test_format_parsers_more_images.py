@@ -3,6 +3,7 @@ from __future__ import annotations
 from server.extractor.formats.bmp_headers import extract_bmp_container_metadata
 from server.extractor.formats.dds_header import extract_dds_container_metadata
 from server.extractor.formats.exr_header import extract_exr_container_metadata
+from server.extractor.formats.fits_header import extract_fits_container_metadata
 from server.extractor.formats.icns_structure import extract_icns_container_metadata
 from server.extractor.formats.ico_headers import extract_ico_container_metadata
 from server.extractor.formats.isobmff_boxes import extract_isobmff_box_metadata
@@ -62,6 +63,13 @@ def test_exr_parser_reads_header() -> None:
     meta = extract_exr_container_metadata("test-data/test_minimal.exr")
     assert meta is not None
     assert meta["format"] == "EXR"
+
+def test_fits_parser_reads_basic_header_cards() -> None:
+    meta = extract_fits_container_metadata("test-data/test_fits.fits")
+    assert meta is not None
+    assert meta["format"] == "FITS"
+    assert meta["naxis"] is not None
+    assert meta["dimensions"] == [3, 2]
 
 
 def test_ico_parser_reads_directory_entries() -> None:
@@ -151,3 +159,17 @@ def test_engine_container_metadata_for_added_formats() -> None:
     out3 = extract_metadata("test-data/test_svg.svg", tier="free")
     assert "container_metadata" in out3
     assert "svg" in out3["container_metadata"]
+
+    out4 = extract_metadata("test-data/test_dng.dng", tier="free")
+    assert "container_metadata" in out4
+    assert "tiff" in out4["container_metadata"]
+    assert out4["container_metadata"].get("raw", {}).get("container_family") == "TIFF"
+
+    out5 = extract_metadata("test-data/test_cr3.cr3", tier="free")
+    assert "container_metadata" in out5
+    assert "isobmff" in out5["container_metadata"]
+    assert out5["container_metadata"].get("raw", {}).get("container_family") == "ISOBMFF"
+
+    out6 = extract_metadata("test-data/test_fits.fits", tier="free")
+    assert "container_metadata" in out6
+    assert "fits" in out6["container_metadata"]
