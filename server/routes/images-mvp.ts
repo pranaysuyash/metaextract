@@ -95,6 +95,11 @@ function getQuoteStore(): Map<string, ImagesMvpStoredQuote> {
   return IMAGES_MVP_QUOTES as Map<string, ImagesMvpStoredQuote>;
 }
 
+// For testing: clear the quote store
+export function clearImagesMvpQuotesForTesting() {
+  IMAGES_MVP_QUOTES.clear();
+}
+
 async function createImagesMvpQuote(input: {
   sessionId: string;
   userId?: string | null;

@@ -1,7 +1,7 @@
 /** @jest-environment node */
 import request from 'supertest';
 import express, { type Express } from 'express';
-import { registerImagesMvpRoutes } from './images-mvp';
+import { registerImagesMvpRoutes, clearImagesMvpQuotesForTesting } from './images-mvp';
 import { storage } from '../storage/index';
 import { getDatabase } from '../db';
 import {
@@ -155,6 +155,8 @@ describe('Images MVP API Tests', () => {
     registerImagesMvpRoutes(app);
     jest.clearAllMocks();
     process.env.DODO_PAYMENTS_API_KEY = 'test_key';
+    process.env.NODE_ENV = 'test';
+    clearImagesMvpQuotesForTesting();
   });
 
   afterEach(() => {
