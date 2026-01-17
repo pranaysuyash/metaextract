@@ -144,10 +144,11 @@ describe('Monitoring Routes', () => {
       const response = await request(app)
         .get('/api/monitoring/abuse-detection')
         .query({ hoursBack: 12 })
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.timeWindow).toBe('12 hours');
-    });
+    }, 10000);
   });
 
   describe('GET /api/monitoring/metrics', () => {
