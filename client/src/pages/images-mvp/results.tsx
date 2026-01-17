@@ -58,6 +58,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
@@ -195,6 +196,21 @@ export default function ImagesMvpResults() {
   const formatHintLogged = useRef(false);
   const paywallLogged = useRef(false);
   const resultsLogged = useRef(false);
+
+  const getTabDescription = (tab: TabValue): string => {
+    switch (tab) {
+      case 'privacy':
+        return 'Location data, device details, and personal identifiers that may reveal your privacy';
+      case 'authenticity':
+        return 'Edit history, hashes, and integrity signals to verify if the file has been modified';
+      case 'photography':
+        return 'Camera settings, lens info, and capture details about how the photo was taken';
+      case 'raw':
+        return 'Complete raw metadata fields in their original format (advanced users only)';
+      default:
+        return '';
+    }
+  };
 
   useEffect(() => {
     const pricingFlag =
@@ -1158,9 +1174,10 @@ export default function ImagesMvpResults() {
     : allRawPaths.slice(0, 40);
 
   return (
-    <Layout showHeader={true} showFooter={true}>
-      <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
-        <div className="container mx-auto px-4 max-w-4xl">
+    <TooltipProvider>
+      <Layout showHeader={true} showFooter={true}>
+        <div className="min-h-screen bg-[#0B0C10] text-white pt-20 pb-20">
+          <div className="container mx-auto px-4 max-w-4xl">
           <PricingModal
             isOpen={showPricingModal}
             onClose={() => setShowPricingModal(false)}
@@ -1518,18 +1535,50 @@ export default function ImagesMvpResults() {
             className="w-full"
           >
             <TabsList className="bg-[#121217] border border-white/5">
-              <TabsTrigger value="privacy">Privacy</TabsTrigger>
-              <TabsTrigger value="authenticity">Authenticity</TabsTrigger>
-              <TabsTrigger value="photography">Photography</TabsTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="privacy">Privacy</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Location data, device details, and personal identifiers</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="authenticity">Authenticity</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit history, hashes, and integrity signals</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="photography">Photography</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Camera settings, lens info, and capture details</p>
+                </TooltipContent>
+              </Tooltip>
               {isAdvanced && (
-                <TabsTrigger value="raw">
-                  <span className="inline-flex items-center gap-2">
-                    {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" />}
-                    Raw
-                  </span>
-                </TabsTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="raw">
+                      <span className="inline-flex items-center gap-2">
+                        {!canExport && <Lock className="w-3.5 h-3.5 opacity-70" />}
+                        Raw
+                      </span>
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Complete raw metadata fields in original format</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </TabsList>
+
+            <div className="mt-4 text-sm text-slate-300">
+              {getTabDescription(activeTab)}
+            </div>
 
             <TabsContent value="privacy" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2611,5 +2660,6 @@ export default function ImagesMvpResults() {
         </div>
       </div>
     </Layout>
+    </TooltipProvider>
   );
 }
