@@ -87,6 +87,22 @@ pytest tests/ -k "test_name" -v
 - Alternative: Explicitly run `git stash push -u` if you need to preserve work without committing (keeps working tree clean).
 - Never run destructive git/cleanup commands (e.g. `git clean`, `git reset --hard`, deleting files/folders) unless the user explicitly asks for it.
 
+### Pre-commit guardrails (required)
+
+This repo uses a Husky pre-commit hook (`scripts/precommit-check.cjs`) to prevent silent regressions and multi-agent accidents.
+
+- **Deletions/renames are blocked by default:** if you stage any `D` or `R*` change, the commit is blocked unless you explicitly set `ALLOW_DELETIONS=1` for that commit. Do not override unless you were explicitly instructed to remove/rename.
+- **Large per-file diffs require semantic review:** if a single file’s staged diff size (added+removed lines) exceeds `LARGE_FILE_CHANGE_PCT`% of that file’s current `HEAD` line count, you must:
+  - **add a staged change review note** under `docs/change_reviews/` (generate template: `node scripts/create-change-review-note.cjs`), and
+  - explicitly acknowledge the review by committing with `ACK_LARGE_FILE_CHANGES=1` (one-off).
+- **What “semantic review” means (non-negotiable):**
+  - do **not** rely on tests alone
+  - compare old vs new: `git diff --staged -- <file>` and `git show HEAD:<file>`
+  - document what changed, what behavior is preserved/expanded, and any intentional removals/flags/deprecations
+  - call out risks and verification steps in the change review note
+
+See `docs/change_reviews/README.md` for the workflow and template.
+
 ## Audit / Remediation Workflow Prompts
 
 When a user asks for any of these workflows (by name or generically, e.g. “run an audit”), follow the **exact prompt structure and hard rules** in `doc/AUDIT_REMEDIATION_WORKFLOWS.md`:

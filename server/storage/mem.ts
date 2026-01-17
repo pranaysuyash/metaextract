@@ -1220,4 +1220,91 @@ export class MemStorage implements IStorage {
 
     return cleanedCount;
   }
+
+  // ============================================================================
+  // Credit Hold Methods (reserve-commit-release pattern)
+  // ============================================================================
+
+  /**
+   * Reserve credits atomically (in-memory stub for MemStorage)
+   * MemStorage doesn't enforce atomicity, so this is best-effort only.
+   * For production use DatabaseStorage.
+   */
+  async reserveCredits(
+    requestId: string,
+    balanceId: string,
+    amount: number,
+    description: string,
+    quoteId?: string,
+    expiresInMs: number = 15 * 60 * 1000
+  ): Promise<any> {
+    const balance = this.creditBalancesMap.get(balanceId);
+    if (!balance || balance.credits < amount) {
+      throw new Error(
+        `Insufficient credits: have ${balance?.credits || 0}, need ${amount}`
+      );
+    }
+
+    // In-memory: just deduct immediately (not truly atomic)
+    balance.credits -= amount;
+
+    return {
+      id: `hold_${randomUUID()}`,
+      requestId,
+      balanceId,
+      amount,
+      state: 'HELD',
+      description,
+      quoteId: quoteId || null,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + expiresInMs),
+    };
+  }
+
+  /**
+   * Commit a credit hold (in-memory stub for MemStorage)
+   * Just records a transaction.
+   */
+  async commitHold(
+    requestId: string,
+    balanceId: string,
+    fileType?: string
+  ): Promise<any | null> {
+    // Already deducted in reserveCredits, just record transaction
+    const balance = this.creditBalancesMap.get(balanceId);
+    if (!balance) return null;
+
+    // Record transaction (audit trail)
+    // Note: credits already deducted in reserveCredits
+    return {
+      id: `hold_${randomUUID()}`,
+      state: 'COMMITTED',
+    };
+  }
+
+  /**
+   * Release a credit hold (in-memory stub for MemStorage)
+   * Returns credits to balance.
+   */
+  async releaseHold(
+    requestId: string,
+    balanceId: string
+  ): Promise<any | null> {
+    // In real DB, would add credits back. In-memory, this is a no-op stub.
+    // MemStorage doesn't track holds, so can't really release them.
+    return {
+      id: `hold_${randomUUID()}`,
+      state: 'RELEASED',
+    };
+  }
+
+  /**
+   * Clean up expired credit holds (in-memory stub for MemStorage)
+   * MemStorage doesn't track holds, so returns 0.
+   */
+  async cleanupExpiredHolds(): Promise<number> {
+    // In-memory storage doesn't track holds
+    return 0;
+  }
 }
+

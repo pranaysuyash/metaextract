@@ -6,11 +6,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { fileTypeFromBuffer } from 'file-type';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
 import { getDatabase, isDatabaseConnected } from '../db';
 import { trialUsages } from '@shared/schema';
-import { storage } from '../storage/index';
+import { storage, assertStorageHealthy } from '../storage/index';
 import {
   extractMetadataWithPython,
   transformMetadataForFrontend,
@@ -207,9 +207,23 @@ function startQuoteCleanup() {
   }, QUOTE_CLEANUP_INTERVAL);
 }
 
+function startHoldCleanup() {
+  setInterval(async () => {
+    try {
+      const released = await storage.cleanupExpiredHolds();
+      if (released > 0) {
+        console.log(`[ImagesMVP] Released ${released} expired credit holds`);
+      }
+    } catch (error) {
+      console.error('[ImagesMVP] Hold cleanup failed:', error);
+    }
+  }, QUOTE_CLEANUP_INTERVAL); // Use same interval as quotes (5 minutes)
+}
+
 // Start cleanup on module load
 if (process.env.NODE_ENV !== 'test') {
   startQuoteCleanup();
+  startHoldCleanup();
 }
 
 // ============================================================================
@@ -678,6 +692,50 @@ function parseLimitParam(value?: string): number {
     return ANALYTICS_LIMIT_DEFAULT;
   }
   return parsed;
+}
+
+/**
+ * Extract idempotency key from request header.
+ * Required for paid extractions to prevent double-charging on retries.
+ * 
+ * @param req - Express request
+ * @returns Idempotency key or null if missing/invalid
+ */
+function getIdempotencyKey(req: Request): string | null {
+  const k = req.header('Idempotency-Key');
+  if (!k) return null;
+  const trimmed = k.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 128) return null; // sanity bound
+  return trimmed;
+}
+
+/**
+ * Check if database is available and fail closed if not.
+ * For money-path operations, we must fail closed (reject) if DB is unavailable
+ * to prevent giving away free extractions or bypassing credit checks.
+ * 
+ * @returns true if DB is healthy, false otherwise
+ */
+async function isDatabaseHealthy(): Promise<boolean> {
+  // In test environment, skip DB health check (tests mock storage)
+  if (process.env.NODE_ENV === 'test') {
+    return true;
+  }
+  
+  if (!isDatabaseConnected()) {
+    return false;
+  }
+  
+  try {
+    const db = getDatabase();
+    // Quick health check: try to query credit_balances table
+    await db.execute(sql`SELECT 1 FROM credit_balances LIMIT 1`);
+    return true;
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    return false;
+  }
 }
 
 // ============================================================================
@@ -1505,11 +1563,13 @@ export function registerImagesMvpRoutes(app: Express) {
     },
     async (req: Request, res: Response) => {
       const startTime = Date.now();
+      const requestId = getIdempotencyKey(req); // Client-provided idempotency key
       let tempPath: string | null = null;
       let sessionId: string | null = null;
       let creditBalanceId: string | null = null;
       let useTrial = false;
       let chargeCredits = false;
+      let holdReserved = false; // Track if we need to release on error
 
       try {
         if (!req.file) {
@@ -1648,6 +1708,17 @@ export function registerImagesMvpRoutes(app: Express) {
 
         const hasTrialAvailable = !!trialEmail && trialUses < 2;
 
+        // Fail-closed DB health check for money-path operations
+        if (process.env.NODE_ENV !== 'development' && !hasTrialAvailable) {
+          const dbHealthy = await isDatabaseHealthy();
+          if (!dbHealthy) {
+            return sendServiceUnavailableError(
+              res,
+              'Billing system temporarily unavailable. Please try again shortly.'
+            );
+          }
+        }
+
         // Determine Access
         // In development, skip all restrictions for easier testing
         if (process.env.NODE_ENV === 'development') {
@@ -1668,13 +1739,52 @@ export function registerImagesMvpRoutes(app: Express) {
             );
             creditBalanceId = balance?.id ?? null;
 
-            if (!balance || balance.credits < creditCost) {
-              return sendQuotaExceededError(
+            if (!balance) {
+              return sendQuotaExceededError(res, 'Credit balance not found');
+            }
+
+            // Require idempotency key for paid extractions
+            if (!requestId) {
+              return sendInvalidRequestError(
                 res,
-                `Insufficient credits (required: ${creditCost}, available: ${balance?.credits ?? 0})`
+                'Idempotency-Key header required for paid extractions'
               );
             }
-            chargeCredits = true;
+
+            // Fail-closed: assert storage is healthy before touching money
+            try {
+              assertStorageHealthy();
+            } catch (error) {
+              console.error('Storage health check failed, refusing extraction:', error);
+              return sendServiceUnavailableError(
+                res,
+                'Database unavailable. Paid extraction cannot proceed. Please try again later.'
+              );
+            }
+
+            // Reserve credits atomically BEFORE Python extraction
+            try {
+              await storage.reserveCredits(
+                requestId,
+                creditBalanceId,
+                creditCost,
+                `Extraction: ${fileExt?.slice(1) || 'unknown'} (Images MVP)`,
+                quoteId || undefined,
+                15 * 60 * 1000 // 15 minutes expiry
+              );
+              holdReserved = true;
+              chargeCredits = true;
+            } catch (error) {
+              console.error('Credit reservation failed:', error);
+              const errMsg = error instanceof Error ? error.message : 'Unknown error';
+              if (errMsg.includes('Insufficient credits')) {
+                return sendQuotaExceededError(res, errMsg);
+              }
+              return sendServiceUnavailableError(
+                res,
+                'Unable to reserve credits. Please try again.'
+              );
+            }
           } else if ((req as any).user?.id) {
             // Authenticated user - use account credits
             const userId = (req as any).user.id as string;
@@ -1685,13 +1795,55 @@ export function registerImagesMvpRoutes(app: Express) {
             );
             creditBalanceId = balance?.id ?? null;
 
-            if (!balance || balance.credits < creditCost) {
-              return sendQuotaExceededError(
+            if (!balance) {
+              return sendQuotaExceededError(res, 'Credit balance not found');
+            }
+
+            // Require idempotency key for paid extractions
+            if (!requestId) {
+              return sendInvalidRequestError(
                 res,
-                `Insufficient credits (required: ${creditCost}, available: ${balance?.credits ?? 0})`
+                'Idempotency-Key header required for paid extractions'
               );
             }
-            chargeCredits = true;
+
+            // Reserve credits atomically BEFORE Python extraction
+            let hold: any;
+            try {
+              hold = await storage.reserveCredits(
+                requestId,
+                creditBalanceId,
+                creditCost,
+                `Extraction: ${fileExt?.slice(1) || 'unknown'} (Images MVP)`,
+                quoteId || undefined,
+                15 * 60 * 1000 // 15 minutes expiry
+              );
+              
+              // ✅ RED FLAG #1 FIX: Check if already processed (COMMITTED hold means Python already ran)
+              // Don't run Python again on retry - return 409 Conflict
+              if (hold.state === 'COMMITTED') {
+                return res.status(409).json({
+                  error: {
+                    message: 'Request already processed. Check your extraction history for results.',
+                    code: 'ALREADY_PROCESSED',
+                    requestId
+                  }
+                });
+              }
+              
+              holdReserved = true;
+              chargeCredits = true;
+            } catch (error) {
+              console.error('Credit reservation failed:', error);
+              const errMsg = error instanceof Error ? error.message : 'Unknown error';
+              if (errMsg.includes('Insufficient credits')) {
+                return sendQuotaExceededError(res, errMsg);
+              }
+              return sendServiceUnavailableError(
+                res,
+                'Unable to reserve credits. Please try again.'
+              );
+            }
           } else {
             // No sessionId and not authenticated - allow anonymous flow, free quota will be enforced later
             chargeCredits = false;
@@ -1861,36 +2013,24 @@ export function registerImagesMvpRoutes(app: Express) {
           })
           .catch(console.error);
 
-        // 2. ✅ Charge credits - MUST await before responding (critical for billing)
-        // Note: useCredits is atomic (uses WHERE credits >= amount) so it returns null
-        // if another concurrent request already consumed the credits.
-        if (chargeCredits && creditBalanceId) {
+        // 2. ✅ Commit credit hold - MUST succeed before responding (critical for billing)
+        // Hold was reserved before Python extraction, now finalize the charge
+        if (chargeCredits && holdReserved && creditBalanceId && requestId) {
           try {
-            const txn = await storage.useCredits(
-              creditBalanceId,
-              creditCost,
-              `Extraction: ${fileExtension} (Images MVP)`,
-              mimeType
-            );
-            // useCredits returns null if balance was insufficient (race condition protection)
-            if (txn === null) {
-              console.warn(
-                `Credit deduction failed for balance ${creditBalanceId}: insufficient credits (possible race condition)`
-              );
-              return res.status(402).json({
-                error: 'Insufficient credits',
-                message:
-                  'Credits were consumed by another request. Please refresh your balance.',
-                requiresRefresh: true,
-              });
-            }
+            await storage.commitHold(requestId, creditBalanceId, mimeType);
           } catch (error) {
-            console.error('Failed to charge credits:', error);
-            return res.status(402).json({
-              error: 'Payment failed',
-              message: 'Could not charge credits for this extraction',
-              requiresRefresh: true,
-            });
+            console.error('Failed to commit credit hold:', error);
+            // Release the hold to refund credits
+            try {
+              await storage.releaseHold(requestId, creditBalanceId);
+            } catch (releaseError) {
+              console.error('Failed to release hold after commit failure:', releaseError);
+            }
+            // Don't return extraction result if we couldn't charge
+            return sendServiceUnavailableError(
+              res,
+              'Credit charge failed. Please contact support.'
+            );
           }
         }
 
@@ -1991,6 +2131,15 @@ export function registerImagesMvpRoutes(app: Express) {
         res.json(metadata);
       } catch (error) {
         console.error('Images MVP extraction error:', error);
+
+        // Release credit hold on error to refund credits
+        if (holdReserved && creditBalanceId && requestId) {
+          try {
+            await storage.releaseHold(requestId, creditBalanceId);
+          } catch (releaseError) {
+            console.error('Failed to release credit hold on error:', releaseError);
+          }
+        }
 
         // Send error notification via WebSocket
         if (sessionId) {

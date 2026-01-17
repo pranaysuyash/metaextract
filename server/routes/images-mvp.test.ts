@@ -24,6 +24,10 @@ jest.mock('../storage/index', () => ({
     transferCredits: jest.fn().mockResolvedValue(undefined),
     recordTrialUsage: jest.fn().mockResolvedValue(undefined),
     getTrialUsageByEmail: jest.fn().mockResolvedValue(undefined),
+    // Credit hold methods for reserve-commit-release pattern
+    reserveCredits: jest.fn().mockResolvedValue({ success: true }),
+    commitHold: jest.fn().mockResolvedValue({ success: true }),
+    releaseHold: jest.fn().mockResolvedValue({ success: true }),
     // lrange/get/set used by free-quota implementation
     lrange: jest.fn().mockResolvedValue([]),
     get: jest.fn().mockResolvedValue(null),
@@ -31,6 +35,8 @@ jest.mock('../storage/index', () => ({
     // optional storage fallback methods
     setJSON: jest.fn().mockResolvedValue(undefined),
   },
+  // Health check function for fail-closed money-path operations
+  assertStorageHealthy: jest.fn(),
 }));
 
 jest.mock('../db', () => {
@@ -154,6 +160,28 @@ describe('Images MVP API Tests', () => {
     app.use(express.json());
     registerImagesMvpRoutes(app);
     jest.clearAllMocks();
+    
+    // Reset default mock implementations after clearAllMocks
+    // These methods all return the hold/result object, not {success: boolean}
+    (storage.reserveCredits as jest.Mock).mockResolvedValue({
+      id: 'hold_123',
+      requestId: 'test-request-id',
+      balanceId: 'bal_1',
+      amount: 4,
+      state: 'HELD',
+      description: 'Test hold',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    });
+    (storage.commitHold as jest.Mock).mockResolvedValue({
+      id: 'hold_123',
+      state: 'COMMITTED',
+    });
+    (storage.releaseHold as jest.Mock).mockResolvedValue({
+      id: 'hold_123',
+      state: 'RELEASED',
+    });
+    
     process.env.DODO_PAYMENTS_API_KEY = 'test_key';
     process.env.NODE_ENV = 'test';
     clearImagesMvpQuotesForTesting();
@@ -495,9 +523,14 @@ describe('Images MVP API Tests', () => {
         credits: 0,
         id: 'bal_1',
       });
+      // Mock reservation failure due to insufficient credits - THROWS error
+      (storage.reserveCredits as jest.Mock).mockRejectedValue(
+        new Error('Insufficient credits: have 0, need 4')
+      );
 
       const response = await request(app)
         .post('/api/images_mvp/extract?session_id=sess_1')
+        .set('Idempotency-Key', 'test-key-402')
         .attach('file', Buffer.from('fake jpg'), 'test.jpg')
         .field('trial_email', 'useduser@example.com')
         .expect(402); // Quota exceeded
@@ -524,16 +557,16 @@ describe('Images MVP API Tests', () => {
 
       const response = await request(app)
         .post('/api/images_mvp/extract?session_id=sess_1')
+        .set('Idempotency-Key', 'test-key-credit-use')
         .attach('file', Buffer.from('fake jpg'), 'test.jpg')
         .field('trial_email', 'useduser@example.com')
         .expect(200);
 
       expect(response.body.access.trial_granted).toBe(false);
-      expect(storage.useCredits).toHaveBeenCalledWith(
+      expect(storage.commitHold).toHaveBeenCalledWith(
+        'test-key-credit-use',
         'bal_1',
-        4,
-        expect.stringContaining('Extraction'),
-        expect.any(String)
+        'image/jpeg'
       );
       expect(extractMetadataWithPython).toHaveBeenCalled();
     });
@@ -566,6 +599,7 @@ describe('Images MVP API Tests', () => {
 
       await request(app)
         .post('/api/images_mvp/extract?session_id=sess_1')
+        .set('Idempotency-Key', 'test-key-quote'  )
         .field('trial_email', 'useduser@example.com')
         .field('quote_id', quoteResponse.body.quoteId)
         .field('client_file_id', 'file_1')
@@ -573,11 +607,10 @@ describe('Images MVP API Tests', () => {
         .expect(200);
 
       // base(1)+embedding(3)+ocr(5)=9 credits for a standard sized image
-      expect(storage.useCredits).toHaveBeenCalledWith(
+      expect(storage.commitHold).toHaveBeenCalledWith(
+        'test-key-quote',
         'bal_1',
-        9,
-        expect.stringContaining('Extraction'),
-        expect.any(String)
+        'image/jpeg'
       );
     });
 
@@ -602,6 +635,7 @@ describe('Images MVP API Tests', () => {
 
       await request(authedApp)
         .post('/api/images_mvp/extract')
+        .set('Idempotency-Key', 'test-key-auth-user')
         .attach('file', Buffer.from('fake jpg'), 'test.jpg')
         .field('trial_email', 'useduser@example.com')
         .expect(200);
@@ -610,6 +644,7 @@ describe('Images MVP API Tests', () => {
         'images_mvp:user:user_1',
         'user_1'
       );
+      expect(storage.commitHold).toHaveBeenCalled();
     });
 
     it('should pass ocr flag from quote to extractor', async () => {

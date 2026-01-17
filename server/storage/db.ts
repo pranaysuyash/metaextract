@@ -11,9 +11,12 @@ import {
   creditBalances,
   creditGrants,
   creditTransactions,
+  creditHolds,
   type CreditBalance,
   type CreditGrant,
   type CreditTransaction,
+  type CreditHold,
+  type InsertCreditHold,
   onboardingSessions,
   type OnboardingSession,
   type InsertOnboardingSession,
@@ -1126,6 +1129,302 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Failed to get credit transactions:', error);
       return [];
+    }
+  }
+
+  /**
+   * Reserve credits atomically with idempotency.
+   * Creates a HELD credit hold that must be committed or released.
+   * 
+   * @param requestId - Idempotency key (e.g. extractionId)
+   * @param balanceId - Credit balance to reserve from
+   * @param amount - Credits to reserve
+   * @param description - Description for audit trail
+   * @param quoteId - Optional quote ID this hold is linked to
+   * @param expiresInMs - How long until hold expires (default: 10 minutes)
+   * @returns The created hold, or existing hold if requestId already exists
+   * @throws If insufficient credits or DB unavailable
+   */
+  async reserveCredits(
+    requestId: string,
+    balanceId: string,
+    amount: number,
+    description: string,
+    quoteId?: string,
+    expiresInMs: number = 15 * 60 * 1000 // 15 minutes (user's recommendation)
+  ): Promise<CreditHold> {
+    if (!this.db) {
+      throw new Error('Database unavailable - fail closed');
+    }
+
+    const expiresAt = new Date(Date.now() + expiresInMs);
+
+    const run = async (client: any): Promise<CreditHold> => {
+      // Check for existing hold with this (balanceId, requestId) - idempotency
+      const existing = await client
+        .select()
+        .from(creditHolds)
+        .where(
+          and(
+            eq(creditHolds.balanceId, balanceId),
+            eq(creditHolds.requestId, requestId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Idempotent: return existing hold
+        return existing[0];
+      }
+
+      // Lock the balance row for update to prevent race conditions
+      const [balance] = await client.execute(
+        sql`
+          SELECT id, credits 
+          FROM credit_balances 
+          WHERE id = ${balanceId} 
+          FOR UPDATE
+        `
+      ).then((result: any) => result.rows || []);
+
+      if (!balance) {
+        throw new Error('Credit balance not found');
+      }
+
+      if (balance.credits < amount) {
+        throw new Error(
+          `Insufficient credits: have ${balance.credits}, need ${amount}`
+        );
+      }
+
+      // Create the hold (unique index on (balance_id, request_id) enforces idempotency)
+      const [hold] = await client
+        .insert(creditHolds)
+        .values({
+          requestId,
+          balanceId,
+          amount,
+          state: 'HELD',
+          description,
+          quoteId: quoteId || null,
+          expiresAt,
+        })
+        .returning();
+
+      // Deduct from balance
+      await client
+        .update(creditBalances)
+        .set({
+          credits: sql`${creditBalances.credits} - ${amount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(creditBalances.id, balanceId));
+
+      return hold;
+    };
+
+    try {
+      if (typeof (this.db as any).transaction === 'function') {
+        return await (this.db as any).transaction(run);
+      }
+      return await run(this.db);
+    } catch (error) {
+      console.error('Failed to reserve credits:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Commit a credit hold, finalizing the charge.
+   * Records usage transactions and marks hold as COMMITTED.
+   * 
+   * @param requestId - Idempotency key of the hold to commit
+   * @param balanceId - Credit balance ID
+   * @param fileType - Optional file type for transaction record
+   * @returns The committed hold, or null if not found/already processed
+   */
+  async commitHold(
+    requestId: string,
+    balanceId: string,
+    fileType?: string
+  ): Promise<CreditHold | null> {
+    if (!this.db) {
+      throw new Error('Database unavailable - fail closed');
+    }
+
+    const run = async (client: any): Promise<CreditHold | null> => {
+      // Get the hold by (balanceId, requestId)
+      const [hold] = await client
+        .select()
+        .from(creditHolds)
+        .where(
+          and(
+            eq(creditHolds.balanceId, balanceId),
+            eq(creditHolds.requestId, requestId)
+          )
+        )
+        .limit(1);
+
+      if (!hold) {
+        return null;
+      }
+
+      if (hold.state === 'COMMITTED') {
+        // Already committed (idempotency)
+        return hold;
+      }
+
+      if (hold.state === 'RELEASED') {
+        throw new Error('Cannot commit a released hold');
+      }
+
+      // ✅ RED FLAG #3 VERIFIED: Record the usage transaction (audit trail only)
+      // NOTE: Credits were already deducted from balance in reserveCredits()
+      // This just records the transaction for audit/history. No second deduction.
+      await client.insert(creditTransactions).values({
+        balanceId: hold.balanceId,
+        type: 'usage',
+        amount: -hold.amount,  // Records what was deducted, doesn't deduct again
+        description: hold.description || 'Credit hold commitment',
+        ...(fileType ? { fileType } : {}),
+      });
+
+      // Mark hold as committed
+      const [updated] = await client
+        .update(creditHolds)
+        .set({
+          state: 'COMMITTED',
+          committedAt: new Date(),
+        })
+        .where(eq(creditHolds.id, hold.id))
+        .returning();
+
+      return updated;
+    };
+
+    try {
+      if (typeof (this.db as any).transaction === 'function') {
+        return await (this.db as any).transaction(run);
+      }
+      return await run(this.db);
+    } catch (error) {
+      console.error('Failed to commit hold:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Release a credit hold, returning credits to the balance.
+   * Used when extraction fails or is cancelled.
+   * 
+   * @param requestId - Idempotency key of the hold to release
+   * @param balanceId - Credit balance ID
+   * @returns The released hold, or null if not found/already processed
+   */
+  async releaseHold(
+    requestId: string,
+    balanceId: string
+  ): Promise<CreditHold | null> {
+    if (!this.db) {
+      throw new Error('Database unavailable - fail closed');
+    }
+
+    const run = async (client: any): Promise<CreditHold | null> => {
+      // Get the hold by (balanceId, requestId)
+      const [hold] = await client
+        .select()
+        .from(creditHolds)
+        .where(
+          and(
+            eq(creditHolds.balanceId, balanceId),
+            eq(creditHolds.requestId, requestId)
+          )
+        )
+        .limit(1);
+
+      if (!hold) {
+        return null;
+      }
+
+      if (hold.state === 'RELEASED') {
+        // Already released (idempotency)
+        return hold;
+      }
+
+      if (hold.state === 'COMMITTED') {
+        throw new Error('Cannot release a committed hold');
+      }
+
+      // Return credits to balance
+      await client
+        .update(creditBalances)
+        .set({
+          credits: sql`${creditBalances.credits} + ${hold.amount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(creditBalances.id, hold.balanceId));
+
+      // Mark hold as released
+      const [updated] = await client
+        .update(creditHolds)
+        .set({
+          state: 'RELEASED',
+          releasedAt: new Date(),
+        })
+        .where(eq(creditHolds.id, hold.id))
+        .returning();
+
+      return updated;
+    };
+
+    try {
+      if (typeof (this.db as any).transaction === 'function') {
+        return await (this.db as any).transaction(run);
+      }
+      return await run(this.db);
+    } catch (error) {
+      console.error('Failed to release hold:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up expired credit holds.
+   * Releases any HELD credits that have passed their expiration time.
+   * 
+   * @returns Number of holds released
+   */
+  async cleanupExpiredHolds(): Promise<number> {
+    if (!this.db) return 0;
+
+    try {
+      const expiredHolds = await this.db
+        .select()
+        .from(creditHolds)
+        .where(
+          and(
+            eq(creditHolds.state, 'HELD'),
+            lt(creditHolds.expiresAt, new Date())
+          )
+        );
+
+      let released = 0;
+      for (const hold of expiredHolds) {
+        try {
+          await this.releaseHold(hold.requestId, hold.balanceId);
+          released++;
+        } catch (error) {
+          console.error(
+            `Failed to release expired hold ${hold.id}:`,
+            error
+          );
+        }
+      }
+
+      return released;
+    } catch (error) {
+      console.error('Failed to cleanup expired holds:', error);
+      return 0;
     }
   }
 

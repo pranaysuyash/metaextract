@@ -400,6 +400,46 @@ export function startQuoteCleanup(opts: {
 }
 
 /**
+ * Start periodic cleanup of expired credit holds
+ * Releases holds that have passed their expiration time
+ */
+export function startHoldCleanup(opts: {
+  cleanupExpiredHolds: () => Promise<number>;
+  intervalMs?: number;
+}): NodeJS.Timeout | null {
+  const intervalMs = opts.intervalMs ?? 5 * 60 * 1000; // 5 minutes default
+
+  const run = async () => {
+    const t0 = Date.now();
+    try {
+      const released = await opts.cleanupExpiredHolds();
+      const dur = Date.now() - t0;
+      if (released > 0) {
+        console.log(
+          `[Hold Cleanup] Released ${released} expired holds in ${dur}ms`
+        );
+      }
+    } catch (error) {
+      console.error('[Hold Cleanup] Failed:', error);
+    }
+  };
+
+  console.log(
+    `[Hold Cleanup] Starting hold cleanup every ${intervalMs / (60 * 1000)} minutes`
+  );
+
+  // Schedule periodic cleanup
+  const timer = setInterval(() => void run(), intervalMs);
+
+  // Allow process to exit even if timer is active
+  if (typeof timer.unref === 'function') {
+    timer.unref();
+  }
+
+  return timer;
+}
+
+/**
  * Setup periodic cleanup (for production use)
  */
 export function startPeriodicCleanup(

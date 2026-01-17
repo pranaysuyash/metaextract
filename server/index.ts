@@ -19,6 +19,7 @@ import {
   cleanupOrphanedTempFiles,
   startPeriodicCleanup,
   startQuoteCleanup,
+  startHoldCleanup,
 } from './startup-cleanup';
 import { storage } from './storage';
 
@@ -280,6 +281,13 @@ if (!isTestEnvironment) {
           // Start quote cleanup (every 5 minutes)
           startQuoteCleanup({
             cleanupExpiredQuotes: () => storage.cleanupExpiredQuotes(),
+            intervalMs: 5 * 60 * 1000,
+          });
+
+          // ✅ RED FLAG #2 FIX: Start hold cleanup (every 5 minutes)
+          // Releases expired HELD credits back to user balances
+          startHoldCleanup({
+            cleanupExpiredHolds: () => storage.cleanupExpiredHolds(),
             intervalMs: 5 * 60 * 1000,
           });
         }

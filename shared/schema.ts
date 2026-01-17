@@ -8,6 +8,8 @@ import {
   timestamp,
   bigint,
   jsonb,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
@@ -197,6 +199,40 @@ export const creditTransactions = pgTable('credit_transactions', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// Credit holds table for reserve-commit-release pattern
+export const creditHolds = pgTable(
+  'credit_holds',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    requestId: varchar('request_id', { length: 255 }).notNull(), // idempotency key from client
+    balanceId: varchar('balance_id')
+      .notNull()
+      .references(() => creditBalances.id),
+    amount: integer('amount').notNull(), // credits held
+    state: text('state').notNull(), // 'HELD', 'COMMITTED', 'RELEASED'
+    description: text('description'),
+    quoteId: varchar('quote_id', { length: 255 }), // link to quote
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    expiresAt: timestamp('expires_at').notNull(), // automatic cleanup
+    committedAt: timestamp('committed_at'),
+    releasedAt: timestamp('released_at'),
+  },
+  (table) => ({
+    // Idempotency: same (balanceId, requestId) can't create multiple holds
+    balanceRequestIdx: uniqueIndex('credit_holds_balance_request_idx').on(
+      table.balanceId,
+      table.requestId
+    ),
+    // Query efficiency for cleanup
+    stateExpiresIdx: index('credit_holds_state_expires_idx').on(
+      table.state,
+      table.expiresAt
+    ),
+  })
+);
+
 export const insertCreditBalanceSchema = createInsertSchema(
   creditBalances
 ).omit({
@@ -212,6 +248,11 @@ export const insertCreditTransactionSchema = createInsertSchema(
   createdAt: true,
 });
 
+export const insertCreditHoldSchema = createInsertSchema(creditHolds).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertCreditBalance = z.infer<typeof insertCreditBalanceSchema>;
 export type CreditBalance = typeof creditBalances.$inferSelect;
 export type CreditGrant = typeof creditGrants.$inferSelect;
@@ -219,6 +260,8 @@ export type InsertCreditTransaction = z.infer<
   typeof insertCreditTransactionSchema
 >;
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type CreditHold = typeof creditHolds.$inferSelect;
+export type InsertCreditHold = z.infer<typeof insertCreditHoldSchema>;
 
 // ============================================================================
 // Metadata Storage Schema (Phase 1: Foundation)

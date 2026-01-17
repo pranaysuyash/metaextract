@@ -18,6 +18,7 @@ Reference: NEMA PS3.6 (DICOM Data Elements)
 
 from . import ScientificParser, logger
 from typing import Dict, Any, Optional
+from pathlib import Path
 import struct
 
 

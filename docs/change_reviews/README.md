@@ -12,6 +12,12 @@ When flagged:
 - Do **not** rely on tests alone.
 - Compare against the previous committed version and document why the change is correct.
 
+Semantic review expectation (what the note must reflect):
+
+- Review the staged diff: `git diff --staged -- <file>`
+- Review the previous version: `git show HEAD:<file>` (or `git show <sha>:<file>` when comparing across commits)
+- Document: what changed, what functionality is preserved/expanded, any intentional removals/deprecations, risk/rollout notes, and how you verified correctness (tests + any manual checks).
+
 ## How to create a review note
 
 Run:
@@ -29,4 +35,3 @@ If you intentionally want to bypass the note requirement:
 If you want to bypass the large-diff acknowledgement prompt:
 
 - `ACK_LARGE_FILE_CHANGES=1` (one-off)
-

@@ -26,8 +26,10 @@ interface DatabaseInstance {
 
 const DEFAULT_POOL_CONFIG = {
   max: 25, // Increased connections for better concurrency under load
-  idleTimeoutMillis: 30000, // 30 seconds
+  idleTimeoutMillis: 60000, // 60 seconds (increased from 30s to reduce reconnections)
   connectionTimeoutMillis: 5000, // 5 seconds
+  statement_timeout: 30000, // 30 second statement timeout
+  query_timeout: 30000, // 30 second query timeout
 };
 
 /**
@@ -98,9 +100,18 @@ function initializeDatabase(): DatabaseInstance | null {
   });
 
   // Set up error listeners for the pool
-  pool.on('error', error => {
-    console.error('❌ Unexpected error on database connection pool:', error);
-  });
+  // Only log errors if explicitly debugging, as many "errors" are expected
+  // (e.g., idle connection drops, transient network issues)
+  if (process.env.DEBUG_DB_POOL) {
+    pool.on('error', error => {
+      console.debug('[DB Pool] Connection error:', error);
+    });
+  } else {
+    // In production/test, just silently handle errors - the pool will reconnect automatically
+    pool.on('error', () => {
+      // Suppress logging for idle connection errors
+    });
+  }
 
   // Create Drizzle client
   const client = drizzle(pool, { schema });

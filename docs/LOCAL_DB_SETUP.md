@@ -1,9 +1,20 @@
-# Local Database + Runtime Setup (Enforced Storage)
+# Local Database + Runtime Setup (Explicit Storage Mode)
 
-Context
+## Context
 
-- Storage is configured to require a real Postgres when `STORAGE_REQUIRE_DATABASE=true` (default in `.env`, `.env.local`, `.env.production`). When this is set, the server performs an explicit DB connection verification at startup and will _exit immediately_ if Postgres cannot be reached (fail-fast behavior).
-- Recent changes: metadata partitioning uses Postgres for summaries and object storage refs; the Images MVP analytics/trials/credits also rely on the DB. The app is intended to run against a real DB in dev and prod; use the in-memory fallback only for short-lived, local debugging when the DB is intentionally disabled.
+Storage backend is now explicitly configured via `STORAGE_MODE` environment variable:
+- `STORAGE_MODE=db` (default, **required for production**): PostgreSQL-backed storage for credits, holds, analytics, and persistent data
+- `STORAGE_MODE=memory`: In-memory storage (development/testing only; **NOT for production**, data not persistent, not thread-safe)
+
+**Critical rule**: No automatic fallback. If `STORAGE_MODE=db` but database is unavailable, the server **fails on startup**. This prevents silent downgrades to insecure modes.
+
+### Production Safety Guarantee
+
+- If `NODE_ENV=production` and `STORAGE_MODE!=db`: **server crashes on boot**
+- If `STORAGE_MODE=db` and DB connection fails: **server crashes on boot** (fail-fast)
+- If DB goes unhealthy at runtime: paid/trial extractions fail with **503 Service Unavailable** (fail-closed, does not process credits)
+
+This keeps outages **honest**: they appear as outages, not silent downgrades to free/insecure mode.
 
 What blocked setup inside this sandbox
 
@@ -23,16 +34,26 @@ What you need on your host (outside the sandbox)
 
 2. Environment (already set in .env/.env.local/.env.production):
    - `DATABASE_URL=postgresql://pranay@localhost:5432/metaextract`
-   - `STORAGE_REQUIRE_DATABASE=true` (enforces DB; remove/false only if you deliberately want in-memory fallback).
-   - If Redis isn’t available locally, set `RATE_LIMIT_ENABLED=false` temporarily to avoid startup failures.
+   - `STORAGE_MODE=db` (enforces database storage; default and required for production)
+   - If Redis isn't available locally, set `RATE_LIMIT_ENABLED=false` temporarily to avoid startup failures.
 3. Port: free 3000 or set `PORT=3001` (update client proxy/dev server if needed).
 
-Optional dev bypass (only if you need to run without DB/Redis briefly)
+### Optional Dev Bypass (explicit in-memory mode only for testing)
 
-- Set `STORAGE_REQUIRE_DATABASE=false` to allow in-memory storage.
-- Set `RATE_LIMIT_ENABLED=false` to skip Redis.
-- Set `PORT=3001` if 3000 is occupied.
-- Revert these after you have Postgres/Redis available.
+If you need to run unit tests or short-lived debugging **without database**:
+```bash
+STORAGE_MODE=memory npm test
+# or
+STORAGE_MODE=memory NODE_ENV=development npm run dev
+```
+
+**⚠️ Warnings**:
+- `STORAGE_MODE=memory` is **NOT allowed in production** (server will crash on boot)
+- In-memory storage is **not persistent** (data lost on restart)
+- In-memory storage is **not thread-safe** (concurrent requests have race conditions)
+- For integration testing with real credit/hold logic, use `STORAGE_MODE=db` with a real PostgreSQL instance
+
+**Do NOT** set `STORAGE_MODE=memory` for production or long-lived deployments.
 
 Troubleshooting
 

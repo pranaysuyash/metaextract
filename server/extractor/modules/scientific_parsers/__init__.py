@@ -1,21 +1,23 @@
 """
 Scientific Format Parsers - Unified Architecture
-================================================
+==================================================
 
 Format-specific parsers for scientific/medical imaging formats:
 - DICOM: Medical imaging (CT, MRI, X-Ray, Ultrasound, etc.)
 - FITS: Astronomical imaging (astronomy research data)
 - HDF5: Scientific data (climate, simulation, sensor data)
 - NetCDF: Climate/atmospheric data
+- NIfTI: Neuroimaging data (MRI, fMRI, brain imaging)
 
 Key Principles:
 1. Each parser extracts ONLY what the format supports
 2. No synthetic/placeholder modules
 3. Proper field counting (non-null leaf values only)
-4. Native library support (pydicom, astropy, h5py, netCDF4)
+4. Native library support (pydicom, astropy, h5py, netCDF4, nibabel)
 
 DICOM Tags Reference: NEMA PS3.6 (DICOM Data Elements)
 FITS Standard: FITS 4.0 (IAU)
+NIfTI Reference: https://nifti.nimh.nih.gov/
 """
 
 import logging
@@ -104,11 +106,13 @@ class ScientificParserRegistry:
         from .dicom_parser import DicomParser
         from .fits_parser import FitsParser
         from .hdf5_netcdf_parser import Hdf5Parser, NetcdfParser
+        from .nifti_parser import NiftiParser
         
         self.register(DicomParser())
         self.register(FitsParser())
         self.register(Hdf5Parser())
         self.register(NetcdfParser())
+        self.register(NiftiParser())
     
     def register(self, parser: ScientificParser):
         """Register a format parser."""
@@ -117,6 +121,9 @@ class ScientificParserRegistry:
     
     def get_parser(self, filepath: str) -> Optional[ScientificParser]:
         """Get the appropriate parser for a file."""
+        filepath_lower = filepath.lower()
+        if filepath_lower.endswith('.nii.gz'):
+            return self._parsers.get('.nii.gz')
         ext = Path(filepath).suffix.lower()
         return self._parsers.get(ext)
     

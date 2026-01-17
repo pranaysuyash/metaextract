@@ -16,6 +16,7 @@ HDF5 Structure:
 
 from . import ScientificParser, logger
 from typing import Dict, Any, Optional
+from pathlib import Path
 import struct
 
 

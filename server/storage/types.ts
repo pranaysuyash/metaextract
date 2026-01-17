@@ -10,6 +10,7 @@ import type {
   CreditBalance as SchemaCreditBalance,
   CreditGrant as SchemaCreditGrant,
   CreditTransaction as SchemaCreditTransaction,
+  CreditHold as SchemaCreditHold,
   InsertUiEvent as SchemaInsertUiEvent,
   UiEvent as SchemaUiEvent,
   OnboardingSession as SchemaOnboardingSession,
@@ -186,6 +187,26 @@ export interface IStorage {
     balanceId: string,
     limit?: number
   ): Promise<CreditTransaction[]>;
+
+  // Credit reservation methods (reserve → commit/release pattern)
+  reserveCredits(
+    requestId: string,
+    balanceId: string,
+    amount: number,
+    description: string,
+    quoteId?: string,
+    expiresInMs?: number
+  ): Promise<CreditHold>;
+  commitHold(
+    requestId: string,
+    balanceId: string,
+    fileType?: string
+  ): Promise<CreditHold | null>;
+  releaseHold(
+    requestId: string,
+    balanceId: string
+  ): Promise<CreditHold | null>;
+  cleanupExpiredHolds(): Promise<number>;
 
   // Onboarding system
   getOnboardingSession(userId: string): Promise<OnboardingSession | undefined>;
@@ -490,6 +511,7 @@ export type ExtractionAnalytics = SchemaExtractionAnalytics;
 export type CreditBalance = SchemaCreditBalance;
 export type CreditGrant = SchemaCreditGrant;
 export type CreditTransaction = SchemaCreditTransaction;
+export type CreditHold = SchemaCreditHold;
 export type InsertUiEvent = SchemaInsertUiEvent;
 export type UiEvent = SchemaUiEvent;
 export type OnboardingSession = SchemaOnboardingSession;

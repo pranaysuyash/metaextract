@@ -27,6 +27,7 @@ Operational note (to avoid internal contradictions across prompts):
 Repo hygiene (always on):
 
 - Before committing: always run `git add -A` (multi-agent staging discipline).
+- Pre-commit guardrails: this repo uses `scripts/precommit-check.cjs` to block risky diffs unless explicitly acknowledged. Large per-file diffs require a staged review note under `docs/change_reviews/` (generate with `node scripts/create-change-review-note.cjs`) and an explicit `ACK_LARGE_FILE_CHANGES=1` acknowledgement; deletions/renames are blocked unless `ALLOW_DELETIONS=1`. These guards exist to force semantic review against `HEAD`, not just tests.
 - Python: always use the existing `.venv` (find via `ls -la` or `which python3`) and prefer `uv` for dependency installs (`uv pip install -r requirements.txt`).
 - Process management: when restarting dev servers, terminate only the Vite (5173) and Express (3000) server processes. Prefer stopping the task/terminal running `npm run dev`, or kill by port if needed (macOS: `lsof -ti:5173 -sTCP:LISTEN | xargs kill -9`, `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9`). Never use blanket commands like `killall node`.
 - Multi-agent safety: do not delete/remove other agents’ worktrees, branches, or untracked files. If other agents added useful work, keep it in-tree (integrate/document/deprecate; don’t delete unless user explicitly instructs). If unsure whether work belongs, commit it to a branch or add a `docs/` TODO/checklist and commit (never discard). Exception: never commit secrets/credentials.

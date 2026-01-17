@@ -17,6 +17,7 @@ Reference: FITS 4.0 (IAU 2015)
 
 from . import ScientificParser, logger
 from typing import Dict, Any, Optional
+from pathlib import Path
 import struct
 
 
