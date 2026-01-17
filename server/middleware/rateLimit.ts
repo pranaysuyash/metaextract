@@ -43,12 +43,33 @@ interface RateLimiterMiddleware {
   windowMs: number;
 }
 
+interface CreateRateLimiterOptions {
+  windowMs?: number;
+  /**
+   * Fixed limit per window. When provided, this limiter ignores tierConfig.
+   * This is used for route-specific limits (e.g. Images MVP upload burst protection).
+   */
+  max?: number;
+  /** Optional fixed daily limit. When omitted, no daily cap is enforced. */
+  maxPerDay?: number;
+  /** Skip function (compatible with common rate-limiter middleware APIs). */
+  skip?: (req: Request) => boolean;
+  skipFailedRequests?: boolean;
+  keyGenerator?: (req: Request) => string;
+  /** Optional name for key scoping/observability. */
+  name?: string;
+}
+
 // ============================================================================
 // In-Memory Rate Limit Store
 // ============================================================================
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
 let cleanupInterval: NodeJS.Timeout | null = null;
+
+export function resetRateLimitStore(): void {
+  rateLimitStore.clear();
+}
 
 /**
  * Start the cleanup interval for expired rate limit entries
@@ -135,12 +156,26 @@ function getTierFromRequest(req: Request): string {
 
 export function createRateLimiter(options?: {
   windowMs?: number;
+  max?: number;
+  maxPerDay?: number;
+  skip?: (req: Request) => boolean;
   skipFailedRequests?: boolean;
   keyGenerator?: (req: Request) => string;
+  name?: string;
 }): RateLimiterMiddleware {
   const windowMs = options?.windowMs || TIME_CONSTANTS.MINUTE_MS;
   const skipFailedRequests = options?.skipFailedRequests ?? false;
   const keyGenerator = options?.keyGenerator || getClientKey;
+  const skip = options?.skip;
+  const fixedMax = typeof options?.max === 'number' ? options.max : undefined;
+  const fixedMaxPerDay =
+    typeof options?.maxPerDay === 'number' ? options.maxPerDay : undefined;
+
+  const limiterId =
+    options?.name ||
+    (fixedMax !== undefined
+      ? `fixed:${windowMs}:${fixedMax}:${fixedMaxPerDay ?? 'nodaily'}`
+      : `tier:${windowMs}`);
 
   // Start cleanup interval on first middleware creation
   startCleanupInterval();
@@ -150,10 +185,20 @@ export function createRateLimiter(options?: {
     res: Response,
     next: NextFunction
   ): void {
+    if (skip && skip(req)) {
+      next();
+      return;
+    }
+
     const now = Date.now();
-    const key = keyGenerator(req);
-    const tier = normalizeTier(getTierFromRequest(req));
-    const limits = getRateLimits(tier);
+    const rawKey = keyGenerator(req);
+    const key = `${limiterId}:${rawKey}`;
+
+    const tier = fixedMax === undefined ? normalizeTier(getTierFromRequest(req)) : null;
+    const tierLimits = tier ? getRateLimits(tier) : null;
+
+    const windowLimit = fixedMax ?? tierLimits?.requestsPerMinute ?? 0;
+    const dailyLimit = fixedMax !== undefined ? fixedMaxPerDay : tierLimits?.requestsPerDay;
 
     // Get or create rate limit entry
     let entry = rateLimitStore.get(key);
@@ -191,11 +236,11 @@ export function createRateLimiter(options?: {
     const newDailyCount = ++entry.dailyCount;
 
     // Check per-minute limit (after increment)
-    if (newCount > limits.requestsPerMinute) {
+    if (windowLimit > 0 && newCount > windowLimit) {
       const retryAfter = Math.ceil((entry.windowStart + windowMs - now) / 1000);
 
       res.setHeader('Retry-After', retryAfter);
-      res.setHeader('X-RateLimit-Limit', limits.requestsPerMinute);
+      res.setHeader('X-RateLimit-Limit', windowLimit);
       res.setHeader('X-RateLimit-Remaining', 0);
       res.setHeader(
         'X-RateLimit-Reset',
@@ -204,15 +249,20 @@ export function createRateLimiter(options?: {
 
       res.status(429).json({
         error: 'Too many requests',
-        message: `Rate limit exceeded. Maximum ${limits.requestsPerMinute} requests per minute for ${tier} tier.`,
-        tier,
+        message:
+          fixedMax !== undefined
+            ? `Rate limit exceeded. Maximum ${windowLimit} requests per window.`
+            : `Rate limit exceeded. Maximum ${windowLimit} requests per minute for ${tier} tier.`,
+        tier: tier ?? undefined,
         retry_after_seconds: retryAfter,
         upgrade_message:
-          tier === 'free'
-            ? 'Upgrade to Professional for higher rate limits'
-            : tier === 'professional'
-              ? 'Upgrade to Forensic for higher rate limits'
-              : undefined,
+          fixedMax !== undefined
+            ? undefined
+            : tier === 'free'
+              ? 'Upgrade to Professional for higher rate limits'
+              : tier === 'professional'
+                ? 'Upgrade to Forensic for higher rate limits'
+                : undefined,
       });
 
       // Decrement since we're rejecting this request
@@ -222,22 +272,27 @@ export function createRateLimiter(options?: {
     }
 
     // Check daily limit (after increment)
-    if (newDailyCount > limits.requestsPerDay) {
+    if (typeof dailyLimit === 'number' && newDailyCount > dailyLimit) {
       const nextDay = new Date(entry.dayStart + TIME_CONSTANTS.ONE_DAY_MS);
 
-      res.setHeader('X-RateLimit-Daily-Limit', limits.requestsPerDay);
+      res.setHeader('X-RateLimit-Daily-Limit', dailyLimit);
       res.setHeader('X-RateLimit-Daily-Remaining', 0);
       res.setHeader('X-RateLimit-Daily-Reset', nextDay.toISOString());
 
       res.status(429).json({
         error: 'Daily limit exceeded',
-        message: `Daily limit of ${limits.requestsPerDay} requests exceeded for ${tier} tier.`,
-        tier,
+        message:
+          fixedMax !== undefined
+            ? `Daily limit of ${dailyLimit} requests exceeded.`
+            : `Daily limit of ${dailyLimit} requests exceeded for ${tier} tier.`,
+        tier: tier ?? undefined,
         reset_at: nextDay.toISOString(),
         upgrade_message:
-          tier === 'free'
-            ? 'Upgrade to Professional for unlimited daily extractions'
-            : undefined,
+          fixedMax !== undefined
+            ? undefined
+            : tier === 'free'
+              ? 'Upgrade to Professional for unlimited daily extractions'
+              : undefined,
       });
 
       // Decrement since we're rejecting this request
@@ -247,20 +302,22 @@ export function createRateLimiter(options?: {
     }
 
     // Set rate limit headers
-    res.setHeader('X-RateLimit-Limit', limits.requestsPerMinute);
+    res.setHeader('X-RateLimit-Limit', windowLimit);
     res.setHeader(
       'X-RateLimit-Remaining',
-      Math.max(0, limits.requestsPerMinute - newCount)
+      Math.max(0, windowLimit - newCount)
     );
     res.setHeader(
       'X-RateLimit-Reset',
       Math.ceil((entry.windowStart + windowMs) / 1000)
     );
-    res.setHeader('X-RateLimit-Daily-Limit', limits.requestsPerDay);
-    res.setHeader(
-      'X-RateLimit-Daily-Remaining',
-      Math.max(0, limits.requestsPerDay - newDailyCount)
-    );
+    if (typeof dailyLimit === 'number') {
+      res.setHeader('X-RateLimit-Daily-Limit', dailyLimit);
+      res.setHeader(
+        'X-RateLimit-Daily-Remaining',
+        Math.max(0, dailyLimit - newDailyCount)
+      );
+    }
 
     // Handle response to decrement on failure if configured
     if (skipFailedRequests) {
@@ -322,10 +379,11 @@ export const authRateLimiter = createRateLimiter({
  * Uses the standard 1-minute window for status reporting
  */
 export function getRateLimitStatus(req: Request, res: Response): void {
-  const key = getClientKey(req);
+  const rawKey = getClientKey(req);
   const tier = normalizeTier(getTierFromRequest(req));
   const limits = getRateLimits(tier);
-  const entry = rateLimitStore.get(key);
+  const limiterId = `tier:${TIME_CONSTANTS.MINUTE_MS}`;
+  const entry = rateLimitStore.get(`${limiterId}:${rawKey}`);
 
   const now = Date.now();
   // Use standard window for status reporting

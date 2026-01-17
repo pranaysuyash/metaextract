@@ -1131,22 +1131,44 @@ export class MemStorage implements IStorage {
 
   async getQuote(id: string): Promise<ImagesMvpQuote | undefined> {
     const quote = this.quotesMap.get(id);
-    
-    // Check if quote exists and is not expired
-    if (quote && quote.status === 'active' && new Date() < quote.expiresAt) {
-      return quote;
+
+    // Only return quotes that have not expired by time.
+    // This allows callers/tests to retrieve quotes even after marking them "used" or "expired",
+    // while still treating time-expired quotes as unavailable.
+    if (!quote) return undefined;
+    if (new Date() >= quote.expiresAt) {
+      // Auto-prune time-expired quotes so they don't leak across tests/runs.
+      this.quotesMap.delete(id);
+      const sessionMapped = this.quotesBySessionId.get(quote.sessionId);
+      if (sessionMapped === id) {
+        this.quotesBySessionId.delete(quote.sessionId);
+      }
+      return undefined;
     }
-    
-    return undefined;
+    return quote;
   }
 
   async getQuoteBySessionId(sessionId: string): Promise<ImagesMvpQuote | undefined> {
-    const quoteId = this.quotesBySessionId.get(sessionId);
-    if (!quoteId) {
-      return undefined;
+    const now = new Date();
+    let best: ImagesMvpQuote | undefined;
+
+    for (const quote of this.quotesMap.values()) {
+      if (quote.sessionId !== sessionId) continue;
+      if (quote.status !== 'active') continue;
+      if (now >= quote.expiresAt) continue;
+
+      if (!best) {
+        best = quote;
+        continue;
+      }
+
+      // Use >= so ties (same ms) prefer the later-inserted quote.
+      if (quote.createdAt.getTime() >= best.createdAt.getTime()) {
+        best = quote;
+      }
     }
 
-    return this.getQuote(quoteId);
+    return best;
   }
 
   async updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void> {
@@ -1154,11 +1176,13 @@ export class MemStorage implements IStorage {
     if (!existingQuote) {
       throw new Error('Quote not found');
     }
-
+    const nextUpdatedAt = new Date(
+      Math.max(Date.now(), existingQuote.updatedAt.getTime() + 1)
+    );
     const updatedQuote: ImagesMvpQuote = {
       ...existingQuote,
       ...updates,
-      updatedAt: new Date(),
+      updatedAt: nextUpdatedAt,
     };
 
     this.quotesMap.set(id, updatedQuote);
@@ -1170,9 +1194,13 @@ export class MemStorage implements IStorage {
       throw new Error('Quote not found');
     }
 
-    quote.status = 'expired';
-    quote.updatedAt = new Date();
-    this.quotesMap.set(id, quote);
+    const updatedAt = new Date(Math.max(Date.now(), quote.updatedAt.getTime() + 1));
+    const updatedQuote: ImagesMvpQuote = {
+      ...quote,
+      status: 'expired',
+      updatedAt,
+    };
+    this.quotesMap.set(id, updatedQuote);
   }
 
   async cleanupExpiredQuotes(): Promise<number> {
@@ -1180,10 +1208,13 @@ export class MemStorage implements IStorage {
     const now = new Date();
 
     for (const [id, quote] of this.quotesMap.entries()) {
-      if (quote.status === 'active' && now >= quote.expiresAt) {
-        quote.status = 'expired';
-        quote.updatedAt = now;
-        cleanedCount++;
+      if (now >= quote.expiresAt) {
+        this.quotesMap.delete(id);
+        const sessionMapped = this.quotesBySessionId.get(quote.sessionId);
+        if (sessionMapped === id) {
+          this.quotesBySessionId.delete(quote.sessionId);
+        }
+        cleanedCount += 1;
       }
     }
 

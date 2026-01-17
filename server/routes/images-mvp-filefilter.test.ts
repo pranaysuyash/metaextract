@@ -20,6 +20,9 @@ describe('Images MVP FileFilter Security', () => {
   const uploadDir = path.join(os.tmpdir(), 'metaextract-uploads');
 
   beforeAll(async () => {
+    // Ensure test environment to skip rate limiters
+    process.env.NODE_ENV = 'test';
+
     app = express();
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));

@@ -2,7 +2,7 @@
  * Interaction Analyzer - Detect patterns from user interactions
  */
 
-import type { UserAction, ActionPattern, UserBehaviorProfile } from './behavior-tracker';
+import type { UserAction } from './types';
 
 export interface InteractionPattern {
   type: string;
@@ -10,6 +10,7 @@ export interface InteractionPattern {
   frequency: number;
   lastDetected: number;
   description: string;
+  averageDurationMs?: number;
 }
 
 export interface ClickStream {
@@ -19,100 +20,110 @@ export interface ClickStream {
   scrollDepth?: number;
 }
 
+export interface ClickPatternAnalysis {
+  isIntentional: boolean;
+  isHesitant: boolean;
+  clickRate: number;
+  averageDepth: number;
+  description?: string;
+}
+
 export class InteractionAnalyzer {
   private patterns: Map<string, InteractionPattern> = new Map();
   private clickStreams: Map<string, ClickStream> = new Map();
   private interactionHistory: UserAction[] = [];
 
   /**
-   * Analyze a user action
+   * Analyze a user action and update in-memory patterns.
    */
-  analyzeAction(action: UserAction): InteractionPattern | null {
-    const actionPattern = this.patterns.get(action.type);
+  analyzeAction(action: UserAction): InteractionPattern {
+    this.interactionHistory.push(action);
 
-    // Record timestamp
-    if (!actionPattern) {
-      const newPattern: InteractionPattern = {
+    const existing = this.patterns.get(action.type);
+    if (!existing) {
+      const created: InteractionPattern = {
         type: action.type,
         confidence: 1,
         frequency: 1,
         lastDetected: action.timestamp,
         description: this.describeActionPattern(action),
+        averageDurationMs: action.durationMs,
       };
-      this.patterns.set(action.type, newPattern);
-      return newPattern;
+      this.patterns.set(action.type, created);
+      return created;
     }
 
-    // Update pattern with new data point
-    const timeSinceLastDetection = action.timestamp - actionPattern.lastDetected;
-    const avgDuration = actionPattern.averageDuration || action.duration || 0;
+    const previousAvg = existing.averageDurationMs ?? action.durationMs ?? 0;
+    const current = action.durationMs ?? previousAvg;
 
-    // Update confidence based on consistency
-    const durationVariance = Math.abs((action.duration || avgDuration) - avgDuration) / avgDuration;
-    const newConfidence = actionPattern.confidence * (1 - durationVariance * 0.5);
+    // Confidence based on timing consistency.
+    const denom = previousAvg === 0 ? 1 : previousAvg;
+    const durationVariance = Math.abs(current - previousAvg) / denom;
+    const newConfidence = existing.confidence * (1 - durationVariance * 0.5);
 
-    const updatedPattern: {
-      ...actionPattern,
-      frequency: actionPattern.frequency + 1,
-      averageDuration: (actionPattern.averageDuration * (actionPattern.frequency - 1) + (action.duration || 0)) / actionPattern.frequency,
-      confidence: Math.max(0.1, newConfidence),
+    const updated: InteractionPattern = {
+      ...existing,
+      frequency: existing.frequency + 1,
+      averageDurationMs:
+        (previousAvg * (existing.frequency - 1) + current) / existing.frequency,
+      confidence: Math.max(0.1, Math.min(1, newConfidence)),
       lastDetected: action.timestamp,
+      description: this.describeActionPattern(action),
     };
 
-    this.patterns.set(action.type, updatedPattern);
-
-    return updatedPattern;
+    this.patterns.set(action.type, updated);
+    return updated;
   }
 
-  /**
-   * Describe an action pattern
-   */
   private describeActionPattern(action: UserAction): string {
     switch (action.type) {
       case 'upload':
-        return `User uploaded files`;
+        return 'User uploaded files';
       case 'click':
         return `User clicked on ${action.target || 'an element'}`;
       case 'navigation':
         return `User navigated to ${action.target || 'a section'}`;
       case 'help_view':
-        return `User viewed help: ${action.metadata?.helpTopicId}`;
+        return `User viewed help: ${String(action.metadata?.helpTopicId ?? 'unknown')}`;
       case 'skip':
-        return `User skipped content (step: ${action.metadata?.stepId})`;
+        return `User skipped content (step: ${String(action.metadata?.stepId ?? 'unknown')})`;
       case 'pause':
-        return 'User paused tutorial`;
+        return 'User paused tutorial';
       case 'export':
-        return `User exported data (${action.metadata?.featureId})`;
+        return `User exported data (${String(action.metadata?.featureId ?? 'unknown')})`;
       default:
         return `User performed ${action.type} action`;
     }
   }
 
   /**
-   * Track clicks on specific elements
+   * Track clicks for a UI element path.
    */
   trackClickStream(
     elementPath: string,
     coordinates: { x: number; y: number }[],
     scrollDepth?: number
   ): void {
-    const existing = this.clickStreams.get(elementPath) || {
+    const existing: ClickStream = this.clickStreams.get(elementPath) || {
       coordinates: [],
       timestamps: [],
+      elementPath,
     };
 
     existing.coordinates.push(...coordinates);
     existing.timestamps.push(Date.now());
-    existing.scrollDepth = scrollDepth || existing.scrollDepth;
+    if (scrollDepth !== undefined) {
+      existing.scrollDepth = scrollDepth;
+    }
 
     this.clickStreams.set(elementPath, existing);
   }
 
   /**
-   * Analyze click patterns
+   * Basic click-pattern analysis.
    */
-  analyzeClickPatterns(elementPath: string): {
-    data: {
+  analyzeClickPatterns(elementPath: string): ClickPatternAnalysis {
+    const result: ClickPatternAnalysis = {
       isIntentional: false,
       isHesitant: false,
       clickRate: 0,
@@ -121,55 +132,50 @@ export class InteractionAnalyzer {
 
     const stream = this.clickStreams.get(elementPath);
     if (!stream || stream.coordinates.length < 3) {
-      return data;
+      return result;
     }
 
-    // Calculate click rate (clicks per session)
-    const timeSpan = stream.timestamps[stream.timestamps.length - 1] - stream.timestamps[0];
-    data.clickRate = stream.coordinates.length / (timeSpan / 60000);
+    const first = stream.timestamps[0];
+    const last = stream.timestamps[stream.timestamps.length - 1];
+    const timeSpanMs = Math.max(1, last - first);
 
-    // Calculate average scroll depth
-    data.averageDepth = stream.scrollDepth || 0;
+    // clicks per minute
+    result.clickRate = stream.coordinates.length / (timeSpanMs / 60000);
+    result.averageDepth = stream.scrollDepth ?? 0;
 
-    // Detect patterns
-    // Check for systematic clicking (grid patterns)
     const xValues = stream.coordinates.map(c => c.x);
     const yValues = stream.coordinates.map(c => c.y);
+    const xAvg = this.average(xValues);
+    const yAvg = this.average(yValues);
 
-    const xVariance = xValues.reduce((sum, val) => sum + Math.pow(val - this.average(xValues), 2), 0) / xValues.length;
-    const yVariance = yValues.reduce((sum, val) => sum + Math.pow(val - this.average(yValues), 2), 0) / yValues.length;
+    const xVariance =
+      xValues.reduce((sum, val) => sum + Math.pow(val - xAvg, 2), 0) /
+      xValues.length;
+    const yVariance =
+      yValues.reduce((sum, val) => sum + Math.pow(val - yAvg, 2), 0) /
+      yValues.length;
 
     if (xVariance < 50 && yVariance < 50 && stream.coordinates.length > 10) {
-      data.isIntentional = true;
-      data.description = 'Systematic clicking pattern detected';
-    } else if (data.clickRate > 10 && stream.coordinates.length < 5) {
-      data.isHesitant = true;
-      data.description = 'User appears to be exploring cautiously (slow, deliberate clicks)';
+      result.isIntentional = true;
+      result.description = 'Systematic clicking pattern detected';
+    } else if (result.clickRate < 2 && stream.coordinates.length < 5) {
+      result.isHesitant = true;
+      result.description = 'User appears to be hesitant (slow, deliberate clicks)';
     }
 
-    return data;
+    return result;
   }
 
-  /**
-   * Get all interaction patterns
-   */
   getAllPatterns(): InteractionPattern[] {
     return Array.from(this.patterns.values());
   }
 
-  /**
-   * Get patterns by type
-   */
   getPatternsByType(type: string): InteractionPattern | null {
     return this.patterns.get(type) || null;
   }
 
-  /**
-   * Clear old click streams (older than 1 hour)
-   */
   clearOldClickStreams(): void {
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
-
     this.clickStreams.forEach((stream, elementPath) => {
       if (stream.timestamps[0] && stream.timestamps[0] < oneHourAgo) {
         this.clickStreams.delete(elementPath);
@@ -177,32 +183,20 @@ export class InteractionAnalyzer {
     });
   }
 
-  /**
-   * Get user intent based on behavior
-   */
-  detectUserIntent(): {
-    exploring: boolean;
-    learning: boolean;
-    expert: boolean;
-
+  detectUserIntent(): { exploring: boolean; learning: boolean; expert: boolean } {
     const uploadActions = this.patterns.get('upload');
     const helpActions = this.patterns.get('help_view');
-    const clickPatterns = Array.from(this.clickStreams.values())
-      .flatMap(stream => stream.coordinates.length > 5 ? [{ type: 'click', elementPath: stream.elementPath }] : []);
 
-    if (uploadActions && uploadActions.frequency >= 5) {
-      expert = true;
-    }
-
-    if (helpActions && helpActions.frequency >= 3) {
-      learning = true;
-    }
-
-    if (clickPatterns.length > 0) {
-      exploring = true;
-    }
+    const expert = Boolean(uploadActions && uploadActions.frequency >= 5);
+    const learning = Boolean(helpActions && helpActions.frequency >= 3);
+    const exploring = this.clickStreams.size > 0 || Boolean(this.patterns.get('navigation'));
 
     return { exploring, learning, expert };
+  }
+
+  private average(values: number[]): number {
+    if (values.length === 0) return 0;
+    return values.reduce((sum, v) => sum + v, 0) / values.length;
   }
 }
 

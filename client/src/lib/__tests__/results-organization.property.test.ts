@@ -242,11 +242,18 @@ describe('Property 9: Results organization', () => {
             // Filtered results should have same or fewer fields
             expect(filtered.visibleFields).toBeLessThanOrEqual(results.visibleFields);
             
-            // All remaining fields should match the query
-            const queryLower = query.toLowerCase();
+            // All remaining fields should match the normalized query.
+            // Whitespace-only queries are treated as empty (no filtering).
+            const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
+            if (!normalizedQuery) {
+              expect(filtered.visibleFields).toBe(results.visibleFields);
+              expect(filtered.sections.length).toBe(results.sections.length);
+              return;
+            }
+
             for (const section of filtered.sections) {
               for (const field of section.fields) {
-                expect(field.searchableText).toContain(queryLower);
+                expect(field.searchableText).toContain(normalizedQuery);
               }
             }
           }
