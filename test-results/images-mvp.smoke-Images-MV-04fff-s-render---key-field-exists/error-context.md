@@ -1,0 +1,53 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - link "Skip to navigation" [ref=e4] [cursor=pointer]:
+    - /url: "#main-navigation"
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e8]:
+        - link "M MetaExtract" [ref=e9] [cursor=pointer]:
+          - /url: /images_mvp
+          - generic [ref=e11]: M
+          - generic [ref=e12]: MetaExtract
+        - generic [ref=e14]:
+          - button "0" [ref=e15]:
+            - img
+            - generic [ref=e16]: "0"
+          - button "T test Professional" [ref=e17]:
+            - generic [ref=e19]: T
+            - generic [ref=e20]:
+              - generic [ref=e21]: test
+              - generic [ref=e22]: Professional
+            - img
+    - main [ref=e23]:
+      - link "Skip to main content" [ref=e24] [cursor=pointer]:
+        - /url: "#main-content"
+      - main [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: BETA ACCESS // IMAGES_ONLY
+            - heading "Extract Metadata" [level=1] [ref=e29]
+            - paragraph [ref=e30]: Welcome back, test. Upload your images to analyze hidden metadata.
+          - generic [ref=e31]:
+            - region "Upload Analysis" [ref=e32]:
+              - heading "Upload Analysis" [level=2] [ref=e33]
+              - button "Upload image drop zone. Drag and drop a file here or click to browse." [ref=e35] [cursor=pointer]:
+                - button "Upload image drop zone. Drag and drop a file here or click to browse." [active] [ref=e36]
+                - img [ref=e39]
+                - heading "Drop your image here" [level=3] [ref=e42]
+                - paragraph [ref=e43]: Supports JPG, PNG, HEIC, WebP
+                - button "Browse Files" [ref=e44]
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - img [ref=e47]
+                - generic [ref=e49]: Instant Check
+              - generic [ref=e50]:
+                - img [ref=e51]
+                - generic [ref=e54]: 100% Private
+```
