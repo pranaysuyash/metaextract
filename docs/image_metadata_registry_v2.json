@@ -1,0 +1,1644 @@
+{
+  "metadata_version": "2.0",
+  "generated_date": "2026-01-17",
+  "scope": "Embedded + Sidecar metadata surfaces for raster image formats",
+  "format_family": "raster_images",
+  "target_mime_types": [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/tiff",
+    "image/heic",
+    "image/avif",
+    "image/vnd.adobe.photoshop",
+    "image/svg+xml",
+    "image/bmp"
+  ],
+  "target_extensions": [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".tiff",
+    ".tif",
+    ".heic",
+    ".heif",
+    ".avif",
+    ".psd",
+    ".svg",
+    ".bmp",
+    ".dib"
+  ],
+
+  "coverage_map": {
+    "image/jpeg": {
+      "extensions": [".jpg", ".jpeg"],
+      "container_family": "JPEG/JFIF",
+      "embedded_surfaces": [
+        "JFIF APP0 marker",
+        "EXIF IFD0 + IFD1 (thumbnail)",
+        "IPTC IIM",
+        "XMP packet",
+        "ICC Profile",
+        "Adobe XMP",
+        "Comment marker"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/png": {
+      "extensions": [".png", ".apng"],
+      "container_family": "PNG",
+      "embedded_surfaces": [
+        "IHDR (image header)",
+        "tEXt (text chunks)",
+        "zTXt (compressed text)",
+        "iTXt (international text)",
+        "iCCP (ICC profile)",
+        "sRGB (color space)",
+        "pHYs (physical dimensions)",
+        "eXIf (EXIF data)",
+        "tRNS (transparency)",
+        "IEND"
+      ],
+      "status": "Complete",
+      "top_missing": ["XMP as iTXt chunk - location dependent"]
+    },
+    "image/gif": {
+      "extensions": [".gif"],
+      "container_family": "GIF",
+      "embedded_surfaces": [
+        "Header + Logical Screen Descriptor",
+        "Global Color Table",
+        "Comment Extension (0x21 0xFE)",
+        "Application Extension (0x21 0xFF)",
+        "Plain Text Extension (0x21 0x01)",
+        "Graphics Control Extension",
+        "Image Descriptor",
+        "Local Color Table",
+        "ICC Profile (via Application Extension)"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/webp": {
+      "extensions": [".webp"],
+      "container_family": "RIFF",
+      "embedded_surfaces": [
+        "RIFF header",
+        "VP8/VP8L/VP9 video data",
+        "EXIF chunk",
+        "XMP chunk",
+        "ICC profile chunk",
+        "ANIM/ANMF (animation)",
+        "ALPH (alpha)"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/tiff": {
+      "extensions": [".tiff", ".tif"],
+      "container_family": "TIFF/IFD",
+      "embedded_surfaces": [
+        "TIFF header (byte order + IFD offset)",
+        "IFD0 (main image)",
+        "EXIF IFD",
+        "GPS IFD",
+        "IPTC IFD",
+        "XMP packet",
+        "ICC Profile",
+        "Thumbnail IFD (IFD1)"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/heic": {
+      "extensions": [".heic", ".heif"],
+      "container_family": "ISOBMFF/HEIF",
+      "embedded_surfaces": [
+        "ftyp box",
+        "moov box (movie header)",
+        "mdat box (media data)",
+        "Exif box (EXIF data)",
+        "XMP box",
+        "iprp box (item properties)",
+        "iloc box (item location)",
+        "iinf box (item info)"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/avif": {
+      "extensions": [".avif"],
+      "container_family": "ISOBMFF/HEIF",
+      "embedded_surfaces": [
+        "ftyp box",
+        "moov box",
+        "mdat box",
+        "Exif box",
+        "XMP box",
+        "av01 item data",
+        "ipco/ipcr boxes (item properties)"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/vnd.adobe.photoshop": {
+      "extensions": [".psd"],
+      "container_family": "Photoshop",
+      "embedded_surfaces": [
+        "File Header",
+        "Color Mode Data",
+        "Image Resources (IDSPARES, 8BIM)",
+        "Layer and Mask Information",
+        "XMP packet",
+        "ICC Profile (via resources)",
+        "EXIF (via resources)",
+        "IPTC (via resources)"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/svg+xml": {
+      "extensions": [".svg"],
+      "container_family": "XML/RDF",
+      "embedded_surfaces": [
+        "svg root element attributes",
+        "metadata element",
+        "RDF/XML content",
+        "Dublin Core elements",
+        "XMP packet",
+        "Custom namespace elements",
+        "title element",
+        "desc element",
+        "defs element"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    },
+    "image/bmp": {
+      "extensions": [".bmp", ".dib"],
+      "container_family": "DIB/BMP",
+      "embedded_surfaces": [
+        "BITMAPFILEHEADER",
+        "BITMAPINFOHEADER / BITMAPCOREHEADER",
+        "BITMAPV4HEADER (ICC profile)",
+        "BITMAPV5HEADER (ICC profile)",
+        "Color Palette",
+        "Pixel Data"
+      ],
+      "status": "Complete",
+      "top_missing": []
+    }
+  },
+
+  "verified_bibliography": [
+    {
+      "title": "Portable Network Graphics (PNG) Specification (Third Edition)",
+      "publisher": "W3C",
+      "version": "3.0",
+      "date": "2025-06-24",
+      "url": "https://www.w3.org/TR/png-3/",
+      "covers": "PNG chunk structure, IHDR, tEXt, zTXt, iTXt, iCCP, pHYs, eXIf"
+    },
+    {
+      "title": "WebP Container Specification",
+      "publisher": "Google",
+      "version": "1.0.3",
+      "date": "2025-08-07",
+      "url": "https://developers.google.com/speed/webp/docs/riff_container",
+      "covers": "RIFF container, EXIF/XMP/ICC chunks, animation"
+    },
+    {
+      "title": "RFC 9649 - WebP Image Format",
+      "publisher": "IETF",
+      "version": "Informational",
+      "date": "2024-11-18",
+      "url": "https://datatracker.ietf.org/doc/rfc9649/",
+      "covers": "WebP format specification"
+    },
+    {
+      "title": "Graphics Interchange Format Version 89a",
+      "publisher": "CompuServe/W3C",
+      "version": "89a",
+      "date": "1990-07-31",
+      "url": "https://www.w3.org/Graphics/GIF/spec-gif89a.txt",
+      "covers": "GIF extensions, comment, application extension"
+    },
+    {
+      "title": "TIFF Revision 6.0",
+      "publisher": "Adobe",
+      "version": "6.0",
+      "date": "1992-06-03",
+      "url": "https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf",
+      "covers": "TIFF IFD structure, EXIF, GPS tags"
+    },
+    {
+      "title": "HEIF Technical Information",
+      "publisher": "Nokia Technologies",
+      "date": "2024",
+      "url": "https://nokiatech.github.io/heif/technical.html",
+      "covers": "ISOBMFF box structure, HEIC/AVIF metadata"
+    },
+    {
+      "title": "Adobe Photoshop File Formats Specification",
+      "publisher": "Adobe Systems",
+      "version": "November 2019",
+      "date": "2019-11",
+      "url": "https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/",
+      "covers": "PSD structure, Image Resource Blocks, 8BIM resources"
+    },
+    {
+      "title": "SVG 1.1 Specification",
+      "publisher": "W3C",
+      "version": "1.1",
+      "date": "2011-08-16",
+      "url": "https://www.w3.org/TR/SVG11/",
+      "covers": "SVG XML structure, metadata element, Dublin Core"
+    },
+    {
+      "title": "ExifTool TagNames Documentation",
+      "publisher": "Phil Harvey",
+      "version": "13.44",
+      "date": "2025-12",
+      "url": "https://exiftool.org/TagNames/",
+      "covers": "Complete tag inventory for all metadata standards (29,026 tags)"
+    },
+    {
+      "title": "XMP Specification",
+      "publisher": "Adobe",
+      "version": "2005",
+      "date": "2005-06",
+      "url": "https://printtechnologies.org/standards/files/xmp-specification-jun05.pdf",
+      "covers": "XMP namespace, Dublin Core schema, RDF/XML"
+    },
+    {
+      "title": "IPTC Photo Metadata Standard",
+      "publisher": "IPTC",
+      "version": "2023.1",
+      "date": "2023-10",
+      "url": "https://www.iptc.org/std/photometadata/documentation/mappingguidelines/",
+      "covers": "IPTC IIM/XMP schema, field mapping"
+    },
+    {
+      "title": "Bitmap Header Types - Win32",
+      "publisher": "Microsoft",
+      "date": "2024-02",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types",
+      "covers": "BMP/DIB header structures (CORE, INFO, V4, V5)"
+    }
+  ],
+
+  "embedded_surfaces": {
+    "surface_jfif_app0": {
+      "surface_id": "surface_jfif_app0",
+      "surface_name": "JFIF APP0 Marker",
+      "formats": ["jpeg"],
+      "location": "After SOI marker, before DQT. Signature: 0xFFE0 + length + 'JFIF' + 0x00",
+      "detection": "Magic bytes: 0xFF 0xE0, check for 'JFIF\\0' identifier",
+      "spec_sources": ["JFIF 1.02 specification"],
+      "fields": [
+        {
+          "key": "jfif_version",
+          "display_name": "JFIF Version",
+          "namespace": "jfif",
+          "native_key": "version",
+          "type": "string",
+          "example_values": ["1.1", "1.2"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -JFIF:Version file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/JFIF.html"]
+            },
+            {
+              "method": "custom_parse",
+              "how": "Parse APP0 marker: 2-byte major, 2-byte minor, units (0=no, 1=dpi, 2=dots/cm), X density, Y density, thumbnail dims",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["JFIF 1.02 spec"]
+            }
+          ]
+        },
+        {
+          "key": "jfif_resolution_unit",
+          "display_name": "Resolution Units",
+          "namespace": "jfif",
+          "native_key": "units",
+          "type": "integer",
+          "example_values": [0, 1, 2],
+          "extraction": [
+            {
+              "method": "custom_parse",
+              "how": "APP0 byte 13: 0=no units, 1=DPI, 2=dots/cm",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["JFIF 1.02 spec"]
+            }
+          ]
+        },
+        {
+          "key": "jfif_x_density",
+          "display_name": "X Density",
+          "namespace": "jfif",
+          "native_key": "Xdensity",
+          "type": "integer",
+          "example_values": [72, 96, 300],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -JFIF:XDensity file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/JFIF.html"]
+            }
+          ]
+        }
+      ]
+    },
+
+    "surface_exif": {
+      "surface_id": "surface_exif",
+      "surface_name": "EXIF Data (TIFF-based)",
+      "formats": ["jpeg", "tiff", "png", "webp", "heic", "avif", "psd"],
+      "location": "TIFF IFD structure. JPEG: APP1 marker (0xFFE1). PNG: eXIf chunk. WebP: EXIF chunk. HEIC: Exif box.",
+      "detection": "JPEG: 0xFFE1 with 'Exif\\0\\0' signature. TIFF byte order mark at start of data.",
+      "spec_sources": ["EXIF 2.32 (CIPA DC-008-2021)", "TIFF 6.0"],
+      "fields": [
+        {
+          "key": "exif_make",
+          "display_name": "Camera Make",
+          "namespace": "exif",
+          "native_key": "Make",
+          "type": "string",
+          "example_values": ["Canon", "Nikon", "Apple", "Samsung"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Make file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "exif_model",
+          "display_name": "Camera Model",
+          "namespace": "exif",
+          "native_key": "Model",
+          "type": "string",
+          "example_values": ["iPhone 15 Pro", "EOS R5", "D850"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Model file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "exif_datetime_original",
+          "display_name": "Date/Time Original",
+          "namespace": "exif",
+          "native_key": "DateTimeOriginal",
+          "type": "string",
+          "example_values": ["2024:03:15 14:30:25"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -DateTimeOriginal file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "exif_gps_latitude",
+          "display_name": "GPS Latitude",
+          "namespace": "exif",
+          "native_key": "GPSLatitude",
+          "type": "rational_array",
+          "example_values": ["37.7749, 0, 0"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -GPSLatitude file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "high",
+          "redactable": true,
+          "privacy_notes": "Exact location of capture - significant privacy risk"
+        },
+        {
+          "key": "exif_exposure_time",
+          "display_name": "Exposure Time",
+          "namespace": "exif",
+          "native_key": "ExposureTime",
+          "type": "rational",
+          "example_values": ["1/250", "0.004"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ExposureTime file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "exif_fnumber",
+          "display_name": "F-Number",
+          "namespace": "exif",
+          "native_key": "FNumber",
+          "type": "rational",
+          "example_values": ["1.8", "2.8", "5.6"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -FNumber file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "exif_iso",
+          "display_name": "ISO Speed Ratings",
+          "namespace": "exif",
+          "native_key": "ISOSpeedRatings",
+          "type": "integer",
+          "example_values": [100, 400, 1600],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ISOSpeedRatings file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/EXIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ],
+      "note": "ExifTool recognizes 29,026 tags across 290+ camera vendor namespaces. This registry lists key public tags only."
+    },
+
+    "surface_iptc": {
+      "surface_id": "surface_iptc",
+      "surface_name": "IPTC IIM (IIM Version 4)",
+      "formats": ["jpeg", "tiff", "psd"],
+      "location": "JPEG: APP13 marker (0xFFED). TIFF: IFD. PSD: Image Resources.",
+      "detection": "JPEG: 0xFFE0 + 'Photoshop 3.0\\0' + 8BIM records",
+      "spec_sources": ["IPTC Photo Metadata Standard 2023.1"],
+      "fields": [
+        {
+          "key": "iptc_caption",
+          "display_name": "Caption",
+          "namespace": "iptc",
+          "native_key": "Caption",
+          "type": "string",
+          "example_values": ["Description of the image content"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Caption file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/IPTC.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "iptc_byline",
+          "display_name": "By-line",
+          "namespace": "iptc",
+          "native_key": "Byline",
+          "type": "string",
+          "example_values": ["John Doe", "Photo Department"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Byline file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/IPTC.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "iptc_copyright",
+          "display_name": "Copyright Notice",
+          "namespace": "iptc",
+          "native_key": "CopyrightNotice",
+          "type": "string",
+          "example_values": ["© 2024 John Doe. All rights reserved."],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -CopyrightNotice file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/IPTC.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "iptc_keywords",
+          "display_name": "Keywords",
+          "namespace": "iptc",
+          "native_key": "Keywords",
+          "type": "string_array",
+          "example_values": ["nature", "landscape", "sunset"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Keywords file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/IPTC.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        }
+      ]
+    },
+
+    "surface_xmp": {
+      "surface_id": "surface_xmp",
+      "surface_name": "XMP Packet",
+      "formats": [
+        "jpeg",
+        "png",
+        "gif",
+        "webp",
+        "tiff",
+        "heic",
+        "avif",
+        "psd",
+        "svg"
+      ],
+      "location": "XML packet embedded in format-specific location. JPEG: APP1. PNG: tEXt/iTXt. WebP: XMP chunk. TIFF: IFD.",
+      "detection": "XML namespace: <x:xmpmeta xmlns:x='adobe:ns:meta/'>",
+      "spec_sources": ["XMP Specification 2005", "XMP Namespaces (Adobe)"],
+      "fields": [
+        {
+          "key": "xmp_dc_title",
+          "display_name": "Title (Dublin Core)",
+          "namespace": "xmp",
+          "native_key": "dc:title",
+          "type": "text",
+          "example_values": ["Sunset over mountains"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Title file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/XMP.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "xmp_dc_creator",
+          "display_name": "Creator (Dublin Core)",
+          "namespace": "xmp",
+          "native_key": "dc:creator",
+          "type": "string",
+          "example_values": ["John Doe"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Creator file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/XMP.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "xmp_dc_rights",
+          "display_name": "Rights (Dublin Core)",
+          "namespace": "xmp",
+          "native_key": "dc:rights",
+          "type": "text",
+          "example_values": ["All rights reserved"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Rights file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/XMP.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "xmp_photoshop_headline",
+          "display_name": "Photoshop Headline",
+          "namespace": "xmp",
+          "native_key": "photoshop:Headline",
+          "type": "string",
+          "example_values": ["Breaking news headline"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Headline file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/XMP.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        }
+      ]
+    },
+
+    "surface_icc_profile": {
+      "surface_id": "surface_icc_profile",
+      "surface_name": "ICC Color Profile",
+      "formats": ["jpeg", "png", "tiff", "webp", "heic", "avif", "psd", "bmp"],
+      "location": "Format-specific embedding. JPEG: APP2 marker. PNG: iCCP chunk. TIFF: IFD tag 34675. WebP: ICCP chunk. HEIC: iprp box.",
+      "detection": "Magic: 'ICC_PROFILE' tag, starts with 0x00 0x00 0x02 0x00 (profile version info)",
+      "spec_sources": ["ICC Specification (ISO 15076-1:2010)", "ICC.1:2010"],
+      "fields": [
+        {
+          "key": "icc_profile_version",
+          "display_name": "Profile Version",
+          "namespace": "icc",
+          "native_key": "Version",
+          "type": "string",
+          "example_values": ["2.4.0", "4.3.0.0"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ICC_Profile:Version file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/ICC_Profile.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "icc_profile_cmm_type",
+          "display_name": "CMM Type",
+          "namespace": "icc",
+          "native_key": "CMMType",
+          "type": "string",
+          "example_values": ["Adobe", "Apple", "Microsoft", "Heidelberg"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ICC_Profile:CMMType file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/ICC_Profile.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "icc_profile_device_class",
+          "display_name": "Device Class",
+          "namespace": "icc",
+          "native_key": "DeviceClass",
+          "type": "string",
+          "example_values": [
+            "Monitor",
+            "Printer",
+            "Scanner",
+            "Link",
+            "Abstract"
+          ],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ICC_Profile:DeviceClass file.jpg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/ICC_Profile.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ],
+      "note": "ExifTool recognizes 100+ ICC Profile tags. Profile data itself is extractable as binary blob."
+    },
+
+    "surface_png_chunks": {
+      "surface_id": "surface_png_chunks",
+      "surface_name": "PNG Chunks",
+      "formats": ["png"],
+      "location": "Sequential chunks after signature: IHDR, optional chunks, IDAT (multiple), IEND.",
+      "detection": "PNG signature: 137 80 78 71 13 10 26 10. Chunk type at offset 8.",
+      "spec_sources": ["PNG Specification 3.0 (W3C 2025)"],
+      "fields": [
+        {
+          "key": "png_width",
+          "display_name": "Image Width",
+          "namespace": "png",
+          "native_key": "IHDR:Width",
+          "type": "integer",
+          "example_values": [1920, 3840, 800],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageWidth file.png",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/PNG.html"]
+            },
+            {
+              "method": "custom_parse",
+              "how": "Parse IHDR chunk bytes 8-11 (big-endian 32-bit)",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://www.w3.org/TR/png-3/"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "png_height",
+          "display_name": "Image Height",
+          "namespace": "png",
+          "native_key": "IHDR:Height",
+          "type": "integer",
+          "example_values": [1080, 2160, 600],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageHeight file.png",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/PNG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "png_bit_depth",
+          "display_name": "Bit Depth",
+          "namespace": "png",
+          "native_key": "IHDR:BitDepth",
+          "type": "integer",
+          "example_values": [1, 2, 4, 8, 16],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -BitDepth file.png",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/PNG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "png_color_type",
+          "display_name": "Color Type",
+          "namespace": "png",
+          "native_key": "IHDR:ColorType",
+          "type": "integer",
+          "example_values": [0, 2, 3, 4, 6],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ColorType file.png",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/PNG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "png_pHYs_pixels_per_unit",
+          "display_name": "Pixels Per Unit",
+          "namespace": "png",
+          "native_key": "pHYs:PixelsPerUnitX",
+          "type": "integer",
+          "example_values": [2835, 3780],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -PixelsPerUnitX file.png",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/PNG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ]
+    },
+
+    "surface_gif_extensions": {
+      "surface_id": "surface_gif_extensions",
+      "surface_name": "GIF Extensions",
+      "formats": ["gif"],
+      "location": "After Logical Screen Descriptor. Application Extension: 0x21 0xFF. Comment Extension: 0x21 0xFE.",
+      "detection": "Extension introducer: 0x21. Check extension type byte.",
+      "spec_sources": ["GIF89a Specification (W3C)"],
+      "fields": [
+        {
+          "key": "gif_comment",
+          "display_name": "Comment Text",
+          "namespace": "gif",
+          "native_key": "Comment",
+          "type": "string",
+          "example_values": ["Created with GIF animator"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Comment file.gif",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/GIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": true
+        },
+        {
+          "key": "gif_application",
+          "display_name": "Application Identifier",
+          "namespace": "gif",
+          "native_key": "Application",
+          "type": "string",
+          "example_values": ["NETSCAPE2.0", "PHOTOSHOP3.0"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Application file.gif",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/GIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "gif_duration",
+          "display_name": "Frame Duration",
+          "namespace": "gif",
+          "native_key": "Duration",
+          "type": "integer",
+          "example_values": [100, 500, 50],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Duration file.gif",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/GIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "gif_frame_count",
+          "display_name": "Frame Count",
+          "namespace": "gif",
+          "native_key": "FrameCount",
+          "type": "integer",
+          "example_values": [10, 50, 5],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -FrameCount file.gif",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/GIF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ]
+    },
+
+    "surface_riff_chunks": {
+      "surface_id": "surface_riff_chunks",
+      "surface_name": "RIFF Chunks (WebP)",
+      "formats": ["webp"],
+      "location": "RIFF container after header. FourCC chunk types.",
+      "detection": "RIFF signature: 'RIFF' + 4-byte size + 'WEBP'. Chunks aligned to 2-byte boundaries.",
+      "spec_sources": [
+        "WebP Container Specification (Google 2025)",
+        "RFC 9649"
+      ],
+      "fields": [
+        {
+          "key": "webp_width",
+          "display_name": "Image Width",
+          "namespace": "webp",
+          "native_key": "ImageWidth",
+          "type": "integer",
+          "example_values": [1920, 800],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageWidth file.webp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/RIFF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "webp_height",
+          "display_name": "Image Height",
+          "namespace": "webp",
+          "native_key": "ImageHeight",
+          "type": "integer",
+          "example_values": [1080, 600],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageHeight file.webp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/RIFF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "webp_has_alpha",
+          "display_name": "Has Alpha Channel",
+          "namespace": "webp",
+          "native_key": "HasAlpha",
+          "type": "boolean",
+          "example_values": [true, false],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -HasAlpha file.webp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/RIFF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "webp_animated",
+          "display_name": "Animated",
+          "namespace": "webp",
+          "native_key": "Animated",
+          "type": "boolean",
+          "example_values": [true, false],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Animated file.webp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/RIFF.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ]
+    },
+
+    "surface_isobmff_boxes": {
+      "surface_id": "surface_isobmff_boxes",
+      "surface_name": "ISOBMFF Boxes (HEIC/AVIF)",
+      "formats": ["heic", "avif"],
+      "location": "Hierarchical box structure. ftyp at start, moov for metadata, mdat for data, items scattered.",
+      "detection": "Box header: 4-byte size (big-endian) + 4-byte type (FourCC). Extended size: size=1 + 8-byte size.",
+      "spec_sources": [
+        "ISO/IEC 14496-12 (ISO Base Media File Format)",
+        "HEIF Technical Information (Nokia)"
+      ],
+      "fields": [
+        {
+          "key": "heif_brand",
+          "display_name": "File Brand",
+          "namespace": "heif",
+          "native_key": "MajorBrand",
+          "type": "string",
+          "example_values": ["heic", "mif1", "avif"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -MajorBrand file.heic",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/QuickTime.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "heif_width",
+          "display_name": "Image Width",
+          "namespace": "heif",
+          "native_key": "ImageWidth",
+          "type": "integer",
+          "example_values": [4032, 1920],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageWidth file.heic",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/QuickTime.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "heif_height",
+          "display_name": "Image Height",
+          "namespace": "heif",
+          "native_key": "ImageHeight",
+          "type": "integer",
+          "example_values": [3024, 1080],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageHeight file.heic",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/QuickTime.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "heif_codec",
+          "display_name": "Codec ID",
+          "namespace": "heif",
+          "native_key": "CodecID",
+          "type": "string",
+          "example_values": ["hev1", "av01", "hvc1"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -CodecID file.heic",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/QuickTime.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ]
+    },
+
+    "surface_psd_resources": {
+      "surface_id": "surface_psd_resources",
+      "surface_name": "Photoshop Image Resources (8BIM)",
+      "formats": ["psd"],
+      "location": "After Color Mode Data. Section signature '8BIM' + resource ID + name + data.",
+      "detection": "Section header: 0x3842494D ('8BIM') + 2-byte resource ID",
+      "spec_sources": ["Adobe Photoshop File Formats Specification (2019)"],
+      "fields": [
+        {
+          "key": "psd_resolution",
+          "display_name": "Resolution Info",
+          "namespace": "photoshop",
+          "native_key": "Resource 1005 (ResolutionInfo)",
+          "type": "binary_structure",
+          "example_values": [{ "h_res": 300, "v_res": 300, "unit": 2 }],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Resolution file.psd",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/Photoshop.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "psd_caption",
+          "display_name": "Caption String",
+          "namespace": "photoshop",
+          "native_key": "Resource 1022 (Caption)",
+          "type": "string",
+          "example_values": ["Layer caption text"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Caption file.psd",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/Photoshop.html"]
+            }
+          ],
+          "sensitivity": "medium",
+          "redactable": true
+        },
+        {
+          "key": "psd_url_list",
+          "display_name": "URL List",
+          "namespace": "photoshop",
+          "native_key": "Resource 2074 (URL List)",
+          "type": "string_array",
+          "example_values": ["http://example.com"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -URLList file.psd",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/Photoshop.html"]
+            }
+          ],
+          "sensitivity": "high",
+          "redactable": true,
+          "privacy_notes": "External URL references embedded in file"
+        },
+        {
+          "key": "psd_version_info",
+          "display_name": "Version Info",
+          "namespace": "photoshop",
+          "native_key": "Resource 2000-2003 (Version Info)",
+          "type": "binary_structure",
+          "example_values": [{ "version": 1, "has_real_merge_data": true }],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -VersionInfo file.psd",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/Photoshop.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ]
+    },
+
+    "surface_svg_elements": {
+      "surface_id": "surface_svg_elements",
+      "surface_name": "SVG Elements and Attributes",
+      "formats": ["svg"],
+      "location": "XML document structure. Root <svg> element and children.",
+      "detection": "XML declaration + svg namespace: 'http://www.w3.org/2000/svg'",
+      "spec_sources": [
+        "SVG 1.1 Specification (W3C 2011)",
+        "SVG 2.0 (W3C 2023)"
+      ],
+      "fields": [
+        {
+          "key": "svg_width",
+          "display_name": "Width Attribute",
+          "namespace": "svg",
+          "native_key": "svg/@width",
+          "type": "string",
+          "example_values": ["100px", "100", "100%"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageWidth file.svg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/SVG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "svg_height",
+          "display_name": "Height Attribute",
+          "namespace": "svg",
+          "native_key": "svg/@height",
+          "type": "string",
+          "example_values": ["200px", "200", "50%"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageHeight file.svg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/SVG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "svg_title",
+          "display_name": "Title Element",
+          "namespace": "svg",
+          "native_key": "svg/title/text()",
+          "type": "string",
+          "example_values": ["Diagram of system architecture"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Title file.svg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/SVG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": true
+        },
+        {
+          "key": "svg_desc",
+          "display_name": "Description Element",
+          "namespace": "svg",
+          "native_key": "svg/desc/text()",
+          "type": "string",
+          "example_values": ["Detailed description of the graphic"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Description file.svg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/SVG.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": true
+        },
+        {
+          "key": "svg_metadata",
+          "display_name": "Metadata Element",
+          "namespace": "svg",
+          "native_key": "svg/metadata/*",
+          "type": "xml",
+          "example_values": ["<rdf:RDF>...</rdf:RDF>"],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Metadata file.svg",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/SVG.html"]
+            }
+          ],
+          "sensitivity": "variable",
+          "redactable": true
+        }
+      ]
+    },
+
+    "surface_bmp_headers": {
+      "surface_id": "surface_bmp_headers",
+      "surface_name": "BMP/DIB Headers",
+      "formats": ["bmp"],
+      "location": "Start of file. File header + info header + color palette (optional).",
+      "detection": "File signature: 'BM' (0x42 0x4D) or 'BA', 'CI', 'IC', 'PT' for OS/2 variants",
+      "spec_sources": [
+        "Microsoft BMP/DIB Specification",
+        "Bitmap Header Types (Microsoft Learn)"
+      ],
+      "fields": [
+        {
+          "key": "bmp_file_size",
+          "display_name": "File Size",
+          "namespace": "bmp",
+          "native_key": "FileSize",
+          "type": "integer",
+          "example_values": [123456, 1024],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -FileSize file.bmp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/BMP.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "bmp_width",
+          "display_name": "Image Width",
+          "namespace": "bmp",
+          "native_key": "ImageWidth",
+          "type": "integer",
+          "example_values": [1920, 800],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageWidth file.bmp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/BMP.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "bmp_height",
+          "display_name": "Image Height",
+          "namespace": "bmp",
+          "native_key": "ImageHeight",
+          "type": "integer",
+          "example_values": [1080, 600],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -ImageHeight file.bmp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/BMP.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "bmp_bit_count",
+          "display_name": "Bits Per Pixel",
+          "namespace": "bmp",
+          "native_key": "BitCount",
+          "type": "integer",
+          "example_values": [1, 4, 8, 16, 24, 32],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -BitCount file.bmp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/BMP.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        },
+        {
+          "key": "bmp_compression",
+          "display_name": "Compression Type",
+          "namespace": "bmp",
+          "native_key": "Compression",
+          "type": "integer",
+          "example_values": [0, 1, 2, 3, 4],
+          "extraction": [
+            {
+              "method": "exiftool",
+              "how": "exiftool -Compression file.bmp",
+              "confidence": "high",
+              "evidence": "Observed",
+              "citations": ["https://exiftool.org/TagNames/BMP.html"]
+            }
+          ],
+          "sensitivity": "low",
+          "redactable": false
+        }
+      ]
+    }
+  },
+
+  "extraction_pipeline": {
+    "stage_1_detect": {
+      "description": "Format detection using magic bytes and file extension",
+      "methods": [
+        {
+          "tool": "libmagic",
+          "method": "file",
+          "confidence": "high",
+          "evidence": "Observed",
+          "command": "file --mime-type image.jpg"
+        },
+        {
+          "tool": "ExifTool",
+          "method": "FileType",
+          "confidence": "high",
+          "evidence": "Observed",
+          "command": "exiftool -FileType image.jpg"
+        }
+      ],
+      "constraints": {
+        "timeout_seconds": 5,
+        "max_file_size_mb": 100,
+        "sandboxing": "recommended"
+      }
+    },
+    "stage_2_extract_primary": {
+      "description": "Extract metadata using highest-coverage tool",
+      "primary_tool": "ExifTool",
+      "command": "exiftool -j -a -G1 -api MissingTagValue=''",
+      "coverage_notes": "ExifTool provides coverage for all 10 formats and 29,026 tags. Primary source for all metadata surfaces.",
+      "constraints": {
+        "timeout_seconds": 60,
+        "max_file_size_mb": 500,
+        "sandboxing": "recommended"
+      }
+    },
+    "stage_3_extract_fallback": {
+      "description": "Fallback extraction for formats not fully supported by primary",
+      "fallbacks": [
+        {
+          "format": "heic",
+          "tool": "pyheif + pillow_heif",
+          "method": "Python library",
+          "confidence": "medium",
+          "evidence": "Inferred"
+        },
+        {
+          "format": "avif",
+          "tool": "pillow-avif",
+          "method": "Python library",
+          "confidence": "medium",
+          "evidence": "Inferred"
+        },
+        {
+          "format": "svg",
+          "tool": "lxml.ElementTree",
+          "method": "XML parsing",
+          "confidence": "high",
+          "evidence": "Observed"
+        }
+      ]
+    },
+    "stage_4_normalize": {
+      "description": "Normalize extracted data to canonical format",
+      "actions": [
+        "Convert rational numbers to floats",
+        "Parse GPS coordinates to decimal degrees",
+        "Normalize date strings to ISO 8601",
+        "Deduplicate tags across namespaces",
+        "Validate against schema where applicable"
+      ]
+    },
+    "stage_5_policy": {
+      "description": "Apply redaction policy based on sensitivity",
+      "actions": [
+        "Flag high-sensitivity fields (GPS, unique identifiers)",
+        "Apply user-configurable redaction rules",
+        "Generate sanitized output versions",
+        "Audit log for redacted fields"
+      ]
+    }
+  },
+
+  "test_matrix": {
+    "jpeg": {
+      "full_metadata": {
+        "file": "sample_with_meta.jpg",
+        "required_fields": [
+          "Make",
+          "Model",
+          "DateTimeOriginal",
+          "GPSLatitude",
+          "ImageWidth",
+          "ColorSpace"
+        ],
+        "negative_assertions": ["No synthetic fields like 'drone_telemetry'"]
+      },
+      "minimal": {
+        "file": "test_quota_0.jpg",
+        "required_fields": ["ImageWidth", "ImageHeight"],
+        "expected_fields_count": "> 0"
+      },
+      "corrupt_metadata": {
+        "file": "test_corrupt.jpg",
+        "behavior": "Graceful degradation, return available fields"
+      }
+    },
+    "png": {
+      "full_metadata": {
+        "file": "test_with_chunks.png",
+        "required_fields": [
+          "ImageWidth",
+          "ImageHeight",
+          "BitDepth",
+          "ColorType",
+          "Text",
+          "ICCProfile"
+        ],
+        "negative_assertions": []
+      },
+      "minimal": {
+        "file": "test_minimal.png",
+        "required_fields": [
+          "ImageWidth",
+          "ImageHeight",
+          "BitDepth",
+          "ColorType"
+        ]
+      }
+    },
+    "heic": {
+      "full_metadata": {
+        "file": "photo_with_exif.heic",
+        "required_fields": [
+          "Make",
+          "Model",
+          "DateTimeOriginal",
+          "ImageWidth",
+          "ImageHeight"
+        ],
+        "note": "Requires HEIC-capable ExifTool build"
+      },
+      "minimal": {
+        "file": "test_minimal.heic",
+        "required_fields": ["MajorBrand", "ImageWidth", "ImageHeight"]
+      }
+    },
+    "svg": {
+      "full_metadata": {
+        "file": "vector_diagram.svg",
+        "required_fields": [
+          "Title",
+          "Description",
+          "Creator",
+          "ImageWidth",
+          "ImageHeight"
+        ],
+        "note": "Extract from XML elements and Dublin Core namespace"
+      }
+    }
+  },
+
+  "known_gaps": [
+    {
+      "gap": "RAW formats (CR2, NEF, ARW, DNG)",
+      "reason": "Complex proprietary formats requiring specialized libraries",
+      "impact": "Missing high-end camera metadata",
+      "closure_plan": "Implement libraw/dcraw integration for camera RAW support"
+    },
+    {
+      "gap": "DICOM medical imaging",
+      "reason": "Specialized healthcare format with patient/PHI metadata",
+      "impact": "Cannot process medical images",
+      "closure_plan": "Implement pydicom library for DICOM support"
+    },
+    {
+      "gap": "FITS astronomy format",
+      "reason": "Scientific format with header keywords",
+      "impact": "Cannot process telescope/observatory images",
+      "closure_plan": "Implement cfitsio library for FITS support"
+    },
+    {
+      "gap": "AVIF native parsing without ExifTool",
+      "reason": "Requires pyavif or libavif",
+      "impact": "Fallback parsing incomplete",
+      "closure_plan": "Integrate libavif for native AVIF extraction"
+    }
+  ]
+}

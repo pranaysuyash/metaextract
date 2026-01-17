@@ -1,6 +1,6 @@
 """
 Image Format Parsers - Unified Architecture
-============================================
+===========================================
 
 Format-specific parsers for all major image types:
 - JPEG: ExifTool + native IFD parsing
@@ -8,10 +8,11 @@ Format-specific parsers for all major image types:
 - GIF: Application extensions, comment extensions
 - WebP: RIFF container, EXIF/XMP chunks
 - TIFF: IFD-based tag parsing
-- HEIC/AVIF: MP4 box structure parsing
+- HEIC: MP4 box structure parsing
+- AVIF: ISOBMFF/HEIF container, av01 codec
 - PSD: Resource fork parsing
 - SVG: XML metadata extraction
-- RAW: Camera-specific metadata (CR2, NEF, ARW, etc.)
+- BMP: DIB header parsing
 
 Key Principles:
 1. Each parser extracts ONLY what the format supports
@@ -29,6 +30,15 @@ import struct
 import json
 
 logger = logging.getLogger(__name__)
+
+try:
+    from ...utils.field_counting import (
+        count_meaningful_fields,
+        DEFAULT_FIELD_COUNT_IGNORED_KEYS,
+    )
+except Exception:  # pragma: no cover
+    count_meaningful_fields = None  # type: ignore[assignment]
+    DEFAULT_FIELD_COUNT_IGNORED_KEYS = set()  # type: ignore[assignment]
 
 
 class FormatParser(ABC):
@@ -77,62 +87,24 @@ class FormatParser(ABC):
         return None
     
     def _count_real_fields(self, data: Any, depth: int = 0, max_depth: int = 10) -> int:
-        """
-        Count only non-null leaf values.
-        
-        Ignores:
-        - Bookkeeping keys: source, errors, warnings, performance, extraction_info
-        - Null/empty values
-        - Placeholder values: 'unknown', 'N/A', None, {}, [], ""
-        
-        Counts:
-        - Non-empty strings, numbers, booleans
-        - Non-empty dicts with real data
-        """
-        if depth > max_depth:
+        if count_meaningful_fields is None:
             return 0
-            
-        # Bookkeeping keys to ignore
-        bookkeeping_keys = {
-            'source', 'errors', 'warnings', 'performance', 'extraction_info',
-            'fields_extracted', 'available', 'analysis_type', 'optimized_mode',
-            'fallback_mode', 'status', 'duration_seconds', 'cache_hits',
-            'cache_misses', 'cache_hit_rate', 'performance_score'
+
+        ignored = set(DEFAULT_FIELD_COUNT_IGNORED_KEYS)
+        # In format parsers, `version` is often meaningful (e.g., SVG version); do not ignore it.
+        ignored.discard("version")
+        # Parser-local bookkeeping keys
+        ignored |= {
+            "analysis_type",
+            "optimized_mode",
+            "fallback_mode",
+            "status",
+            "cache_hits",
+            "cache_misses",
+            "cache_hit_rate",
+            "performance_score",
         }
-        
-        if isinstance(data, dict):
-            count = 0
-            for key, value in data.items():
-                # Skip bookkeeping keys
-                if key in bookkeeping_keys:
-                    continue
-                # Skip keys that are just indicators
-                if key.startswith('_'):
-                    continue
-                count += self._count_real_fields(value, depth + 1, max_depth)
-            return count
-            
-        elif isinstance(data, list):
-            count = 0
-            for item in data:
-                count += self._count_real_fields(item, depth + 1, max_depth)
-            return count
-            
-        else:
-            # It's a leaf value
-            if data is None:
-                return 0
-            if isinstance(data, (str, bytes)):
-                if not data or data in ['', b'', 'unknown', 'N/A', 'none', 'null']:
-                    return 0
-                return 1
-            if isinstance(data, (int, float)):
-                if data == 0:
-                    return 0
-                return 1
-            if isinstance(data, bool):
-                return 1 if data else 0
-            return 0
+        return count_meaningful_fields(data, ignored_keys=ignored, max_depth=max_depth)
     
     def _has_real_data(self, data: Any) -> bool:
         """Check if data contains any real/meaningful content."""
@@ -155,6 +127,7 @@ class ImageParserRegistry:
         from .webp_parser import WebpParser
         from .tiff_parser import TiffParser
         from .heic_parser import HeicParser
+        from .avif_parser import AvifParser
         from .psd_parser import PsdParser
         from .svg_parser import SvgParser
         
@@ -165,6 +138,7 @@ class ImageParserRegistry:
         self.register(WebpParser())
         self.register(TiffParser())
         self.register(HeicParser())
+        self.register(AvifParser())
         self.register(PsdParser())
         self.register(SvgParser())
         

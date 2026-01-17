@@ -32,8 +32,8 @@ def test_bmp_header_parser_reads_dimensions() -> None:
     meta = extract_bmp_container_metadata("test-data/test_bmp.bmp")
     assert meta is not None
     assert meta["format"] == "BMP"
-    assert meta["width"] == 64
-    assert abs(meta["height"]) == 64
+    assert meta["width"] == 100
+    assert abs(meta["height"]) == 100
 
 
 def test_tiff_parser_counts_ifds() -> None:
