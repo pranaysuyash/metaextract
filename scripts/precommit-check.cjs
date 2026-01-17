@@ -1,6 +1,64 @@
 #!/usr/bin/env node
 const { execSync } = require('child_process');
 
+function stagedNameStatus() {
+  try {
+    const out = execSync('git diff --staged --name-status', {
+      encoding: 'utf8',
+    });
+    return (out || '')
+      .trim()
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
+function enforceNoDeletions() {
+  const allowDeletions = String(process.env.ALLOW_DELETIONS || '') === '1';
+  const statuses = stagedNameStatus();
+  if (!statuses.length) return;
+
+  const added = [];
+  const modified = [];
+  const deleted = [];
+  const renamed = [];
+
+  for (const line of statuses) {
+    const [status, ...rest] = line.split(/\s+/);
+    if (!status) continue;
+    if (status === 'A') added.push(rest.join(' '));
+    else if (status === 'M') modified.push(rest.join(' '));
+    else if (status === 'D') deleted.push(rest.join(' '));
+    else if (status.startsWith('R')) renamed.push(rest.join(' '));
+  }
+
+  console.log(
+    `Staged files: +${added.length} ~${modified.length} -${deleted.length} R${renamed.length}`
+  );
+  if (deleted.length || renamed.length) {
+    const message =
+      [
+        'Pre-commit guard: file removals/renames detected.',
+        'Multi-agent safety rule: do not delete or remove other agents’ work unless explicitly instructed.',
+        '',
+        ...(deleted.length ? ['Deleted:', ...deleted.map(p => `  - ${p}`)] : []),
+        ...(renamed.length ? ['Renamed:', ...renamed.map(p => `  - ${p}`)] : []),
+        '',
+        'To override intentionally, rerun with ALLOW_DELETIONS=1 (one-off).',
+      ].join('\n') + '\n';
+
+    if (!allowDeletions) {
+      console.error(message);
+      process.exit(1);
+    } else {
+      console.warn(message);
+    }
+  }
+}
+
 function stagedDiffLines() {
   try {
     const out = execSync('git diff --staged --numstat', { encoding: 'utf8' });
@@ -24,6 +82,7 @@ function stagedDiffLines() {
 }
 
 (function main() {
+  enforceNoDeletions();
   const lines = stagedDiffLines();
   console.log(`Staged change size: ${lines} lines`);
 

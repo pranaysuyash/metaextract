@@ -64,6 +64,17 @@ class TestImageParserRegistry(unittest.TestCase):
         unknown_parser = registry.get_parser('test.xyz')
         self.assertIsNone(unknown_parser)
 
+    def test_registry_resolves_heic_and_avif_separately(self):
+        """Regression: HEIC and AVIF must map to their dedicated parsers."""
+        registry = get_parser_registry()
+        heic = registry.get_parser('x.heic')
+        avif = registry.get_parser('x.avif')
+
+        self.assertIsNotNone(heic)
+        self.assertIsNotNone(avif)
+        self.assertEqual(heic.__class__.__name__, 'HeicParser')
+        self.assertEqual(avif.__class__.__name__, 'AvifParser')
+
 
 class TestFieldCounting(unittest.TestCase):
     """Test accurate field counting (not synthetic)."""
