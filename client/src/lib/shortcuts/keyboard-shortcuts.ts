@@ -2,7 +2,7 @@
  * Keyboard Shortcuts System - Global and context-aware keyboard shortcuts
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 
 export interface Shortcut {
   id: string;
@@ -34,6 +34,7 @@ class KeyboardShortcutManager {
   private activeContext: string | null = null;
   private enabled: boolean = true;
   private listeners: Array<() => void> = [];
+  private showHelp: boolean = false;
 
   constructor() {
     this.init();
@@ -191,7 +192,7 @@ class KeyboardShortcutManager {
     const group = this.groups.find(g => g.id === groupId);
     if (!group) return [];
 
-    return group.shortcuts.map(id => this.shortcuts.get(id)).filter(Boolean) as Shortcut[];
+    return group.shortcuts;
   }
 
   /**
@@ -381,9 +382,6 @@ class KeyboardShortcutManager {
       ]
     }
   ];
-
-  // State for help modal
-  private showHelp: boolean = false;
 }
 
 // Create singleton instance
@@ -392,7 +390,7 @@ export const shortcutManager = new KeyboardShortcutManager();
 // React hook for using shortcuts in components
 export function useKeyboardShortcuts(
   shortcuts: Omit<Shortcut, 'id' | 'combo'>[],
-  deps: any[] = []
+  deps: unknown[] = []
 ) {
   useEffect(() => {
     const unregisterFunctions = shortcuts.map(shortcut => {
@@ -426,61 +424,7 @@ export function useKeyboardContext(context: string) {
   }, [context]);
 }
 
-// React component for shortcut help modal
-export const ShortcutHelpModal: React.FC<{ 
-  isOpen: boolean; 
-  onClose: () => void 
-}> = ({ isOpen, onClose }) => {
-  const [groups, setGroups] = useState<ShortcutGroup[]>([]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setGroups(shortcutManager.getGroups());
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-xl border border-white/10 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Keyboard Shortcuts</h2>
-            <button 
-              onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {groups.map(group => (
-              <div key={group.id} className="border-b border-white/10 pb-6 last:border-0 last:pb-0">
-                <h3 className="text-lg font-semibold text-white mb-4">{group.name}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {group.shortcuts.map(shortcut => (
-                    <div key={shortcut.id} className="flex items-start justify-between p-3 bg-muted/20 rounded-lg">
-                      <span className="text-slate-300">{shortcut.description}</span>
-                      <kbd className="px-2 py-1 bg-background border border-white/20 rounded text-sm font-mono text-white">
-                        {shortcut.combo?.replace('cmd', isMac ? '⌘' : 'Ctrl')}
-                      </kbd>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 text-center text-sm text-slate-500">
-            Press <kbd className="px-2 py-1 bg-background border border-white/20 rounded text-xs font-mono">/</kbd> to open this help anytime
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// UI components live in `keyboard-shortcuts-ui.tsx`.
 
 // Helper function to check if user is on Mac
 export function isMac(): boolean {

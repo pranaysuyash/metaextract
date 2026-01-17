@@ -209,7 +209,14 @@ export function isFieldLocked(value: any): boolean {
  */
 export function createSearchableText(key: string, value: any): string {
   const formattedValue = formatFieldValue(value);
-  return `${key} ${formatFieldLabel(key)} ${formattedValue}`.toLowerCase();
+  // Normalize whitespace so search behaves predictably even with weird inputs.
+  // This ensures:
+  // - no accidental double-spaces
+  // - leading/trailing whitespace doesn't affect matching
+  return `${key} ${formatFieldLabel(key)} ${formattedValue}`
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -285,7 +292,10 @@ export function organizeMetadata(
       
       // Search query
       if (filter.query && filter.query.trim()) {
-        const queryLower = filter.query.trim().toLowerCase();
+        const queryLower = filter.query
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, ' ');
         if (!field.searchableText.includes(queryLower)) {
           return false;
         }
@@ -349,15 +359,17 @@ export function searchResults(
   results: OrganizedResults,
   query: string
 ): OrganizedResults {
-  if (!query.trim()) return results;
-  
-  const queryLower = query.toLowerCase();
+  const normalizedQuery = query
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  if (!normalizedQuery) return results;
   
   const filteredSections = results.sections
     .map(section => ({
       ...section,
       fields: section.fields.filter(field => 
-        field.searchableText.includes(queryLower)
+        field.searchableText.includes(normalizedQuery)
       ),
     }))
     .filter(section => section.fields.length > 0);

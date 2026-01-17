@@ -2,12 +2,7 @@
  * Path Recommender - A/B test for tutorial optimization
  */
 
-import type {
-  UserBehaviorProfile,
-  SkillLevel,
-  DifficultyLevel,
-} from './behavior-tracker';
-import type { InteractionPattern, PatternMatch } from './pattern-detector';
+import type { CommonPattern, SkillLevelId, UserBehaviorProfile } from './types';
 
 export interface PathOption {
   id: string;
@@ -15,7 +10,7 @@ export interface PathOption {
   description: string;
   estimatedDuration: number;
   steps: string[];
-  difficulty: SkillLevel['level'];
+  difficulty: SkillLevelId;
   priority: number;
 }
 
@@ -134,8 +129,13 @@ export class PathRecommender {
     this.paths.forEach(path => {
       let score = 0;
 
+      // Prefer the explicitly requested tutorial path when it exists.
+      if (path.id === currentTutorialId) {
+        score += 2;
+      }
+
       // 1. Match with skill level (higher is better)
-      const skillLevelMatch = profile.expertiseLevel.toLowerCase();
+      const skillLevelMatch = profile.expertiseLevel;
       if (skillLevelMatch === path.difficulty) {
         score += 5;
       } else if (
@@ -210,7 +210,7 @@ export class PathRecommender {
    * Check if pattern matches behavior
    */
   private patternMatchesBehavior(
-    pattern: Pattern,
+    pattern: CommonPattern,
     profile: UserBehaviorProfile
   ): boolean {
     if (pattern.type === 'hesitant' && profile.averageTimeBetweenActions > 30) {
@@ -223,6 +223,23 @@ export class PathRecommender {
       return true;
     }
     return false;
+  }
+
+  private detectUserIntent(profile: UserBehaviorProfile): {
+    exploring: boolean;
+    learning: boolean;
+  } {
+    const hasNavigation = profile.getActionsByType('navigation').length > 0;
+    const hasHelpViews = profile.getActionsByType('help_view').length > 0;
+
+    const exploring =
+      hasNavigation ||
+      profile.commonPatterns.some(p => p.type === 'exploration' || p.type === 'click');
+
+    const learning =
+      hasHelpViews || profile.commonPatterns.some(p => p.type === 'help_seeking');
+
+    return { exploring, learning };
   }
 
   /**
@@ -255,21 +272,19 @@ export class PathRecommender {
     }
 
     const completionRate = profile.completionRate;
-    if (completionRate > 90 && path.id !== 'quick_skip') {
+    if (completionRate > 0.9 && path.id !== 'quick_skip') {
       reasons.push(
         'High completion rate user: Should handle standard/longer tutorials'
       );
     }
 
     if (profile.commonPatterns.length > 0) {
-      const patternNames = profile.commonPatterns.map(p => p.description);
-      reasons.push(`Behavior patterns: ${patternNames.slice(0, 3).join(', ')}`);
+      const patternTypes = profile.commonPatterns.map(p => p.type);
+      reasons.push(`Behavior patterns: ${patternTypes.slice(0, 3).join(', ')}`);
     }
 
     const intent = this.detectUserIntent(profile);
-    reasons.push(
-      `User intent: ${intent.exploring ? 'Exploring' : 'Task-oriented'}`
-    );
+    reasons.push(`User intent: ${intent.exploring ? 'Exploring' : 'Task-oriented'}`);
 
     return reasons.join('; ');
   }

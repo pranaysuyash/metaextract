@@ -2,27 +2,37 @@
  * Adaptive Learning System - Main module
  */
 
-export {
-  behaviorTracker,
-  interactionAnalyzer,
-  patternDetector,
-  skillAssessor,
-  difficultyScaler,
-  pathRecommender,
-  contentPersonalizer,
-  tutorialOptimizer,
-} from './behavior-tracker';
-export type { UserBehaviorProfile, UserAction } from './behavior-tracker';
-export type { SkillLevel, DifficultyLevel } from './skill-assessor';
+export { adaptiveLearningSystem as behaviorTracker } from './behavior-tracker';
+export { interactionAnalyzer } from './interaction-analyzer';
+export { patternDetector } from './pattern-detector';
+export { skillAssessor } from './skill-assessor';
+export { difficultyScaler } from './difficulty-scaler';
+export { pathRecommender } from './path-recommender';
+export { contentPersonalizer } from './content-personalizer';
+export { tutorialOptimizer } from './tutorial-optimizer';
+
+export type {
+  UserBehaviorProfile,
+  UserAction,
+  SkillLevelId,
+  SkillLevel,
+  PersonalizedContent,
+} from './types';
+
+export type { DifficultyLevel, ContentAdjustment } from './difficulty-scaler';
 export type { TutorialVariant, ABTest, ABTestMetrics, ABTestResult } from './tutorial-optimizer';
-export type { PersonalizedContent } from './content-personalizer';
+
+import type { PersonalizedContent, SkillLevel } from './types';
+import { contentPersonalizer } from './content-personalizer';
+import { difficultyScaler } from './difficulty-scaler';
+import { pathRecommender } from './path-recommender';
 
 export interface AdaptiveLearningConfig {
   enabled: boolean;
   dataRetentionDays: number;
   minConfidenceThreshold: number;
   minSampleSize: number;
-  a/bTesting: boolean;
+  abTesting: boolean;
 }
 
 export class AdaptiveLearningEngine {
@@ -34,7 +44,7 @@ export class AdaptiveLearningEngine {
       dataRetentionDays: 30,
       minConfidenceThreshold: 0.6,
       minSampleSize: 100,
-      a/bTesting: true,
+      abTesting: true,
       ...config,
     };
   }
@@ -76,12 +86,10 @@ export class AdaptiveLearningEngine {
     userSkillLevel: SkillLevel
   ): string {
     const personalizer = contentPersonalizer;
-    const path = pathRecommender.getOptimalPath('tutorial_1');
+    pathRecommender.getOptimalPath('tutorial_1');
 
     let adaptiveContent = '';
-    const steps = baseTutorialSteps.split('\n');
-
-    steps.forEach((step, index) => {
+    baseTutorialSteps.forEach((step, index) => {
       const personalized = personalizer.getRecommendedContent(
         step,
         `tutorial_${index}`,
@@ -127,6 +135,8 @@ export class AdaptiveLearningEngine {
           'Batch process multiple files',
           'Complete 50 extractions',
         ];
+      default:
+        return [];
     }
   }
 }

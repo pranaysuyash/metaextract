@@ -2,8 +2,7 @@
  * Pattern Detector - Identify user behavior patterns
  */
 
-import type { UserAction, UserBehaviorProfile } from './behavior-tracker';
-import { interactionAnalyzer, ClickStream } from './interaction-analyzer';
+import type { UserBehaviorProfile } from './types';
 
 export interface Pattern {
   id: string;
@@ -104,7 +103,7 @@ export class PatternDetector {
         name: 'Systematic Clicker',
         description: 'User exhibits systematic clicking patterns',
         triggerCondition: 'Detected by interaction analyzer',
-        adaptationRecommendation 'Review content organization and navigation flow',
+        adaptationRecommendation: 'Review content organization and navigation flow',
         confidence: 0.8,
       },
       {
@@ -133,12 +132,17 @@ export class PatternDetector {
    */
   private loadDetectedPatterns(): void {
     try {
-      const stored = localStorage.getItem('detected_patterns');
-      if (stored) {
-        const loaded: PatternMatch[] = JSON.parse(stored);
-        loaded.forEach(match => {
-          this.detectedPatterns.set(match.patternId, match);
-        });
+      const stored = localStorage.getItem('detected_patterns_v1');
+      if (!stored) return;
+
+      const parsed: unknown = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return;
+
+      for (const item of parsed) {
+        const match = item as PatternMatch;
+        if (!match?.patternId || typeof match.timestamp !== 'number') continue;
+        const existing = this.detectedPatterns.get(match.patternId) || [];
+        this.detectedPatterns.set(match.patternId, [...existing, match].slice(-3));
       }
     } catch (error) {
       console.error('[PatternDetector] Failed to load patterns', error);
@@ -154,7 +158,11 @@ export class PatternDetector {
       const updated = [match, ...existing].slice(-3); // Keep last 3 matches
       this.detectedPatterns.set(match.patternId, updated);
 
-      localStorage.setItem('detected_patterns', JSON.stringify(Array.from(this.detectedPatterns.entries())));
+      const flattened: PatternMatch[] = [];
+      this.detectedPatterns.forEach(matches => {
+        flattened.push(...matches);
+      });
+      localStorage.setItem('detected_patterns_v1', JSON.stringify(flattened));
     } catch (error) {
       console.error('[PatternDetector] Failed to save pattern', error);
     }
@@ -164,132 +172,73 @@ export class PatternDetector {
    * Analyze behavior and detect patterns
    */
   analyzeAndDetect(profile: UserBehaviorProfile): Pattern[] {
-    const detectedPatterns: Pattern[] = [];
+    const matched: Pattern[] = [];
+    const now = Date.now();
 
-    // Check each pattern against behavior
-    this.patterns.forEach(pattern => {
-      let matches = false;
+    const helpViews = profile.getActionsByType('help_view').length;
+    const uploads = profile.getActionsByType('upload').length;
+    const navigations = profile.getActionsByType('navigation').length;
 
-      switch (pattern.type) {
-        case 'upload_frequency':
-          const uploadActions = profile.commonPatterns.find(p => p.type === 'upload_frequency');
-          if (uploadActions && uploadActions.frequency >= pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
+    for (const pattern of this.patterns) {
+      const isMatch = this.isPatternMatch(pattern, {
+        uploads,
+        helpViews,
+        navigations,
+        totalActions: profile.totalActions,
+        completionRate: profile.completionRate,
+        averageTimeBetweenActions: profile.averageTimeBetweenActions,
+        commonPatternTypes: new Set(profile.commonPatterns.map(p => p.type)),
+      });
 
-        case 'help_seeking':
-          const helpActions = profile.commonPatterns.find(p => p.type === 'help_seeking');
-          if (helpActions && helpActions.frequency >= pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
+      if (!isMatch) continue;
 
-        case 'exploration':
-          const explorationActions = profile.commonPatterns.filter(p =>
-            p.type === 'click' && p.target?.includes('nav')
-          );
-          if (explorationActions.length >= pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
+      matched.push(pattern);
+      this.saveDetectedPattern({
+        patternId: pattern.id,
+        confidence: pattern.confidence,
+        timestamp: now,
+      });
+    }
 
-        case 'completist':
-          if (profile.completionRate >= pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
+    return matched;
+  }
 
-        case 'hesitant':
-          if (profile.averageTimeBetweenActions > pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
-
-        case 'fast_learner':
-          if (profile.averageTimeBetweenActions < pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
-
-        case 'slow_learner':
-          if (profile.averageTimeBetweenActions > pattern.triggerCondition) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
-
-        case 'systematic_clicker':
-          const clickAnalysis = interactionAnalyzer.analyzeClickPatterns('*');
-          if (clickAnalysis.isIntentional) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
-
-        case 'power_user':
-          if (profile.totalActions >= 50 && profile.completionRate >= 80) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
-
-        case 'casual_user':
-          if (profile.totalActions < 20 && profile.completionRate >= 50) {
-            detectedPatterns.push({
-              patternId: pattern.id,
-              confidence: pattern.confidence,
-              timestamp: Date.now(),
-            });
-            matches = true;
-          }
-          break;
-      }
-    });
-
-    return detectedPatterns;
+  private isPatternMatch(
+    pattern: Pattern,
+    data: {
+      uploads: number;
+      helpViews: number;
+      navigations: number;
+      totalActions: number;
+      completionRate: number;
+      averageTimeBetweenActions: number;
+      commonPatternTypes: Set<string>;
+    }
+  ): boolean {
+    switch (pattern.type) {
+      case 'upload_frequency':
+        return data.uploads >= 10 || data.totalActions >= 10;
+      case 'help_seeking':
+        return data.helpViews >= 5;
+      case 'exploration':
+        return data.navigations >= 3;
+      case 'completist':
+        return data.completionRate >= 0.9;
+      case 'hesitant':
+        return data.averageTimeBetweenActions > 30;
+      case 'fast_learner':
+        return data.averageTimeBetweenActions > 0 && data.averageTimeBetweenActions < 10;
+      case 'slow_learner':
+        return data.averageTimeBetweenActions > 20;
+      case 'systematic_clicker':
+        return data.commonPatternTypes.has('systematic_clicker');
+      case 'power_user':
+        return data.totalActions >= 50 && data.completionRate >= 0.8;
+      case 'casual_user':
+        return data.totalActions < 20 && data.completionRate >= 0.5;
+      default:
+        return false;
+    }
   }
 
   /**
@@ -308,7 +257,7 @@ export class PatternDetector {
    */
   clearDetectedPatterns(): void {
     this.detectedPatterns.clear();
-    localStorage.removeItem('detected_patterns');
+    localStorage.removeItem('detected_patterns_v1');
   }
 }
 

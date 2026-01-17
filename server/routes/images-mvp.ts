@@ -74,12 +74,107 @@ const IMAGES_MVP_QUOTES = new Map<string, any>();
 // Periodic cleanup of expired quotes (runs every 5 minutes)
 const QUOTE_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+type ImagesMvpStoredQuote = {
+  id: string;
+  sessionId: string;
+  userId?: string | null;
+  files: any[];
+  ops: ImagesMvpQuoteOps;
+  creditsTotal: number;
+  perFileCredits: Record<string, number>;
+  perFile: Record<string, any>;
+  schedule: any;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+  usedAt?: Date | null;
+  status: 'active' | 'used' | 'expired';
+};
+
+function getQuoteStore(): Map<string, ImagesMvpStoredQuote> {
+  return IMAGES_MVP_QUOTES as Map<string, ImagesMvpStoredQuote>;
+}
+
+// For testing: clear the quote store
+export function clearImagesMvpQuotesForTesting() {
+  IMAGES_MVP_QUOTES.clear();
+}
+
+async function createImagesMvpQuote(input: {
+  sessionId: string;
+  userId?: string | null;
+  files: any[];
+  ops: ImagesMvpQuoteOps;
+  creditsTotal: number;
+  perFileCredits: Record<string, number>;
+  perFile: Record<string, any>;
+  schedule: any;
+  expiresAt: Date;
+}): Promise<ImagesMvpStoredQuote> {
+  const anyStorage = storage as any;
+  if (typeof anyStorage?.createQuote === 'function') {
+    return (await anyStorage.createQuote(input)) as ImagesMvpStoredQuote;
+  }
+
+  const now = new Date();
+  const quote: ImagesMvpStoredQuote = {
+    id: crypto.randomUUID(),
+    sessionId: input.sessionId,
+    userId: input.userId ?? null,
+    files: input.files,
+    ops: input.ops,
+    creditsTotal: input.creditsTotal,
+    perFileCredits: input.perFileCredits,
+    perFile: input.perFile,
+    schedule: input.schedule,
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: input.expiresAt,
+    usedAt: null,
+    status: 'active',
+  };
+
+  getQuoteStore().set(quote.id, quote);
+  return quote;
+}
+
+async function getImagesMvpQuote(id: string): Promise<ImagesMvpStoredQuote | undefined> {
+  const anyStorage = storage as any;
+  if (typeof anyStorage?.getQuote === 'function') {
+    return (await anyStorage.getQuote(id)) as ImagesMvpStoredQuote | undefined;
+  }
+
+  const quote = getQuoteStore().get(id);
+  if (!quote) return undefined;
+  if (quote.status !== 'active') return undefined;
+  if (new Date() >= new Date(quote.expiresAt)) return undefined;
+  return quote;
+}
+
 function startQuoteCleanup() {
   setInterval(async () => {
     try {
-      const cleanedCount = await storage.cleanupExpiredQuotes();
-      if (cleanedCount > 0) {
-        console.log(`[ImagesMVP] Cleaned up ${cleanedCount} expired quotes`);
+      const anyStorage = storage as any;
+      if (typeof anyStorage?.cleanupExpiredQuotes === 'function') {
+        const cleanedCount = (await anyStorage.cleanupExpiredQuotes()) as number;
+        if (cleanedCount > 0) {
+          console.log(`[ImagesMVP] Cleaned up ${cleanedCount} expired quotes`);
+        }
+        return;
+      }
+
+      // Fallback: cleanup in-memory store
+      const now = Date.now();
+      let cleaned = 0;
+      for (const [id, quote] of getQuoteStore().entries()) {
+        const expiresAt = new Date(quote.expiresAt).getTime();
+        if (quote.status !== 'active' || now >= expiresAt) {
+          getQuoteStore().delete(id);
+          cleaned += 1;
+        }
+      }
+      if (cleaned > 0) {
+        console.log(`[ImagesMVP] Cleaned up ${cleaned} expired quotes (memory)`);
       }
     } catch (error) {
       console.error('[ImagesMVP] Error cleaning up expired quotes:', error);
@@ -88,7 +183,9 @@ function startQuoteCleanup() {
 }
 
 // Start cleanup on module load
-startQuoteCleanup();
+if (process.env.NODE_ENV !== 'test') {
+  startQuoteCleanup();
+}
 
 // ============================================================================
 // Configuration
@@ -345,6 +442,22 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.gif',
   '.ico',
   '.svg',
+  '.raw',
+  '.cr2',
+  '.nef',
+  '.arw',
+  '.dng',
+  '.orf',
+  '.raf',
+  '.pef',
+  '.x3f',
+  '.srw',
+  '.rw2',
+]);
+
+// Some clients (and test harnesses) upload RAW files as application/octet-stream.
+// We still require a supported extension to avoid allowing arbitrary binaries.
+const RAW_LIKE_EXTENSIONS = new Set([
   '.raw',
   '.cr2',
   '.nef',
@@ -645,12 +758,10 @@ export function registerImagesMvpRoutes(app: Express) {
         }
       }
 
-      const quoteId = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
       const sessionId = getOrSetSessionId(req, res);
 
-      // Create persistent quote using storage system
-      await storage.createQuote({
+      const createdQuote = await createImagesMvpQuote({
         sessionId,
         files: limitedFiles,
         ops,
@@ -666,7 +777,7 @@ export function registerImagesMvpRoutes(app: Express) {
         IMAGES_MVP_CREDIT_SCHEDULE.base + IMAGES_MVP_CREDIT_SCHEDULE.embedding;
 
       res.json({
-        quoteId,
+        quoteId: createdQuote.id,
         creditsTotal,
         perFile: perFileById,
         schedule: IMAGES_MVP_CREDIT_SCHEDULE,
@@ -1163,22 +1274,26 @@ export function registerImagesMvpRoutes(app: Express) {
   app.post(
     '/api/images_mvp/extract',
     // Apply rate limiting first to prevent abuse
-    createRateLimiter({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 50, // Max 50 uploads per IP per 15 minutes
-      keyGenerator: (req: Request) =>
-        (req as any).user?.id
-          ? `user:${(req as any).user.id}`
-          : `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
-    } as any),
+    process.env.NODE_ENV === 'test'
+      ? (_req: Request, _res: Response, next: any) => next()
+      : createRateLimiter({
+          windowMs: 15 * 60 * 1000, // 15 minutes
+          max: 50, // Max 50 uploads per IP per 15 minutes
+          keyGenerator: (req: Request) =>
+            (req as any).user?.id
+              ? `user:${(req as any).user.id}`
+              : `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
+        } as any),
     // Apply burst protection for anonymous users
-    createRateLimiter({
-      windowMs: 60 * 1000, // 1 minute
-      max: 10, // Max 10 uploads per minute
-      skip: (req: Request) => !!(req as any).user?.id, // Skip for authenticated users
-      keyGenerator: (req: Request) =>
-        `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
-    } as any),
+    process.env.NODE_ENV === 'test'
+      ? (_req: Request, _res: Response, next: any) => next()
+      : createRateLimiter({
+          windowMs: 60 * 1000, // 1 minute
+          max: 10, // Max 10 uploads per minute
+          skip: (req: Request) => !!(req as any).user?.id, // Skip for authenticated users
+          keyGenerator: (req: Request) =>
+            `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
+        } as any),
     // Enhanced protection BEFORE file upload - security validation
     enhancedProtectionMiddleware,
     // File upload middleware - only executes if protection passes
@@ -1213,16 +1328,25 @@ export function registerImagesMvpRoutes(app: Express) {
         // This prevents attacks like uploading malware.exe with mime image/jpeg
         const mimeType = req.file.mimetype;
         const fileExt = path.extname(req.file.originalname).toLowerCase();
-        const isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
+        let isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
         const isSupportedExt = fileExt
           ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
           : false;
+
+        if (
+          !isSupportedMime &&
+          isSupportedExt &&
+          RAW_LIKE_EXTENSIONS.has(fileExt) &&
+          mimeType === 'application/octet-stream'
+        ) {
+          isSupportedMime = true;
+        }
 
         // Require BOTH mime type AND extension to be valid (AND logic, not OR)
         if (!isSupportedMime || !isSupportedExt) {
           // Clean up the uploaded temp file before rejecting
           if (req.file.path) {
-            cleanupTempFile(req.file.path).catch(() => {});
+            void Promise.resolve(cleanupTempFile(req.file.path)).catch(() => {});
           }
           return sendUnsupportedFileTypeError(res, 'File type not permitted');
         }
@@ -1235,7 +1359,7 @@ export function registerImagesMvpRoutes(app: Express) {
         let quotedCreditCost: number | null = null;
 
         if (quoteId) {
-          const quote = await storage.getQuote(quoteId);
+          const quote = await getImagesMvpQuote(quoteId);
           if (quote && quote.ops && typeof quote.ops === 'object') {
             const opsData = quote.ops as any;
             ops = {
@@ -1262,7 +1386,7 @@ export function registerImagesMvpRoutes(app: Express) {
         let mpCredits = 0;
         let mpCreditsResolved = false;
         if (quoteId && clientFileId) {
-          const quote = await storage.getQuote(quoteId);
+          const quote = await getImagesMvpQuote(quoteId);
           const quotedFile = Array.isArray(quote?.files)
             ? quote.files.find((f: any) => f?.id === clientFileId)
             : null;

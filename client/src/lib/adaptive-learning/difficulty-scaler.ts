@@ -2,77 +2,69 @@
  * Difficulty Scaler - Adjust content complexity based on user skill
  */
 
+import type { SkillLevelId } from './types';
 import type { SkillLevel } from './skill-assessor';
 
 export interface DifficultyLevel {
   level: 'minimal' | 'simple' | 'standard' | 'detailed' | 'comprehensive';
   complexityFactor: number;
   description: string;
-}
-
-export interface ContentAdjustment {
   explanationDepth: 'minimal' | 'concise' | 'standard' | 'detailed';
-  examples: number;
-  technicalTerms: boolean;
   animationLevel: 'none' | 'subtle' | 'moderate';
   progressIndicators: 'none' | 'minimal' | 'standard';
 }
 
+export interface ContentAdjustment {
+  explanationDepth: DifficultyLevel['explanationDepth'];
+  examples: number;
+  technicalTerms: boolean;
+  animationLevel: DifficultyLevel['animationLevel'];
+  progressIndicators: DifficultyLevel['progressIndicators'];
+}
+
 export class DifficultyScaler {
-  private skillLevels: Map<string, DifficultyLevel> = new Map();
+  private skillLevels: Map<SkillLevelId, DifficultyLevel> = new Map();
 
   constructor() {
     this.initializeDifficultyLevels();
   }
 
-  /**
-   * Initialize difficulty level mappings
-   */
   private initializeDifficultyLevels(): void {
     this.skillLevels.set('beginner', {
       level: 'minimal',
       complexityFactor: 1.0,
       description: 'Simple language, clear instructions, minimal information per step',
+      explanationDepth: 'concise',
+      animationLevel: 'subtle',
+      progressIndicators: 'minimal',
     });
 
     this.skillLevels.set('intermediate', {
       level: 'simple',
       complexityFactor: 1.5,
       description: 'Standard language, clear examples, balanced information',
+      explanationDepth: 'standard',
+      animationLevel: 'subtle',
+      progressIndicators: 'standard',
     });
 
     this.skillLevels.set('advanced', {
       level: 'standard',
       complexityFactor: 2.0,
       description: 'Detailed language, comprehensive examples, rich information',
+      explanationDepth: 'detailed',
+      animationLevel: 'moderate',
+      progressIndicators: 'standard',
     });
   }
 
-    this.skillLevels.forEach((_, level) => {
-      if (!level.explanationDepth) {
-        level.explanationDepth = 'concise';
-      }
-      if (!level.animationLevel) {
-        level.animationLevel = 'subtle';
-      }
-      if (!level.progressIndicators) {
-        level.progressIndicators = 'minimal';
-      }
-    });
-  }
-
-  /**
-   * Get difficulty level for skill level
-   */
-  getDifficultyLevel(skillLevelId: string): DifficultyLevel | undefined {
+  getDifficultyLevel(skillLevelId: SkillLevelId): DifficultyLevel | undefined {
     return this.skillLevels.get(skillLevelId);
   }
 
-  /**
-   * Adjust content based on skill level
-   */
-  adjustContent(skillLevel: SkillLevel): ContentAdjustment {
+  adjustContent(skillLevel: Pick<SkillLevel, 'id'>): ContentAdjustment {
     const level = this.skillLevels.get(skillLevel.id);
+
     if (!level) {
       return {
         explanationDepth: 'standard',
@@ -86,57 +78,41 @@ export class DifficultyScaler {
     const isIntermediate = skillLevel.id === 'intermediate';
     const isAdvanced = skillLevel.id === 'advanced';
 
-    // Adjust based on level
-    const adjustment: ContentAdjustment = {
+    return {
       explanationDepth: level.explanationDepth,
       examples: isAdvanced ? 5 : isIntermediate ? 3 : 2,
       technicalTerms: isAdvanced,
       animationLevel: isAdvanced ? 'moderate' : 'subtle',
       progressIndicators: isAdvanced ? 'standard' : 'minimal',
     };
-
-    return adjustment;
   }
 
-  /**
-   * Get recommended tutorial length based on skill level
-   */
-  getRecommendedTutorialLength(skillLevelId: string): number {
+  getRecommendedTutorialLength(skillLevelId: SkillLevelId): number {
     const level = this.skillLevels.get(skillLevelId);
+    if (!level) return 5;
+
     switch (level.level) {
       case 'minimal':
-        return 2; // 2 steps for beginner
+        return 2;
       case 'simple':
-        return 4; // 4 steps for intermediate
+        return 4;
       case 'standard':
-        return 7; // 7 steps for advanced
+        return 7;
       case 'detailed':
-        return 12; // 12 steps for experts
+        return 12;
       default:
         return 5;
     }
   }
 
-  /**
-   * Get explanation depth
-   */
-  getExplanationDepth(skillLevelId: string): 'minimal' | 'concise' | 'standard' | 'detailed' {
-    const level = this.skillLevels.get(skillLevelId);
-    return level.explanationDepth || 'standard';
+  getExplanationDepth(skillLevelId: SkillLevelId): DifficultyLevel['explanationDepth'] {
+    return this.skillLevels.get(skillLevelId)?.explanationDepth ?? 'standard';
   }
 
-  /**
-   * Should show advanced features?
-   */
-  shouldShowAdvancedFeatures(skillLevelId: string): boolean {
-    const level = this.skillLevels.get(skillLevelId);
-    return level.id === 'advanced';
+  shouldShowAdvancedFeatures(skillLevelId: SkillLevelId): boolean {
+    return skillLevelId === 'advanced';
   }
-}
 
-  /**
-   * Get all difficulty levels
-   */
   getAllDifficultyLevels(): DifficultyLevel[] {
     return Array.from(this.skillLevels.values());
   }

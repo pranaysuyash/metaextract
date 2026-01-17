@@ -2,14 +2,14 @@
  * Skill Assessor - Evaluate user's proficiency level
  */
 
-import type { UserBehaviorProfile, UserAction } from './behavior-tracker';
+import type { SkillLevelId, UserBehaviorProfile } from './types';
 
 export interface SkillLevel {
-  level: 'beginner' | 'intermediate' | 'advanced';
+  id: SkillLevelId;
   name: string;
   requirements: SkillLevelRequirement[];
-  confidence: number;
-  nextLevel?: SkillLevel;
+  confidence: number; // 0..1
+  nextLevelId?: SkillLevelId;
 }
 
 export interface SkillLevelRequirement {
@@ -32,7 +32,7 @@ export class SkillAssessor {
    */
   private initializeSkillLevels(): void {
     this.skillLevels.set('beginner', {
-      level: 'beginner',
+      id: 'beginner',
       name: 'Beginner',
       requirements: [
         {
@@ -61,7 +61,7 @@ export class SkillAssessor {
     });
 
     this.skillLevels.set('intermediate', {
-      level: 'intermediate',
+      id: 'intermediate',
       name: 'Intermediate User',
       requirements: [
         {
@@ -97,7 +97,7 @@ export class SkillAssessor {
     });
 
     this.skillLevels.set('advanced', {
-      level: 'advanced',
+      id: 'advanced',
       name: 'Advanced User',
       requirements: [
         {
@@ -136,84 +136,93 @@ export class SkillAssessor {
   /**
    * Assess user's current skill level
    */
-  assess(profile: UserBehaviorProfile): {
-    matchedLevel: this.skillLevels.get('beginner');
+  assess(profile: UserBehaviorProfile): SkillLevel {
+    // Evaluate all levels and pick the highest level whose REQUIRED requirements are met.
+    const levels: SkillLevel[] = ['beginner', 'intermediate', 'advanced']
+      .map(id => this.skillLevels.get(id))
+      .filter((v): v is SkillLevel => Boolean(v));
 
-    // Check each level's requirements
-    for (const [levelId, level] of this.skillLevels.entries()) {
-      let meetsRequirements = true;
-      let totalProgress = 0;
-      let metCount = 0;
+    let matched: SkillLevel = levels[0]!;
 
-      // Check progress on each requirement
-      for (const requirement of level.requirements) {
-        if (!requirement.required) {
-          continue; // Optional requirement, skip
-        }
+    for (const level of levels) {
+      const updatedRequirements = level.requirements.map(req => {
+        const progress = this.calculateRequirementProgress(req.id, profile);
+        return {
+          ...req,
+          currentProgress: Math.min(req.targetValue, progress),
+        };
+      });
 
-        let progress = 0;
+      const required = updatedRequirements.filter(r => r.required);
+      const metRequired = required.filter(r => r.currentProgress >= r.targetValue);
+      const meetsAllRequired = required.length > 0 && metRequired.length === required.length;
 
-        switch (requirement.id) {
-          case 'uploads_5':
-          progress = Math.min(5, profile.totalActions);
-            break;
-          case 'uploads_15':
-            progress = Math.min(15, profile.totalActions);
-            break;
-          case 'uploads_50':
-            progress = Math.min(50, profile.totalActions);
-            break;
-          case 'navigation_explore':
-            const uniqueSections = new Set(profile.getActionsByType('navigation').map(a => a.target));
-            progress = Math.min(3, uniqueSections.size);
-            break;
-          case 'help_views_5':
-            progress = Math.min(5, profile.getActionsByType('help_view').length);
-            break;
-          case 'help_views_15':
-            progress = Math.min(15, profile.getActionsByType('help_view').length);
-            break;
-          case 'advanced_filters':
-            const usesFilters = profile.commonPatterns.some(p => p.type === 'filter');
-            progress = usesFilters ? 5 : 0;
-            break;
-          case 'batch_processing':
-            const usesBatch = profile.commonPatterns.some(p => p.type === 'upload' && profile.totalActions >= 20);
-            progress = usesBatch ? 5 : 0;
-            break;
-          case 'export_advanced':
-            const exports = profile.getActionsByType('export').length;
-            progress = Math.min(5, exports);
-            break;
-          case 'all_help_views':
-            const helpViews = profile.getActionsByType('help_view').length;
-            progress = Math.min(5, helpViews);
-            break;
-        }
+      // Confidence: average completion across required requirements (0..1)
+      const completion =
+        required.length === 0
+          ? 0
+          : required.reduce((sum, r) => sum + r.currentProgress / r.targetValue, 0) /
+            required.length;
 
-        // Calculate percentage for this requirement
-        const percentage = (progress / requirement.targetValue) * 100;
-        totalProgress += percentage;
-        metCount += (percentage >= 100) ? 1 : 0;
+      const candidate: SkillLevel = {
+        ...level,
+        requirements: updatedRequirements,
+        confidence: Math.max(0, Math.min(1, completion)),
+      };
 
-        if (metCount === level.requirements.length) {
-          // All required requirements met, this level matches
-          matchedLevel = level;
-          break;
-        }
+      if (meetsAllRequired) {
+        matched = candidate;
       }
-
-    // Next level
-    if (matchedLevel.level === 'beginner' && matchedLevel.confidence > 0.8) {
-      matchedLevel.nextLevel = this.skillLevels.get('intermediate');
-    } else if (matchedLevel.level === 'intermediate' && matchedLevel.confidence > 0.8) {
-      matchedLevel.nextLevel = this.skillLevels.get('advanced');
     }
 
-    return {
-      ...matchedLevel,
-      confidence: matchedLevel.confidence,
+    matched = {
+      ...matched,
+      nextLevelId:
+        matched.id === 'beginner'
+          ? 'intermediate'
+          : matched.id === 'intermediate'
+            ? 'advanced'
+            : undefined,
     };
+
+    return matched;
+  }
+
+  private calculateRequirementProgress(
+    requirementId: string,
+    profile: UserBehaviorProfile
+  ): number {
+    switch (requirementId) {
+      case 'uploads_5':
+        return Math.min(5, profile.getActionsByType('upload').length);
+      case 'uploads_15':
+        return Math.min(15, profile.getActionsByType('upload').length);
+      case 'uploads_50':
+        return Math.min(50, profile.getActionsByType('upload').length);
+      case 'navigation_explore': {
+        const uniqueTargets = new Set(
+          profile
+            .getActionsByType('navigation')
+            .map(a => a.target)
+            .filter((t): t is string => Boolean(t))
+        );
+        return Math.min(3, uniqueTargets.size);
+      }
+      case 'help_views_5':
+        return Math.min(5, profile.getActionsByType('help_view').length);
+      case 'help_views_15':
+        return Math.min(15, profile.getActionsByType('help_view').length);
+      case 'advanced_filters':
+        return profile.commonPatterns.some(p => p.type === 'filter') ? 5 : 0;
+      case 'batch_processing':
+        return profile.commonPatterns.some(p => p.type === 'batch') ? 5 : 0;
+      case 'export_advanced':
+        return Math.min(5, profile.getActionsByType('export').length);
+      case 'all_help_views':
+        return Math.min(5, profile.getActionsByType('help_view').length);
+      default:
+        return 0;
+    }
   }
 
   /**
@@ -234,13 +243,9 @@ export class SkillAssessor {
    * Get current level
    */
   getCurrentLevel(): SkillLevel {
-    const profile = this.analyzeBehavior();
-
-    const assessment = this.assess(profile);
-    return {
-      ...assessment,
-      confidence: assessment.confidence,
-    };
+    // Without a live behavior profile, return the baseline beginner level.
+    // Callers that have a profile should call assess(profile) directly.
+    return this.skillLevels.get('beginner')!;
   }
 
   /**
@@ -261,21 +266,14 @@ export class SkillAssessor {
     let totalProgress = 0;
     let metRequirements = 0;
 
-    for (const requirement of level.requirements) {
-      if (!requirement.required) {
-        continue;
-      }
-
-      let progress = 0;
-
-      // This is a simplified calculation - in real implementation,
-      // we'd need to track actual progress for each requirement
-      progress = 50; // Assume 50% for now
-      totalProgress += progress;
-      metRequirements += (progress >= 100) ? 1 : 0;
+    const required = level.requirements.filter(r => r.required);
+    for (const requirement of required) {
+      const percentage = (requirement.currentProgress / requirement.targetValue) * 100;
+      totalProgress += percentage;
+      metRequirements += percentage >= 100 ? 1 : 0;
     }
 
-    return totalProgress / (level.requirements.length * 100);
+    return required.length === 0 ? 0 : totalProgress / (required.length * 100);
   }
 }
 

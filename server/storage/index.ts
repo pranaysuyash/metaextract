@@ -5,12 +5,14 @@ import { createObjectStorage, IObjectStorage } from './objectStorage';
 import { isDatabaseConnected } from '../db';
 
 // Use MemStorage for tests and for development when DATABASE_URL is placeholder or missing
+const isTestEnv = process.env.NODE_ENV === 'test';
 const isDatabaseConfigured =
   process.env.DATABASE_URL &&
   !process.env.DATABASE_URL.includes('user:password@host');
 const requireDatabase =
-  process.env.STORAGE_REQUIRE_DATABASE?.toLowerCase() === 'true' ||
-  process.env.NODE_ENV === 'production';
+  !isTestEnv &&
+  (process.env.STORAGE_REQUIRE_DATABASE?.toLowerCase() === 'true' ||
+    process.env.NODE_ENV === 'production');
 const isDatabaseReady = Boolean(isDatabaseConfigured && isDatabaseConnected());
 
 const objectStorage: IObjectStorage = createObjectStorage();
@@ -21,9 +23,7 @@ if (requireDatabase && !isDatabaseReady) {
   );
 }
 
-const preferMemoryStorage =
-  process.env.NODE_ENV === 'test' &&
-  process.env.STORAGE_REQUIRE_DATABASE?.toLowerCase() !== 'true';
+const preferMemoryStorage = isTestEnv;
 
 export const storage: IStorage =
   !preferMemoryStorage && isDatabaseReady
