@@ -87,6 +87,31 @@ function enforceLargeFileChangeReview() {
 
   if (!flagged.length) return;
 
+  const requireNote =
+    String(process.env.SKIP_CHANGE_REVIEW_NOTE || '') !== '1';
+  if (requireNote) {
+    const statuses = stagedNameStatus();
+    const hasReviewNote = statuses.some(line =>
+      line.includes('docs/change_reviews/')
+    );
+    if (!hasReviewNote) {
+      const msg = [
+        `Pre-commit guard: change review note required for large diffs (>=${thresholdPct}%).`,
+        'Add a staged note under `docs/change_reviews/` explaining why the change is correct (semantic review, not just tests).',
+        '',
+        'Generate a template:',
+        '  - node scripts/create-change-review-note.cjs',
+        '',
+        'Then stage it and retry the commit:',
+        '  - git add docs/change_reviews/*.md',
+        '',
+        'Override (one-off): SKIP_CHANGE_REVIEW_NOTE=1',
+      ].join('\n');
+      console.error(msg + '\n');
+      process.exit(1);
+    }
+  }
+
   const lines = [
     `Pre-commit guard: large per-file changes detected (>=${thresholdPct}% of previous file).`,
     'This guard is generic: it cannot prove “better”, but it forces an explicit review step.',
