@@ -96,18 +96,59 @@ describe('Images MVP FileFilter Security', () => {
     });
 
     test('should accept supported RAW formats', async () => {
-      const rawFormats = ['.cr2', '.nef', '.arw', '.dng'];
+      const rawFormats = ['.cr2', '.cr3', '.nef', '.arw', '.dng'];
 
       for (const ext of rawFormats) {
         const response = await request(app)
           .post('/api/images_mvp/extract')
-          .attach('file', Buffer.from('fake raw content'), `test${ext}`)
-          .set('Content-Type', 'image/x-raw');
+          .attach('file', Buffer.from('fake raw content'), {
+            filename: `test${ext}`,
+            contentType: 'application/octet-stream',
+          });
 
         expect(response.status).not.toBe(403);
         expect(response.status).not.toBe(400);
         console.log(`✅ ${ext} file accepted: ${response.status}`);
       }
+    });
+
+    test('should accept AVIF files', async () => {
+      const response = await request(app)
+        .post('/api/images_mvp/extract')
+        .attach('file', Buffer.from('fake avif content'), {
+          filename: 'test.avif',
+          contentType: 'image/avif',
+        });
+
+      expect(response.status).not.toBe(403);
+      expect(response.status).not.toBe(400);
+      console.log(`✅ AVIF file accepted: ${response.status}`);
+    });
+
+    test('should accept PSD files', async () => {
+      const response = await request(app)
+        .post('/api/images_mvp/extract')
+        .attach('file', Buffer.from('fake psd content'), {
+          filename: 'test.psd',
+          contentType: 'image/vnd.adobe.photoshop',
+        });
+
+      expect(response.status).not.toBe(403);
+      expect(response.status).not.toBe(400);
+      console.log(`✅ PSD file accepted: ${response.status}`);
+    });
+
+    test('should accept SVGZ files', async () => {
+      const response = await request(app)
+        .post('/api/images_mvp/extract')
+        .attach('file', Buffer.from('fake svgz content'), {
+          filename: 'test.svgz',
+          contentType: 'application/gzip',
+        });
+
+      expect(response.status).not.toBe(403);
+      expect(response.status).not.toBe(400);
+      console.log(`✅ SVGZ file accepted: ${response.status}`);
     });
   });
 

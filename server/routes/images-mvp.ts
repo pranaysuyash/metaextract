@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
+import { fileTypeFromBuffer } from 'file-type';
 import { eq } from 'drizzle-orm';
 import DodoPayments from 'dodopayments';
 import { getDatabase, isDatabaseConnected } from '../db';
@@ -437,10 +438,26 @@ const SUPPORTED_IMAGE_MIMES = new Set([
   'image/gif',
   'image/x-icon',
   'image/svg+xml',
+  'image/avif',
+  'image/jxl',
+  'image/jp2',
+  'image/jpx',
+  'image/jpm',
+  'image/vnd.adobe.photoshop',
+  'image/x-exr',
+  'image/icns',
+  'image/vnd-ms.dds',
+  'image/x-tga',
+  'image/x-portable-anymap',
+  'image/vnd.radiance',
+  'application/fits',
   'image/x-raw',
   'image/x-canon-cr2',
+  'image/x-canon-cr3',
   'image/x-nikon-nef',
+  'image/x-nikon-nrw',
   'image/x-sony-arw',
+  'image/x-sony-sr2',
   'image/x-adobe-dng',
   'image/x-olympus-orf',
   'image/x-fuji-raf',
@@ -448,6 +465,10 @@ const SUPPORTED_IMAGE_MIMES = new Set([
   'image/x-sigma-x3f',
   'image/x-samsung-srw',
   'image/x-panasonic-rw2',
+  'image/x-panasonic-raw',
+  'image/x-leica-rwl',
+  'image/x-hasselblad-3fr',
+  'image/x-phaseone-iiq',
 ]);
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([
@@ -460,6 +481,29 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.heif',
 
   // Enhanced formats from our comprehensive system
+  '.avif',
+  '.jxl',
+  '.jp2',
+  '.j2k',
+  '.jpf',
+  '.jpx',
+  '.jpm',
+  '.mj2',
+  '.psd',
+  '.psb',
+  '.exr',
+  '.icns',
+  '.dds',
+  '.tga',
+  '.pbm',
+  '.pgm',
+  '.ppm',
+  '.pnm',
+  '.hdr',
+  '.svgz',
+  '.fits',
+  '.fit',
+  '.fts',
   '.tiff',
   '.tif',
   '.bmp',
@@ -468,8 +512,11 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.svg',
   '.raw',
   '.cr2',
+  '.cr3',
   '.nef',
+  '.nrw',
   '.arw',
+  '.sr2',
   '.dng',
   '.orf',
   '.raf',
@@ -477,6 +524,9 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
   '.x3f',
   '.srw',
   '.rw2',
+  '.rwl',
+  '.3fr',
+  '.iiq',
 ]);
 
 // Some clients (and test harnesses) upload RAW files as application/octet-stream.
@@ -484,8 +534,11 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
 const RAW_LIKE_EXTENSIONS = new Set([
   '.raw',
   '.cr2',
+  '.cr3',
   '.nef',
+  '.nrw',
   '.arw',
+  '.sr2',
   '.dng',
   '.orf',
   '.raf',
@@ -493,7 +546,83 @@ const RAW_LIKE_EXTENSIONS = new Set([
   '.x3f',
   '.srw',
   '.rw2',
+  '.rwl',
+  '.3fr',
+  '.iiq',
 ]);
+
+function guessImagesMvpMimeFromExt(ext: string): string | null {
+  const map: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.tif': 'image/tiff',
+    '.tiff': 'image/tiff',
+    '.heic': 'image/heic',
+    '.heif': 'image/heif',
+    '.avif': 'image/avif',
+    '.svg': 'image/svg+xml',
+    '.svgz': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.icns': 'image/icns',
+    '.psd': 'image/vnd.adobe.photoshop',
+    '.psb': 'image/vnd.adobe.photoshop',
+    '.exr': 'image/x-exr',
+    '.jp2': 'image/jp2',
+    '.j2k': 'image/jp2',
+    '.jpf': 'image/jp2',
+    '.jpx': 'image/jpx',
+    '.jpm': 'image/jpm',
+    '.mj2': 'video/mj2',
+    '.jxl': 'image/jxl',
+    '.dds': 'image/vnd-ms.dds',
+    '.tga': 'image/x-tga',
+    '.pbm': 'image/x-portable-anymap',
+    '.pgm': 'image/x-portable-anymap',
+    '.ppm': 'image/x-portable-anymap',
+    '.pnm': 'image/x-portable-anymap',
+    '.hdr': 'image/vnd.radiance',
+    '.fits': 'application/fits',
+    '.fit': 'application/fits',
+    '.fts': 'application/fits',
+
+    '.cr2': 'image/x-canon-cr2',
+    '.cr3': 'image/x-canon-cr3',
+    '.nef': 'image/x-nikon-nef',
+    '.nrw': 'image/x-nikon-nrw',
+    '.arw': 'image/x-sony-arw',
+    '.sr2': 'image/x-sony-sr2',
+    '.dng': 'image/x-adobe-dng',
+    '.orf': 'image/x-olympus-orf',
+    '.rw2': 'image/x-panasonic-rw2',
+    '.raf': 'image/x-fuji-raf',
+    '.pef': 'image/x-pentax-pef',
+    '.x3f': 'image/x-sigma-x3f',
+    '.rwl': 'image/x-leica-rwl',
+    '.3fr': 'image/x-hasselblad-3fr',
+    '.iiq': 'image/x-phaseone-iiq',
+  };
+  return map[ext] ?? null;
+}
+
+async function detectMimeFromFilePath(filePath: string): Promise<string | null> {
+  try {
+    const handle = await fs.open(filePath, 'r');
+    try {
+      const probe = Buffer.alloc(4100);
+      const { bytesRead } = await handle.read(probe, 0, probe.length, 0);
+      const detected = await fileTypeFromBuffer(probe.subarray(0, bytesRead));
+      return detected?.mime ?? null;
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    return null;
+  }
+}
 
 function getBaseUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {
@@ -1389,8 +1518,18 @@ export function registerImagesMvpRoutes(app: Express) {
 
         // Enforce file type - SECURITY: require BOTH mime AND extension to match
         // This prevents attacks like uploading malware.exe with mime image/jpeg
-        const mimeType = req.file.mimetype;
         const fileExt = path.extname(req.file.originalname).toLowerCase();
+        const guessedMime = guessImagesMvpMimeFromExt(fileExt);
+        const detectedMime = req.file.path
+          ? await detectMimeFromFilePath(req.file.path)
+          : null;
+        const mimeType =
+          (fileExt === '.svgz' && detectedMime === 'application/gzip'
+            ? 'image/svg+xml'
+            : detectedMime) ||
+          guessedMime ||
+          req.file.mimetype;
+
         let isSupportedMime = SUPPORTED_IMAGE_MIMES.has(mimeType);
         const isSupportedExt = fileExt
           ? SUPPORTED_IMAGE_EXTENSIONS.has(fileExt)
@@ -1400,7 +1539,19 @@ export function registerImagesMvpRoutes(app: Express) {
           !isSupportedMime &&
           isSupportedExt &&
           RAW_LIKE_EXTENSIONS.has(fileExt) &&
-          mimeType === 'application/octet-stream'
+          (mimeType === 'application/octet-stream' ||
+            req.file.mimetype === 'application/octet-stream')
+        ) {
+          isSupportedMime = true;
+        }
+
+        // Some scientific / uncommon image-like formats won't have a reliable browser mimetype;
+        // allow them only when extension matches and mime is unknown.
+        if (
+          !isSupportedMime &&
+          isSupportedExt &&
+          (mimeType === 'application/octet-stream' ||
+            req.file.mimetype === 'application/octet-stream')
         ) {
           isSupportedMime = true;
         }
