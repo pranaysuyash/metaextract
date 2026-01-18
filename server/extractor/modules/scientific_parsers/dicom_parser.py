@@ -34,10 +34,8 @@ class DicomParser(ScientificParser):
         
         try:
             import pydicom
-            from pydicom.tag import Tag
             
             ds = pydicom.dcmread(filepath, stop_before_pixels=True)
-            
             result = self._extract_dicom_metadata(ds)
             
         except ImportError:
@@ -549,3 +547,535 @@ def count_fields(data: Any, depth: int = 0) -> int:
             count += count_fields(v, depth + 1)
         return count
     return 1
+
+
+def parse_dicom_volume(filepath: str) -> Dict[str, Any]:
+    """
+    Parse DICOM volume (multi-frame) and extract 3D metadata.
+    
+    Useful for CT, MRI, PET volumes where multiple slices represent
+    a 3D volume.
+    
+    Args:
+        filepath: Path to DICOM file
+        
+    Returns:
+        Volume metadata including 3D geometry, slice positions, etc.
+    """
+    try:
+        import pydicom
+        from pydicom.sr.coding import CodedConcept
+        
+        ds = pydicom.dcmread(filepath)
+        
+        result = {
+            'is_volume': False,
+            'volume_info': None,
+            'slice_analysis': None
+        }
+        
+        # Check if this is a multi-frame instance
+        num_frames = getattr(ds, 'NumberOfFrames', 1)
+        
+        if num_frames > 1 or _is_ct_mr_volume(ds):
+            result['is_volume'] = True
+            
+            # Extract volume geometry
+            result['volume_info'] = _extract_volume_geometry(ds)
+            
+            # Analyze slices
+            result['slice_analysis'] = _analyze_volume_slices(ds)
+            
+        # Check for shared functional groups (multi-frame)
+        if hasattr(ds, 'SharedFunctionalGroupsSequence'):
+            result['shared_functional_groups'] = _extract_shared_groups(ds)
+        
+        # Check for per-frame groups
+        if hasattr(ds, 'PerFrameFunctionalGroupsSequence'):
+            result['per_frame_groups'] = _extract_per_frame_groups(ds)
+        
+        return result
+        
+    except ImportError:
+        return {
+            'is_volume': False,
+            'error': 'pydicom required for volume parsing'
+        }
+    except Exception as e:
+        logger.warning(f"Volume parsing failed: {e}")
+        return {
+            'is_volume': False,
+            'error': str(e)[:200]
+        }
+
+
+def _is_ct_mr_volume(ds) -> bool:
+    """Check if DICOM represents a CT or MR volume."""
+    modality = getattr(ds, 'Modality', '')
+    slices = getattr(ds, 'ImagesInAcquisition', 0)
+    
+    if modality in ['CT', 'MR', 'PT', 'NM'] and slices > 1:
+        return True
+    
+    # Check for multiple series instances
+    if modality in ['CT', 'MR'] and hasattr(ds, 'SeriesInstanceUID'):
+        return True
+    
+    return False
+
+
+def _extract_volume_geometry(ds) -> Dict[str, Any]:
+    """Extract 3D volume geometry information."""
+    geometry = {}
+    
+    # Basic dimensions
+    rows = getattr(ds, 'Rows', 0)
+    cols = getattr(ds, 'Columns', 0)
+    frames = getattr(ds, 'NumberOfFrames', 1)
+    
+    geometry['dimensions_2d'] = f"{cols}x{rows}"
+    geometry['total_slices'] = frames
+    
+    # Pixel spacing
+    pixel_spacing = getattr(ds, 'PixelSpacing', [])
+    if pixel_spacing and len(pixel_spacing) >= 2:
+        geometry['pixel_spacing'] = {
+            'x_mm': float(pixel_spacing[0]),
+            'y_mm': float(pixel_spacing[1])
+        }
+        geometry['voxel_size_xy_mm'] = float(pixel_spacing[0])
+    
+    # Slice thickness (spacing between slices)
+    slice_thickness = getattr(ds, 'SliceThickness', '')
+    if slice_thickness:
+        try:
+            geometry['slice_thickness_mm'] = float(slice_thickness.replace('mm', ''))
+            geometry['voxel_volume_mm3'] = round(
+                geometry.get('voxel_size_xy_mm', 1) ** 2 * float(slice_thickness.replace('mm', '')), 3
+            )
+        except (ValueError, KeyError):
+            pass
+    
+    # Slice spacing
+    slice_spacing = getattr(ds, 'SpacingBetweenSlices', '')
+    if slice_spacing:
+        try:
+            geometry['slice_spacing_mm'] = float(slice_spacing)
+        except ValueError:
+            pass
+    
+    # Image position patient (first slice position)
+    image_position = getattr(ds, 'ImagePositionPatient', [])
+    if image_position and len(image_position) >= 3:
+        geometry['first_slice_position'] = {
+            'x_mm': float(image_position[0]),
+            'y_mm': float(image_position[1]),
+            'z_mm': float(image_position[2])
+        }
+    
+    # Image orientation patient
+    orientation = getattr(ds, 'ImageOrientationPatient', [])
+    if orientation and len(orientation) >= 6:
+        geometry['orientation'] = {
+            'row_vector': [float(orientation[0]), float(orientation[1]), float(orientation[2])],
+            'column_vector': [float(orientation[3]), float(orientation[4]), float(orientation[5])]
+        }
+    
+    # Calculate volume coverage
+    if frames > 1 and slice_thickness:
+        try:
+            thickness = float(slice_thickness.replace('mm', ''))
+            geometry['volume_coverage_cm'] = round(frames * thickness / 10, 1)
+        except ValueError:
+            pass
+    
+    # Estimate total volume
+    if rows and cols and frames:
+        geometry['estimated_voxels'] = rows * cols * frames
+    
+    return geometry
+
+
+def _analyze_volume_slices(ds) -> Dict[str, Any]:
+    """Analyze slice distribution and timing."""
+    analysis = {}
+    
+    # Acquisition timing
+    acquisition_time = getattr(ds, 'AcquisitionTime', '')
+    if acquisition_time:
+        analysis['acquisition_time'] = acquisition_time
+    
+    # Reconstruction
+    reconstruction_kernel = getattr(ds, 'ReconstructionKernel', '')
+    if reconstruction_kernel:
+        analysis['reconstruction_kernel'] = reconstruction_kernel
+    
+    # Window/Level (for CT, typical brain and lung windows)
+    window_center = getattr(ds, 'WindowCenter', '')
+    window_width = getattr(ds, 'WindowWidth', '')
+    
+    if window_center and window_width:
+        analysis['display_window'] = {
+            'center': str(window_center),
+            'width': str(window_width)
+        }
+    
+    # Slice location range (if available)
+    slice_locations = getattr(ds, 'SliceLocation', '')
+    if slice_locations:
+        try:
+            analysis['slice_location_mm'] = float(slice_locations)
+        except ValueError:
+            pass
+    
+    # CT-specific dose info
+    modality = getattr(ds, 'Modality', '')
+    if modality == 'CT':
+        ct_divol = getattr(ds, 'CTDIvol', 0)
+        dlp = getattr(ds, 'DoseLengthProduct', 0)
+        
+        if ct_divol or dlp:
+            analysis['dose'] = {
+                'ct_divol_mgy': float(ct_divol) if ct_divol else None,
+                'dlp_mgy_cm': float(dlp) if dlp else None
+            }
+    
+    # MRI-specific parameters
+    if modality == 'MR':
+        tr = getattr(ds, 'RepetitionTime', 0)
+        te = getattr(ds, 'EchoTime', 0)
+        flip_angle = getattr(ds, 'FlipAngle', 0)
+        
+        if tr or te or flip_angle:
+            analysis['mri_parameters'] = {
+                'tr_ms': float(tr) if tr else None,
+                'te_ms': float(te) if te else None,
+                'flip_angle_degrees': float(flip_angle) if flip_angle else None
+            }
+    
+    return analysis
+
+
+def _extract_shared_groups(ds) -> Dict[str, Any]:
+    """Extract shared functional groups for multi-frame DICOM."""
+    shared = {}
+    
+    try:
+        shared_seq = ds.SharedFunctionalGroupsSequence
+        
+        # Pixel measures
+        if hasattr(shared_seq, 'PixelMeasuresSequence'):
+            pm = shared_seq.PixelMeasuresSequence
+            if hasattr(pm, 'PixelSpacing'):
+                shared['pixel_spacing'] = list(pm.PixelSpacing)
+            if hasattr(pm, 'SliceThickness'):
+                shared['slice_thickness'] = str(pm.SliceThickness)
+        
+        # Plane orientation
+        if hasattr(shared_seq, 'PlaneOrientationSequence'):
+            po = shared_seq.PlaneOrientationSequence
+            if hasattr(po, 'ImageOrientationPatient'):
+                shared['orientation'] = list(po.ImageOrientationPatient)
+        
+        # CT dose
+        if hasattr(shared_seq, 'CTAcquisitionTypeSequence'):
+            ct = shared_seq.CTAcquisitionTypeSequence
+            if hasattr(ct, 'AcquisitionType'):
+                shared['ct_acquisition_type'] = str(ct.AcquisitionType)
+        
+    except Exception as e:
+        logger.debug(f"Shared functional groups extraction failed: {e}")
+    
+    return shared
+
+
+def _extract_per_frame_groups(ds) -> Dict[str, Any]:
+    """Extract per-frame functional groups for multi-frame DICOM."""
+    per_frame = {
+        'frames_analyzed': 0,
+        'frame_positions': [],
+        'unique_positions': 0
+    }
+    
+    try:
+        frame_seq = ds.PerFrameFunctionalGroupsSequence
+        positions = []
+        
+        for frame in frame_seq:
+            per_frame['frames_analyzed'] += 1
+            
+            # Get frame position
+            if hasattr(frame, 'PlanePositionSequence'):
+                pos_seq = frame.PlanePositionSequence
+                if hasattr(pos_seq, 'ImagePositionPatient'):
+                    positions.append(list(pos_seq.ImagePositionPatient))
+        
+        if positions:
+            per_frame['frame_positions'] = positions[:100]  # Limit to 100
+            per_frame['unique_positions'] = len(set(tuple(p) for p in positions))
+            
+    except Exception as e:
+        logger.debug(f"Per-frame groups extraction failed: {e}")
+    
+    return per_frame
+
+
+# Protocol Deviation Detection for DICOM (Quality Assurance)
+# Compares actual acquisition parameters against expected protocols
+
+PROTOCOL_THRESHOLDS = {
+    'CT': {
+        'slice_thickness_mm': {'min': 0.5, 'max': 10.0, 'optimal': 2.5},
+        'kvp': {'min': 80, 'max': 140, 'optimal': 120},
+        'max_mas': {'min': 10, 'max': 800, 'optimal': 200},
+        'pitch': {'min': 0.5, 'max': 1.5, 'optimal': 0.984}
+    },
+    'MR': {
+        'slice_thickness_mm': {'min': 0.5, 'max': 10.0, 'optimal': 5.0},
+        'tr_ms': {'min': 500, 'max': 10000, 'optimal': 2000},
+        'te_ms': {'min': 10, 'max': 200, 'optimal': 30},
+        'flip_angle_degrees': {'min': 5, 'max': 180, 'optimal': 90}
+    },
+    'CR': {
+        'exposure_uAs': {'min': 1, 'max': 500, 'optimal': 25},
+        'kvp': {'min': 40, 'max': 125, 'optimal': 110}
+    },
+    'DX': {
+        'exposure_mAs': {'min': 0.5, 'max': 100, 'optimal': 5},
+        'kvp': {'min': 40, 'max': 150, 'optimal': 120}
+    },
+    'US': {
+        'mechanical_index': {'min': 0, 'max': 1.9, 'optimal': 0.8},
+        'thermal_index': {'min': 0, 'max': 2.0, 'optimal': 0.5}
+    }
+}
+
+
+def detect_protocol_deviations(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Detect protocol deviations in DICOM metadata.
+    
+    Compares actual acquisition parameters against expected ranges
+    for quality assurance purposes.
+    
+    Args:
+        metadata: DICOM metadata dict
+        
+    Returns:
+        Protocol deviation analysis dict
+    """
+    analysis = {
+        'is_compliant': True,
+        'deviations': [],
+        'warnings': [],
+        'recommendations': [],
+        'protocol_scores': {},
+        'overall_score': 100
+    }
+    
+    # Get modality
+    modality = metadata.get('series', {}).get('modality', '')
+    if not modality:
+        return {
+            'is_compliant': False,
+            'error': 'Modality not identified',
+            'recommendations': ['Unable to assess - missing modality information']
+        }
+    
+    thresholds = PROTOCOL_THRESHOLDS.get(modality, {})
+    if not thresholds:
+        return {
+            'is_compliant': True,
+            'modality': modality,
+            'note': 'No protocol thresholds defined for this modality',
+            'recommendations': ['Consider establishing protocol thresholds for quality assurance']
+        }
+    
+    # Get acquisition parameters
+    acq = metadata.get('acquisition', {})
+    modality_specific = metadata.get('modality_specific', {})
+    
+    # Check each parameter
+    deviations_found = []
+    warnings_found = []
+    scores = []
+    
+    for param, limits in thresholds.items():
+        # Find the actual value
+        value = None
+        
+        # Check in acquisition
+        if param in acq:
+            value = acq[param]
+        # Check in modality-specific
+        elif param in modality_specific:
+            value = modality_specific[param]
+        
+        if value is None:
+            continue
+        
+        try:
+            # Convert to float if needed
+            if isinstance(value, str):
+                value = float(value.replace('mm', '').replace('mAs', '').replace('uAs', '').replace('ms', ''))
+            else:
+                value = float(value)
+            
+            # Check for deviations
+            if value < limits['min']:
+                deviations_found.append({
+                    'parameter': param,
+                    'value': value,
+                    'expected_min': limits['min'],
+                    'severity': 'high' if value < limits['min'] * 0.5 else 'medium',
+                    'message': f"{param} ({value}) below minimum threshold ({limits['min']})"
+                })
+                scores.append(50)
+            elif value > limits['max']:
+                deviations_found.append({
+                    'parameter': param,
+                    'value': value,
+                    'expected_max': limits['max'],
+                    'severity': 'high' if value > limits['max'] * 1.5 else 'medium',
+                    'message': f"{param} ({value}) above maximum threshold ({limits['max']})"
+                })
+                scores.append(50)
+            elif value < limits['optimal'] * 0.8 or value > limits['optimal'] * 1.2:
+                warnings_found.append({
+                    'parameter': param,
+                    'value': value,
+                    'optimal': limits['optimal'],
+                    'message': f"{param} ({value}) outside optimal range ({limits['optimal']})"
+                })
+                scores.append(80)
+            else:
+                scores.append(100)
+                
+        except (ValueError, TypeError):
+            pass
+    
+    # Calculate overall score
+    if scores:
+        analysis['overall_score'] = round(sum(scores) / len(scores), 1)
+    
+    # Determine compliance status
+    high_severity = [d for d in deviations_found if d['severity'] == 'high']
+    analysis['is_compliant'] = len(high_severity) == 0
+    analysis['deviations'] = deviations_found
+    analysis['warnings'] = warnings_found
+    
+    # Generate recommendations
+    if high_severity:
+        analysis['recommendations'].append(
+            f"Critical: {len(high_severity)} protocol deviation(s) detected. Review acquisition parameters."
+        )
+    if deviations_found:
+        analysis['recommendations'].append(
+            f"Review {len(deviations_found)} parameter(s) outside acceptable range."
+        )
+    if warnings_found:
+        analysis['recommendations'].append(
+            f"Consider optimizing {len(warnings_found)} parameter(s) for better image quality."
+        )
+    if analysis['is_compliant'] and not warnings_found:
+        acquisition = metadata.get('series', {}).get('series_description', '')
+        analysis['recommendations'].append(
+            f"Protocol appears compliant for {modality} acquisition."
+        )
+    
+    analysis['protocol_scores'] = {
+        'parameters_evaluated': len(scores),
+        'optimal_parameters': len([s for s in scores if s == 100]),
+        'suboptimal_parameters': len([s for s in scores if 70 <= s < 100]),
+        'deviant_parameters': len([s for s in scores if s < 70])
+    }
+    
+    return analysis
+
+
+def validate_dicom_quality(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Comprehensive DICOM quality validation.
+    
+    Checks for common quality issues:
+    - Missing required fields
+    - Out of range values
+    - Consistency checks
+    - Completeness scoring
+    
+    Args:
+        metadata: DICOM metadata dict
+        
+    Returns:
+        Quality validation report
+    """
+    validation = {
+        'is_valid': True,
+        'completeness_score': 0,
+        'issues': [],
+        'quality_level': 'unknown',
+        'checks_performed': []
+    }
+    
+    required_patient = ['patient_id', 'patient_name', 'patient_birth_date']
+    required_study = ['study_instance_uid', 'study_date', 'study_id']
+    required_series = ['series_instance_uid', 'modality']
+    required_image = ['rows', 'columns']
+    
+    all_checks = []
+    
+    # Check patient data completeness
+    patient = metadata.get('patient', {})
+    patient_present = sum(1 for f in required_patient if patient.get(f))
+    patient_score = round(patient_present / len(required_patient) * 100, 1)
+    all_checks.append(('patient_completeness', patient_score))
+    
+    # Check study data completeness
+    study = metadata.get('study', {})
+    study_present = sum(1 for f in required_study if study.get(f))
+    study_score = round(study_present / len(required_study) * 100, 1)
+    all_checks.append(('study_completeness', study_score))
+    
+    # Check series data completeness
+    series = metadata.get('series', {})
+    series_present = sum(1 for f in required_series if series.get(f))
+    series_score = round(series_present / len(required_series) * 100, 1)
+    all_checks.append(('series_completeness', series_score))
+    
+    # Check image data completeness
+    image = metadata.get('image', {})
+    image_present = sum(1 for f in required_image if image.get(f))
+    image_score = round(image_present / len(required_image) * 100, 1)
+    all_checks.append(('image_completeness', image_score))
+    
+    # Calculate overall completeness
+    if all_checks:
+        validation['completeness_score'] = round(sum(s for _, s in all_checks) / len(all_checks), 1)
+    
+    # Identify issues
+    issues = []
+    
+    if patient_score < 50:
+        issues.append({'type': 'missing_patient_data', 'severity': 'high'})
+    if study_score < 50:
+        issues.append({'type': 'missing_study_data', 'severity': 'high'})
+    if image.get('bits_stored', 0) < 8:
+        issues.append({'type': 'low_bit_depth', 'severity': 'medium'})
+    if not image.get('pixel_spacing'):
+        issues.append({'type': 'missing_pixel_spacing', 'severity': 'medium'})
+    
+    validation['issues'] = issues
+    validation['checks_performed'] = [f"{name}: {score}%" for name, score in all_checks]
+    validation['is_valid'] = len([i for i in issues if i['severity'] == 'high']) == 0
+    
+    # Determine quality level
+    if validation['completeness_score'] >= 95 and validation['is_valid']:
+        validation['quality_level'] = 'excellent'
+    elif validation['completeness_score'] >= 80 and validation['is_valid']:
+        validation['quality_level'] = 'good'
+    elif validation['completeness_score'] >= 60:
+        validation['quality_level'] = 'acceptable'
+    else:
+        validation['quality_level'] = 'poor'
+    
+    return validation
