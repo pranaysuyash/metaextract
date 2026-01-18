@@ -97,6 +97,8 @@ function initializeDatabase(): DatabaseInstance | null {
   const pool = new Pool({
     connectionString: dbUrl,
     ...DEFAULT_POOL_CONFIG,
+    // Force UTC timezone for all connections
+    options: '-c timezone=UTC',
   });
 
   // Set up error listeners for the pool

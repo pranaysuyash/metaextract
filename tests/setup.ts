@@ -12,6 +12,7 @@ process.env.DATABASE_URL =
 process.env.SESSION_SECRET = 'test-session-secret-for-testing';
 process.env.TOKEN_SECRET = 'test-token-secret-for-testing';
 process.env.JWT_SECRET = 'test-jwt-secret-for-testing';
+process.env.RATE_LIMIT_ENABLED = 'false';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -116,13 +117,14 @@ beforeAll(async () => {
     // Quick connectivity probe
     await client.query('SELECT 1');
 
-    // Check for critical table used by tests
+    // Check for critical tables used by tests
     const res = await client.query(
-      "SELECT to_regclass('public.credit_grants') AS reg"
+      "SELECT to_regclass('public.credit_grants') AS grants, to_regclass('public.credit_holds') AS holds, to_regclass('public.images_mvp_quotes') AS quotes"
     );
-    const reg = res.rows[0]?.reg;
+    const hasAllCriticalTables =
+      !!res.rows[0]?.grants && !!res.rows[0]?.holds && !!res.rows[0]?.quotes;
 
-    // Also ensure newer tables exist even if the DB was initialized previously.
+    // Also ensure newer tables/columns exist even if the DB was initialized previously.
     // This prevents noisy errors when modules run background cleanup tasks.
     const ensureUserSessionsTable = async (): Promise<void> => {
       const t = await client.query(
@@ -152,7 +154,19 @@ beforeAll(async () => {
       );
     };
 
-    if (!reg) {
+    const ensureImagesMvpQuoteColumns = async (): Promise<void> => {
+      const usedAt = await client.query(
+        `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'images_mvp_quotes' AND column_name = 'used_at'`
+      );
+
+      if (usedAt.rowCount === 0) {
+        await client.query(
+          'ALTER TABLE public.images_mvp_quotes ADD COLUMN IF NOT EXISTS used_at TIMESTAMP;'
+        );
+      }
+    };
+
+    if (!hasAllCriticalTables) {
       // Try to load and run init.sql from repo root, executing statements
       // one-by-one so we can report which statement (if any) fails.
       try {
@@ -188,19 +202,22 @@ beforeAll(async () => {
             stmt.toLowerCase().includes('create index')
           ) {
             const r = await client.query(
-              "SELECT to_regclass('public.credit_grants') AS reg"
+              "SELECT to_regclass('public.credit_grants') AS grants, to_regclass('public.credit_holds') AS holds, to_regclass('public.images_mvp_quotes') AS quotes"
             );
-            if (r.rows[0]?.reg) break; // early exit if critical table is present
+            const allCriticalPresent =
+              !!r.rows[0]?.grants && !!r.rows[0]?.holds && !!r.rows[0]?.quotes;
+            if (allCriticalPresent) break; // early exit only when all critical tables are present
           }
         }
 
-        // Verify table exists after init
+        // Verify tables exist after init
         const verify = await client.query(
-          "SELECT to_regclass('public.credit_grants') AS reg"
+          "SELECT to_regclass('public.credit_grants') AS grants, to_regclass('public.credit_holds') AS holds, to_regclass('public.images_mvp_quotes') AS quotes"
         );
-        if (!verify.rows[0]?.reg) {
+        const { grants, holds, quotes } = verify.rows[0] || {};
+        if (!grants || !holds || !quotes) {
           throw new Error(
-            'Schema init did not create expected tables (credit_grants missing)'
+            'Schema init did not create expected tables (credit_grants/credit_holds/images_mvp_quotes missing)'
           );
         }
       } catch (initErr) {
@@ -217,6 +234,7 @@ beforeAll(async () => {
     }
 
     await ensureUserSessionsTable();
+    await ensureImagesMvpQuoteColumns();
 
     // If we reach here, DB is ready
     (global as any).__TEST_DB_READY = true;

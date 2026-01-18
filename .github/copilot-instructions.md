@@ -53,6 +53,16 @@ npm run dev  # Concurrent client (5173) + server
 - If you find untracked work in another branch/worktree: commit it on that branch or copy it into `main` and commit it; if unsure, add a TODO/checklist doc under `docs/` and commit (never discard).
 - Exception: never commit secrets (e.g. `.env`, tokens, credentials).
 
+### Pre-commit guardrails (required)
+
+This repo uses a Husky pre-commit hook (`scripts/precommit-check.cjs`) to prevent multi-agent accidents and force **semantic review** for risky diffs.
+
+- **Deletions/renames blocked by default**: commits with staged `D`/`R*` changes are blocked unless explicitly overridden with `ALLOW_DELETIONS=1` (one-off). Do not override unless the user explicitly instructed a deletion/rename.
+- **Large per-file diffs require review notes**: if any single file’s staged diff size (added+removed) exceeds `LARGE_FILE_CHANGE_PCT`% of that file’s `HEAD` line count, you must:
+  - stage a change review note under `docs/change_reviews/` (template: `node scripts/create-change-review-note.cjs`), and
+  - commit with `ACK_LARGE_FILE_CHANGES=1` (one-off acknowledgement).
+- **Do not rely on tests alone** for large diffs: always compare `git diff --staged -- <file>` against `git show HEAD:<file>` and document what changed and why the new version is better.
+
 ### Build & Test
 
 ```bash

@@ -47,11 +47,11 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
    */
   it('should prevent concurrent overspending via atomic reservation', async () => {
     // Setup: Create user with exactly 1 extraction worth of credits
-    const testBalanceId = 'test-balance-concurrent';
+    const sessionId = 'test-session-concurrent';
+    const balance = await storage.getOrCreateCreditBalance(sessionId);
+    const testBalanceId = balance.id;
     const creditCost = 10; // Assume 10 credits per extraction
     
-    // Create the balance first, then add credits
-    await storage.getOrCreateCreditBalance(`session:${testBalanceId}`);
     await storage.addCredits(
       testBalanceId,
       creditCost,
@@ -59,9 +59,6 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
       'test'
     );
 
-    // Mock session/auth to use this balance
-    const sessionId = 'test-session-concurrent';
-    
     // Fire 10 concurrent requests with DIFFERENT idempotency keys
     const requests = Array.from({ length: 10 }, (_, i) =>
       request(app)
@@ -83,7 +80,7 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
     expect(insufficientCreditsCount + unavailableCount).toBe(9);
 
     // Verify: Only 1 hold was committed
-    const finalBalance = await storage.getOrCreateCreditBalance(testBalanceId, undefined);
+    const finalBalance = await storage.getOrCreateCreditBalance(sessionId, undefined);
     expect(finalBalance?.credits).toBe(0); // All credits consumed by the 1 successful request
   }, 30000); // 30 second timeout for concurrent requests
 
@@ -94,7 +91,9 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
    * Expected: Second request returns existing hold, no double-charge
    */
   it('should not double-charge on retry with same Idempotency-Key', async () => {
-    const testBalanceId = 'test-balance-idempotency';
+    const sessionId = 'test-session-idempotency';
+    const balance = await storage.getOrCreateCreditBalance(sessionId);
+    const testBalanceId = balance.id;
     const creditCost = 10;
     
     await storage.addCredits(
@@ -104,7 +103,6 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
       'test'
     );
 
-    const sessionId = 'test-session-idempotency';
     const idempotencyKey = 'test-retry-same-key';
 
     // First request
@@ -129,7 +127,7 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
     expect(response2.status).toBe(200);
 
     // Verify: Only charged once
-    const finalBalance = await storage.getOrCreateCreditBalance(testBalanceId, undefined);
+    const finalBalance = await storage.getOrCreateCreditBalance(sessionId, undefined);
     expect(finalBalance?.credits).toBe(creditCost); // Still have 1 extraction worth left
   }, 20000);
 
@@ -178,7 +176,9 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
    * Expected: 503 response, no extraction result returned, hold released
    */
   it('should not return extraction result if commit fails', async () => {
-    const testBalanceId = 'test-balance-commit-fail';
+    const sessionId = 'test-session-commit-fail';
+    const balance = await storage.getOrCreateCreditBalance(sessionId);
+    const testBalanceId = balance.id;
     const creditCost = 10;
     
     await storage.addCredits(
@@ -187,8 +187,6 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
       'Test setup - commit failure',
       'test'
     );
-
-    const sessionId = 'test-session-commit-fail';
 
     // Mock commitHold to fail
     const commitHoldSpy = jest.spyOn(storage, 'commitHold');
@@ -207,7 +205,7 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
     expect(response.body.metadata).toBeUndefined(); // No extraction result
 
     // Verify: Hold was released (credits refunded)
-    const finalBalance = await storage.getOrCreateCreditBalance(testBalanceId, undefined);
+    const finalBalance = await storage.getOrCreateCreditBalance(sessionId, undefined);
     expect(finalBalance?.credits).toBe(creditCost); // Credits refunded
   }, 15000);
 
@@ -219,6 +217,14 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
    */
   it('should require Idempotency-Key header for paid extractions', async () => {
     const sessionId = 'test-session-no-idem-key';
+
+    const balance = await storage.getOrCreateCreditBalance(sessionId);
+    await storage.addCredits(
+      balance.id,
+      10,
+      'Test setup - missing idempotency key',
+      'test'
+    );
 
     const response = await request(app)
       .post('/api/images_mvp/extract')
@@ -239,7 +245,9 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
    * Expected: Cleanup job releases hold and refunds credits
    */
   it('should automatically release expired holds', async () => {
-    const testBalanceId = 'test-balance-expiry';
+    const sessionId = 'test-session-expiry';
+    const balance = await storage.getOrCreateCreditBalance(sessionId);
+    const testBalanceId = balance.id;
     const creditCost = 10;
     
     await storage.addCredits(
@@ -261,7 +269,7 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
     );
 
     // Verify hold was created and credits deducted
-    const balanceAfterReserve = await storage.getOrCreateCreditBalance(testBalanceId, undefined);
+    const balanceAfterReserve = await storage.getOrCreateCreditBalance(sessionId, undefined);
     expect(balanceAfterReserve?.credits).toBe(0);
 
     // Wait for expiry
@@ -272,7 +280,7 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
     expect(releasedCount).toBeGreaterThan(0);
 
     // Verify credits were refunded
-    const balanceAfterCleanup = await storage.getOrCreateCreditBalance(testBalanceId, undefined);
+    const balanceAfterCleanup = await storage.getOrCreateCreditBalance(sessionId, undefined);
     expect(balanceAfterCleanup?.credits).toBe(creditCost);
   }, 10000);
 });

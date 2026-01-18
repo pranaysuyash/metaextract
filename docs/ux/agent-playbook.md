@@ -2,6 +2,11 @@
 
 This file captures execution-ready UX tasks and the definition of done. It is the canonical companion to the persona library.
 
+## Repo Guardrails (Non-negotiable)
+
+- Follow `AGENTS.md` + `doc/AGENTS.md` (multi-agent safety: do not delete other agents’ work unless explicitly instructed).
+- Pre-commit hook `scripts/precommit-check.cjs` blocks deletions/renames and requires `docs/change_reviews/` notes + semantic review for large diffs.
+
 ## Example Tasks Agents Can Execute Immediately
 
 1) Add missingness states everywhere

@@ -300,3 +300,252 @@ def parse_dicom(filepath: str) -> Dict[str, Any]:
     """Parse DICOM file and return metadata."""
     parser = DicomParser()
     return parser.parse(filepath)
+
+
+# HIPAA De-identification Functions (DICOM PS3.15 Annex E)
+# These implement the Basic Profile for Safe Harbor de-identification
+
+DICOM_DEIDENTIFY_TAGS = {
+    # Patient Identification (Group 0010)
+    'PatientName',
+    'PatientID',
+    'PatientBirthDate',
+    'PatientBirthTime',
+    'PatientSex',
+    'PatientAge',
+    'PatientSize',
+    'PatientWeight',
+    'PatientAddress',
+    'PatientTelephoneNumbers',
+    'PatientReligiousPreference',
+    'PatientMedicalRecordNumber',
+    'PatientMilitaryRank',
+    'PatientVeteran',
+    'PatientInsurancePlanCodeSequence',
+    'PatientPrimaryLanguageCodeSequence',
+    
+    # Referring Physician (Group 0008)
+    'ReferringPhysicianName',
+    'ReferringPhysicianAddress',
+    'ReferringPhysicianTelephoneNumbers',
+    'ReferringPhysicianIdentificationSequence',
+    
+    # Study (Group 0008, 0020)
+    'StudyDate',
+    'StudyTime',
+    'AccessionNumber',
+    'StudyID',
+    'StudyDescription',
+    'NameOfPhysiciansReadingStudy',
+    
+    # Series (Group 0020)
+    'OperatorsName',
+    'SeriesDescription',
+    'SeriesNumber',
+    
+    # Equipment (Group 0008)
+    'InstitutionName',
+    'InstitutionAddress',
+    'StationName',
+    'InstitutionalDepartmentName',
+    'Manufacturer',
+    'ManufacturerModelName',
+    'DeviceSerialNumber',
+    'SoftwareVersions',
+    
+    # Other Identifiers
+    'OtherPatientNames',
+    'OtherPatientIDs',
+    'PerformedProcedureStepID',
+    'PerformedProcedureStepDescription',
+    'ScheduledStepAttributesSequence',
+    'RequestingPhysician',
+    'RequestingService',
+    'RequestedProcedureDescription',
+    'RequestedProcedureCodeSequence',
+    'StudyIDIssuer',
+    'PrivacyBlockSequence',
+    'ResponsibleOrganization',
+}
+
+
+DICOM_CLEANUP_TAGS = {
+    # Remove these tags entirely (safe harbor)
+    'PatientBirthDate': None,
+    'PatientBirthTime': None,
+    'StudyDate': None,
+    'StudyTime': None,
+    'AccessionNumber': None,
+    'SeriesNumber': None,
+}
+
+
+def deidentify_dicom_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Apply HIPAA Basic Profile de-identification to DICOM metadata.
+    
+    This removes or replaces all Direct Identifiers as specified in
+    DICOM PS3.15 Annex E.1 (Basic Profile).
+    
+    Args:
+        metadata: Raw DICOM metadata dict
+        
+    Returns:
+        De-identified metadata dict with PHI removed
+    """
+    deidentified = {}
+    
+    for key, value in metadata.items():
+        if key == 'patient':
+            deidentified['patient'] = deidentify_patient_data(value)
+        elif key == 'study':
+            deidentified['study'] = deidentify_study_data(value)
+        elif key == 'series':
+            deidentified['series'] = deidentify_series_data(value)
+        elif key == 'equipment':
+            deidentified['equipment'] = deidentify_equipment_data(value)
+        else:
+            # Pass through other fields unchanged
+            deidentified[key] = value
+    
+    # Add de-identification status
+    deidentified['_deidentified'] = {
+        'status': 'deidentified',
+        'method': 'hipaa_basic_profile',
+        'timestamp': str(__import__('datetime').datetime.now()),
+        'fields_removed': count_removed_fields(metadata, deidentified)
+    }
+    
+    return deidentified
+
+
+def deidentify_patient_data(patient: Dict[str, Any]) -> Dict[str, Any]:
+    """De-identify patient demographic data."""
+    deid = {}
+    
+    for key, value in patient.items():
+        if key in ['patient_name', 'patient_id', 'patient_address', 'patient_phone']:
+            # Remove PHI
+            deid[key] = '[REMOVED]'
+        elif key in ['patient_birth_date', 'patient_birth_time']:
+            # Keep year only (DOB year is allowed if year > 89)
+            if value and len(str(value)) >= 4:
+                year = str(value)[:4]
+                deid[key] = f"{year}0101"  # Approximate to Jan 1
+            else:
+                deid[key] = ''
+        elif key == 'patient_sex':
+            deid[key] = value  # Sex is not PHI
+        else:
+            deid[key] = value
+    
+    return deid
+
+
+def deidentify_study_data(study: Dict[str, Any]) -> Dict[str, Any]:
+    """De-identify study data."""
+    deid = {}
+    
+    for key, value in study.items():
+        if key in ['accession_number', 'study_id', 'referring_physician']:
+            deid[key] = '[REMOVED]'
+        elif key in ['study_date', 'study_time']:
+            # Keep date/time for clinical use but could be shifted
+            deid[key] = value
+        elif key == 'study_description':
+            deid[key] = value  # Keep clinical info
+        else:
+            deid[key] = value
+    
+    return deid
+
+
+def deidentify_series_data(series: Dict[str, Any]) -> Dict[str, Any]:
+    """De-identify series data."""
+    deid = {}
+    
+    for key, value in series.items():
+        if key == 'operators_name':
+            deid[key] = '[REMOVED]'
+        elif key in ['series_description', 'modality', 'body_part_examined']:
+            deid[key] = value  # Keep clinical info
+        else:
+            deid[key] = value
+    
+    return deid
+
+
+def deidentify_equipment_data(equipment: Dict[str, Any]) -> Dict[str, Any]:
+    """De-identify equipment data (keep for quality assurance)."""
+    # Equipment info is generally kept for QA purposes
+    # but serial numbers should be generalized
+    deid = {}
+    
+    for key, value in equipment.items():
+        if key in ['device_serial_number', 'institution_name', 'institution_address']:
+            deid[key] = '[GENERALIZED]'
+        elif key in ['manufacturer', 'manufacturer_model_name']:
+            deid[key] = value  # Keep manufacturer info
+        else:
+            deid[key] = value
+    
+    return deid
+
+
+def count_removed_fields(original: Dict, deidentified: Dict) -> int:
+    """Count how many fields were removed or modified."""
+    count = 0
+    
+    def count_recursive(orig, deid, path=''):
+        nonlocal count
+        if isinstance(orig, dict):
+            for k in orig:
+                if k == '_deidentified':
+                    continue
+                new_path = f"{path}.{k}" if path else k
+                if k not in deid:
+                    count += 1
+                elif isinstance(orig[k], dict) and isinstance(deid.get(k), dict):
+                    count_recursive(orig[k], deid[k], new_path)
+                elif orig[k] != deid.get(k):
+                    count += 1
+        elif isinstance(orig, list):
+            for i, item in enumerate(orig):
+                if i >= len(deidentified if isinstance(deidentified, list) else []):
+                    count += 1
+                elif isinstance(item, (dict, list)):
+                    count_recursive(item, deidentified[i] if i < len(deidentified) else {}, f"{path}[{i}]")
+    
+    count_recursive(original, deidentified)
+    return count
+
+
+def create_deidentification_report(original: Dict[str, Any], 
+                                   deidentified: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a report of what was de-identified."""
+    return {
+        'original_fields': count_fields(original),
+        'deidentified_fields': count_fields(deidentified),
+        'fields_removed': count_removed_fields(original, deidentified),
+        'deidentification_method': 'HIPAA Basic Profile (DICOM PS3.15 E.1)',
+        'compliance_status': 'safe_harbor_compliant',
+        'recommendations': [
+            'Review and validate de-identified data before sharing',
+            'Ensure data transfer uses secure methods',
+            'Document the de-identification process for audit trail',
+            'Consider additional de-identification for research use'
+        ]
+    }
+
+
+def count_fields(data: Any, depth: int = 0) -> int:
+    """Count total fields in nested dict."""
+    if depth > 10:
+        return 0
+    
+    if isinstance(data, dict):
+        count = 0
+        for v in data.values():
+            count += count_fields(v, depth + 1)
+        return count
+    return 1

@@ -171,6 +171,53 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_balance_id ON credit_transactions(balance_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_type ON credit_transactions(type);
+
+-- Credit holds (reserve-commit-release) for money-path safety
+CREATE TABLE IF NOT EXISTS credit_holds (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id VARCHAR(255) NOT NULL,
+  balance_id VARCHAR NOT NULL REFERENCES credit_balances(id),
+  amount INTEGER NOT NULL,
+  state TEXT NOT NULL,
+  description TEXT,
+  quote_id VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL,
+  committed_at TIMESTAMP,
+  released_at TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS credit_holds_balance_request_idx ON credit_holds(balance_id, request_id);
+CREATE INDEX IF NOT EXISTS credit_holds_state_expires_idx ON credit_holds(state, expires_at);
+
+-- Images MVP Quote Storage Table
+CREATE TABLE IF NOT EXISTS images_mvp_quotes (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id TEXT NOT NULL,
+  user_id VARCHAR REFERENCES users(id),
+  files JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ops JSONB NOT NULL DEFAULT '{}'::jsonb,
+  credits_total INTEGER NOT NULL DEFAULT 0,
+  per_file_credits JSONB NOT NULL DEFAULT '{}'::jsonb,
+  per_file JSONB NOT NULL DEFAULT '{}'::jsonb,
+  schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  status VARCHAR(20) NOT NULL DEFAULT 'active'
+);
+
+-- Backfill safety: ensure column exists even if table was created before migration
+ALTER TABLE images_mvp_quotes
+  ADD COLUMN IF NOT EXISTS used_at TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_session_id ON images_mvp_quotes(session_id);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_user_id ON images_mvp_quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_status ON images_mvp_quotes(status);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_expires_at ON images_mvp_quotes(expires_at);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_created_at ON images_mvp_quotes(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_session_status ON images_mvp_quotes(session_id, status);
 -- Ensure image_mvp_events exists (as a view filtered from ui_events)
 DO $$
 BEGIN
@@ -328,28 +375,3 @@ BEGIN
 END
 $$;
 
--- ============================================================================
--- Images MVP Quote Storage Table
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS images_mvp_quotes (
-  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id TEXT NOT NULL,
-  user_id VARCHAR REFERENCES users(id),
-  files JSONB NOT NULL DEFAULT '[]'::jsonb,
-  ops JSONB NOT NULL DEFAULT '{}'::jsonb,
-  credits_total INTEGER NOT NULL DEFAULT 0,
-  per_file_credits JSONB NOT NULL DEFAULT '{}'::jsonb,
-  per_file JSONB NOT NULL DEFAULT '{}'::jsonb,
-  schedule JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  expires_at TIMESTAMP NOT NULL,
-  used_at TIMESTAMP,
-  status VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_session_id ON images_mvp_quotes(session_id);
-CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_user_id ON images_mvp_quotes(user_id);
-CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_status ON images_mvp_quotes(status);
-CREATE INDEX IF NOT EXISTS idx_images_mvp_quotes_expires_at ON images_mvp_quotes(expires_at);

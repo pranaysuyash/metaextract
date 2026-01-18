@@ -1,5 +1,10 @@
 # Implementation Plan: Professional Product Polish & Enhancement
 
+## Repo Guardrails (Non-negotiable)
+
+- Follow `AGENTS.md` + `doc/AGENTS.md` (multi-agent safety: do not delete other agents’ work unless explicitly instructed).
+- Pre-commit hook `scripts/precommit-check.cjs` blocks deletions/renames and requires `docs/change_reviews/` notes + semantic review for large diffs.
+
 ## Overview
 
 Transform the metadata extraction application into a polished, professional product through systematic implementation of design system, user experience improvements, content optimization, pricing strategy, and comprehensive testing. Each task builds incrementally toward a cohesive, production-ready application.

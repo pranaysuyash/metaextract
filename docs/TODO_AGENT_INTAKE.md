@@ -16,6 +16,7 @@ Use this checklist when multiple agents/worktrees are active and you need to mer
 ## 3) Safety
 - [ ] Never commit secrets (`.env`, tokens, credentials)
 - [ ] Avoid destructive commands (`git clean`, `git reset --hard`, `git worktree remove`) unless explicitly instructed
+- [ ] Respect repo pre-commit guardrails (`scripts/precommit-check.cjs`): deletions/renames are blocked by default, and large per-file diffs require a staged `docs/change_reviews/` note + explicit acknowledgment (`ACK_LARGE_FILE_CHANGES=1`)
 
 ## 4) Verification
 - [ ] Run the smallest relevant checks (or `npm test` / `npm run test:ci` when pushing to `main`)

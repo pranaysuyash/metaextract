@@ -1,5 +1,10 @@
 # Implementation Plan: Accessibility Compliance & WCAG 2.1 AA
 
+## Repo Guardrails (Non-negotiable)
+
+- Follow `AGENTS.md` + `doc/AGENTS.md` (multi-agent safety: do not delete other agents’ work unless explicitly instructed).
+- Pre-commit hook `scripts/precommit-check.cjs` blocks deletions/renames and requires `docs/change_reviews/` notes + semantic review for large diffs.
+
 ## Overview
 
 Transform the MetaExtract images_mvp application into a fully accessible, WCAG 2.1 AA compliant application through systematic implementation of accessibility infrastructure, component enhancements, and comprehensive testing. Each task builds incrementally toward eliminating all 25+ accessibility barriers identified in the audit.

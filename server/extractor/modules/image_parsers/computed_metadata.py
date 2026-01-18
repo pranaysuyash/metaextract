@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 def extract_image_quality_analysis(filepath: str, width: int, height: int, 
                                    format_name: str, mode: str, 
-                                   file_size: Optional[int] = None) -> Dict[str, Any]:
+                                   file_size: Optional[int] = None,
+                                   exif: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Extract image quality metrics."""
     
     # Calculate megapixels
@@ -30,20 +31,119 @@ def extract_image_quality_analysis(filepath: str, width: int, height: int,
     total_pixels = width * height
     if total_pixels >= 20_000_000:
         resolution_quality = "excellent"
+        resolution_score = 95
     elif total_pixels >= 12_000_000:
         resolution_quality = "high"
+        resolution_score = 85
     elif total_pixels >= 8_000_000:
         resolution_quality = "good"
+        resolution_score = 75
     elif total_pixels >= 4_000_000:
         resolution_quality = "medium"
+        resolution_score = 60
     else:
         resolution_quality = "basic"
+        resolution_score = 40
     
     # File size optimization
     file_size_optimized = False
+    bytes_per_pixel = None
     if file_size and total_pixels > 0:
         bytes_per_pixel = file_size / total_pixels
         file_size_optimized = 0.5 <= bytes_per_pixel <= 5.0
+    
+    # Exposure score (based on EXIF metadata if available)
+    exposure_score = None
+    if exif:
+        exposure_factors = []
+        
+        # Check ISO (lower is generally better for quality, but need some range)
+        iso = exif.get('isospeedratings') or exif.get('iso')
+        if iso:
+            if isinstance(iso, (int, float)):
+                if iso <= 100:
+                    exposure_factors.append(100)
+                elif iso <= 400:
+                    exposure_factors.append(90)
+                elif iso <= 800:
+                    exposure_factors.append(75)
+                elif iso <= 1600:
+                    exposure_factors.append(60)
+                elif iso <= 3200:
+                    exposure_factors.append(45)
+                else:
+                    exposure_factors.append(30)
+        
+        # Check aperture (wider aperture = lower f-number = generally better for quality)
+        fnumber = exif.get('fnumber')
+        if fnumber:
+            if isinstance(fnumber, (int, float)):
+                if fnumber <= 1.8:
+                    exposure_factors.append(100)
+                elif fnumber <= 2.8:
+                    exposure_factors.append(90)
+                elif fnumber <= 4.0:
+                    exposure_factors.append(80)
+                elif fnumber <= 5.6:
+                    exposure_factors.append(70)
+                elif fnumber <= 8.0:
+                    exposure_factors.append(60)
+                else:
+                    exposure_factors.append(50)
+        
+        # Check shutter speed (reasonable range)
+        exposure_time = exif.get('exposuretime')
+        if exposure_time:
+            if isinstance(exposure_time, (int, float)):
+                # Very fast or very slow can indicate issues
+                if 0.001 <= exposure_time <= 0.5:
+                    exposure_factors.append(85)
+                elif 0.0001 <= exposure_time < 0.001:
+                    exposure_factors.append(70)
+                elif 0.5 < exposure_time <= 2.0:
+                    exposure_factors.append(75)
+                else:
+                    exposure_factors.append(60)
+        
+        # Calculate average exposure score
+        if exposure_factors:
+            exposure_score = sum(exposure_factors) / len(exposure_factors)
+    
+    # Focus score (based on EXIF focus metadata if available)
+    focus_score = None
+    focus_factors = []
+    
+    if exif:
+        # Check focus mode
+        focus_mode = exif.get('focusmode') or exif.get('afmode')
+        if focus_mode:
+            focus_modes_good = ['AF-S', 'Single', 'One Shot', 'AF-C', 'Continuous']
+            if any(gm in str(focus_mode) for gm in focus_modes_good):
+                focus_factors.append(80)
+            else:
+                focus_factors.append(50)
+        
+        # Check AF points in focus
+        af_points_in_focus = exif.get('pointsinfocus') or exif.get('afpoints')
+        if af_points_in_focus:
+            focus_factors.append(75)
+        
+        # Check face detection (if available)
+        face_detected = exif.get('facedetected')
+        if face_detected:
+            focus_factors.append(85)
+    
+    if focus_factors:
+        focus_score = sum(focus_factors) / len(focus_factors)
+    
+    # Overall quality assessment
+    quality_factors = [resolution_score]
+    if exposure_score is not None:
+        quality_factors.append(exposure_score)
+    if focus_score is not None:
+        quality_factors.append(focus_score)
+    
+    overall_quality = round(sum(quality_factors) / len(quality_factors))
     
     # Color depth
     color_depth_map = {
@@ -69,12 +169,24 @@ def extract_image_quality_analysis(filepath: str, width: int, height: int,
     }
     compression = compression_map.get(format_name, 'unknown')
     
-    return {
+    result = {
         'resolution_quality': resolution_quality,
+        'resolution_score': resolution_score,
         'file_size_optimized': file_size_optimized,
         'color_depth': color_depth,
-        'compression_estimated': compression
+        'compression_estimated': compression,
+        'overall_quality': overall_quality,
+        'quality_factors': {
+            'resolution': resolution_score,
+            'exposure': exposure_score,
+            'focus': focus_score
+        }
     }
+    
+    if bytes_per_pixel is not None:
+        result['bytes_per_pixel'] = round(bytes_per_pixel, 3)
+    
+    return result
 
 
 def extract_ai_analysis(filepath: str, width: int, height: int, 
@@ -362,7 +474,7 @@ def compute_all_metadata(filepath: str, width: int, height: int, format_name: st
     
     # Image quality analysis
     quality_analysis = extract_image_quality_analysis(
-        filepath, width, height, format_name, mode, file_size
+        filepath, width, height, format_name, mode, file_size, exif
     )
     computed['image_quality_analysis'] = quality_analysis
     
@@ -708,3 +820,280 @@ def extract_format_features(format_name: str) -> Dict[str, Any]:
         'compression': 'unknown',
         'typical_extensions': []
     })
+
+
+def parse_gpx_track(gpx_filepath: str) -> Dict[str, Any]:
+    """
+    Parse a GPX track file and return waypoints with timestamps.
+    
+    Args:
+        gpx_filepath: Path to GPX file
+        
+    Returns:
+        Dict with 'waypoints' list and 'time_range'
+    """
+    import xml.etree.ElementTree as ET
+    from datetime import datetime, timedelta
+    
+    try:
+        tree = ET.parse(gpx_filepath)
+        root = tree.getroot()
+        
+        # Handle namespace
+        ns = {'gpx': 'http://www.topografix.com/GPX/1/1'}
+        
+        waypoints = []
+        
+        # Parse track points
+        for trkpt in root.findall('.//gpx:trkpt', ns):
+            lat = trkpt.get('lat')
+            lon = trkpt.get('lon')
+            
+            ele_elem = trkpt.find('gpx:ele', ns)
+            elevation = None
+            if ele_elem is not None and ele_elem.text:
+                try:
+                    elevation = float(ele_elem.text)
+                except ValueError:
+                    pass
+            
+            time_elem = trkpt.find('gpx:time', ns)
+            timestamp = None
+            if time_elem is not None and time_elem.text:
+                try:
+                    timestamp = datetime.fromisoformat(time_elem.text.replace('Z', '+00:00'))
+                except ValueError:
+                    pass
+            
+            if lat and lon and timestamp:
+                waypoints.append({
+                    'latitude': float(lat),
+                    'longitude': float(lon),
+                    'elevation': elevation,
+                    'timestamp': timestamp
+                })
+        
+        # Also parse waypoints
+        for wpt in root.findall('.//gpx:wpt', ns):
+            lat = wpt.get('lat')
+            lon = wpt.get('lon')
+            
+            ele_elem = wpt.find('gpx:ele', ns)
+            elevation = None
+            if ele_elem is not None and ele_elem.text:
+                try:
+                    elevation = float(ele_elem.text)
+                except ValueError:
+                    pass
+            
+            time_elem = wpt.find('gpx:time', ns)
+            timestamp = None
+            if time_elem is not None and time_elem.text:
+                try:
+                    timestamp = datetime.fromisoformat(time_elem.text.replace('Z', '+00:00'))
+                except ValueError:
+                    pass
+            
+            if lat and lon:
+                waypoints.append({
+                    'latitude': float(lat),
+                    'longitude': float(lon),
+                    'elevation': elevation,
+                    'timestamp': timestamp,
+                    'is_waypoint': True
+                })
+        
+        # Sort by timestamp
+        waypoints.sort(key=lambda w: w.get('timestamp') or datetime.max)
+        
+        # Calculate time range
+        timestamps = [w['timestamp'] for w in waypoints if w.get('timestamp')]
+        time_range = {}
+        if timestamps:
+            time_range['start'] = min(timestamps)
+            time_range['end'] = max(timestamps)
+            time_range['duration_seconds'] = (time_range['end'] - time_range['start']).total_seconds()
+        
+        return {
+            'waypoints': waypoints,
+            'time_range': time_range,
+            'total_points': len(waypoints),
+            'format': 'GPX'
+        }
+        
+    except Exception as e:
+        logger.warning(f"Failed to parse GPX file {gpx_filepath}: {e}")
+        return {
+            'waypoints': [],
+            'time_range': {},
+            'total_points': 0,
+            'format': 'GPX',
+            'error': str(e)
+        }
+
+
+def sync_gps_from_track(image_timestamp, track_data: Dict[str, Any]):
+    """
+    Find closest GPS point from track for given image timestamp.
+    
+    Args:
+        image_timestamp: EXIF timestamp from image
+        track_data: Parsed GPX track data
+        
+    Returns:
+        GPS coordinates dict or None if no match
+    """
+    from datetime import timedelta
+    
+    if not image_timestamp or not track_data or not track_data.get('waypoints'):
+        return None
+    
+    waypoints = track_data['waypoints']
+    
+    # Filter to waypoints with timestamps
+    timed_points = [w for w in waypoints if w.get('timestamp')]
+    if not timed_points:
+        return None
+    
+    # Find closest point in time
+    closest_point = None
+    min_delta = timedelta.max
+    
+    for point in timed_points:
+        delta = abs(image_timestamp - point['timestamp'])
+        if delta < min_delta:
+            min_delta = delta
+            closest_point = point
+    
+    # Only return if within reasonable threshold (e.g., 5 minutes) and we found a point
+    if closest_point and min_delta < timedelta(minutes=5):
+        return {
+            'latitude': closest_point['latitude'],
+            'longitude': closest_point['longitude'],
+            'altitude': closest_point.get('elevation'),
+            'timestamp': closest_point['timestamp'],
+            'time_offset_seconds': min_delta.total_seconds(),
+            'confidence': 'high' if min_delta < timedelta(seconds=60) else 'medium'
+        }
+    
+    return None
+
+
+def calculate_gps_synchronization(gps_data: Dict[str, Any], 
+                                  exif_datetime: Any) -> Dict[str, Any]:
+    """
+    Calculate GPS synchronization status and corrections.
+    
+    Args:
+        gps_data: GPS metadata from image
+        exif_datetime: EXIF DateTimeOriginal
+        
+    Returns:
+        Synchronization analysis dict
+    """
+    analysis = {
+        'has_valid_gps': False,
+        'gps_quality': 'none',
+        'clock_offset_detected': False,
+        'suggested_correction': None,
+        'sync_status': 'not_applicable'
+    }
+    
+    if not gps_data:
+        analysis['sync_status'] = 'no_gps_data'
+        return analysis
+    
+    # Check for valid coordinates
+    lat = gps_data.get('latitude')
+    lon = gps_data.get('longitude')
+    
+    if lat is None or lon is None:
+        analysis['sync_status'] = 'incomplete_gps'
+        return analysis
+    
+    analysis['has_valid_gps'] = True
+    
+    # Basic GPS quality assessment
+    if 'latitude_ref' in gps_data and 'longitude_ref' in gps_data:
+        analysis['gps_quality'] = 'standard'
+    
+    if 'altitude' in gps_data:
+        analysis['gps_quality'] = 'with_altitude'
+    
+    if 'speed' in gps_data or 'track' in gps_data:
+        analysis['gps_quality'] = 'with_motion'
+    
+    analysis['sync_status'] = 'gps_present'
+    
+    return analysis
+
+
+def extract_gps_track_sync(gps_data: Dict[str, Any], 
+                          exif_datetime: Any,
+                          track_filepath: Optional[str] = None,
+                          track_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Sync GPS data from track file to image if needed.
+    
+    Args:
+        gps_data: Existing GPS metadata from image
+        exif_datetime: Image capture datetime
+        track_filepath: Optional path to GPX track file
+        track_data: Optional pre-parsed track data
+        
+    Returns:
+        GPS sync analysis and potential correction
+    """
+    result = {
+        'original_gps': gps_data,
+        'sync_status': 'not_attempted',
+        'suggested_correction': None,
+        'track_data_loaded': False
+    }
+    
+    # If we already have good GPS, no sync needed
+    if gps_data and gps_data.get('latitude') and gps_data.get('longitude'):
+        sync_analysis = calculate_gps_synchronization(gps_data, exif_datetime)
+        result['sync_analysis'] = sync_analysis
+        result['sync_status'] = 'already_synced'
+        return result
+    
+    # Need to sync from track
+    if track_filepath or track_data:
+        if track_data is None and track_filepath:
+            if track_filepath.lower().endswith('.gpx'):
+                track_data = parse_gpx_track(track_filepath)
+            else:
+                result['sync_status'] = 'unsupported_format'
+                return result
+        
+        if track_data and track_data.get('waypoints'):
+            result['track_data_loaded'] = True
+            
+            if exif_datetime:
+                # Try to find matching GPS point
+                synced_gps = sync_gps_from_track(exif_datetime, track_data)
+                
+                if synced_gps:
+                    result['suggested_correction'] = synced_gps
+                    result['sync_status'] = 'sync_available'
+                    result['sync_analysis'] = {
+                        'has_valid_gps': True,
+                        'gps_quality': 'synced',
+                        'clock_offset_detected': False,
+                        'time_offset_seconds': synced_gps.get('time_offset_seconds', 0),
+                        'confidence': synced_gps.get('confidence', 'unknown')
+                    }
+                else:
+                    result['sync_status'] = 'no_match_in_time_range'
+                    time_range = track_data.get('time_range')
+                    if time_range:
+                        result['time_range'] = time_range
+            else:
+                result['sync_status'] = 'no_exif_timestamp'
+        else:
+            result['sync_status'] = 'no_track_data'
+    else:
+        result['sync_status'] = 'no_track_provided'
+    
+    return result

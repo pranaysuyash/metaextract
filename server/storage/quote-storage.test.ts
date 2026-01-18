@@ -2,11 +2,26 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { storage } from './index';
 import { ImagesMvpQuote, InsertImagesMvpQuote } from '../../shared/schema';
 
+// Helper to clean up test quotes (only for DatabaseStorage)
+async function cleanupTestQuotes() {
+  // @ts-ignore - accessing internal db for test cleanup
+  if (storage.db) {
+    const { imagesMvpQuotes } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+    // Delete all quotes with test sessionId pattern
+    // @ts-ignore
+    await storage.db.delete(imagesMvpQuotes).where(eq(imagesMvpQuotes.sessionId, 'test-session-123'));
+  }
+}
+
 describe('Quote Storage', () => {
   let testQuote: InsertImagesMvpQuote;
   let createdQuote: ImagesMvpQuote;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Clean up stale test quotes from previous runs
+    await cleanupTestQuotes();
+    
     // Create test quote data
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
     
@@ -166,6 +181,8 @@ describe('Quote Storage', () => {
   describe('updateQuote', () => {
     beforeEach(async () => {
       createdQuote = await storage.createQuote(testQuote);
+      // Small delay to ensure updatedAt timestamp will be different after update
+      await new Promise(resolve => setTimeout(resolve, 10));
     });
 
     it('should update quote fields', async () => {
@@ -192,6 +209,8 @@ describe('Quote Storage', () => {
   describe('expireQuote', () => {
     beforeEach(async () => {
       createdQuote = await storage.createQuote(testQuote);
+      // Small delay to ensure updatedAt timestamp will be different after expiry
+      await new Promise(resolve => setTimeout(resolve, 10));
     });
 
     it('should mark quote as expired', async () => {
@@ -210,6 +229,11 @@ describe('Quote Storage', () => {
   });
 
   describe('cleanupExpiredQuotes', () => {
+    beforeEach(async () => {
+      // Clean up any leftover expired quotes from previous test runs
+      await storage.cleanupExpiredQuotes();
+    });
+
     it('should clean up expired quotes and return count', async () => {
       // Create quotes that will expire
       const expiredQuote1 = await storage.createQuote({

@@ -126,6 +126,34 @@ class JpegParser(FormatParser):
         if exif:
             metadata['exif'] = exif
         
+        # EXIF focus data
+        focus = {}
+        focus_fields = [
+            'FocusMode', 'AFPoint', 'AFPointsInFocus', 'AFPointsSelected',
+            'AFAreaMode', 'AFZone', 'AFAreaMode', 'AFPointsUsed',
+            'FocusDistance', 'FocusRange', 'FocusBracketMode',
+            'FaceDetected', 'FaceCount', 'FacePositions'
+        ]
+        
+        for field in focus_fields:
+            if field in data and data[field] is not None:
+                key = field.lower()
+                if key.startswith('af'):
+                    key = key[2:]
+                if key.startswith('focus'):
+                    key = key[5:]
+                focus[key] = data[field]
+            elif f'ExifIFD:{field}' in data and data[f'ExifIFD:{field}'] is not None:
+                key = field.lower()
+                if key.startswith('af'):
+                    key = key[2:]
+                if key.startswith('focus'):
+                    key = key[5:]
+                focus[key] = data[f'ExifIFD:{field}']
+        
+        if focus:
+            metadata['exif_focus'] = focus
+        
         # GPS data
         gps = {}
         gps_fields = [

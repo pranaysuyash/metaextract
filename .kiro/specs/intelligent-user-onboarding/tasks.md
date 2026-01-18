@@ -1,5 +1,10 @@
 # Implementation Plan: Intelligent User Onboarding & First-Time Experience
 
+## Repo Guardrails (Non-negotiable)
+
+- Follow `AGENTS.md` + `doc/AGENTS.md` (multi-agent safety: do not delete other agents’ work unless explicitly instructed).
+- Pre-commit hook `scripts/precommit-check.cjs` blocks deletions/renames and requires `docs/change_reviews/` notes + semantic review for large diffs.
+
 ## Overview
 
 Transform the new user experience through an intelligent onboarding system that guides users from first visit to successful metadata extraction. The implementation focuses on progressive disclosure, contextual guidance, and adaptive learning paths that personalize the experience based on user behavior and needs.

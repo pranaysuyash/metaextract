@@ -1,5 +1,10 @@
 # Pricing Agent Brief: Credits Packs + Paid-First Images Launch
 
+## Repo Guardrails (Non-negotiable)
+
+- Follow `AGENTS.md` + `doc/AGENTS.md` (multi-agent safety: do not delete other agents’ work unless explicitly instructed).
+- Pre-commit hook `scripts/precommit-check.cjs` blocks deletions/renames and requires `docs/change_reviews/` notes + semantic review for large diffs.
+
 ## Objective
 Configure credits + UI so launch pricing is:
 - Primary pack: `$3` for `25 images` (assume `1 image/jpeg|png = 1 credit`)

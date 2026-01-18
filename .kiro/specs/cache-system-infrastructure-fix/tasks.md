@@ -1,5 +1,10 @@
 # Implementation Tasks: Cache System Infrastructure Fix
 
+## Repo Guardrails (Non-negotiable)
+
+- Follow `AGENTS.md` + `doc/AGENTS.md` (multi-agent safety: do not delete other agents’ work unless explicitly instructed).
+- Pre-commit hook `scripts/precommit-check.cjs` blocks deletions/renames and requires `docs/change_reviews/` notes + semantic review for large diffs.
+
 ## Overview
 
 This document outlines the implementation tasks to fix critical structural issues in the MetaExtract cache system. The tasks are organized by priority and dependencies.

@@ -1950,6 +1950,12 @@ export class DatabaseStorage implements IStorage {
         .from(imagesMvpQuotes)
         .where(eq(imagesMvpQuotes.id, id))
         .limit(1);
+      
+      // Filter out time-expired quotes (align with MemStorage behavior)
+      if (quote && new Date() >= quote.expiresAt) {
+        return undefined;
+      }
+      
       return quote;
     } catch (error) {
       console.error('Error getting quote:', error);
@@ -1980,14 +1986,30 @@ export class DatabaseStorage implements IStorage {
 
   async updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void> {
     try {
-      await this.db
+      // Check if quote exists
+      const existing = await this.db
+        .select()
+        .from(imagesMvpQuotes)
+        .where(eq(imagesMvpQuotes.id, id))
+        .limit(1);
+      
+      if (!existing.length) {
+        throw new Error('Quote not found');
+      }
+
+      const result = await this.db
         .update(imagesMvpQuotes)
         .set({
           ...updates,
           updatedAt: new Date(),
         })
-        .where(eq(imagesMvpQuotes.id, id));
+        .where(eq(imagesMvpQuotes.id, id))
+        .returning();
     } catch (error) {
+      // Re-throw validation errors
+      if (error instanceof Error && error.message === 'Quote not found') {
+        throw error;
+      }
       console.error('Error updating quote:', error);
       throw new Error('Failed to update quote');
     }
@@ -1995,6 +2017,17 @@ export class DatabaseStorage implements IStorage {
 
   async expireQuote(id: string): Promise<void> {
     try {
+      // Check if quote exists
+      const existing = await this.db
+        .select()
+        .from(imagesMvpQuotes)
+        .where(eq(imagesMvpQuotes.id, id))
+        .limit(1);
+      
+      if (!existing.length) {
+        throw new Error('Quote not found');
+      }
+
       await this.db
         .update(imagesMvpQuotes)
         .set({
@@ -2003,6 +2036,10 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(imagesMvpQuotes.id, id));
     } catch (error) {
+      // Re-throw validation errors
+      if (error instanceof Error && error.message === 'Quote not found') {
+        throw error;
+      }
       console.error('Error expiring quote:', error);
       throw new Error('Failed to expire quote');
     }
