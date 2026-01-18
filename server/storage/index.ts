@@ -10,7 +10,7 @@ import { isDatabaseConnected } from '../db';
 // STORAGE_MODE: explicit choice of storage backend
 //   - 'db': PostgreSQL-backed storage (required for production, credits, holds)
 //   - 'memory': in-memory storage (development/test only, data not persistent)
-// 
+//
 // In test environment, default to memory if not explicitly set to avoid DB dependency.
 // RULE: No automatic fallback. If requested mode is unavailable, server fails.
 // ============================================================================
@@ -19,7 +19,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isTestEnv = process.env.NODE_ENV === 'test';
 
 // In test mode, default to memory unless explicitly set to db
-let storageMode = (process.env.STORAGE_MODE || (isTestEnv ? 'memory' : 'db')).toLowerCase() as 'db' | 'memory';
+let storageMode = (
+  process.env.STORAGE_MODE || (isTestEnv ? 'memory' : 'db')
+).toLowerCase() as 'db' | 'memory';
 
 // Validate storage mode
 if (!['db', 'memory'].includes(storageMode)) {
@@ -82,10 +84,10 @@ const storage: IStorage = (() => {
  * Check if storage is healthy for money-path operations (credits, quotes, holds).
  * If STORAGE_MODE=db, requires database connectivity.
  * This is called before any credit reservation or extraction processing.
- * 
+ *
  * In memory mode, always returns healthy (dev/test only).
  * In db mode, checks actual database connectivity.
- * 
+ *
  * @throws Error if in production/money-path and storage is unhealthy
  */
 export function assertStorageHealthy(): void {

@@ -1120,7 +1120,7 @@ export class MemStorage implements IStorage {
     };
 
     this.quotesMap.set(quoteId, createdQuote);
-    
+
     // Store session ID mapping for quick lookup
     if (createdQuote.sessionId) {
       this.quotesBySessionId.set(createdQuote.sessionId, quoteId);
@@ -1148,7 +1148,9 @@ export class MemStorage implements IStorage {
     return quote;
   }
 
-  async getQuoteBySessionId(sessionId: string): Promise<ImagesMvpQuote | undefined> {
+  async getQuoteBySessionId(
+    sessionId: string
+  ): Promise<ImagesMvpQuote | undefined> {
     const now = new Date();
     let best: ImagesMvpQuote | undefined;
 
@@ -1171,7 +1173,10 @@ export class MemStorage implements IStorage {
     return best;
   }
 
-  async updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void> {
+  async updateQuote(
+    id: string,
+    updates: Partial<ImagesMvpQuote>
+  ): Promise<void> {
     const existingQuote = this.quotesMap.get(id);
     if (!existingQuote) {
       throw new Error('Quote not found');
@@ -1194,7 +1199,9 @@ export class MemStorage implements IStorage {
       throw new Error('Quote not found');
     }
 
-    const updatedAt = new Date(Math.max(Date.now(), quote.updatedAt.getTime() + 1));
+    const updatedAt = new Date(
+      Math.max(Date.now(), quote.updatedAt.getTime() + 1)
+    );
     const updatedQuote: ImagesMvpQuote = {
       ...quote,
       status: 'expired',
@@ -1286,10 +1293,7 @@ export class MemStorage implements IStorage {
    * Release a credit hold (in-memory stub for MemStorage)
    * Returns credits to balance.
    */
-  async releaseHold(
-    requestId: string,
-    balanceId: string
-  ): Promise<any | null> {
+  async releaseHold(requestId: string, balanceId: string): Promise<any | null> {
     // In real DB, would add credits back. In-memory, this is a no-op stub.
     // MemStorage doesn't track holds, so can't really release them.
     return {
@@ -1307,4 +1311,3 @@ export class MemStorage implements IStorage {
     return 0;
   }
 }
-

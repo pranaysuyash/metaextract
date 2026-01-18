@@ -5,9 +5,10 @@
 ## What's Been Completed
 
 ### ✅ Infrastructure (ALL DONE)
+
 1. **Schema**: creditHolds table with unique index on `(balance_id, request_id)`
 2. **Migration**: 010_add_credit_holds.sql applied to database
-3. **Storage Methods**: 
+3. **Storage Methods**:
    - `reserveCredits(requestId, balanceId, amount, description, quoteId?, expiresInMs?)`
    - `commitHold(requestId, balanceId, fileType?)`
    - `releaseHold(requestId, balanceId)`
@@ -34,7 +35,7 @@ async (req: Request, res: Response) => {
   try {
     // Lines 1560-1640: File validation, credit computation
     const creditCost = quotedCreditCost ?? creditsTotal;
-    
+
     // Lines 1710-1760: Check credits (TOO LATE!)
     if (sessionId) {
       const balance = await storage.getOrCreateCreditBalance(...);
@@ -44,10 +45,10 @@ async (req: Request, res: Response) => {
       }
       chargeCredits = true;
     }
-    
+
     // Line 1800: PYTHON STARTS HERE (before final verification!)
     const rawMetadata = await extractMetadataWithPython(...);
-    
+
     // Line 1900: Credits deducted AFTER Python completes (RACE CONDITION!)
     if (chargeCredits && creditBalanceId) {
       const txn = await storage.useCredits(
@@ -60,7 +61,7 @@ async (req: Request, res: Response) => {
         return res.status(402).json({...});
       }
     }
-    
+
     res.json(metadata);
   } catch (error) {
     // No hold release here!
@@ -221,13 +222,13 @@ async (req: Request, res: Response) => {
     // PHASE D: Run Python extraction (line 1800+)
     // [existing Python call code - NO CHANGES]
     tempPath = req.file.path;
-    
+
     if (sessionId) {
       broadcastProgress(sessionId, 10, 'File uploaded successfully', 'upload_complete');
     }
 
     const pythonTier = 'super';
-    
+
     if (sessionId) {
       broadcastProgress(sessionId, 20, 'Starting metadata extraction', 'extraction_start');
     }
@@ -244,7 +245,7 @@ async (req: Request, res: Response) => {
 
     // [existing metadata transformation code lines 1820-1890]
     const metadata = transformMetadataForFrontend(...);
-    
+
     // PHASE E: Commit hold BEFORE responding (REPLACE lines 1900-1930)
     // **DELETE THE OLD useCredits() CALL ENTIRELY**
     // Replace with:
@@ -335,6 +336,7 @@ async (req: Request, res: Response) => {
 Once refactoring is complete, add these 4 critical tests:
 
 ### Test 1: Concurrency Overspend
+
 ```typescript
 // Set user credits to exactly 1 extraction worth
 // Fire 10 concurrent requests with DIFFERENT Idempotency-Keys
@@ -343,6 +345,7 @@ Once refactoring is complete, add these 4 critical tests:
 ```
 
 ### Test 2: Retry Idempotency
+
 ```typescript
 // Send same request twice with SAME Idempotency-Key
 // Assert: second request returns existing hold, no double-charge
@@ -350,6 +353,7 @@ Once refactoring is complete, add these 4 critical tests:
 ```
 
 ### Test 3: DB Outage Fail-Closed
+
 ```typescript
 // Mock isDatabaseHealthy() to return false
 // Send paid extraction request
@@ -357,6 +361,7 @@ Once refactoring is complete, add these 4 critical tests:
 ```
 
 ### Test 4: Commit Failure Protection
+
 ```typescript
 // Mock commitHold() to fail
 // Python returns successful result
@@ -369,6 +374,7 @@ Once refactoring is complete, add these 4 critical tests:
 All infrastructure is in place. The extraction endpoint can now be refactored safely following the exact pattern above.
 
 The key is:
+
 1. Add requestId extraction at top
 2. Add DB health check after trial determination
 3. Replace credit check with reservation (requires Idempotency-Key)

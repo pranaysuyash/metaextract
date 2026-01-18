@@ -16,6 +16,7 @@ Replaced the implicit fallback with an explicit `STORAGE_MODE` environment varia
 ## Configuration
 
 ### Environment Variable
+
 ```bash
 STORAGE_MODE=db       # Production (default): PostgreSQL-backed, persistent, safe for money
 STORAGE_MODE=memory   # Dev/Test only: In-memory, not persistent, not thread-safe
@@ -24,26 +25,32 @@ STORAGE_MODE=memory   # Dev/Test only: In-memory, not persistent, not thread-saf
 ### Defaults & Guards
 
 **Test Environment** (`NODE_ENV=test`):
+
 - Default: `STORAGE_MODE=memory` (auto-enables in-memory for unit tests without DB dependency)
 - Override: Set `STORAGE_MODE=db` to test with real database
 
 **Production** (`NODE_ENV=production`):
+
 - Enforced: `STORAGE_MODE=db` **only**
 - If `STORAGE_MODE!=db` on boot: **server crashes immediately** (fail-fast)
 - If `STORAGE_MODE=db` but DB unavailable: **server crashes immediately** (no fallback)
 
 **Development** (`NODE_ENV=development`):
+
 - Default: `STORAGE_MODE=db` (use Postgres locally)
 - Optional: `STORAGE_MODE=memory` if explicitly configured (for quick unit tests)
 
 ## Implementation Details
 
 ### 1. Storage Initialization
+
 **Location**: `server/storage/index.ts`
 
 ```typescript
 // Auto-default memory mode in test environment
-const storageMode = (process.env.STORAGE_MODE || (isTestEnv ? 'memory' : 'db')).toLowerCase();
+const storageMode = (
+  process.env.STORAGE_MODE || (isTestEnv ? 'memory' : 'db')
+).toLowerCase();
 
 // Production guard
 if (isProduction && storageMode !== 'db') {
@@ -56,21 +63,22 @@ if (storageMode === 'db' && !isDatabaseReady) {
 }
 
 // Instantiate chosen backend
-const storage = storageMode === 'db'
-  ? new DatabaseStorage()
-  : new MemStorage();
+const storage = storageMode === 'db' ? new DatabaseStorage() : new MemStorage();
 ```
 
 ### 2. Runtime Health Check (Fail-Closed)
+
 **Location**: `server/storage/index.ts` + `server/routes/images-mvp.ts`
 
 **Function**: `assertStorageHealthy()`
+
 - Called **before any credit reservation** (money-path operations)
 - In `db` mode: checks `isDatabaseConnected()` dynamically
 - In `memory` mode: always passes (dev/test only, no check needed)
 - **Throws error** if DB required but unhealthy
 
 **Usage in Route**:
+
 ```typescript
 // Before credit reservation
 try {
@@ -84,13 +92,14 @@ await storage.reserveCredits(...);
 ```
 
 ### 3. Exports
+
 **Location**: `server/storage/index.ts`
 
 ```typescript
-export { storage };                    // Active storage instance
-export function assertStorageHealthy(): void;  // Health check
-export function getStorageMode(): string;      // For logging/debugging
-export function isStorageDatabase(): boolean;  // Is it DB-backed?
+export { storage }; // Active storage instance
+export function assertStorageHealthy(): void; // Health check
+export function getStorageMode(): string; // For logging/debugging
+export function isStorageDatabase(): boolean; // Is it DB-backed?
 ```
 
 ## Test Integration
@@ -98,10 +107,13 @@ export function isStorageDatabase(): boolean;  // Is it DB-backed?
 **File**: `server/routes/images-mvp.test.ts`
 
 Updated mock to include `assertStorageHealthy`:
+
 ```typescript
 jest.mock('../storage/index', () => ({
-  storage: { /* ... */ },
-  assertStorageHealthy: jest.fn(),  // No-op in tests
+  storage: {
+    /* ... */
+  },
+  assertStorageHealthy: jest.fn(), // No-op in tests
 }));
 ```
 
@@ -110,6 +122,7 @@ jest.mock('../storage/index', () => ({
 ## Migration from Old System
 
 ### Old (Implicit Fallback)
+
 ```env
 STORAGE_REQUIRE_DATABASE=true  # Fallback if false
 DATABASE_URL=...
@@ -117,6 +130,7 @@ DATABASE_URL=...
 ```
 
 ### New (Explicit Mode)
+
 ```env
 STORAGE_MODE=db  # Explicit choice
 DATABASE_URL=...
@@ -124,6 +138,7 @@ DATABASE_URL=...
 ```
 
 ### Backward Compatibility
+
 - Old `STORAGE_REQUIRE_DATABASE` env var is **ignored** (use `STORAGE_MODE` instead)
 - `.env` files updated from `STORAGE_REQUIRE_DATABASE=true` to `STORAGE_MODE=db`
 - All routes automatically use new health check before money operations
@@ -131,22 +146,27 @@ DATABASE_URL=...
 ## Guarantees & Invariants
 
 ### ✅ No Silent Downgrades
+
 - Outages appear as **503 Service Unavailable**, not "free usage"
 - Client knows extraction failed, doesn't assume credits were charged
 
 ### ✅ Production Safety
+
 - `NODE_ENV=production` + `STORAGE_MODE!=db` → crash on boot (non-negotiable)
 - DB connectivity checked at startup and before each money operation
 
 ### ✅ Development Flexibility
+
 - Unit tests auto-use in-memory mode (fast, no DB needed)
 - Integration tests can opt-in to `STORAGE_MODE=db` with real DB
 
 ### ✅ Fail-Closed Money Path
+
 - Credit operations are gated by `assertStorageHealthy()`
 - If DB fails at runtime, extraction returns **503** (not charged, not queued)
 
 ### ✅ Idempotent Retries Still Work
+
 - In-memory mode: uses stubs (basic, not atomic)
 - DB mode: atomic holds with `requestId` UNIQUE constraint (truly idempotent)
 
@@ -176,11 +196,13 @@ DATABASE_URL=...
 ## Testing
 
 **Command**:
+
 ```bash
 npm test -- server/routes/images-mvp.test.ts
 ```
 
 **Result**: ✅ 18/18 tests passing
+
 - Tests auto-use `STORAGE_MODE=memory` (no DB dependency)
 - Health check is mocked (no-op) during tests
 - All credit reservation logic tested via mocked storage

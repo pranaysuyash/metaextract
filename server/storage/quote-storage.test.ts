@@ -10,7 +10,9 @@ async function cleanupTestQuotes() {
     const { eq } = await import('drizzle-orm');
     // Delete all quotes with test sessionId pattern
     // @ts-ignore
-    await storage.db.delete(imagesMvpQuotes).where(eq(imagesMvpQuotes.sessionId, 'test-session-123'));
+    await storage.db
+      .delete(imagesMvpQuotes)
+      .where(eq(imagesMvpQuotes.sessionId, 'test-session-123'));
   }
 }
 
@@ -21,10 +23,10 @@ describe('Quote Storage', () => {
   beforeEach(async () => {
     // Clean up stale test quotes from previous runs
     await cleanupTestQuotes();
-    
+
     // Create test quote data
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
-    
+
     testQuote = {
       sessionId: 'test-session-123',
       files: [
@@ -99,10 +101,12 @@ describe('Quote Storage', () => {
     it('should generate UUID if not provided', async () => {
       const quoteWithoutId = { ...testQuote };
       delete (quoteWithoutId as any).id;
-      
+
       createdQuote = await storage.createQuote(quoteWithoutId);
-      
-      expect(createdQuote.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+      expect(createdQuote.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      );
     });
   });
 
@@ -143,7 +147,9 @@ describe('Quote Storage', () => {
     });
 
     it('should retrieve the most recent active quote for a session', async () => {
-      const retrievedQuote = await storage.getQuoteBySessionId(testQuote.sessionId);
+      const retrievedQuote = await storage.getQuoteBySessionId(
+        testQuote.sessionId
+      );
 
       expect(retrievedQuote).toBeDefined();
       expect(retrievedQuote?.id).toBe(createdQuote.id);
@@ -151,7 +157,9 @@ describe('Quote Storage', () => {
     });
 
     it('should return undefined for non-existent session', async () => {
-      const retrievedQuote = await storage.getQuoteBySessionId('non-existent-session');
+      const retrievedQuote = await storage.getQuoteBySessionId(
+        'non-existent-session'
+      );
       expect(retrievedQuote).toBeUndefined();
     });
 
@@ -172,7 +180,9 @@ describe('Quote Storage', () => {
         creditsTotal: 8,
       });
 
-      const retrievedQuote = await storage.getQuoteBySessionId(testQuote.sessionId);
+      const retrievedQuote = await storage.getQuoteBySessionId(
+        testQuote.sessionId
+      );
       expect(retrievedQuote?.id).toBe(newerQuote.id);
       expect(retrievedQuote?.creditsTotal).toBe(8);
     });
@@ -196,7 +206,9 @@ describe('Quote Storage', () => {
 
       expect(updatedQuote?.status).toBe('used');
       expect(updatedQuote?.usedAt).toBeDefined();
-      expect(updatedQuote?.updatedAt.getTime()).toBeGreaterThan(createdQuote.updatedAt.getTime());
+      expect(updatedQuote?.updatedAt.getTime()).toBeGreaterThan(
+        createdQuote.updatedAt.getTime()
+      );
     });
 
     it('should throw error for non-existent quote', async () => {
@@ -218,13 +230,15 @@ describe('Quote Storage', () => {
       const expiredQuote = await storage.getQuote(createdQuote.id);
 
       expect(expiredQuote?.status).toBe('expired');
-      expect(expiredQuote?.updatedAt.getTime()).toBeGreaterThan(createdQuote.updatedAt.getTime());
+      expect(expiredQuote?.updatedAt.getTime()).toBeGreaterThan(
+        createdQuote.updatedAt.getTime()
+      );
     });
 
     it('should throw error for non-existent quote', async () => {
-      await expect(
-        storage.expireQuote('non-existent-id')
-      ).rejects.toThrow('Quote not found');
+      await expect(storage.expireQuote('non-existent-id')).rejects.toThrow(
+        'Quote not found'
+      );
     });
   });
 

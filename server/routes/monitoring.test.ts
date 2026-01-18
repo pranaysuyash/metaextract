@@ -1,6 +1,6 @@
 /**
  * Tests for Monitoring Routes
- * 
+ *
  * Tests the security monitoring endpoints:
  * - Dashboard overview
  * - Security events
@@ -205,9 +205,7 @@ describe('Monitoring Routes', () => {
       ];
 
       for (const endpoint of endpoints) {
-        const response = await request(app)
-          .get(endpoint)
-          .expect(200); // All should return 200 with data or empty results
+        const response = await request(app).get(endpoint).expect(200); // All should return 200 with data or empty results
 
         // Should not have error when successful
         expect(response.body).not.toHaveProperty('error');
@@ -230,16 +228,16 @@ describe('Monitoring Routes', () => {
   describe('Performance', () => {
     test('should respond within reasonable time', async () => {
       const startTime = Date.now();
-      
+
       const response = await request(app)
         .get('/api/monitoring/dashboard')
         .expect(200);
-      
+
       const responseTime = Date.now() - startTime;
-      
+
       // Should respond within 2 seconds
       expect(responseTime).toBeLessThan(2000);
-      
+
       // Should have reasonable payload size
       expect(JSON.stringify(response.body).length).toBeLessThan(100000); // 100KB max
     });

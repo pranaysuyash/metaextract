@@ -2,13 +2,13 @@
 
 /**
  * Critical Money-Path Tests for Credit Reservation System
- * 
+ *
  * PENDING: These tests verify that the reserve-commit-release pattern correctly prevents:
  * 1. Concurrent overspending (race conditions)
  * 2. Double-charging on retries (idempotency)
  * 3. Free extractions during DB outages (fail-closed)
  * 4. Extraction results without successful charging (commit before response)
- * 
+ *
  * These tests require full Python extraction integration with atomic credit
  * reservation pattern implementation. Currently pending proper endpoint setup.
  */
@@ -28,7 +28,7 @@ describe('Credit Reservation - Money Path Safety Tests', () => {
   beforeAll(() => {
     // Disable rate limiting for these critical money-path tests
     process.env.BYPASS_RATE_LIMIT = 'true';
-    
+
     app = express();
     server = createServer(app);
     registerRoutes(server, app);

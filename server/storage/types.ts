@@ -139,9 +139,7 @@ export interface IStorage {
 
   // Security / monitoring helpers
   logSecurityEvent?(event: any): Promise<void>;
-  getSecurityEvents?(
-    filters?: Record<string, any>
-  ): Promise<
+  getSecurityEvents?(filters?: Record<string, any>): Promise<
     | any[]
     | {
         events: any[];
@@ -202,10 +200,7 @@ export interface IStorage {
     balanceId: string,
     fileType?: string
   ): Promise<CreditHold | null>;
-  releaseHold(
-    requestId: string,
-    balanceId: string
-  ): Promise<CreditHold | null>;
+  releaseHold(requestId: string, balanceId: string): Promise<CreditHold | null>;
   cleanupExpiredHolds(): Promise<number>;
 
   // Onboarding system

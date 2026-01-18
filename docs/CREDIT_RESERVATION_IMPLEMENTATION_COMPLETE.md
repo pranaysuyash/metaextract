@@ -13,6 +13,7 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 ### 1. Database Schema ✅
 
 **Migration**: `migrations/010_add_credit_holds.sql`
+
 - `credit_holds` table with columns:
   - `id` (UUID primary key)
   - `request_id` (idempotency key from client)
@@ -30,6 +31,7 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 **File**: `server/storage/db.ts` (lines 1148-1420)
 
 #### `reserveCredits(requestId, balanceId, amount, ...)`
+
 - Atomic reservation with `SELECT FOR UPDATE` (lines 1186-1196)
 - Creates HELD hold record (lines 1200-1215)
 - Deducts from balance (lines 1217-1225)
@@ -38,16 +40,19 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 - **Throws error** if insufficient credits (line 1198)
 
 #### `commitHold(requestId, balanceId, fileType?)`
+
 - Transitions hold from HELD → COMMITTED (lines 1252-1268)
 - Idempotent: returns existing if already COMMITTED (lines 1248-1251)
 - **Throws error** if hold not found or expired (lines 1270-1273)
 
 #### `releaseHold(requestId, balanceId)`
+
 - Transitions hold HELD → RELEASED (lines 1308-1324)
 - Refunds credits to balance (lines 1326-1332)
 - Idempotent: no-op if already RELEASED (lines 1304-1307)
 
 #### `cleanupExpiredHolds()`
+
 - Finds holds in HELD state past expiry (lines 1405-1410)
 - Releases and refunds credits (lines 1412-1415)
 - Called every 5 minutes (line 1426)
@@ -57,11 +62,13 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 **File**: `server/routes/images-mvp.ts` (lines 697-751)
 
 #### `getIdempotencyKey(req)`
+
 - Extracts `Idempotency-Key` header (line 698)
 - Validates: non-empty, max 128 chars (lines 701-703)
 - Returns `null` if missing/invalid
 
 #### `isDatabaseHealthy()`
+
 - Skips check in test environment (NODE_ENV=test) (lines 742-744)
 - Verifies `isDatabaseConnected()` (line 746)
 - Quick health check: `SELECT 1 FROM credit_balances LIMIT 1` (line 751)
@@ -72,6 +79,7 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 **File**: `server/routes/images-mvp.ts` (lines 1530-2084)
 
 #### Changes:
+
 1. **Line 1532**: Extract `requestId = getIdempotencyKey(req)`
 2. **Line 1533**: Track `holdReserved = false` for cleanup
 3. **Line 1705**: DB health check with fail-closed (503 if unhealthy)
@@ -85,6 +93,7 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 6. **Line 2040**: Added `releaseHold()` in catch block if hold was reserved
 
 #### Invariants Enforced:
+
 1. ✅ Reserve BEFORE Python extraction
 2. ✅ Commit AFTER Python, BEFORE response
 3. ✅ Release on error (Python crash, validation failure)
@@ -95,9 +104,12 @@ All core infrastructure and endpoint refactoring complete. Existing regression t
 **File**: `server/storage/db.ts` (line 1424-1427)
 
 ```typescript
-setInterval(() => {
-  this.cleanupExpiredHolds();
-}, 5 * 60 * 1000); // Run every 5 minutes
+setInterval(
+  () => {
+    this.cleanupExpiredHolds();
+  },
+  5 * 60 * 1000
+); // Run every 5 minutes
 ```
 
 ### 6. Tests Updated ✅
@@ -124,6 +136,7 @@ npm test -- server/routes/images-mvp.test.ts
 ### New Integration Tests: ⏸️ Deferred
 
 Created `server/routes/credit-reservation.test.ts` with 6 critical tests:
+
 1. Concurrent overspending prevention
 2. Retry idempotency
 3. DB outage fail-closed
@@ -182,6 +195,7 @@ Created `server/routes/credit-reservation.test.ts` with 6 critical tests:
 ### Optional: Fix Integration Tests
 
 The 6 new integration tests need balance setup fixes:
+
 - Use `storage.getOrCreateCreditBalance()` to get correct balance IDs
 - Mock or set up test database with proper foreign keys
 - Current blocker: "Credit balance not found" errors
@@ -201,6 +215,7 @@ curl -X POST http://localhost:3000/api/images_mvp/extract \
 ```
 
 Verify:
+
 1. First request: 200 OK
 2. Retry with same key: Returns same result (no double-charge)
 3. Different key: New extraction (if credits available)
@@ -208,6 +223,7 @@ Verify:
 ### Monitoring
 
 Watch for these log messages:
+
 - `[ImagesMVP] Credit reservation failed:` - Insufficient credits or errors
 - `[ImagesMVP] Committing hold before response` - Normal success path
 - `[ImagesMVP] Releasing hold due to error` - Python/validation errors
@@ -227,6 +243,7 @@ Watch for these log messages:
 ## Credits
 
 Implementation follows user's detailed specification for reserve-commit-release pattern with emphasis on:
+
 - Client-provided idempotency keys (not server-generated)
 - Fail-closed behavior on DB outage
 - Atomic reservation before expensive operations

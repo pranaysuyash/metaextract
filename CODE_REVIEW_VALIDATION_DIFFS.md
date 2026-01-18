@@ -119,15 +119,15 @@ const quoteLimiter = createRateLimiter({
     if ((req as any).user?.id) {
       return `u:${(req as any).user.id}`;
     }
-    
+
     // Fall back to session (good)
-    const sessionId = (req as any).cookies?.sessionId || 
+    const sessionId = (req as any).cookies?.sessionId ||
                       (req as any).session?.id ||
                       req.headers['x-session-id'];
     if (sessionId && typeof sessionId === 'string') {
       return `s:${sessionId}`;
     }
-    
+
     // Last resort: IP (works even if behind proxy with trust=off)
     return `ip:${req.ip || (req as any).socket?.remoteAddress || 'unknown'}`;
   },
@@ -138,6 +138,7 @@ app.post('/api/images_mvp/quote', quoteLimiter, async (req: Request, res: Respon
 ```
 
 **Validation:**
+
 - ✅ Key precedence: user > session > IP (topology-agnostic)
 - ✅ Works behind proxy even with trust proxy OFF
 - ✅ Prevents session-level abuse (30/min per session, not just per IP)
@@ -149,22 +150,25 @@ app.post('/api/images_mvp/quote', quoteLimiter, async (req: Request, res: Respon
 const TRUST_PROXY_MODE = process.env.TRUST_PROXY_MODE || 'off';
 
 if (TRUST_PROXY_MODE === 'one') {
-  app.set('trust proxy', 1);  // Single reverse proxy
+  app.set('trust proxy', 1); // Single reverse proxy
 } else if (TRUST_PROXY_MODE === 'all') {
-  app.set('trust proxy', true);  // All hops (origin locked down)
+  app.set('trust proxy', true); // All hops (origin locked down)
 }
 // Default: OFF (safe)
 
 // Boot-time warning if X-Forwarded-For detected but trust=off
 app.use((req, res, next) => {
   if (TRUST_PROXY_MODE === 'off' && req.headers['x-forwarded-for']) {
-    console.warn('[proxy] ⚠️  X-Forwarded-For detected but TRUST_PROXY_MODE=off');
+    console.warn(
+      '[proxy] ⚠️  X-Forwarded-For detected but TRUST_PROXY_MODE=off'
+    );
   }
   next();
 });
 ```
 
 **Validation:**
+
 - ✅ Default OFF (prevents header spoofing)
 - ✅ Explicit modes: off / one / all
 - ✅ Boot-time warning if behind proxy
@@ -409,6 +413,7 @@ describe('Images MVP Contract Drift Guard', () => {
 **Implementation:** [tests/images-mvp-contract-real-endpoint.test.ts](tests/images-mvp-contract-real-endpoint.test.ts)
 
 **What it does:**
+
 - Imports actual server app from `server/index.ts` (not a mock)
 - Makes real POST to `/api/images_mvp/quote`
 - Validates response matches `ImagesMvpQuoteResponse` type
@@ -418,34 +423,42 @@ describe('Images MVP Contract Drift Guard', () => {
 
 ```typescript
 import request from 'supertest';
-import { app } from '../server/index';  // ✅ REAL app
+import { app } from '../server/index'; // ✅ REAL app
 import { IMAGES_MVP_QUOTE_SCHEMA_VERSION } from '../client/src/lib/images-mvp-quote';
 
 describe('Images MVP Contract - Real Endpoint (Integration)', () => {
   it('real /api/images_mvp/quote response matches contract v1', async () => {
     const response = await request(app)
       .post('/api/images_mvp/quote')
-      .send({ files: [], ops: { embedding: false, ocr: false, forensics: false } })
+      .send({
+        files: [],
+        ops: { embedding: false, ocr: false, forensics: false },
+      })
       .expect(200);
 
     const body = response.body;
 
     // Validate real response
     expect(body.schemaVersion).toBe(IMAGES_MVP_QUOTE_SCHEMA_VERSION);
-    
+
     // Required keys and types
     expect(typeof body.quoteId).toBe('string');
     expect(typeof body.expiresAt).toBe('string');
     expect(Array.isArray(body.warnings)).toBe(true);
-    
+
     expect(body).toHaveProperty('limits.maxFiles');
     expect(body).toHaveProperty('creditSchedule.mpBuckets');
     expect(body).toHaveProperty('quote.totalCredits');
-    
+
     // Strict keyset (tight coupling)
     const expectedKeys = [
-      'schemaVersion', 'limits', 'creditSchedule', 'quote', 
-      'quoteId', 'expiresAt', 'warnings'
+      'schemaVersion',
+      'limits',
+      'creditSchedule',
+      'quote',
+      'quoteId',
+      'expiresAt',
+      'warnings',
     ].sort();
     const actualKeys = Object.keys(body).sort();
     expect(actualKeys).toEqual(expectedKeys);
@@ -454,6 +467,7 @@ describe('Images MVP Contract - Real Endpoint (Integration)', () => {
 ```
 
 **Why this works:**
+
 - ✅ Tests actual backend route wiring (not hardcoded mock data)
 - ✅ Will fail immediately when backend response shape changes
 - ✅ Prevents silent contract drift
@@ -462,12 +476,14 @@ describe('Images MVP Contract - Real Endpoint (Integration)', () => {
 - ✅ Checks exact keyset (tight coupling choice)
 
 **Additional coverage:**
+
 - File input handling (perFile array structure)
 - expiresAt is valid future date
 - allowedMimes contains expected MIME types
 - mpBuckets has correct structure
 
 **Test Results:** ✅ **All 5 tests PASSING - EXIT CODE 0**
+
 ```bash
 npm run test:ci server/routes/images-mvp-contract-real-endpoint.test.ts
 # Test Suites: 1 passed, 1 total
@@ -477,6 +493,7 @@ npm run test:ci server/routes/images-mvp-contract-real-endpoint.test.ts
 ```
 
 **Deprecated Keys Decision:** ✅ **Documented for v2 Removal**
+
 - `creditsTotal`, `perFile`, `schedule` are intentionally kept in v1 for backwards compatibility with older clients
 - Marked as "DEPRECATED" in code comments
 - Will be removed in `images_mvp_quote_v2`
@@ -484,6 +501,7 @@ npm run test:ci server/routes/images-mvp-contract-real-endpoint.test.ts
 - Test enforces strict keyset, flagging any additions/removals immediately
 
 **Teardown Implementation:** ✅ **Complete**
+
 - `setupApp({ testMode: true })` returns `{ app, teardown }`
 - `afterAll()` calls `teardown()` to close database connections
 - No lingering open handles or async warnings
@@ -507,9 +525,11 @@ You chose "strict, no unexpected fields." That requires ONE rule:
 If not enforced, strict tests become a tax without preventing drift.
 
 **Breaking changes (must bump version):**
+
 - New required field, rename, type change, remove field
 
 **Non-breaking changes (no bump needed, but test may need loosening):**
+
 - Optional new field (if frontend ignores unknown fields)
 - New enum value to existing field
 
@@ -576,20 +596,20 @@ As you noted, this PR is strictly C & E. Validation status:
 
 ## Summary: Footguns Found & Status
 
-| Concern                        | Status   | Details                                                                                         | Action                 |
-| ------------------------------ | -------- | ----------------------------------------------------------------------------------------------- | ---------------------- |
-| Cleanup in prod entry point?   | ✅ YES   | Called in `http.listen()` callback (line 205-211 of index.ts)                                   | Ready                  |
-| Cleanup targets real storage?  | ✅ YES   | Both DB and Memory backends implement `cleanupExpiredQuotes()` correctly                        | Ready                  |
-| Timer never crashes?           | ✅ YES   | Try/catch + logging present                                                                     | Ready                  |
-| Timer won't block exit?        | ✅ YES   | `timer.unref()` called                                                                          | Ready                  |
-| Cleanup idempotent?            | ✅ YES   | DB: `UPDATE SET status='expired' WHERE active AND expiresAt < now()` / Memory: deletes from map | Ready                  |
-| Limiter behind proxy?          | ✅ SAFE | Session/user-based keys (works regardless of topology) + trust proxy default OFF | Ready                  |
-| Limiter key explicit?          | ✅ YES   | Uses `req.ip` with fallback to `socket.remoteAddress`                                           | Ready                  |
-| schemaVersion in response?     | ✅ YES   | Added as literal constant `'images_mvp_quote_v1'`                                               | Ready                  |
-| schemaVersion in type?         | ✅ YES   | Type includes it, validated at fetch                                                            | Ready                  |
-| Frontend validation?           | ✅ YES   | `assertQuoteSchemaVersion()` throws if mismatch                                                 | Ready                  |
-| Frontend graceful degradation? | ❌ NO    | Component must catch and show UI error                                                          | Low priority follow-up |
-| Drift tests strict?            | ✅ YES   | Pinned to exact version, all fields validated                                                   | Ready                  |
+| Concern                        | Status  | Details                                                                                         | Action                 |
+| ------------------------------ | ------- | ----------------------------------------------------------------------------------------------- | ---------------------- |
+| Cleanup in prod entry point?   | ✅ YES  | Called in `http.listen()` callback (line 205-211 of index.ts)                                   | Ready                  |
+| Cleanup targets real storage?  | ✅ YES  | Both DB and Memory backends implement `cleanupExpiredQuotes()` correctly                        | Ready                  |
+| Timer never crashes?           | ✅ YES  | Try/catch + logging present                                                                     | Ready                  |
+| Timer won't block exit?        | ✅ YES  | `timer.unref()` called                                                                          | Ready                  |
+| Cleanup idempotent?            | ✅ YES  | DB: `UPDATE SET status='expired' WHERE active AND expiresAt < now()` / Memory: deletes from map | Ready                  |
+| Limiter behind proxy?          | ✅ SAFE | Session/user-based keys (works regardless of topology) + trust proxy default OFF                | Ready                  |
+| Limiter key explicit?          | ✅ YES  | Uses `req.ip` with fallback to `socket.remoteAddress`                                           | Ready                  |
+| schemaVersion in response?     | ✅ YES  | Added as literal constant `'images_mvp_quote_v1'`                                               | Ready                  |
+| schemaVersion in type?         | ✅ YES  | Type includes it, validated at fetch                                                            | Ready                  |
+| Frontend validation?           | ✅ YES  | `assertQuoteSchemaVersion()` throws if mismatch                                                 | Ready                  |
+| Frontend graceful degradation? | ❌ NO   | Component must catch and show UI error                                                          | Low priority follow-up |
+| Drift tests strict?            | ✅ YES  | Pinned to exact version, all fields validated                                                   | Ready                  |
 
 ### Verified Implementations
 
@@ -600,6 +620,7 @@ As you noted, this PR is strictly C & E. Validation status:
 - ✅ Both return `cleanedCount: number` as expected
 
 **Gate C - Proxy Concern (SAFE DEFAULT PATTERN):**
+
 - ⚠️ Current: IP-only rate limiting (breaks behind proxy with trust=off)
 - **Safe fix:** Session/user-based limiter keys (works regardless of proxy)
 - **Recommended key precedence:**
@@ -618,6 +639,7 @@ As you noted, this PR is strictly C & E. Validation status:
 ---
 
 **Gate E - Drift Guard Test (COMPLETE):**
+
 - ✅ Real integration test implemented: `tests/images-mvp-contract-real-endpoint.test.ts`
 - ✅ Hits actual `/api/images_mvp/quote` route (imports real app from `server/index.ts`)
 - ✅ Validates response structure, types, and exact keyset

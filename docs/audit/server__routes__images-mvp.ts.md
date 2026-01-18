@@ -35,6 +35,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Key Components
 
 ### Route Handlers
+
 - `/api/images_mvp/quote` - Preflight credit calculation and quote generation
 - `/api/images_mvp/extract` - Main extraction endpoint with full security stack
 - `/api/images_mvp/analytics/track` - Analytics event logging
@@ -43,6 +44,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 - `/api/images_mvp/credits/balance` - Balance checking
 
 ### Security Components
+
 - Rate limiting (quote, extraction, analytics)
 - Free quota middleware (2 extractions per device)
 - Enhanced protection middleware
@@ -51,6 +53,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 - Size limits enforcement
 
 ### Business Logic
+
 - Credit cost calculation based on file dimensions and operations
 - Trial email validation and usage tracking
 - WebSocket progress broadcasting
@@ -61,6 +64,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Outbound Dependencies (Load-bearing)
 
 **Database Operations:**
+
 - `getDatabase()` - Database connection for trial usage queries
 - `trialUsages` table queries for email-based trial tracking
 - `storage.getOrCreateCreditBalance()` - Credit balance management
@@ -70,17 +74,20 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 - `storage.recordTrialUsage()` - Trial usage recording
 
 **External Services:**
+
 - `extractMetadataWithPython()` - Core extraction via Python subprocess
 - `DodoPayments` client for payment processing
 - `sharp` for image dimension calculation
 
 **Security Infrastructure:**
+
 - `freeQuotaMiddleware` - Device-based free quota enforcement
 - `enhancedProtectionMiddleware` - Advanced abuse detection
 - `createRateLimiter()` - Multiple rate limiting layers
 - `requireAuth()` - Authentication middleware
 
 **Utilities:**
+
 - `transformMetadataForFrontend()` - Response formatting
 - `applyAccessModeRedaction()` - Data filtering based on access tier
 - `getOrSetSessionId()` - Session management
@@ -89,11 +96,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Inbound Dependencies
 
 **Direct Callers:**
+
 - Express app setup calls `registerImagesMvpRoutes(app)`
 - Test files import and test individual routes
 - Client-side code makes HTTP requests to these endpoints
 
 **Assumptions Made by Callers:**
+
 - Routes return consistent JSON schemas with `schemaVersion` fields
 - Credit costs are calculated before extraction work begins
 - File uploads are validated before expensive processing
@@ -105,12 +114,14 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Direct Capabilities
 
 **Quote Generation:**
+
 - Validates file lists and operation parameters
 - Calculates credit costs based on dimensions and features
 - Creates time-limited quotes with unique IDs
 - Returns detailed per-file breakdowns
 
 **Extraction Processing:**
+
 - Accepts file uploads with multipart/form-data
 - Validates file types against allowlists (MIME + extension)
 - Enforces size limits (100MB per file)
@@ -119,6 +130,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 - Charges credits atomically after successful extraction
 
 **Access Control:**
+
 - Supports anonymous, trial, and paid access modes
 - Enforces device-based free quotas (2 extractions)
 - Validates trial email usage limits
@@ -126,6 +138,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 - Handles authenticated user credit deduction
 
 **Analytics & Monitoring:**
+
 - Logs UI events for product analytics
 - Tracks extraction usage and performance metrics
 - Records security events and abuse patterns
@@ -134,12 +147,14 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Implied Capabilities
 
 **Business Logic:**
+
 - Implements credit-based monetization model
 - Supports freemium conversion funnel (anonymous → trial → paid)
 - Handles payment processing integration
 - Manages quote lifecycle and expiration
 
 **Security Posture:**
+
 - Multi-layer abuse prevention (rate limiting, fingerprinting, circuit breaker)
 - File upload security with type validation
 - Credit system prevents overspending
@@ -148,16 +163,19 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Gaps and Missing Functionality
 
 **Observability:**
+
 - No structured logging for business metrics
 - Limited error telemetry for debugging failures
 - No performance monitoring for extraction times
 
 **Resilience:**
+
 - No retry logic for transient Python extraction failures
 - Limited handling of database connection issues during credit operations
 - No circuit breaker for Python subprocess failures
 
 **Security:**
+
 - No explicit bounds checking on uploaded file dimensions before processing
 - Limited validation of client-provided metadata in quotes
 
@@ -166,16 +184,19 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Logic and Correctness
 
 **HIGH: Credit Enforcement Timing (Money Path Critical)**
+
 - Evidence: Credit balance check happens at lines 1490-1520, but extraction work begins at line 1560
 - Failure mode: Server could perform expensive Python extraction work before discovering insufficient credits
 - Blast radius: Wasted compute resources, potential DoS vector, billing inconsistencies
 
 **MEDIUM: Race Condition in Credit Deduction**
+
 - Evidence: Credit deduction uses `storage.useCredits()` with atomic WHERE clause, but concurrent requests could both pass initial balance check
 - Failure mode: Double-spending if race condition window exists between balance check and deduction
 - Blast radius: Financial loss, customer disputes, system instability
 
 **MEDIUM: Trial Email Validation Bypass**
+
 - Evidence: Trial email validation only checks database if `isDatabaseConnected()`, falls back to storage layer
 - Failure mode: Inconsistent trial limits if database unavailable
 - Blast radius: Unlimited free usage during database outages
@@ -183,11 +204,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Edge Cases and Undefined Behavior
 
 **MEDIUM: File Size Validation Gap**
+
 - Evidence: Quote endpoint validates per-file size (line 768), but extraction endpoint relies on multer limits
 - Failure mode: Inconsistent size enforcement between quote and extract
 - Blast radius: Unexpected rejections, user confusion
 
 **LOW: WebSocket Progress Without Session**
+
 - Evidence: Progress broadcasting checks for sessionId but continues if missing
 - Failure mode: Silent failures in progress updates
 - Blast radius: Poor user experience, no visible feedback
@@ -195,11 +218,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Coupling and Hidden Dependencies
 
 **HIGH: Hardcoded Credit Limits**
+
 - Evidence: Free quota hardcoded to 2 extractions per device
 - Failure mode: Business rule changes require code deployment
 - Blast radius: Inflexible pricing strategy, delayed feature updates
 
 **MEDIUM: Environment-Specific Behavior**
+
 - Evidence: Rate limiting and quota checks disabled in test environment
 - Failure mode: Test environment doesn't match production security
 - Blast radius: False confidence in security testing
@@ -207,11 +232,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Security and Data Exposure
 
 **MEDIUM: File Type Validation Logic**
+
 - Evidence: Requires BOTH MIME type AND extension to be supported (AND logic)
 - Failure mode: Overly restrictive for legitimate files, potential bypass attempts
 - Blast radius: User friction, support burden
 
 **LOW: Client Token in Cookies**
+
 - Evidence: Server-issued tokens stored in httpOnly cookies
 - Failure mode: Token theft via XSS if httpOnly not properly enforced
 - Blast radius: Quota bypass, abuse potential
@@ -219,6 +246,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Observability and Debuggability
 
 **MEDIUM: Limited Error Context**
+
 - Evidence: Generic error messages without request IDs or timestamps
 - Failure mode: Difficult debugging of production issues
 - Blast radius: Slower incident response, poor developer experience
@@ -226,16 +254,19 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Extremes and Abuse Cases
 
 **Large Scale:**
+
 - 1000+ concurrent extractions could overwhelm Python subprocess pool
 - Database connection exhaustion during high credit transaction volume
 - WebSocket connection limits for progress broadcasting
 
 **Adversarial Inputs:**
+
 - Malformed multipart uploads bypassing file validation
 - Race condition exploitation between quote creation and extraction
 - Session fixation attacks via cookie manipulation
 
 **Failure Scenarios:**
+
 - Python extraction process hangs, consuming server resources
 - Database unavailability during credit operations
 - Redis failure causing rate limit bypass
@@ -245,11 +276,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Inbound Impact
 
 **Caller Breakage Risk:**
+
 - Client applications expect specific JSON response schemas
 - Breaking changes to quote or extraction responses could break UI
 - Credit calculation changes affect pricing transparency
 
 **Contract Preservation Needs:**
+
 - `schemaVersion` fields must remain stable for API versioning
 - Error response formats must be consistent across endpoints
 - WebSocket message formats must not change without client updates
@@ -257,11 +290,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Outbound Impact
 
 **Dependency Failure Risk:**
+
 - `storage.useCredits()` failure could leave extractions unpaid
 - `extractMetadataWithPython()` failures waste credits
 - Database unavailability breaks trial validation
 
 **Unsafe Assumptions:**
+
 - Assumes Python extraction always succeeds after file validation
 - Assumes credit balances remain stable between check and deduction
 - Assumes WebSocket connections are reliable for progress updates
@@ -269,12 +304,14 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ### Change Impact per Finding
 
 **Credit Timing Issue:**
+
 - Could break callers: No, internal optimization
 - Could invalidate fix: Concurrent requests could still race
 - Contract lock needed: Credit deduction must be atomic
 - Test proof: Concurrent extraction test with same balance
 
 **Race Condition:**
+
 - Could break callers: No, improves reliability
 - Could invalidate fix: Database-level locking needed
 - Contract lock needed: Balance check + deduction atomicity
@@ -283,12 +320,14 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Clean Architecture Fit
 
 **Core Responsibilities (Belongs Here):**
+
 - HTTP request/response handling
 - Input validation and sanitization
 - Business rule enforcement (credits, quotas)
 - Integration coordination (Python, database, storage)
 
 **Responsibility Leakage (Should Move):**
+
 - Credit calculation logic could be extracted to pricing service
 - File validation could be shared utility
 - WebSocket broadcasting could be separate service
@@ -340,17 +379,20 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Verification and Test Coverage
 
 **Existing Tests:**
+
 - Contract tests for response schemas
 - Unit tests for credit calculation
 - Integration tests for extraction flow
 - Free quota enforcement tests
 
 **Critical Gaps:**
+
 - Concurrent credit deduction stress tests
 - Database outage scenario tests
 - Race condition exploitation tests
 
 **Assumed Invariants Not Enforced:**
+
 - Credit atomicity during concurrent requests
 - Consistent behavior during partial failures
 - Performance bounds for extraction operations
@@ -360,12 +402,14 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 **HIGH Risk**
 
 **Why at least HIGH:**
+
 - Handles money path with credit transactions
 - Complex security stack with multiple enforcement layers
 - Race conditions in financial operations
 - Potential for resource exhaustion attacks
 
 **Why not CRITICAL:**
+
 - Has multiple security layers (rate limiting, quota, validation)
 - Atomic credit operations in storage layer
 - Comprehensive error handling for most failure modes
@@ -373,10 +417,12 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Regression Analysis
 
 **Commands Executed:**
+
 - `git log --follow --name-status -- server/routes/images-mvp.ts`
 - `git show <recent-commits>` for specific changes
 
 **Concrete Deltas Observed:**
+
 - Recent commits added contract drift guards and deprecation warnings
 - Security hardening with enhanced protection middleware
 - Trial system integration with email validation
@@ -384,6 +430,7 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 - Credit system integration with atomic deductions
 
 **Classification:**
+
 - **Fixed:** Contract drift issues, middleware ordering
 - **Regression:** None identified in recent changes
 - **Unknown:** Long-term evolution from initial MVP implementation
@@ -391,11 +438,13 @@ This file implements the core Images MVP API routes for MetaExtract, handling qu
 ## Next Actions
 
 **Recommended for Next Remediation PR:**
+
 1. Fix credit enforcement timing (HIGH priority)
 2. Implement atomic credit reservation (HIGH priority)
 3. Strengthen trial validation consistency (MEDIUM priority)
 
 **Verification Notes:**
+
 - Test concurrent extractions with shared credit balance
 - Verify Python extraction not called when credits insufficient
 - Confirm consistent trial limits during database outages

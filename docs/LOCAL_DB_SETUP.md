@@ -3,6 +3,7 @@
 ## Context
 
 Storage backend is now explicitly configured via `STORAGE_MODE` environment variable:
+
 - `STORAGE_MODE=db` (default, **required for production**): PostgreSQL-backed storage for credits, holds, analytics, and persistent data
 - `STORAGE_MODE=memory`: In-memory storage (development/testing only; **NOT for production**, data not persistent, not thread-safe)
 
@@ -41,6 +42,7 @@ What you need on your host (outside the sandbox)
 ### Optional Dev Bypass (explicit in-memory mode only for testing)
 
 If you need to run unit tests or short-lived debugging **without database**:
+
 ```bash
 STORAGE_MODE=memory npm test
 # or
@@ -48,6 +50,7 @@ STORAGE_MODE=memory NODE_ENV=development npm run dev
 ```
 
 **⚠️ Warnings**:
+
 - `STORAGE_MODE=memory` is **NOT allowed in production** (server will crash on boot)
 - In-memory storage is **not persistent** (data lost on restart)
 - In-memory storage is **not thread-safe** (concurrent requests have race conditions)

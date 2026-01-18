@@ -7,11 +7,13 @@ All critical concurrency safety measures have been implemented in the credit res
 ## Implementation Overview
 
 ### Core Problem
+
 The images-MVP extraction pipeline needs atomic credit reservation before expensive Python processing to prevent concurrent requests from double-charging users or wasting compute resources.
 
 ### Solution Architecture
 
 #### 1. Database Schema (Atomic Hold Table)
+
 **Location**: `shared/schema.ts` (CreditHold table)
 
 ```typescript
@@ -29,6 +31,7 @@ holds: {
 ```
 
 **Key Design Decisions**:
+
 - `RESERVED`: Initial state after atomically deducting from balance
 - `COMMITTED`: Python extraction succeeded, hold becomes permanent audit record
 - `RELEASED`: Rollback (failure, cancellation) - credits restored
@@ -36,9 +39,11 @@ holds: {
 - 30-minute expiration ensures stale holds are cleaned up
 
 #### 2. Credit Reservation Logic
+
 **Location**: `server/storage/index.ts` (CreditStorage class)
 
 **`reserveCredits(balanceId, credits, requestId)` - Atomic Operation**:
+
 ```
 Transaction:
 1. SELECT * FROM creditBalances WHERE id = $1 FOR UPDATE  -- lock balance row
@@ -51,35 +56,41 @@ Return: hold object with new state='RESERVED'
 ```
 
 **Idempotency Guarantee**:
+
 - If caller retries with same `requestId`, query finds existing hold
 - Returns prior hold state without re-deducting
 - Prevents credit loss on network/process failures
 
 **`commitHold(holdId)` - Audit Trail**:
+
 - Inserts transaction record with `amount = -(chargedCredits)`
 - Hold state remains `COMMITTED` permanently
 - Just accounting; balance already deducted in `reserveCredits`
 
 **`releaseHold(holdId)` - Rollback**:
+
 - On Python extraction failure
 - Updates hold.state → `RELEASED`
 - Refunds credits: `available_credits += hold.chargedCredits`
 
 #### 3. Endpoint Integration
+
 **Location**: `server/routes/images-mvp.ts` (POST /api/images_mvp/extract)
 
 **Pre-Python Hold Reservation** (lines 1756-1763):
+
 ```typescript
 let hold = await storage.reserveCredits(
   sessionBalance.id,
   quote.cost.credits,
-  requestId  // idempotency key from quote_id + client_file_id
+  requestId // idempotency key from quote_id + client_file_id
 );
 holdReserved = true;
 chargeCredits = true;
 ```
 
 **Post-Python Commitment** (lines 1810-1814):
+
 ```typescript
 await storage.commitHold(hold.id);
 // hold.state = 'COMMITTED'
@@ -87,22 +98,26 @@ await storage.commitHold(hold.id);
 ```
 
 **Failure Cleanup** (catch blocks):
+
 ```typescript
 if (holdReserved) {
-  await storage.releaseHold(hold.id);  // Refund
+  await storage.releaseHold(hold.id); // Refund
 }
 ```
 
 #### 4. Expired Hold Cleanup
+
 **Location**: `server/storage/index.ts` (cleanupExpiredHolds method)
 
 **Interval-based cleanup** (runs hourly):
+
 ```typescript
 DELETE FROM holds WHERE state='RESERVED' AND expiresAt < now()
 UPDATE creditBalances SET available_credits = available_credits + hold.chargedCredits
 ```
 
 **Startup Scheduling** (can be added to `server/index.ts`):
+
 ```typescript
 // Run cleanup every hour to free stale holds
 setInterval(() => storage.cleanupExpiredHolds(), 3600000);
@@ -111,26 +126,31 @@ setInterval(() => storage.cleanupExpiredHolds(), 3600000);
 ## Concurrency Safety Guarantees
 
 ### ✅ Atomic Credit Reservation
+
 - **Problem**: Multiple requests for same user simultaneously
 - **Solution**: `FOR UPDATE` row lock + single INSERT for hold
 - **Guarantee**: Only one request succeeds if credits exhausted; others fail with 402
 
 ### ✅ No Double-Charging
+
 - **Problem**: Process crash between `reserveCredits` and `commitHold`
 - **Solution**: Credits deducted in `reserveCredits` only; `commitHold` is pure audit
 - **Guarantee**: Balance reflects deduction even if commitment fails
 
 ### ✅ Idempotent Retries
+
 - **Problem**: Network timeout causes retry; second request shouldn't re-deduct
 - **Solution**: `requestId` UNIQUE constraint on holds table
 - **Guarantee**: Retry returns same hold; no duplicate deduction
 
 ### ✅ Stale Hold Cleanup
+
 - **Problem**: Server crash prevents `releaseHold` execution
 - **Solution**: 30-minute TTL + hourly cleanup job
 - **Guarantee**: Stuck holds eventually freed; credits restored automatically
 
 ### ✅ Access Control Preserved
+
 - Credit reservation respects access modes:
   - `device_free`: 2-extraction limit (built into quote logic)
   - `trial_limited`: Trial balance only (separate table)
@@ -139,6 +159,7 @@ setInterval(() => storage.cleanupExpiredHolds(), 3600000);
 ## Test Coverage
 
 **Unit Tests**: `server/routes/images-mvp.test.ts`
+
 - ✅ Quote generation with cost breakdown
 - ✅ Pricing contract enforcement
 - ✅ Trial depletion logic
@@ -147,6 +168,7 @@ setInterval(() => storage.cleanupExpiredHolds(), 3600000);
 - ✅ Failed extractions don't charge
 
 **Integration Coverage Needed** (manual verification):
+
 1. Concurrent requests on same session → one succeeds, one gets 402
 2. Retry same extraction → idempotent, no re-deduction
 3. Python failure → credits refunded (rollback)
@@ -156,11 +178,13 @@ setInterval(() => storage.cleanupExpiredHolds(), 3600000);
 ## Known Limitations & Future Improvements
 
 ### Current Scope
+
 - Single database instance (no distributed locks)
 - Synchronous credit checking
 - 30-minute hold expiration (hardcoded)
 
 ### Future Enhancements
+
 1. **Distributed Locking**: Replace `FOR UPDATE` with Redis/Consul if multi-node
 2. **Hold Re-expiry**: Extend expiration when extraction in-progress
 3. **Partial Credits**: Reserve quoted cost; refund unused if actual cost < quote
@@ -178,7 +202,7 @@ setInterval(() => storage.cleanupExpiredHolds(), 3600000);
 ## Files Modified
 
 1. **shared/schema.ts**: Added `CreditHold` table schema
-2. **server/storage/index.ts**: 
+2. **server/storage/index.ts**:
    - `reserveCredits()` with atomic transaction
    - `commitHold()` for audit trail
    - `releaseHold()` for rollback

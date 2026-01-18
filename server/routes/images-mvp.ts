@@ -622,7 +622,9 @@ function guessImagesMvpMimeFromExt(ext: string): string | null {
   return map[ext] ?? null;
 }
 
-async function detectMimeFromFilePath(filePath: string): Promise<string | null> {
+async function detectMimeFromFilePath(
+  filePath: string
+): Promise<string | null> {
   try {
     const handle = await fs.open(filePath, 'r');
     try {
@@ -697,7 +699,7 @@ function parseLimitParam(value?: string): number {
 /**
  * Extract idempotency key from request header.
  * Required for paid extractions to prevent double-charging on retries.
- * 
+ *
  * @param req - Express request
  * @returns Idempotency key or null if missing/invalid
  */
@@ -714,7 +716,7 @@ function getIdempotencyKey(req: Request): string | null {
  * Check if database is available and fail closed if not.
  * For money-path operations, we must fail closed (reject) if DB is unavailable
  * to prevent giving away free extractions or bypassing credit checks.
- * 
+ *
  * @returns true if DB is healthy, false otherwise
  */
 async function isDatabaseHealthy(): Promise<boolean> {
@@ -722,11 +724,11 @@ async function isDatabaseHealthy(): Promise<boolean> {
   if (process.env.NODE_ENV === 'test') {
     return true;
   }
-  
+
   if (!isDatabaseConnected()) {
     return false;
   }
-  
+
   try {
     const db = getDatabase();
     // Quick health check: try to query credit_balances table
@@ -891,15 +893,16 @@ export function registerImagesMvpRoutes(app: Express) {
       if ((req as any).user?.id) {
         return `u:${(req as any).user.id}`;
       }
-      
+
       // Fall back to session (from cookie or header)
-      const sessionId = (req as any).cookies?.sessionId || 
-                        (req as any).session?.id ||
-                        req.headers['x-session-id'];
+      const sessionId =
+        (req as any).cookies?.sessionId ||
+        (req as any).session?.id ||
+        req.headers['x-session-id'];
       if (sessionId && typeof sessionId === 'string') {
         return `s:${sessionId}`;
       }
-      
+
       // Last resort: IP (works even if behind proxy with trust=off)
       return `ip:${req.ip || (req as any).socket?.remoteAddress || 'unknown'}`;
     },
@@ -1755,7 +1758,10 @@ export function registerImagesMvpRoutes(app: Express) {
             try {
               assertStorageHealthy();
             } catch (error) {
-              console.error('Storage health check failed, refusing extraction:', error);
+              console.error(
+                'Storage health check failed, refusing extraction:',
+                error
+              );
               return sendServiceUnavailableError(
                 res,
                 'Database unavailable. Paid extraction cannot proceed. Please try again later.'
@@ -1776,7 +1782,8 @@ export function registerImagesMvpRoutes(app: Express) {
               chargeCredits = true;
             } catch (error) {
               console.error('Credit reservation failed:', error);
-              const errMsg = error instanceof Error ? error.message : 'Unknown error';
+              const errMsg =
+                error instanceof Error ? error.message : 'Unknown error';
               if (errMsg.includes('Insufficient credits')) {
                 return sendQuotaExceededError(res, errMsg);
               }
@@ -1818,24 +1825,26 @@ export function registerImagesMvpRoutes(app: Express) {
                 quoteId || undefined,
                 15 * 60 * 1000 // 15 minutes expiry
               );
-              
+
               // ✅ RED FLAG #1 FIX: Check if already processed (COMMITTED hold means Python already ran)
               // Don't run Python again on retry - return 409 Conflict
               if (hold.state === 'COMMITTED') {
                 return res.status(409).json({
                   error: {
-                    message: 'Request already processed. Check your extraction history for results.',
+                    message:
+                      'Request already processed. Check your extraction history for results.',
                     code: 'ALREADY_PROCESSED',
-                    requestId
-                  }
+                    requestId,
+                  },
                 });
               }
-              
+
               holdReserved = true;
               chargeCredits = true;
             } catch (error) {
               console.error('Credit reservation failed:', error);
-              const errMsg = error instanceof Error ? error.message : 'Unknown error';
+              const errMsg =
+                error instanceof Error ? error.message : 'Unknown error';
               if (errMsg.includes('Insufficient credits')) {
                 return sendQuotaExceededError(res, errMsg);
               }
@@ -2024,7 +2033,10 @@ export function registerImagesMvpRoutes(app: Express) {
             try {
               await storage.releaseHold(requestId, creditBalanceId);
             } catch (releaseError) {
-              console.error('Failed to release hold after commit failure:', releaseError);
+              console.error(
+                'Failed to release hold after commit failure:',
+                releaseError
+              );
             }
             // Don't return extraction result if we couldn't charge
             return sendServiceUnavailableError(
@@ -2137,7 +2149,10 @@ export function registerImagesMvpRoutes(app: Express) {
           try {
             await storage.releaseHold(requestId, creditBalanceId);
           } catch (releaseError) {
-            console.error('Failed to release credit hold on error:', releaseError);
+            console.error(
+              'Failed to release credit hold on error:',
+              releaseError
+            );
           }
         }
 

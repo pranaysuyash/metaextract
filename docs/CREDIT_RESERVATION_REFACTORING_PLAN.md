@@ -3,17 +3,20 @@
 ## Status: IN PROGRESS
 
 ## Objective
+
 Fix HIGH-risk credit enforcement issues by implementing reserve-commit-release pattern.
 
 ## Completed Steps
 
 ### ✅ 1. Schema & Migration (DONE)
+
 - Added `creditHolds` table to shared/schema.ts
 - Created migration 010_add_credit_holds.sql
 - Applied migration to database
 - Added unique index on requestId for idempotency
 
 ### ✅ 2. Storage Layer Methods (DONE)
+
 - Implemented `reserveCredits()` with SELECT FOR UPDATE locking
 - Implemented `commitHold()` to finalize charges
 - Implemented `releaseHold()` to refund on failure
@@ -22,6 +25,7 @@ Fix HIGH-risk credit enforcement issues by implementing reserve-commit-release p
 - Added CreditHold type exports
 
 ### ✅ 3. Health Check Helper (DONE)
+
 - Added `isDatabaseHealthy()` function to images-mvp.ts
 
 ## Remaining Work
@@ -29,6 +33,7 @@ Fix HIGH-risk credit enforcement issues by implementing reserve-commit-release p
 ### 4. Refactor Extraction Endpoint (IN PROGRESS)
 
 Current problematic flow (lines 1530-1900):
+
 ```
 1530: Start handler
 1540: File validation (mime + extension)
@@ -42,13 +47,14 @@ Current problematic flow (lines 1530-1900):
 ```
 
 Required new flow:
+
 ```
 1530: Start handler
 1531: Generate extractionId = crypto.randomUUID() for idempotency
 1532: Check DB health - FAIL CLOSED if unhealthy
 1540: File validation (mime + extension)
 1600: Compute credit cost
-1630: Check trial status  
+1630: Check trial status
 1650: Determine access mode (trial/paid/device_free)
 1660: **RESERVE CREDITS HERE** (before Python!)
       - If paid mode: storage.reserveCredits(extractionId, balanceId, cost, desc, quoteId)
@@ -64,6 +70,7 @@ CATCH: **RELEASE HOLD** storage.releaseHold(extractionId) on error
 ### Code Changes Required
 
 #### A. Early Initialization (after line 1530)
+
 ```typescript
 const startTime = Date.now();
 const extractionId = crypto.randomUUID(); // Idempotency key
@@ -76,6 +83,7 @@ let chargeCredits = false;
 ```
 
 #### B. Add DB Health Check (after line 1540)
+
 ```typescript
 // Fail closed if database is unavailable (money-path safety)
 if (process.env.NODE_ENV !== 'development') {
@@ -90,8 +98,10 @@ if (process.env.NODE_ENV !== 'development') {
 ```
 
 #### C. Move Credit Reservation (replace lines 1650-1708)
+
 Current location: AFTER file upload, BEFORE Python
 New logic:
+
 ```typescript
 // Determine Access Mode
 if (process.env.NODE_ENV === 'development') {
@@ -145,10 +155,7 @@ if (process.env.NODE_ENV === 'development') {
     // Authenticated user path - same pattern
     const userId = (req as any).user.id as string;
     const namespaced = getImagesMvpBalanceId(`user:${userId}`);
-    const balance = await storage.getOrCreateCreditBalance(
-      namespaced,
-      userId
-    );
+    const balance = await storage.getOrCreateCreditBalance(namespaced, userId);
     creditBalanceId = balance?.id ?? null;
 
     if (!balance || balance.credits < creditCost) {
@@ -184,9 +191,11 @@ if (process.env.NODE_ENV === 'development') {
 ```
 
 #### D. Remove Old Credit Deduction (delete lines 1867-1891)
+
 The old `storage.useCredits()` call must be REMOVED - we now use commitHold instead.
 
 #### E. Add Commit Hold (after line 1780, after extraction succeeds)
+
 ```typescript
 // Commit the credit hold (finalize charge)
 if (chargeCredits && holdReserved) {
@@ -201,6 +210,7 @@ if (chargeCredits && holdReserved) {
 ```
 
 #### F. Update Error Handler (in catch block, line 2015)
+
 ```typescript
 } catch (error) {
   console.error('Images MVP extraction error:', error);
@@ -227,17 +237,20 @@ if (chargeCredits && holdReserved) {
 ```
 
 ### 5. Update Tests
+
 - Add concurrency test (10 parallel requests, 1 balance, verify single charge)
 - Add idempotency test (retry with same extractionId, verify no double charge)
 - Add DB outage test (simulate DB down, verify 503 with no Python call)
 
 ### 6. Regression Testing
+
 - Run full test suite
 - Verify no existing functionality broken
 - Check trial flow still works
 - Check device_free flow still works
 
 ## Files Modified
+
 - ✅ shared/schema.ts (credit_holds table)
 - ✅ migrations/010_add_credit_holds.sql
 - ✅ server/storage/db.ts (reservation methods)
@@ -247,6 +260,7 @@ if (chargeCredits && holdReserved) {
 - ⏳ tests/... (new tests) - PENDING
 
 ## Safety Checklist
+
 - [ ] Extraction ID generated early for idempotency
 - [ ] DB health checked before expensive work
 - [ ] Credits reserved BEFORE Python extraction
@@ -260,6 +274,7 @@ if (chargeCredits && holdReserved) {
 - [ ] Tests verify DB outage fails gracefully
 
 ## Notes
+
 - This is a critical money-path change - test thoroughly
 - The reserve-commit-release pattern eliminates the race condition window
 - Idempotency via requestId prevents double-charging on retries

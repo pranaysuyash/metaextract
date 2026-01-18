@@ -485,7 +485,10 @@ export class DatabaseStorage implements IStorage {
       return balance;
     } catch (error: any) {
       if (error?.message?.includes('aborted transaction')) {
-        console.error('❌ Critical: Database transaction aborted. Connection may be poisoned.', error);
+        console.error(
+          '❌ Critical: Database transaction aborted. Connection may be poisoned.',
+          error
+        );
       } else {
         console.error('Failed to get credit balance by sessionId:', error);
       }
@@ -1135,7 +1138,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Reserve credits atomically with idempotency.
    * Creates a HELD credit hold that must be committed or released.
-   * 
+   *
    * @param requestId - Idempotency key (e.g. extractionId)
    * @param balanceId - Credit balance to reserve from
    * @param amount - Credits to reserve
@@ -1178,14 +1181,16 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Lock the balance row for update to prevent race conditions
-      const [balance] = await client.execute(
-        sql`
+      const [balance] = await client
+        .execute(
+          sql`
           SELECT id, credits 
           FROM credit_balances 
           WHERE id = ${balanceId} 
           FOR UPDATE
         `
-      ).then((result: any) => result.rows || []);
+        )
+        .then((result: any) => result.rows || []);
 
       if (!balance) {
         throw new Error('Credit balance not found');
@@ -1237,7 +1242,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Commit a credit hold, finalizing the charge.
    * Records usage transactions and marks hold as COMMITTED.
-   * 
+   *
    * @param requestId - Idempotency key of the hold to commit
    * @param balanceId - Credit balance ID
    * @param fileType - Optional file type for transaction record
@@ -1284,7 +1289,7 @@ export class DatabaseStorage implements IStorage {
       await client.insert(creditTransactions).values({
         balanceId: hold.balanceId,
         type: 'usage',
-        amount: -hold.amount,  // Records what was deducted, doesn't deduct again
+        amount: -hold.amount, // Records what was deducted, doesn't deduct again
         description: hold.description || 'Credit hold commitment',
         ...(fileType ? { fileType } : {}),
       });
@@ -1316,7 +1321,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Release a credit hold, returning credits to the balance.
    * Used when extraction fails or is cancelled.
-   * 
+   *
    * @param requestId - Idempotency key of the hold to release
    * @param balanceId - Credit balance ID
    * @returns The released hold, or null if not found/already processed
@@ -1391,7 +1396,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Clean up expired credit holds.
    * Releases any HELD credits that have passed their expiration time.
-   * 
+   *
    * @returns Number of holds released
    */
   async cleanupExpiredHolds(): Promise<number> {
@@ -1414,10 +1419,7 @@ export class DatabaseStorage implements IStorage {
           await this.releaseHold(hold.requestId, hold.balanceId);
           released++;
         } catch (error) {
-          console.error(
-            `Failed to release expired hold ${hold.id}:`,
-            error
-          );
+          console.error(`Failed to release expired hold ${hold.id}:`, error);
         }
       }
 
@@ -1950,12 +1952,12 @@ export class DatabaseStorage implements IStorage {
         .from(imagesMvpQuotes)
         .where(eq(imagesMvpQuotes.id, id))
         .limit(1);
-      
+
       // Filter out time-expired quotes (align with MemStorage behavior)
       if (quote && new Date() >= quote.expiresAt) {
         return undefined;
       }
-      
+
       return quote;
     } catch (error) {
       console.error('Error getting quote:', error);
@@ -1963,7 +1965,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getQuoteBySessionId(sessionId: string): Promise<ImagesMvpQuote | undefined> {
+  async getQuoteBySessionId(
+    sessionId: string
+  ): Promise<ImagesMvpQuote | undefined> {
     try {
       const [quote] = await this.db
         .select()
@@ -1984,7 +1988,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateQuote(id: string, updates: Partial<ImagesMvpQuote>): Promise<void> {
+  async updateQuote(
+    id: string,
+    updates: Partial<ImagesMvpQuote>
+  ): Promise<void> {
     try {
       // Check if quote exists
       const existing = await this.db
@@ -1992,7 +1999,7 @@ export class DatabaseStorage implements IStorage {
         .from(imagesMvpQuotes)
         .where(eq(imagesMvpQuotes.id, id))
         .limit(1);
-      
+
       if (!existing.length) {
         throw new Error('Quote not found');
       }
@@ -2023,7 +2030,7 @@ export class DatabaseStorage implements IStorage {
         .from(imagesMvpQuotes)
         .where(eq(imagesMvpQuotes.id, id))
         .limit(1);
-      
+
       if (!existing.length) {
         throw new Error('Quote not found');
       }
@@ -2059,7 +2066,7 @@ export class DatabaseStorage implements IStorage {
             lt(imagesMvpQuotes.expiresAt, new Date())
           )
         );
-      
+
       return result.rowCount || 0;
     } catch (error) {
       console.error('Error cleaning up expired quotes:', error);

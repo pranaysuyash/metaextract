@@ -3,6 +3,7 @@
 ## Problem Summary
 
 Tests were showing scary error messages like:
+
 ```
 ❌ Unexpected error on database connection pool: [Error: Connection timeout]
 ```
@@ -25,6 +26,7 @@ This is a **UX issue, not a functionality issue** - the error messages made it l
 ### Secondary Issue: Test Database
 
 The test setup was configured to use:
+
 - Database: `metaextract_test` ✅ (exists)
 - User: `test` ✅ (exists and works)
 - Connection string: `postgresql://test:test@localhost:5432/metaextract_test` ✅ (valid)
@@ -38,10 +40,10 @@ Everything was actually configured correctly - PostgreSQL just had idle connecti
 ```typescript
 const DEFAULT_POOL_CONFIG = {
   max: 25,
-  idleTimeoutMillis: 60000,  // ← Increased from 30s to 60s
+  idleTimeoutMillis: 60000, // ← Increased from 30s to 60s
   connectionTimeoutMillis: 5000,
-  statement_timeout: 30000,   // ← Added statement timeout
-  query_timeout: 30000,       // ← Added query timeout
+  statement_timeout: 30000, // ← Added statement timeout
+  query_timeout: 30000, // ← Added query timeout
 };
 ```
 
@@ -63,7 +65,8 @@ if (process.env.DEBUG_DB_POOL) {
 }
 ```
 
-**Why**: 
+**Why**:
+
 - Idle connection drops are **expected and normal** in connection pooling
 - The pool handles reconnection automatically
 - Logging them as errors causes alarm when there's no actual problem
@@ -72,6 +75,7 @@ if (process.env.DEBUG_DB_POOL) {
 ## Results
 
 ### Before Fix
+
 ```
 Test Suites: 1 passed, 1 total
 Tests:       18 passed, 18 total
@@ -81,6 +85,7 @@ Tests:       18 passed, 18 total
 ```
 
 ### After Fix
+
 ```
 Test Suites: 1 passed, 1 total
 Tests:       18 passed, 18 total

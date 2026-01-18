@@ -27,12 +27,14 @@ Successfully implemented the reserve-commit-release pattern to fix HIGH-risk cre
 ### 1. Schema & Database ✅
 
 **File**: `shared/schema.ts`
+
 - Added `creditHolds` table with:
   - Unique index on `(balance_id, request_id)` for idempotency
   - 15-minute expiry with automatic cleanup
   - States: `HELD`, `COMMITTED`, `RELEASED`
 
 **Migration**: `migrations/010_add_credit_holds.sql`
+
 - Applied to database
 - Includes PostgreSQL function for expired hold cleanup
 
@@ -41,6 +43,7 @@ Successfully implemented the reserve-commit-release pattern to fix HIGH-risk cre
 **File**: `server/storage/db.ts`
 
 **Methods Added**:
+
 ```typescript
 reserveCredits(requestId, balanceId, amount, description, quoteId?, expiresInMs?)
   - SELECT FOR UPDATE lock on balance row
@@ -69,6 +72,7 @@ cleanupExpiredHolds()
 **File**: `server/routes/images-mvp.ts`
 
 **Functions Added**:
+
 ```typescript
 getIdempotencyKey(req)
   - Extracts Idempotency-Key header
@@ -92,24 +96,31 @@ startHoldCleanup()
 **Changes Made**:
 
 #### A. Early initialization (line 1530)
+
 ```typescript
 const requestId = getIdempotencyKey(req); // Client-provided idempotency key
 let holdReserved = false; // Track if we need to release on error
 ```
 
 #### B. DB health check (after line 1700)
+
 ```typescript
 if (process.env.NODE_ENV !== 'development' && !hasTrialAvailable) {
   const dbHealthy = await isDatabaseHealthy();
   if (!dbHealthy) {
-    return sendServiceUnavailableError(res, 'Billing system temporarily unavailable');
+    return sendServiceUnavailableError(
+      res,
+      'Billing system temporarily unavailable'
+    );
   }
 }
 ```
 
 #### C. Credit reservation BEFORE Python (lines 1710-1760)
+
 **Old**: Checked balance, set `chargeCredits = true`, ran Python, then deducted  
 **New**: Reserve credits atomically BEFORE Python:
+
 ```typescript
 if (!requestId) {
   return sendInvalidRequestError(res, 'Idempotency-Key header required');
@@ -128,8 +139,10 @@ chargeCredits = true;
 ```
 
 #### D. Commit hold BEFORE response (line 1900)
+
 **Old**: `storage.useCredits()` after Python completes  
 **New**: `storage.commitHold()` before sending response:
+
 ```typescript
 if (chargeCredits && holdReserved && creditBalanceId && requestId) {
   try {
@@ -142,8 +155,10 @@ if (chargeCredits && holdReserved && creditBalanceId && requestId) {
 ```
 
 #### E. Release hold on error (catch block)
+
 **Old**: No hold release, credits stuck  
 **New**: Automatic refund:
+
 ```typescript
 if (holdReserved && creditBalanceId && requestId) {
   await storage.releaseHold(requestId, creditBalanceId);
@@ -233,11 +248,13 @@ if (holdReserved && creditBalanceId && requestId) {
 ## Next Steps
 
 1. **Run Integration Tests**
+
    ```bash
    npm run test:integration
    ```
 
 2. **Run Full Regression Suite**
+
    ```bash
    npm run test:ci
    ```
@@ -262,6 +279,7 @@ if (holdReserved && creditBalanceId && requestId) {
 **Status**: ✅ RESOLVED
 
 All 3 HIGH-risk findings have been addressed:
+
 - ✅ Credits now reserved before Python extraction
 - ✅ Race conditions eliminated via atomic reservation
 - ✅ DB outage behavior consistent (fail-closed)
@@ -282,6 +300,7 @@ All 3 HIGH-risk findings have been addressed:
 ## Credits
 
 Implementation follows the exact pattern specified by user feedback:
+
 - Client-provided Idempotency-Key for retry safety
 - 15-minute hold expiry with automatic cleanup
 - Fail-closed on DB outage for money-path operations

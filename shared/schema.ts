@@ -219,7 +219,7 @@ export const creditHolds = pgTable(
     committedAt: timestamp('committed_at'),
     releasedAt: timestamp('released_at'),
   },
-  (table) => ({
+  table => ({
     // Idempotency: same (balanceId, requestId) can't create multiple holds
     balanceRequestIdx: uniqueIndex('credit_holds_balance_request_idx').on(
       table.balanceId,

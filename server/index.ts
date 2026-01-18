@@ -96,7 +96,11 @@ if (TRUST_PROXY_MODE === 'one') {
 // Boot-time warning if behind proxy but trust is off
 let proxyWarningShown = false;
 app.use((req, res, next) => {
-  if (!proxyWarningShown && TRUST_PROXY_MODE === 'off' && req.headers['x-forwarded-for']) {
+  if (
+    !proxyWarningShown &&
+    TRUST_PROXY_MODE === 'off' &&
+    req.headers['x-forwarded-for']
+  ) {
     console.warn(
       '\x1b[33m%s\x1b[0m',
       '[proxy] ⚠️  X-Forwarded-For detected but TRUST_PROXY_MODE=off'
@@ -240,68 +244,69 @@ export async function setupApp(opts?: { testMode?: boolean }): Promise<any> {
 
 // Only run server startup if not in test mode (environment variable)
 // Tests call setupApp() directly with testMode: true
-const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+const isTestEnvironment =
+  process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
 
 if (!isTestEnvironment) {
   (async () => {
     await setupApp();
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === 'production') {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import('./vite');
-    await setupVite(httpServer, app);
-  }
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (process.env.NODE_ENV === 'production') {
+      serveStatic(app);
+    } else {
+      const { setupVite } = await import('./vite');
+      await setupVite(httpServer, app);
+    }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 3000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '3000', 10);
-  const host = process.env.HOST || '0.0.0.0';
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 3000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || '3000', 10);
+    const host = process.env.HOST || '0.0.0.0';
 
-  const startServer = (portToUse: number) => {
-    httpServer
-      .listen(
-        {
-          port: portToUse,
-          host,
-        },
-        () => {
-          log(`serving on ${host}:${portToUse}`);
+    const startServer = (portToUse: number) => {
+      httpServer
+        .listen(
+          {
+            port: portToUse,
+            host,
+          },
+          () => {
+            log(`serving on ${host}:${portToUse}`);
 
-          // Start periodic temp cleanup (every hour in production)
-          if (process.env.NODE_ENV === 'production') {
-            startPeriodicCleanup(60 * 60 * 1000);
+            // Start periodic temp cleanup (every hour in production)
+            if (process.env.NODE_ENV === 'production') {
+              startPeriodicCleanup(60 * 60 * 1000);
+            }
+
+            // Start quote cleanup (every 5 minutes)
+            startQuoteCleanup({
+              cleanupExpiredQuotes: () => storage.cleanupExpiredQuotes(),
+              intervalMs: 5 * 60 * 1000,
+            });
+
+            // ✅ RED FLAG #2 FIX: Start hold cleanup (every 5 minutes)
+            // Releases expired HELD credits back to user balances
+            startHoldCleanup({
+              cleanupExpiredHolds: () => storage.cleanupExpiredHolds(),
+              intervalMs: 5 * 60 * 1000,
+            });
           }
+        )
+        .on('error', (err: any) => {
+          if (err.code === 'EADDRINUSE') {
+            log(`Port ${portToUse} is in use, retrying on ${portToUse + 1}...`);
+            startServer(portToUse + 1);
+          } else {
+            console.error('Server failed to start:', err);
+          }
+        });
+    };
 
-          // Start quote cleanup (every 5 minutes)
-          startQuoteCleanup({
-            cleanupExpiredQuotes: () => storage.cleanupExpiredQuotes(),
-            intervalMs: 5 * 60 * 1000,
-          });
-
-          // ✅ RED FLAG #2 FIX: Start hold cleanup (every 5 minutes)
-          // Releases expired HELD credits back to user balances
-          startHoldCleanup({
-            cleanupExpiredHolds: () => storage.cleanupExpiredHolds(),
-            intervalMs: 5 * 60 * 1000,
-          });
-        }
-      )
-      .on('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
-          log(`Port ${portToUse} is in use, retrying on ${portToUse + 1}...`);
-          startServer(portToUse + 1);
-        } else {
-          console.error('Server failed to start:', err);
-        }
-      });
-  };
-
-  startServer(port);
-})();
+    startServer(port);
+  })();
 }

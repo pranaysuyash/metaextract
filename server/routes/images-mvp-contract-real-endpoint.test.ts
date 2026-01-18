@@ -67,7 +67,10 @@ describe('Images MVP Contract - Real Endpoint (Integration)', () => {
     expect(body).toHaveProperty('quote');
     expect(Array.isArray(body.quote.perFile)).toBe(true);
     expect(typeof body.quote.totalCredits).toBe('number');
-    expect(body.quote.standardEquivalents === null || typeof body.quote.standardEquivalents === 'number').toBe(true);
+    expect(
+      body.quote.standardEquivalents === null ||
+        typeof body.quote.standardEquivalents === 'number'
+    ).toBe(true);
 
     // Strict keyset validation (tight coupling choice)
     // If backend adds/removes fields, this test will fail
@@ -80,9 +83,9 @@ describe('Images MVP Contract - Real Endpoint (Integration)', () => {
       'quoteId',
       'expiresAt',
       'warnings',
-      'creditsTotal',  // legacy
-      'perFile',       // legacy
-      'schedule',      // legacy
+      'creditsTotal', // legacy
+      'perFile', // legacy
+      'schedule', // legacy
     ].sort();
     const actualKeys = Object.keys(body).sort();
     expect(actualKeys).toEqual(expectedKeys);

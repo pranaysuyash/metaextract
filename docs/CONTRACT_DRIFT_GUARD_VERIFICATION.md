@@ -16,6 +16,7 @@ All three critical pre-merge checks completed successfully:
 ## 1. Contract Test Verification
 
 ### Test Results
+
 ```bash
 npm run test:ci server/routes/images-mvp-contract-real-endpoint.test.ts
 
@@ -25,6 +26,7 @@ Exit Code:   0 (success)
 ```
 
 ### Test Coverage
+
 File: `server/routes/images-mvp-contract-real-endpoint.test.ts` (178 lines)
 
 1. ✅ **schemaVersion exact match** - Validates `images_mvp_quote_v1`
@@ -34,6 +36,7 @@ File: `server/routes/images-mvp-contract-real-endpoint.test.ts` (178 lines)
 5. ✅ **Exact keyset matching** - Detects any field additions/removals
 
 ### Why This Guards Drift
+
 - Imports actual `setupApp()` from `server/index.ts` (not mock)
 - Hits real `/api/images_mvp/quote` endpoint with supertest
 - Validates actual backend response structure
@@ -45,12 +48,15 @@ File: `server/routes/images-mvp-contract-real-endpoint.test.ts` (178 lines)
 ## 2. Deprecated Keys Decision
 
 ### The Three Extra Keys
+
 Backend currently returns top-level keys for backwards compatibility:
+
 - `creditsTotal`
 - `perFile`
 - `schedule`
 
 ### Decision: DOCUMENTED FOR V2 REMOVAL
+
 ```typescript
 // In server/routes/images-mvp.ts:
 res.json({
@@ -59,7 +65,7 @@ res.json({
   creditsTotal,
   perFile: perFileById,
   schedule: IMAGES_MVP_CREDIT_SCHEDULE,
-  
+
   // Canonical v1 shape (what frontend actually uses):
   limits: { ... },
   creditSchedule: { ... },
@@ -73,6 +79,7 @@ res.json({
 ```
 
 ### Frontend Contract (TypeScript Types)
+
 ```typescript
 // client/src/lib/images-mvp-quote.ts
 export type ImagesMvpQuoteResponse = {
@@ -92,13 +99,17 @@ export type ImagesMvpQuoteResponse = {
 ```
 
 ### Contract Test Enforcement
+
 Test explicitly documents deprecated keys and will fail if:
+
 - Frontend uses top-level keys instead of nested keys
 - Backend removes these keys before v2 migration
 - New keys are added without version bump
 
 ### Migration Plan for v2
+
 When ready (separate PR):
+
 1. Remove top-level `creditsTotal`, `perFile`, `schedule`
 2. Bump schema to `images_mvp_quote_v2`
 3. Frontend updates to consume from nested structure
@@ -109,6 +120,7 @@ When ready (separate PR):
 ## 3. Jest Cleanup & Teardown
 
 ### Problem
+
 - Original test had open handles (Redis socket)
 - Jest forced exit with warnings about async logging
 - "Cannot log after tests are done" errors
@@ -116,13 +128,14 @@ When ready (separate PR):
 ### Solution: Proper Teardown Function
 
 #### Server Setup
+
 ```typescript
 // server/index.ts - setupApp()
 export async function setupApp(opts?: { testMode?: boolean }) {
   const isTestMode = opts?.testMode === true;
-  
+
   // ... setup routes ...
-  
+
   const teardown = async () => {
     // Close database connections if in test mode
     if (isTestMode) {
@@ -137,12 +150,13 @@ export async function setupApp(opts?: { testMode?: boolean }) {
   if (isTestMode) {
     return { app, teardown };
   }
-  
+
   return app as any;
 }
 ```
 
 #### Test Implementation
+
 ```typescript
 // server/routes/images-mvp-contract-real-endpoint.test.ts
 describe('Images MVP Contract', () => {
@@ -160,17 +174,17 @@ describe('Images MVP Contract', () => {
       await teardown();
     }
   });
-  
+
   // Tests...
 });
 ```
 
 ### Test Environment Detection
+
 ```typescript
 // server/index.ts
-const isTestEnvironment = 
-  process.env.NODE_ENV === 'test' || 
-  process.env.JEST_WORKER_ID !== undefined;
+const isTestEnvironment =
+  process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
 
 if (!isTestEnvironment) {
   (async () => {
@@ -180,6 +194,7 @@ if (!isTestEnvironment) {
 ```
 
 ### Results
+
 - ✅ Exit code 0 (success)
 - ✅ No "Cannot log after tests are done" warnings
 - ✅ Clean global teardown (only WriteStream handles remain)
@@ -190,25 +205,29 @@ if (!isTestEnvironment) {
 ## 4. Vite Import Safety
 
 ### Problem
+
 Jest was parsing `server/vite.ts` which contains `import.meta.dirname`
+
 - `import.meta` only valid in ESM modules
 - Jest uses CommonJS by default
 - SyntaxError: "Cannot use 'import.meta' outside a module"
 
 ### Solution
+
 ```typescript
 // server/index.ts - setupApp()
 if (!isTestMode) {
   if (process.env.NODE_ENV === 'production') {
     serveStatic(app);
   } else {
-    const { setupVite } = await import('./vite');  // Only in non-test runtime
+    const { setupVite } = await import('./vite'); // Only in non-test runtime
     await setupVite(httpServer, app);
   }
 }
 ```
 
 ### Results
+
 - ✅ Vite module never imported during tests
 - ✅ No parse errors
 - ✅ Test suite passes without SyntaxError
@@ -270,6 +289,7 @@ When deploying to production:
 ✅ **All three critical pre-merge checks completed successfully.**
 
 The contract drift guard is now:
+
 - Real (tests actual endpoint, not mock)
 - Reliable (exit code 0, clean teardown)
 - Maintainable (deprecated keys documented for removal)

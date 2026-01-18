@@ -1,7 +1,10 @@
 /** @jest-environment node */
 import request from 'supertest';
 import express, { type Express } from 'express';
-import { registerImagesMvpRoutes, clearImagesMvpQuotesForTesting } from './images-mvp';
+import {
+  registerImagesMvpRoutes,
+  clearImagesMvpQuotesForTesting,
+} from './images-mvp';
 import { storage } from '../storage/index';
 import { getDatabase } from '../db';
 import {
@@ -160,7 +163,7 @@ describe('Images MVP API Tests', () => {
     app.use(express.json());
     registerImagesMvpRoutes(app);
     jest.clearAllMocks();
-    
+
     // Reset default mock implementations after clearAllMocks
     // These methods all return the hold/result object, not {success: boolean}
     (storage.reserveCredits as jest.Mock).mockResolvedValue({
@@ -181,7 +184,7 @@ describe('Images MVP API Tests', () => {
       id: 'hold_123',
       state: 'RELEASED',
     });
-    
+
     process.env.DODO_PAYMENTS_API_KEY = 'test_key';
     process.env.NODE_ENV = 'test';
     clearImagesMvpQuotesForTesting();
@@ -599,7 +602,7 @@ describe('Images MVP API Tests', () => {
 
       await request(app)
         .post('/api/images_mvp/extract?session_id=sess_1')
-        .set('Idempotency-Key', 'test-key-quote'  )
+        .set('Idempotency-Key', 'test-key-quote')
         .field('trial_email', 'useduser@example.com')
         .field('quote_id', quoteResponse.body.quoteId)
         .field('client_file_id', 'file_1')
