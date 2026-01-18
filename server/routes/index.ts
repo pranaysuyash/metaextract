@@ -31,6 +31,7 @@ import { applyUploadRateLimiting } from '../middleware/upload-rate-limit';
 import advancedProtectionRouter from './advanced-protection';
 import enhancedProtectionRouter from './enhanced-protection';
 import adminSecurityRouter from './admin-security';
+// import { registerDoseRoutes } from './dose_routes';
 
 /**
  * Register all API routes on the Express app.
@@ -103,6 +104,9 @@ export async function registerRoutes(
   app.use('/api/protection', advancedProtectionRouter);
   app.use('/api/enhanced-protection', enhancedProtectionRouter);
   app.use('/api/admin', adminSecurityRouter);
+
+  // Dose trend analysis routes
+  // registerDoseRoutes(app);
 
   return httpServer;
 }

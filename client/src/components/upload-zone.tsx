@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LimitedAccessModal } from '@/components/limited-access-modal';
 import { validateUploadFile } from '@/lib/upload-guards';
 import { showUploadError, showSuccessMessage } from '@/lib/toast-helpers';
+import { ChallengeUI, type ChallengeData } from '@/components/challenges';
 
 // File validation configuration
 const FILE_CONFIG = {
@@ -168,6 +169,10 @@ export function UploadZone() {
   const [accessEmail, setAccessEmail] = useState<string | null>(null);
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [challengeData, setChallengeData] = useState<ChallengeData | null>(
+    null
+  );
+  const [challengeRetryAfter, setChallengeRetryAfter] = useState<number>(30);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -298,6 +303,16 @@ export function UploadZone() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 403 && errorData.challenge) {
+          setChallengeData(errorData.challenge as ChallengeData);
+          setChallengeRetryAfter(errorData.retryAfter || 30);
+          setIsUploading(false);
+          setUploadProgress(0);
+          if (progressInterval) clearInterval(progressInterval);
+          return;
+        }
+
         throw new Error(
           errorData.error ||
             errorData.message ||
@@ -362,6 +377,20 @@ export function UploadZone() {
 
   const handleCancel = () => {
     setUploadError(null);
+    setCurrentFile(null);
+    setIsUploading(false);
+    setUploadProgress(0);
+  };
+
+  const handleChallengeComplete = () => {
+    setChallengeData(null);
+    if (currentFile) {
+      startUpload(currentFile);
+    }
+  };
+
+  const handleChallengeCancel = () => {
+    setChallengeData(null);
     setCurrentFile(null);
     setIsUploading(false);
     setUploadProgress(0);
@@ -463,6 +492,15 @@ export function UploadZone() {
               </Button>
             </div>
           </motion.div>
+        ) : challengeData ? (
+          <ChallengeUI
+            key="challenge"
+            challenge={challengeData}
+            retryAfter={challengeRetryAfter}
+            fileName={currentFile?.name}
+            onComplete={handleChallengeComplete}
+            onCancel={handleChallengeCancel}
+          />
         ) : !isUploading ? (
           <motion.div
             key="upload"

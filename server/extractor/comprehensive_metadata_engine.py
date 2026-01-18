@@ -91,6 +91,29 @@ except ImportError:
         pass
     MONITORING_AVAILABLE = False
 
+# Import extraction observability (provenance, sensitive fields, shadow mode)
+try:
+    from .extraction_observability import (
+        record_top_level_provenance,
+        should_run_shadow,
+        run_shadow_extraction_safe,
+        add_observability_to_result,
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError as _obs_err:
+    OBSERVABILITY_AVAILABLE = False
+    logger.warning(f"Extraction observability not available: {_obs_err}")
+    
+    # Stub functions if observability module not available
+    def record_top_level_provenance(**kwargs):
+        pass
+    def should_run_shadow():
+        return False
+    def run_shadow_extraction_safe(filepath, timeout=2.0):
+        return {"enabled": False, "error": "observability module not available"}
+    def add_observability_to_result(result, provenance, conflicts, shadow_info=None):
+        return result
+
 try:
     from .alerting import get_alert_manager
     ALERTING_AVAILABLE = True
@@ -2444,11 +2467,24 @@ class ComprehensiveMetadataExtractor:
         """
         import time
         start_time = time.time()
+        
+        # Initialize observability tracking
+        _provenance: Dict[str, str] = {}
+        _provenance_conflicts: List[Dict[str, str]] = []
+        _shadow_info: Optional[Dict[str, Any]] = None
 
         try:
             # Start with base metadata extraction
             base_result = extract_base_metadata(
                 filepath, tier, enable_burned_metadata=enable_ocr
+            )
+            
+            # Record provenance for base extraction results
+            record_top_level_provenance(
+                module_name="base_metadata_engine",
+                module_output=base_result,
+                provenance=_provenance,
+                conflicts=_provenance_conflicts
             )
 
             if "error" in base_result:
@@ -2559,43 +2595,63 @@ class ComprehensiveMetadataExtractor:
         is_audio = mime_type.startswith("audio/") or file_ext in [".mp3", ".flac", ".ogg", ".wav", ".m4a", ".aac", ".aiff"]
         is_psd = file_ext in ['.psd', '.psb'] or 'photoshop' in mime_type.lower()
         is_exr = file_ext in ['.exr']
+        
+        # Helper to merge module result and track provenance
+        def _merge_module_result(result_key: str, module_result: Optional[Dict[str, Any]], module_name: str) -> None:
+            if module_result:
+                base_result[result_key] = module_result
+                record_top_level_provenance(
+                    module_name=module_name,
+                    module_output={result_key: module_result},
+                    provenance=_provenance,
+                    conflicts=_provenance_conflicts
+                )
+        
+        # Run shadow mode for images (parallel, never blocks main path)
+        if is_image and should_run_shadow():
+            try:
+                _shadow_info = run_shadow_extraction_safe(filepath)
+            except Exception as shadow_err:
+                # Shadow mode errors NEVER fail main extraction
+                _shadow_info = {"enabled": True, "error": f"Shadow init failed: {shadow_err}"}
+                logger.debug(f"Shadow mode init failed (non-fatal): {shadow_err}")
 
         try:
             # Medical imaging (DICOM)
             if tier_config.medical_imaging and (file_ext in ['.dcm', '.dicom'] or 'dicom' in mime_type):
                 dicom_result = safe_extract_module(self.medical_engine.extract_dicom_metadata, filepath, "medical_imaging")
                 if dicom_result and dicom_result.get("available"):
-                    base_result["medical_imaging"] = dicom_result
+                    _merge_module_result("medical_imaging", dicom_result, "medical_imaging")
 
             # Astronomical data (FITS)
             if tier_config.astronomical_data and file_ext in ['.fits', '.fit', '.fts']:
                 fits_result = safe_extract_module(self.astronomical_engine.extract_fits_metadata, filepath, "astronomical_data")
                 if fits_result and fits_result.get("available"):
-                    base_result["astronomical_data"] = fits_result
+                    _merge_module_result("astronomical_data", fits_result, "astronomical_data")
 
             # Geospatial data
             if tier_config.geospatial_analysis:
                 if file_ext in ['.tif', '.tiff'] and 'geo' in str(base_result.get("exif", {})).lower():
                     geotiff_result = safe_extract_module(self.geospatial_engine.extract_geotiff_metadata, filepath, "geospatial_geotiff")
                     if geotiff_result and geotiff_result.get("available"):
-                        base_result["geospatial"] = geotiff_result
+                        _merge_module_result("geospatial", geotiff_result, "geospatial_geotiff")
 
                 elif file_ext in ['.shp']:
                     shapefile_result = safe_extract_module(self.geospatial_engine.extract_shapefile_metadata, filepath, "geospatial_shapefile")
                     if shapefile_result and shapefile_result.get("available"):
-                        base_result["geospatial"] = shapefile_result
+                        _merge_module_result("geospatial", shapefile_result, "geospatial_shapefile")
 
             # Scientific instruments
             if tier_config.scientific_instruments:
                 if file_ext in ['.h5', '.hdf5', '.he5']:
                     hdf5_result = safe_extract_module(self.scientific_engine.extract_hdf5_metadata, filepath, "scientific_hdf5")
                     if hdf5_result and hdf5_result.get("available"):
-                        base_result["scientific_data"] = hdf5_result
+                        _merge_module_result("scientific_data", hdf5_result, "scientific_hdf5")
 
                 elif file_ext in ['.nc', '.netcdf', '.nc4']:
                     netcdf_result = safe_extract_module(self.scientific_engine.extract_netcdf_metadata, filepath, "scientific_netcdf")
                     if netcdf_result and netcdf_result.get("available"):
-                        base_result["scientific_data"] = netcdf_result
+                        _merge_module_result("scientific_data", netcdf_result, "scientific_netcdf")
 
             # Drone telemetry (for images and videos)
             if tier_config.drone_telemetry and mime_type.startswith(('image/', 'video/')):
@@ -2707,19 +2763,19 @@ class ComprehensiveMetadataExtractor:
 
                 mobile_result = safe_extract_module(extract_mobile_metadata, filepath, "mobile_metadata", mobile_exiftool_data)
                 if mobile_result:
-                    base_result["mobile_metadata"] = mobile_result
+                    _merge_module_result("mobile_metadata", mobile_result, "mobile_metadata")
 
             # Optional: Forensic/security metadata
             if tier_config.forensic_details and extract_forensic_metadata:
                 forensic_result = safe_extract_module(extract_forensic_metadata, filepath, "forensic_metadata")
                 if forensic_result:
-                    base_result["forensic_security"] = forensic_result
+                    _merge_module_result("forensic_security", forensic_result, "forensic_metadata")
 
             # Optional: Action camera metadata
             if (tier_config.drone_telemetry or tier_config.professional_video) and extract_action_camera_metadata and (is_image or is_video):
                 action_result = safe_extract_module(extract_action_camera_metadata, filepath, "action_camera_metadata")
                 if action_result:
-                    base_result["action_camera"] = action_result
+                    _merge_module_result("action_camera", action_result, "action_camera_metadata")
 
             # Optional: 360° camera metadata
             if extract_360_camera_metadata and is_image:
@@ -2740,19 +2796,19 @@ class ComprehensiveMetadataExtractor:
 
                 camera_360_result = safe_extract_module(extract_360_camera_metadata, filepath, "360_camera_metadata", camera_360_exiftool_data)
                 if camera_360_result:
-                    base_result["camera_360"] = camera_360_result
+                    _merge_module_result("camera_360", camera_360_result, "360_camera_metadata")
 
             # Optional: Print/publishing metadata
             if tier_config.web_metadata and extract_print_publishing_metadata and is_image:
                 print_result = safe_extract_module(extract_print_publishing_metadata, filepath, "print_publishing_metadata")
                 if print_result:
-                    base_result["print_publishing"] = print_result
+                    _merge_module_result("print_publishing", print_result, "print_publishing_metadata")
 
             # Optional: Workflow/DAM metadata
             if tier_config.web_metadata and extract_workflow_dam_metadata:
                 workflow_result = safe_extract_module(extract_workflow_dam_metadata, filepath, "workflow_dam_metadata")
                 if workflow_result:
-                    base_result["workflow_dam"] = workflow_result
+                    _merge_module_result("workflow_dam", workflow_result, "workflow_dam_metadata")
 
             # Optional: Advanced audio/video analysis
             if tier_config.advanced_audio and extract_audio_advanced_metadata and is_audio:
@@ -3334,6 +3390,22 @@ class ComprehensiveMetadataExtractor:
                 if "gps" not in base_result or not base_result["gps"] or not base_result["gps"].get("latitude"):
                     base_result["gps"] = burned_gps
                     logger.debug(f"Promoted burned metadata GPS to main GPS field: {burned_gps['latitude']}, {burned_gps['longitude']}")
+
+        # Add observability data (provenance, sensitive fields, shadow mode)
+        # This is the final step - adds to extraction_info only, never changes client-facing metadata
+        try:
+            base_result = add_observability_to_result(
+                result=base_result,
+                provenance=_provenance,
+                conflicts=_provenance_conflicts,
+                shadow_info=_shadow_info
+            )
+        except Exception as obs_err:
+            # Observability errors NEVER fail main extraction
+            logger.warning(f"Observability data addition failed (non-fatal): {obs_err}")
+            if "extraction_info" not in base_result:
+                base_result["extraction_info"] = {}
+            base_result["extraction_info"]["observability_error"] = str(obs_err)
 
         return base_result
 
