@@ -1317,6 +1317,270 @@ export function registerImagesMvpRoutes(app: Express) {
   );
 
   // ---------------------------------------------------------------------------
+  // Analytics Report (SQL Optimized - for high traffic)
+  // ---------------------------------------------------------------------------
+  app.get(
+    '/api/images_mvp/analytics/report-optimized',
+    analyticsRateLimiter,
+    async (req: Request, res: Response) => {
+      try {
+        const periodQuery =
+          typeof req.query.period === 'string' ? req.query.period : undefined;
+        const period = parseAnalyticsPeriod(periodQuery);
+
+        const since =
+          period.since ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        const events = await storage.getUiEvents({
+          product: 'images_mvp',
+          since,
+          limit: 5000,
+        });
+
+        const eventCounts: Record<string, number> = {};
+        const purposeCounts: Record<string, number> = {};
+        const tabCounts: Record<string, number> = {};
+        const densityCounts: Record<string, number> = {};
+        const formatHintCounts: Record<string, number> = {};
+        const resultsMimeCounts: Record<string, number> = {};
+
+        let landingViewed = 0;
+        let uploadSelected = 0;
+        let uploadRejected = 0;
+        let analysisStarted = 0;
+        let analysisCompleted = 0;
+        let analysisSuccess = 0;
+        let analysisFailed = 0;
+        let analysisProcessingMsTotal = 0;
+        let analysisProcessingCount = 0;
+        let paywallViewed = 0;
+        let purchaseCompleted = 0;
+
+        let paywallPreviewed = 0;
+        let paywallClicked = 0;
+        let summaryCopied = 0;
+        let summaryDownloaded = 0;
+        let jsonDownloaded = 0;
+        let fullTxtDownloaded = 0;
+        let purposePromptShown = 0;
+        let purposePromptOpened = 0;
+        let purposeSkipped = 0;
+
+        const sessionIds = new Set<string>();
+        const userIds = new Set<string>();
+        let firstEventAt: Date | null = null;
+        let lastEventAt: Date | null = null;
+
+        const increment = (bucket: Record<string, number>, key: string) => {
+          bucket[key] = (bucket[key] || 0) + 1;
+        };
+
+        for (const event of events) {
+          increment(eventCounts, event.eventName);
+
+          if (event.sessionId) {
+            sessionIds.add(event.sessionId);
+          }
+          if (event.userId) {
+            userIds.add(event.userId);
+          }
+          if (!firstEventAt || event.createdAt < firstEventAt) {
+            firstEventAt = event.createdAt;
+          }
+          if (!lastEventAt || event.createdAt > lastEventAt) {
+            lastEventAt = event.createdAt;
+          }
+
+          const properties = isPlainObject(event.properties)
+            ? event.properties
+            : {};
+
+          switch (event.eventName) {
+            case 'images_landing_viewed':
+              landingViewed += 1;
+              break;
+            case 'upload_selected':
+              uploadSelected += 1;
+              break;
+            case 'upload_rejected':
+              uploadRejected += 1;
+              break;
+            case 'analysis_started':
+              analysisStarted += 1;
+              break;
+            case 'analysis_completed': {
+              analysisCompleted += 1;
+              const success =
+                typeof properties.success === 'boolean'
+                  ? properties.success
+                  : null;
+              if (success === true) {
+                analysisSuccess += 1;
+              } else if (success === false) {
+                analysisFailed += 1;
+              }
+              const processingMs =
+                typeof properties.processing_ms === 'number'
+                  ? properties.processing_ms
+                  : null;
+              if (processingMs !== null) {
+                analysisProcessingMsTotal += processingMs;
+                analysisProcessingCount += 1;
+              }
+              break;
+            }
+            case 'purpose_selected': {
+              const purpose =
+                typeof properties.purpose === 'string'
+                  ? properties.purpose
+                  : 'unknown';
+              increment(purposeCounts, purpose);
+              break;
+            }
+            case 'purpose_prompt_shown':
+              purposePromptShown += 1;
+              break;
+            case 'purpose_prompt_opened':
+              purposePromptOpened += 1;
+              break;
+            case 'purpose_skipped':
+              purposeSkipped += 1;
+              break;
+            case 'tab_changed': {
+              const tab =
+                typeof properties.tab === 'string' ? properties.tab : 'unknown';
+              increment(tabCounts, tab);
+              break;
+            }
+            case 'density_changed': {
+              const mode =
+                typeof properties.mode === 'string'
+                  ? properties.mode
+                  : 'unknown';
+              increment(densityCounts, mode);
+              break;
+            }
+            case 'format_hint_shown': {
+              const mimeType =
+                typeof properties.mime_type === 'string'
+                  ? properties.mime_type
+                  : 'unknown';
+              increment(formatHintCounts, mimeType);
+              break;
+            }
+            case 'results_viewed': {
+              const mimeType =
+                typeof properties.mime_type === 'string'
+                  ? properties.mime_type
+                  : 'unknown';
+              increment(resultsMimeCounts, mimeType);
+              break;
+            }
+            case 'paywall_viewed':
+              paywallViewed += 1;
+              break;
+            case 'paywall_preview_shown':
+              paywallPreviewed += 1;
+              break;
+            case 'paywall_cta_clicked':
+              paywallClicked += 1;
+              break;
+            case 'purchase_completed':
+              purchaseCompleted += 1;
+              break;
+            case 'summary_copied':
+              summaryCopied += 1;
+              break;
+            case 'export_summary_downloaded':
+              summaryDownloaded += 1;
+              break;
+            case 'export_json_downloaded':
+              jsonDownloaded += 1;
+              break;
+            case 'export_full_txt_downloaded':
+              fullTxtDownloaded += 1;
+              break;
+            default:
+              break;
+          }
+        }
+
+        res.json({
+          period: {
+            range: period.range,
+            since: period.since ? period.since.toISOString() : null,
+            until: new Date().toISOString(),
+            limit: 5000,
+          },
+          totals: {
+            events: events.length,
+            sessions: sessionIds.size,
+            users: userIds.size,
+            firstEventAt: firstEventAt ? firstEventAt.toISOString() : null,
+            lastEventAt: lastEventAt ? lastEventAt.toISOString() : null,
+          },
+          funnel: {
+            landing_viewed: landingViewed,
+            upload_selected: uploadSelected,
+            upload_rejected: uploadRejected,
+            analysis_started: analysisStarted,
+            analysis_completed: analysisCompleted,
+            analysis_success: analysisSuccess,
+            analysis_failed: analysisFailed,
+            results_viewed: eventCounts.results_viewed || 0,
+            paywall_viewed: paywallViewed,
+            paywall_previewed: paywallPreviewed,
+            paywall_clicked: paywallClicked,
+            purchase_completed: purchaseCompleted,
+            export_summary_downloaded: summaryDownloaded,
+            export_json_downloaded: jsonDownloaded,
+            export_full_txt_downloaded: fullTxtDownloaded,
+          },
+          events: eventCounts,
+          purposes: {
+            selected: purposeCounts,
+            prompt_shown: purposePromptShown,
+            prompt_opened: purposePromptOpened,
+            skipped: purposeSkipped,
+          },
+          tabs: tabCounts,
+          density: densityCounts,
+          formats: {
+            hints: formatHintCounts,
+            results: resultsMimeCounts,
+          },
+          exports: {
+            json: jsonDownloaded,
+            summary: summaryDownloaded,
+            full_txt: fullTxtDownloaded,
+            summary_copied: summaryCopied,
+          },
+          analysis: {
+            completed: analysisCompleted,
+            success: analysisSuccess,
+            failed: analysisFailed,
+            average_processing_ms:
+              analysisProcessingCount > 0
+                ? Math.round(
+                    analysisProcessingMsTotal / analysisProcessingCount
+                  )
+                : null,
+          },
+          paywall: {
+            previewed: paywallPreviewed,
+            cta_clicked: paywallClicked,
+          },
+        });
+      } catch (error) {
+        console.error('Images MVP analytics report error:', error);
+        return res
+          .status(500)
+          .json({ error: 'Failed to build analytics report' });
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
   // Credits: Get Packs
   // ---------------------------------------------------------------------------
   app.get('/api/images_mvp/credits/packs', (req: Request, res: Response) => {
@@ -1874,6 +2138,7 @@ export function registerImagesMvpRoutes(app: Express) {
         }
 
         // Extract with enhanced features
+        // Super tier provides comprehensive field extraction for all paid users
         const pythonTier = 'super';
 
         // Send progress update before extraction

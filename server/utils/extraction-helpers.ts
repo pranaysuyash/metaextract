@@ -762,8 +762,10 @@ export async function extractMetadataWithPython(
 ): Promise<PythonMetadataResponse> {
   // Validate and sanitize the file path
   const resolvedPath = path.resolve(filePath);
+
   const tempDir = '/tmp/metaextract';
-  const allowedDirs = [tempDir, process.cwd()];
+  const uploadTempDir = '/tmp/metaextract-uploads';
+  const allowedDirs = [tempDir, uploadTempDir, process.cwd()];
 
   if (!isPathSafe(resolvedPath, allowedDirs)) {
     throw new Error(`Invalid file path: path is outside allowed directories`);

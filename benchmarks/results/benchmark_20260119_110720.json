@@ -1,0 +1,454 @@
+{
+  "timestamp": "2026-01-19T05:37:12.078074Z",
+  "exiftool_available": true,
+  "iterations": 5,
+  "files": [
+    {
+      "filepath": "test-data/test_jpg.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 821,
+      "file_size_mb": 0.001,
+      "dimensions": [
+        100,
+        100
+      ],
+      "megapixels": 0.01,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 88.51,
+      "min_time_ms": 86.64,
+      "max_time_ms": 90.46,
+      "avg_tags": 24.0,
+      "total_tags": 24,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 9,
+        "JFIF": 4,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "standard_synthetic"
+    },
+    {
+      "filepath": "test-data/test_png.png",
+      "file_ext": ".png",
+      "file_size_bytes": 313,
+      "file_size_mb": 0.0,
+      "dimensions": [
+        100,
+        100
+      ],
+      "megapixels": 0.01,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 89.89,
+      "min_time_ms": 88.54,
+      "max_time_ms": 91.1,
+      "avg_tags": 21.0,
+      "total_tags": 21,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "PNG": 7,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "standard_synthetic"
+    },
+    {
+      "filepath": "test-data/test_webp.webp",
+      "file_ext": ".webp",
+      "file_size_bytes": 82,
+      "file_size_mb": 0.0,
+      "dimensions": [
+        100,
+        100
+      ],
+      "megapixels": 0.01,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 90.29,
+      "min_time_ms": 89.6,
+      "max_time_ms": 91.26,
+      "avg_tags": 19.0,
+      "total_tags": 19,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "RIFF": 5,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "standard_synthetic"
+    },
+    {
+      "filepath": "tests/fixtures/test_image.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 9562433,
+      "file_size_mb": 9.119,
+      "dimensions": [
+        3072,
+        4096
+      ],
+      "megapixels": 12.58,
+      "mp_bucket": "large",
+      "iterations": 5,
+      "avg_time_ms": 95.69,
+      "min_time_ms": 93.85,
+      "max_time_ms": 99.01,
+      "avg_tags": 100.0,
+      "total_tags": 100,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 10,
+        "IFD0": 6,
+        "ExifIFD": 27,
+        "GPS": 4,
+        "JFIF": 4,
+        "ICC-header": 16,
+        "ICC_Profile": 9,
+        "Composite": 15
+      },
+      "credits_base": 1,
+      "credits_mp": 1,
+      "credits_total": 2,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "standard_real"
+    },
+    {
+      "filepath": "tests/fixtures/test_ultra_comprehensive.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 391238,
+      "file_size_mb": 0.373,
+      "dimensions": [
+        3840,
+        2160
+      ],
+      "megapixels": 8.29,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 98.18,
+      "min_time_ms": 95.85,
+      "max_time_ms": 101.7,
+      "avg_tags": 92.0,
+      "total_tags": 92,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 11,
+        "JFIF": 4,
+        "IFD0": 11,
+        "ExifIFD": 27,
+        "GPS": 12,
+        "IPTC": 2,
+        "XMP-x": 1,
+        "XMP-exif": 1,
+        "XMP-xmp": 1,
+        "Composite": 13
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "standard_real"
+    },
+    {
+      "filepath": "test-data/test_tiff.tiff",
+      "file_ext": ".tiff",
+      "file_size_bytes": 6284,
+      "file_size_mb": 0.006,
+      "dimensions": [
+        64,
+        32
+      ],
+      "megapixels": 0.0,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 87.02,
+      "min_time_ms": 86.3,
+      "max_time_ms": 87.96,
+      "avg_tags": 25.0,
+      "total_tags": 25,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 4,
+        "IFD0": 10,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "professional"
+    },
+    {
+      "filepath": "test-data/test_dng.dng",
+      "file_ext": ".dng",
+      "file_size_bytes": 6284,
+      "file_size_mb": 0.006,
+      "dimensions": [
+        64,
+        32
+      ],
+      "megapixels": 0.0,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 86.79,
+      "min_time_ms": 85.24,
+      "max_time_ms": 88.55,
+      "avg_tags": 25.0,
+      "total_tags": 25,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 4,
+        "IFD0": 10,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "professional"
+    },
+    {
+      "filepath": "test-data/test_minimal.psd",
+      "file_ext": ".psd",
+      "file_size_bytes": 43,
+      "file_size_mb": 0.0,
+      "dimensions": [
+        1,
+        1
+      ],
+      "megapixels": 0.0,
+      "mp_bucket": "standard",
+      "iterations": 5,
+      "avg_time_ms": 88.94,
+      "min_time_ms": 88.56,
+      "max_time_ms": 89.53,
+      "avg_tags": 19.0,
+      "total_tags": 19,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "Photoshop": 5,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "professional"
+    },
+    {
+      "filepath": "test-data/test_cr3.cr3",
+      "file_ext": ".cr3",
+      "file_size_bytes": 24,
+      "file_size_mb": 0.0,
+      "dimensions": null,
+      "megapixels": null,
+      "mp_bucket": "unknown",
+      "iterations": 5,
+      "avg_time_ms": 108.9,
+      "min_time_ms": 106.67,
+      "max_time_ms": 110.24,
+      "avg_tags": 15.0,
+      "total_tags": 15,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "QuickTime": 3
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "raw"
+    },
+    {
+      "filepath": "test-data/test_fits.fits",
+      "file_ext": ".fits",
+      "file_size_bytes": 2880,
+      "file_size_mb": 0.003,
+      "dimensions": null,
+      "megapixels": null,
+      "mp_bucket": "unknown",
+      "iterations": 5,
+      "avg_time_ms": 106.83,
+      "min_time_ms": 104.0,
+      "max_time_ms": 108.84,
+      "avg_tags": 16.0,
+      "total_tags": 16,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 7
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "scientific"
+    },
+    {
+      "filepath": "test-data/test_minimal.exr",
+      "file_ext": ".exr",
+      "file_size_bytes": 9,
+      "file_size_mb": 0.0,
+      "dimensions": null,
+      "megapixels": null,
+      "mp_bucket": "unknown",
+      "iterations": 5,
+      "avg_time_ms": 86.4,
+      "min_time_ms": 85.65,
+      "max_time_ms": 87.21,
+      "avg_tags": 14.0,
+      "total_tags": 14,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "OpenEXR": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "scientific"
+    },
+    {
+      "filepath": "test-data/test_minimal.heic",
+      "file_ext": ".heic",
+      "file_size_bytes": 24,
+      "file_size_mb": 0.0,
+      "dimensions": null,
+      "megapixels": null,
+      "mp_bucket": "unknown",
+      "iterations": 5,
+      "avg_time_ms": 100.45,
+      "min_time_ms": 99.77,
+      "max_time_ms": 100.96,
+      "avg_tags": 15.0,
+      "total_tags": 15,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "QuickTime": 3
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "features": {
+        "ocr": false,
+        "embedding": false,
+        "forensics": false
+      },
+      "category": "heic"
+    }
+  ],
+  "by_category": {
+    "standard_synthetic": {
+      "count": 3,
+      "avg_time_ms": 89.56,
+      "avg_tags": 21.3
+    },
+    "standard_real": {
+      "count": 2,
+      "avg_time_ms": 96.94,
+      "avg_tags": 96.0
+    },
+    "professional": {
+      "count": 3,
+      "avg_time_ms": 87.58,
+      "avg_tags": 23.0
+    },
+    "raw": {
+      "count": 1,
+      "avg_time_ms": 108.9,
+      "avg_tags": 15.0
+    },
+    "scientific": {
+      "count": 2,
+      "avg_time_ms": 96.62,
+      "avg_tags": 15.0
+    },
+    "heic": {
+      "count": 1,
+      "avg_time_ms": 100.45,
+      "avg_tags": 15.0
+    }
+  },
+  "summary": {
+    "total_files": 12,
+    "avg_time_ms": 93.99,
+    "min_time_ms": 86.4,
+    "max_time_ms": 108.9,
+    "avg_tags": 32.1,
+    "total_tags": 385.0,
+    "total_credits": 13,
+    "avg_credits": 1.08,
+    "total_size_bytes": 9970435,
+    "total_size_mb": 9.51
+  }
+}

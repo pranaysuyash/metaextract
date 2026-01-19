@@ -29,7 +29,19 @@ import {
   type ImagesMvpQuote,
   type InsertImagesMvpQuote,
 } from '@shared/schema';
-import { and, asc, desc, eq, gte, gt, lt, isNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  gt,
+  lt,
+  lte,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '../db';
 import {
   IStorage,
@@ -2071,6 +2083,361 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error cleaning up expired quotes:', error);
       return 0;
+    }
+  }
+
+  async getUserExtractionHistory(
+    userId: string,
+    limit: number = 50
+  ): Promise<any[]> {
+    if (!this.db) return [];
+    try {
+      return await this.db
+        .select({
+          id: imagesMvpQuotes.id,
+          files: imagesMvpQuotes.files,
+          ops: imagesMvpQuotes.ops,
+          creditsTotal: imagesMvpQuotes.creditsTotal,
+          status: imagesMvpQuotes.status,
+          createdAt: imagesMvpQuotes.createdAt,
+          usedAt: imagesMvpQuotes.usedAt,
+        })
+        .from(imagesMvpQuotes)
+        .where(eq(imagesMvpQuotes.userId, userId))
+        .orderBy(desc(imagesMvpQuotes.createdAt))
+        .limit(limit);
+    } catch (error) {
+      console.error('Failed to get user extraction history:', error);
+      return [];
+    }
+  }
+
+  async getCreditUsageTrends(
+    balanceId: string,
+    period: 'day' | 'week' | 'month' = 'week'
+  ): Promise<any[]> {
+    if (!this.db) return [];
+
+    try {
+      const intervalMap = {
+        day: '1 day',
+        week: '7 days',
+        month: '30 days',
+      };
+
+      const interval = intervalMap[period];
+      const groupByFormat = {
+        day: 'YYYY-MM-DD',
+        week: 'YYYY-"W"IW',
+        month: 'YYYY-MM',
+      };
+
+      return await this.db
+        .select({
+          period: sql<string>`TO_CHAR(${creditTransactions.createdAt}, '${groupByFormat[period]}')`,
+          totalCredits: sql<number>`SUM(${creditTransactions.amount})`,
+          transactionCount: sql<number>`COUNT(*)`,
+        })
+        .from(creditTransactions)
+        .where(
+          and(
+            eq(creditTransactions.balanceId, balanceId),
+            gte(
+              creditTransactions.createdAt,
+              sql`NOW() - INTERVAL '${interval}'`
+            ),
+            sql`${creditTransactions.amount} < 0`
+          )
+        )
+        .groupBy(sql`1`)
+        .orderBy(sql`1`)
+        .limit(30);
+    } catch (error) {
+      console.error('Failed to get credit usage trends:', error);
+      return [];
+    }
+  }
+
+  async getAdminDashboardStats(): Promise<any> {
+    if (!this.db) return {};
+
+    try {
+      const now = new Date();
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const [userCount] = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(users);
+
+      const [activeUsers24h] = await this.db
+        .select({ count: sql<number>`COUNT(DISTINCT ${uiEvents.userId})` })
+        .from(uiEvents)
+        .where(gte(uiEvents.createdAt, dayAgo));
+
+      const [totalExtractions] = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(uiEvents)
+        .where(eq(uiEvents.eventName, 'analysis_completed'));
+
+      const [extractions24h] = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(uiEvents)
+        .where(
+          and(
+            eq(uiEvents.eventName, 'analysis_completed'),
+            gte(uiEvents.createdAt, dayAgo)
+          )
+        );
+
+      const [totalCredits] = await this.db
+        .select({ sum: sql<number>`SUM(${creditBalances.credits})` })
+        .from(creditBalances);
+
+      const [creditUsage24h] = await this.db
+        .select({ sum: sql<number>`SUM(ABS(${creditTransactions.amount}))` })
+        .from(creditTransactions)
+        .where(
+          and(
+            gte(creditTransactions.createdAt, dayAgo),
+            sql`${creditTransactions.amount} < 0`
+          )
+        );
+
+      const [successfulExtractions] = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(uiEvents)
+        .where(
+          and(
+            eq(uiEvents.eventName, 'analysis_completed'),
+            sql`${uiEvents.properties}->>'success' = 'true'`
+          )
+        );
+
+      const [failedExtractions] = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(uiEvents)
+        .where(
+          and(
+            eq(uiEvents.eventName, 'analysis_completed'),
+            sql`${uiEvents.properties}->>'success' = 'false'`
+          )
+        );
+
+      return {
+        users: {
+          total: userCount?.count || 0,
+          active24h: activeUsers24h?.count || 0,
+        },
+        extractions: {
+          total: totalExtractions?.count || 0,
+          last24h: extractions24h?.count || 0,
+          success: successfulExtractions?.count || 0,
+          failed: failedExtractions?.count || 0,
+        },
+        credits: {
+          totalBalance: totalCredits?.sum || 0,
+          used24h: Math.abs(creditUsage24h?.sum || 0),
+        },
+        timestamp: now.toISOString(),
+      };
+    } catch (error) {
+      console.error('Failed to get admin dashboard stats:', error);
+      return {};
+    }
+  }
+
+  async getAnalyticsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    product?: string
+  ): Promise<any> {
+    if (!this.db) return {};
+
+    try {
+      const conditions: any[] = [
+        gte(uiEvents.createdAt, startDate),
+        lte(uiEvents.createdAt, endDate),
+      ];
+
+      if (product) {
+        conditions.push(eq(uiEvents.product, product));
+      }
+
+      const events = await this.db
+        .select()
+        .from(uiEvents)
+        .where(and(...conditions))
+        .orderBy(desc(uiEvents.createdAt))
+        .limit(10000);
+
+      const eventCounts: Record<string, number> = {};
+      let totalEvents = 0;
+      const uniqueUsers = new Set<string>();
+      const uniqueSessions = new Set<string>();
+
+      for (const event of events) {
+        eventCounts[event.eventName] = (eventCounts[event.eventName] || 0) + 1;
+        totalEvents++;
+        if (event.userId) uniqueUsers.add(event.userId);
+        if (event.sessionId) uniqueSessions.add(event.sessionId);
+      }
+
+      return {
+        period: {
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+        },
+        totals: {
+          events: totalEvents,
+          users: uniqueUsers.size,
+          sessions: uniqueSessions.size,
+        },
+        eventCounts,
+      };
+    } catch (error) {
+      console.error('Failed to get analytics by date range:', error);
+      return {};
+    }
+  }
+
+  async getFileLevelAnalytics(limit: number = 100): Promise<any[]> {
+    if (!this.db) return [];
+
+    try {
+      const [extractions] = await this.db
+        .select({
+          fileExtension: extractionAnalytics.fileExtension,
+          mimeType: extractionAnalytics.mimeType,
+          successCount: sql<number>`SUM(CASE WHEN ${extractionAnalytics.success} THEN 1 ELSE 0 END)`,
+          failedCount: sql<number>`SUM(CASE WHEN NOT ${extractionAnalytics.success} THEN 1 ELSE 0 END)`,
+          avgProcessingMs: sql<number>`AVG(${extractionAnalytics.processingMs})`,
+          avgFieldsExtracted: sql<number>`AVG(${extractionAnalytics.fieldsExtracted})`,
+          totalFileSize: sql<number>`SUM(${extractionAnalytics.fileSizeBytes})`,
+          totalCount: sql<number>`COUNT(*)`,
+        })
+        .from(extractionAnalytics)
+        .groupBy(
+          extractionAnalytics.fileExtension,
+          extractionAnalytics.mimeType
+        )
+        .limit(limit);
+
+      return [];
+    } catch (error) {
+      console.error('Failed to get file-level analytics:', error);
+      return [];
+    }
+  }
+
+  async setUsageAlert(
+    userId: string,
+    threshold: number,
+    email: string
+  ): Promise<any> {
+    if (!this.db) throw new Error('Database not available');
+
+    try {
+      const existing = await this.db
+        .select()
+        .from(creditBalances)
+        .where(eq(creditBalances.userId, userId))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await this.db
+          .update(creditBalances)
+          .set({
+            credits: threshold,
+            updatedAt: new Date(),
+          })
+          .where(eq(creditBalances.userId, userId));
+
+        return {
+          userId,
+          threshold,
+          email,
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        const [alert] = await this.db
+          .insert(creditBalances)
+          .values({
+            userId,
+            credits: threshold,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+
+        return {
+          userId,
+          threshold,
+          email,
+          createdAt: new Date().toISOString(),
+        };
+      }
+    } catch (error) {
+      console.error('Failed to set usage alert:', error);
+      throw error;
+    }
+  }
+
+  async getUsageAlerts(userId: string): Promise<any[]> {
+    if (!this.db) return [];
+
+    try {
+      const alerts = await this.db
+        .select({
+          id: creditBalances.id,
+          userId: creditBalances.userId,
+          threshold: creditBalances.credits,
+          createdAt: creditBalances.createdAt,
+        })
+        .from(creditBalances)
+        .where(eq(creditBalances.userId, userId))
+        .limit(10);
+
+      return alerts;
+    } catch (error) {
+      console.error('Failed to get usage alerts:', error);
+      return [];
+    }
+  }
+
+  async checkAndTriggerAlerts(userId: string): Promise<any[]> {
+    if (!this.db) return [];
+
+    try {
+      const [balance] = await this.db
+        .select()
+        .from(creditBalances)
+        .where(eq(creditBalances.userId, userId))
+        .limit(1);
+
+      if (!balance) return [];
+
+      const [alertThreshold] = await this.db
+        .select({ threshold: creditBalances.credits })
+        .from(creditBalances)
+        .where(eq(creditBalances.userId, userId))
+        .limit(1);
+
+      if (alertThreshold && balance.credits <= alertThreshold.threshold) {
+        return [
+          {
+            type: 'low_credits',
+            message: `Credit balance is low: ${balance.credits} credits remaining`,
+            threshold: alertThreshold.threshold,
+            current: balance.credits,
+          },
+        ];
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Failed to check alerts:', error);
+      return [];
     }
   }
 }

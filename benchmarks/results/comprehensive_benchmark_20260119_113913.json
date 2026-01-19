@@ -1,0 +1,395 @@
+{
+  "timestamp": "2026-01-19T06:09:09.258976Z",
+  "exiftool_available": true,
+  "iterations": 3,
+  "files": [
+    {
+      "filepath": "tests/fixtures/test_image.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 9562433,
+      "file_size_mb": 9.119,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 92.07,
+      "min_time_ms": 89.43,
+      "max_time_ms": 97.02,
+      "avg_tags": 100.0,
+      "total_tags": 100,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 10,
+        "IFD0": 6,
+        "ExifIFD": 27,
+        "GPS": 4,
+        "JFIF": 4,
+        "ICC-header": 16,
+        "ICC_Profile": 9,
+        "Composite": 15
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "real_phone_with_gps"
+    },
+    {
+      "filepath": "tests/persona-files/sarah-phone-photos/IMG_20251225_164634.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 2756210,
+      "file_size_mb": 2.629,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 89.56,
+      "min_time_ms": 87.43,
+      "max_time_ms": 91.07,
+      "avg_tags": 84.0,
+      "total_tags": 84,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 10,
+        "IFD0": 7,
+        "ExifIFD": 20,
+        "InteropIFD": 1,
+        "GPS": 2,
+        "IFD1": 7,
+        "ICC-header": 16,
+        "ICC_Profile": 10,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "real_phone_with_gps"
+    },
+    {
+      "filepath": "tests/persona-files/sarah-phone-photos/gps-map-photo.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 9562433,
+      "file_size_mb": 9.119,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 90.95,
+      "min_time_ms": 89.84,
+      "max_time_ms": 92.22,
+      "avg_tags": 100.0,
+      "total_tags": 100,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 10,
+        "IFD0": 6,
+        "ExifIFD": 27,
+        "GPS": 4,
+        "JFIF": 4,
+        "ICC-header": 16,
+        "ICC_Profile": 9,
+        "Composite": 15
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "real_phone_with_gps"
+    },
+    {
+      "filepath": "test-data/CT_small.dcm",
+      "file_ext": ".dcm",
+      "file_size_bytes": 39206,
+      "file_size_mb": 0.037,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 99.12,
+      "min_time_ms": 98.68,
+      "max_time_ms": 99.9,
+      "avg_tags": 267.0,
+      "total_tags": 267,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "DICOM": 254,
+        "Composite": 1
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "real_dicom_medical"
+    },
+    {
+      "filepath": "test-data/MR_small.dcm",
+      "file_ext": ".dcm",
+      "file_size_bytes": 9830,
+      "file_size_mb": 0.009,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 95.29,
+      "min_time_ms": 94.25,
+      "max_time_ms": 95.99,
+      "avg_tags": 93.0,
+      "total_tags": 93,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "DICOM": 81
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "real_dicom_medical"
+    },
+    {
+      "filepath": "test-data/wcs_astronomy.fits",
+      "file_ext": ".fits",
+      "file_size_bytes": 2102400,
+      "file_size_mb": 2.005,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 87.45,
+      "min_time_ms": 83.81,
+      "max_time_ms": 93.26,
+      "avg_tags": 28.0,
+      "total_tags": 28,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "FITS": 16
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "real_fits_scientific"
+    },
+    {
+      "filepath": "test-data/primary_3d.fits",
+      "file_ext": ".fits",
+      "file_size_bytes": 26219520,
+      "file_size_mb": 25.005,
+      "mp_bucket": "xl",
+      "iterations": 3,
+      "avg_time_ms": 82.93,
+      "min_time_ms": 81.11,
+      "max_time_ms": 86.48,
+      "avg_tags": 21.0,
+      "total_tags": 21,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "FITS": 9
+      },
+      "credits_base": 1,
+      "credits_mp": 3,
+      "credits_total": 4,
+      "category": "real_fits_scientific"
+    },
+    {
+      "filepath": "test-data/test_jpg.jpg",
+      "file_ext": ".jpg",
+      "file_size_bytes": 821,
+      "file_size_mb": 0.001,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 81.53,
+      "min_time_ms": 81.22,
+      "max_time_ms": 82.07,
+      "avg_tags": 24.0,
+      "total_tags": 24,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 9,
+        "JFIF": 4,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "standard_synthetic"
+    },
+    {
+      "filepath": "test-data/test_png.png",
+      "file_ext": ".png",
+      "file_size_bytes": 313,
+      "file_size_mb": 0.0,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 84.05,
+      "min_time_ms": 81.73,
+      "max_time_ms": 86.16,
+      "avg_tags": 21.0,
+      "total_tags": 21,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "PNG": 7,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "standard_synthetic"
+    },
+    {
+      "filepath": "test-data/test_webp.webp",
+      "file_ext": ".webp",
+      "file_size_bytes": 82,
+      "file_size_mb": 0.0,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 85.49,
+      "min_time_ms": 83.85,
+      "max_time_ms": 87.63,
+      "avg_tags": 19.0,
+      "total_tags": 19,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "RIFF": 5,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "standard_synthetic"
+    },
+    {
+      "filepath": "test-data/test_tiff.tiff",
+      "file_ext": ".tiff",
+      "file_size_bytes": 6284,
+      "file_size_mb": 0.006,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 82.5,
+      "min_time_ms": 81.35,
+      "max_time_ms": 83.87,
+      "avg_tags": 25.0,
+      "total_tags": 25,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 4,
+        "IFD0": 10,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "professional_synthetic"
+    },
+    {
+      "filepath": "test-data/test_dng.dng",
+      "file_ext": ".dng",
+      "file_size_bytes": 6284,
+      "file_size_mb": 0.006,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 83.04,
+      "min_time_ms": 82.1,
+      "max_time_ms": 83.98,
+      "avg_tags": 25.0,
+      "total_tags": 25,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 4,
+        "IFD0": 10,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "professional_synthetic"
+    },
+    {
+      "filepath": "test-data/test_minimal.psd",
+      "file_ext": ".psd",
+      "file_size_bytes": 43,
+      "file_size_mb": 0.0,
+      "mp_bucket": "standard",
+      "iterations": 3,
+      "avg_time_ms": 83.48,
+      "min_time_ms": 82.21,
+      "max_time_ms": 85.16,
+      "avg_tags": 19.0,
+      "total_tags": 19,
+      "categories": {
+        "System": 8,
+        "ExifTool": 1,
+        "File": 3,
+        "Photoshop": 5,
+        "Composite": 2
+      },
+      "credits_base": 1,
+      "credits_mp": 0,
+      "credits_total": 1,
+      "category": "professional_synthetic"
+    }
+  ],
+  "by_category": {
+    "real_phone_with_gps": {
+      "count": 3,
+      "avg_time_ms": 90.86,
+      "avg_tags": 94.7,
+      "files": [
+        "tests/fixtures/test_image.jpg",
+        "tests/persona-files/sarah-phone-photos/IMG_20251225_164634.jpg",
+        "tests/persona-files/sarah-phone-photos/gps-map-photo.jpg"
+      ]
+    },
+    "real_dicom_medical": {
+      "count": 2,
+      "avg_time_ms": 97.21,
+      "avg_tags": 180.0,
+      "files": [
+        "test-data/CT_small.dcm",
+        "test-data/MR_small.dcm"
+      ]
+    },
+    "real_fits_scientific": {
+      "count": 2,
+      "avg_time_ms": 85.19,
+      "avg_tags": 24.5,
+      "files": [
+        "test-data/wcs_astronomy.fits",
+        "test-data/primary_3d.fits"
+      ]
+    },
+    "standard_synthetic": {
+      "count": 3,
+      "avg_time_ms": 83.69,
+      "avg_tags": 21.3,
+      "files": [
+        "test-data/test_jpg.jpg",
+        "test-data/test_png.png",
+        "test-data/test_webp.webp"
+      ]
+    },
+    "professional_synthetic": {
+      "count": 3,
+      "avg_time_ms": 83.01,
+      "avg_tags": 23.0,
+      "files": [
+        "test-data/test_tiff.tiff",
+        "test-data/test_dng.dng",
+        "test-data/test_minimal.psd"
+      ]
+    }
+  },
+  "summary": {
+    "total_files": 13,
+    "categories_tested": 5,
+    "avg_time_ms": 87.5,
+    "min_time_ms": 81.53,
+    "max_time_ms": 99.12,
+    "avg_tags": 63.5,
+    "total_tags": 826.0,
+    "total_credits": 16,
+    "avg_credits": 1.23,
+    "total_size_bytes": 50265859,
+    "total_size_mb": 47.94
+  }
+}

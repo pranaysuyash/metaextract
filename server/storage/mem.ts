@@ -1307,7 +1307,61 @@ export class MemStorage implements IStorage {
    * MemStorage doesn't track holds, so returns 0.
    */
   async cleanupExpiredHolds(): Promise<number> {
-    // In-memory storage doesn't track holds
     return 0;
+  }
+
+  async getUserExtractionHistory(
+    userId: string,
+    limit: number = 50
+  ): Promise<any[]> {
+    return [];
+  }
+
+  async getCreditUsageTrends(
+    balanceId: string,
+    period: 'day' | 'week' | 'month' = 'week'
+  ): Promise<any[]> {
+    return [];
+  }
+
+  async getAdminDashboardStats(): Promise<any> {
+    return {
+      users: { total: 0, active24h: 0 },
+      extractions: { total: 0, last24h: 0, success: 0, failed: 0 },
+      credits: { totalBalance: 0, used24h: 0 },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async getAnalyticsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    product?: string
+  ): Promise<any> {
+    return {
+      period: { start: startDate.toISOString(), end: endDate.toISOString() },
+      totals: { events: 0, users: 0, sessions: 0 },
+      eventCounts: {},
+    };
+  }
+
+  async getFileLevelAnalytics(limit: number = 100): Promise<any[]> {
+    return [];
+  }
+
+  async setUsageAlert(
+    userId: string,
+    threshold: number,
+    email: string
+  ): Promise<any> {
+    return { userId, threshold, email, createdAt: new Date().toISOString() };
+  }
+
+  async getUsageAlerts(userId: string): Promise<any[]> {
+    return [];
+  }
+
+  async checkAndTriggerAlerts(userId: string): Promise<any[]> {
+    return [];
   }
 }

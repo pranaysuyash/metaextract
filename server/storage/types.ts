@@ -224,6 +224,33 @@ export interface IStorage {
     id: string
   ): Promise<(StoredMetadata & { metadata: any }) | undefined>;
 
+  // User extraction history
+  getUserExtractionHistory(userId: string, limit?: number): Promise<any[]>;
+
+  // Credit usage trends
+  getCreditUsageTrends(
+    balanceId: string,
+    period?: 'day' | 'week' | 'month'
+  ): Promise<any[]>;
+
+  // Admin dashboard
+  getAdminDashboardStats(): Promise<any>;
+
+  // Custom date range analytics
+  getAnalyticsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    product?: string
+  ): Promise<any>;
+
+  // File-level analytics
+  getFileLevelAnalytics(limit?: number): Promise<any[]>;
+
+  // Usage alerts
+  setUsageAlert(userId: string, threshold: number, email: string): Promise<any>;
+  getUsageAlerts(userId: string): Promise<any[]>;
+  checkAndTriggerAlerts(userId: string): Promise<any[]>;
+
   // Additional methods that may be needed by various systems (optional for backward compatibility)
   getExtractionHistoryByUser?(userId: string, limit?: number): Promise<any[]>;
   anonymizeUserData?(userId: string): Promise<void>;

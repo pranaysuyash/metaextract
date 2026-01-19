@@ -611,12 +611,25 @@ export function registerPaymentRoutes(app: Express) {
   // When testing checkout flows on localhost, Dodo webhooks can't reach your machine
   // unless you use a tunnel. This endpoint verifies payment status via the Dodo API
   // and applies the same credit logic as the webhook handler (idempotent).
+  // PROTECTED: Only allow from localhost or with admin secret
   app.post('/api/payments/confirm', async (req: Request, res: Response) => {
-    try {
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(404).json({ error: 'Not found' });
-      }
+    // Defense in depth: Multiple security layers
+    const adminSecret = req.headers['x-admin-secret'];
+    const expectedSecret = process.env.ADMIN_SECRET;
+    const isLocalhost =
+      req.ip === '127.0.0.1' ||
+      req.ip === '::1' ||
+      req.hostname === 'localhost';
 
+    // Block unless: localhost OR correct admin secret
+    if (!isLocalhost && (!expectedSecret || adminSecret !== expectedSecret)) {
+      console.warn(
+        `Payment confirm blocked from IP: ${req.ip}, Host: ${req.hostname}`
+      );
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
       const dodoClient = getDodoClient();
       if (!dodoClient) {
         return res.status(503).json({
@@ -879,6 +892,223 @@ export function registerPaymentRoutes(app: Express) {
       },
       description: '1 credit = 1 standard file extraction',
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Credit Usage Trends
+  // ---------------------------------------------------------------------------
+
+  app.get('/api/credits/trends', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const period = (req.query.period as string) || 'week';
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const balanceKey = getCoreBalanceKeyForUser(authReq.user.id);
+      const balance = await storage.getCreditBalanceBySessionId(balanceKey);
+
+      if (!balance) {
+        return res.json({ trends: [], period });
+      }
+
+      const trends = await storage.getCreditUsageTrends(
+        balance.id,
+        period as 'day' | 'week' | 'month'
+      );
+      res.json({ trends, period });
+    } catch (error) {
+      console.error('Credit trends error:', error);
+      res.status(500).json({ error: 'Failed to get credit trends' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // User Extraction History
+  // ---------------------------------------------------------------------------
+
+  app.get('/api/user/extractions', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const history = await storage.getUserExtractionHistory(
+        authReq.user.id,
+        limit
+      );
+      res.json({
+        extractions: history,
+        count: history.length,
+      });
+    } catch (error) {
+      console.error('Extraction history error:', error);
+      res.status(500).json({ error: 'Failed to get extraction history' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Analytics by Custom Date Range
+  // ---------------------------------------------------------------------------
+
+  app.get('/api/analytics/range', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const startDateStr = req.query.start as string;
+      const endDateStr = req.query.end as string;
+      const product = req.query.product as string | undefined;
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      if (!startDateStr || !endDateStr) {
+        return res.status(400).json({ error: 'start and end dates required' });
+      }
+
+      const startDate = new Date(startDateStr);
+      const endDate = new Date(endDateStr);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid date format' });
+      }
+
+      const analytics = await storage.getAnalyticsByDateRange(
+        startDate,
+        endDate,
+        product
+      );
+      res.json(analytics);
+    } catch (error) {
+      console.error('Analytics range error:', error);
+      res.status(500).json({ error: 'Failed to get analytics' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Export Analytics to CSV
+  // ---------------------------------------------------------------------------
+
+  app.get('/api/analytics/export', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const format = (req.query.format as string) || 'csv';
+      const period = (req.query.period as string) || 'week';
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const now = new Date();
+      const periodMap: Record<string, number> = {
+        day: 1,
+        week: 7,
+        month: 30,
+        year: 365,
+      };
+      const days = periodMap[period] || 7;
+      const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+      const analytics = await storage.getAnalyticsByDateRange(
+        startDate,
+        now,
+        'images_mvp'
+      );
+
+      if (format === 'csv') {
+        const csvHeader = 'Metric,Value\n';
+        const csvRows = [
+          `Total Events,${analytics.totals?.events || 0}`,
+          `Total Users,${analytics.totals?.users || 0}`,
+          `Total Sessions,${analytics.totals?.sessions || 0}`,
+        ];
+
+        if (analytics.eventCounts) {
+          for (const [key, value] of Object.entries(analytics.eventCounts)) {
+            csvRows.push(`${key},${value}`);
+          }
+        }
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=analytics-${period}.csv`
+        );
+        res.send(csvHeader + csvRows.join('\n'));
+      } else {
+        res.json(analytics);
+      }
+    } catch (error) {
+      console.error('Analytics export error:', error);
+      res.status(500).json({ error: 'Failed to export analytics' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Usage Alerts
+  // ---------------------------------------------------------------------------
+
+  app.post('/api/user/alerts', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+      const { threshold, email } = req.body;
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      if (!threshold || threshold <= 0) {
+        return res.status(400).json({ error: 'Valid threshold required' });
+      }
+
+      const alert = await storage.setUsageAlert(
+        authReq.user.id,
+        threshold,
+        email || authReq.user.email
+      );
+
+      res.json({ success: true, alert });
+    } catch (error) {
+      console.error('Set alert error:', error);
+      res.status(500).json({ error: 'Failed to set alert' });
+    }
+  });
+
+  app.get('/api/user/alerts', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const alerts = await storage.getUsageAlerts(authReq.user.id);
+      res.json({ alerts });
+    } catch (error) {
+      console.error('Get alerts error:', error);
+      res.status(500).json({ error: 'Failed to get alerts' });
+    }
+  });
+
+  app.get('/api/user/alerts/check', async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthRequest;
+
+      if (!authReq.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const alerts = await storage.checkAndTriggerAlerts(authReq.user.id);
+      res.json({ alerts, triggered: alerts.length > 0 });
+    } catch (error) {
+      console.error('Check alerts error:', error);
+      res.status(500).json({ error: 'Failed to check alerts' });
+    }
   });
 }
 

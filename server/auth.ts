@@ -941,12 +941,9 @@ export function registerAuthRoutes(app: Express) {
 
         const token = generateUserCSRFToken(req.user.id);
 
-        // Set CSRF token in cookie for client-side access
+        // Set CSRF token in cookie - SECURED with httpOnly
         res.cookie('csrf_token', token, {
-          httpOnly: false, // Allow client-side JavaScript to read for AJAX requests
-          // SECURITY NOTE: httpOnly: false allows CSRF token to be read via XSS attacks.
-          // This is a trade-off to enable AJAX requests without requiring a separate token fetch.
-          // In production, ensure no XSS vulnerabilities exist to mitigate this risk.
+          httpOnly: true, // SECURITY: Prevents XSS from reading CSRF token
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           maxAge: 60 * 60 * 1000, // 1 hour
@@ -962,6 +959,36 @@ export function registerAuthRoutes(app: Express) {
           error: 'Failed to generate CSRF token',
           message: error instanceof Error ? error.message : 'Unknown error',
         });
+      }
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // Get CSRF Token for AJAX (with httpOnly cookie - token in response body)
+  // -------------------------------------------------------------------------
+  app.get(
+    '/api/auth/csrf-token',
+    authMiddleware,
+    async (req: AuthRequest, res: Response) => {
+      try {
+        if (!req.user?.id) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const token = generateUserCSRFToken(req.user.id);
+
+        // Set CSRF token in cookie - SECURED with httpOnly
+        res.cookie('csrf_token', token, {
+          httpOnly: true, // SECURITY: Prevents XSS from reading CSRF token
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 60 * 60 * 1000, // 1 hour
+        });
+
+        res.json({ token });
+      } catch (error) {
+        console.error('CSRF token fetch error:', error);
+        res.status(500).json({ error: 'Failed to fetch CSRF token' });
       }
     }
   );

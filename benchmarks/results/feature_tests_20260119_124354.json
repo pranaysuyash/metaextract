@@ -1,0 +1,178 @@
+{
+  "timestamp": "2026-01-19T07:13:53.746740Z",
+  "exiftool_available": true,
+  "tests": {
+    "mp_bucket_pricing": {
+      "category": "mp_bucket_pricing",
+      "tests": [
+        {
+          "file": "png_standard.png",
+          "size_mb": 8.6,
+          "dimensions": [
+            2000,
+            1500
+          ],
+          "megapixels": 3.0,
+          "bucket": "standard",
+          "expected_credits": 0
+        },
+        {
+          "file": "png_large.png",
+          "size_mb": 17.19,
+          "dimensions": [
+            3000,
+            2000
+          ],
+          "megapixels": 6.0,
+          "bucket": "standard",
+          "expected_credits": 0
+        },
+        {
+          "file": "png_xl.png",
+          "size_mb": 34.38,
+          "dimensions": [
+            4000,
+            3000
+          ],
+          "megapixels": 12.0,
+          "bucket": "standard",
+          "expected_credits": 0
+        },
+        {
+          "file": "large_xl.jpg",
+          "size_mb": 0.99,
+          "dimensions": [
+            8000,
+            6000
+          ],
+          "megapixels": 48.0,
+          "bucket": "xl",
+          "expected_credits": 3
+        },
+        {
+          "file": "large_xxl.jpg",
+          "size_mb": 1.72,
+          "dimensions": [
+            12000,
+            8000
+          ],
+          "megapixels": 96.0,
+          "bucket": "xxl",
+          "expected_credits": 7
+        }
+      ]
+    },
+    "ocr_extraction": {
+      "category": "ocr_extraction",
+      "available": true,
+      "tests": [
+        {
+          "file": "test-data/ocr_test.png",
+          "extracted_text": "MotaBxtract OCR Test\n\nThis ssample text for OOR testing\n\n1234567890",
+          "success": true
+        }
+      ]
+    },
+    "embedding_generation": {
+      "category": "embedding_generation",
+      "available": true,
+      "tests": [
+        {
+          "file": "test-data/embedding_test.jpg",
+          "embedding_dim": 768,
+          "embedding_sample": [
+            0.0,
+            0.0,
+            0.0625,
+            0.0,
+            0.0
+          ],
+          "success": true
+        }
+      ],
+      "note": "Simple histogram-based embedding (ML library optional)"
+    },
+    "image_forensics": {
+      "category": "image_forensics",
+      "available": true,
+      "tests": [
+        {
+          "file": "test-data/forensics_test.jpg",
+          "analysis": {
+            "file_size": 4723,
+            "dimensions": [
+              500,
+              500
+            ],
+            "format": "JPEG",
+            "mode": "RGB"
+          },
+          "success": true
+        }
+      ]
+    },
+    "credit_calculations": {
+      "category": "credit_calculations",
+      "tests": [
+        {
+          "file": "test_image.jpg",
+          "features": "Base only",
+          "mp_bucket": "large",
+          "mp_credits": 1,
+          "total_credits": 2
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "Base + OCR",
+          "mp_bucket": "large",
+          "mp_credits": 1,
+          "total_credits": 7
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "Base + Embedding",
+          "mp_bucket": "large",
+          "mp_credits": 1,
+          "total_credits": 5
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "Base + Forensics",
+          "mp_bucket": "large",
+          "mp_credits": 1,
+          "total_credits": 6
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "All features",
+          "mp_bucket": "large",
+          "mp_credits": 1,
+          "total_credits": 14
+        }
+      ]
+    },
+    "raw_simulation": {
+      "category": "raw_simulation",
+      "file": "test-data/raw_simulation.jpg",
+      "tests": [
+        {
+          "total_tags": 110,
+          "raw_tags_found": 10,
+          "raw_tag_names": [
+            "Artist",
+            "GPSLatitude",
+            "LensSerialNumber",
+            "ExposureTime",
+            "Copyright",
+            "FNumber",
+            "Make",
+            "LensModel",
+            "GPSLongitude",
+            "Model"
+          ],
+          "success": true
+        }
+      ]
+    }
+  }
+}

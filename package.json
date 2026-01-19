@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev:client": "vite dev --port 5173",
-    "dev:server": "PYTHON_EXECUTABLE=$PWD/.venv/bin/python3 NODE_ENV=development HOST=127.0.0.1 JWT_SECRET=your-super-secure-random-jwt-secret-here-at-least-32-characters-for-development node --import tsx/esm server/index.ts",
+    "dev:server": "PYTHON_EXECUTABLE=/Users/pranay/Projects/metaextract/.venv/bin/python3 NODE_ENV=development HOST=127.0.0.1 JWT_SECRET=your-super-secure-random-jwt-secret-here-at-least-32-characters-for-development node --import tsx/esm server/index.ts",
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "dev:tsx": "PYTHON_EXECUTABLE=$PWD/.venv/bin/python3 NODE_ENV=development tsx server/index.ts",
     "build": "tsx script/build.ts",

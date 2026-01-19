@@ -8,10 +8,12 @@
  * - Health checks
  */
 
-import type { Express, Response } from 'express';
+import type { Express, Request, Response } from 'express';
+import type { WebSocket } from 'ws';
 import path from 'path';
 import { spawn } from 'child_process';
 import { pythonExecutable } from '../utils/extraction-helpers';
+import { verifyToken } from '../auth';
 
 // Get the routes directory - compatible with both ESM and CommonJS
 const projectRoot = process.cwd();
@@ -23,6 +25,10 @@ import {
   adminRateLimitMiddleware,
   healthCheckAuth,
 } from '../middleware/admin-auth';
+import {
+  getRecentSecurityEvents,
+  getSecurityStats,
+} from '../utils/enhanced-quota-handler';
 import { sanitizeFilename } from '../security-utils';
 
 // Allowed patterns for cache clearing (whitelist)
@@ -476,4 +482,162 @@ print(json.dumps(get_error_summary()))
       });
     }
   });
+
+  // ---------------------------------------------------------------------------
+  // File-Level Analytics
+  // ---------------------------------------------------------------------------
+
+  app.get(
+    '/api/admin/analytics/files',
+    adminAuthMiddleware,
+    adminRateLimitMiddleware,
+    async (req: Request, res: Response) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 100;
+        const fileAnalytics = await storage.getFileLevelAnalytics(limit);
+        res.json({
+          success: true,
+          files: fileAnalytics,
+          count: fileAnalytics.length,
+        });
+      } catch (error) {
+        console.error('File analytics error:', error);
+        res.status(500).json({
+          error: 'Failed to get file analytics',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // Analytics by Custom Date Range (Admin)
+  // ---------------------------------------------------------------------------
+
+  app.get(
+    '/api/admin/analytics/range',
+    adminAuthMiddleware,
+    adminRateLimitMiddleware,
+    async (req: Request, res: Response) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 100;
+        const fileAnalytics = await storage.getFileLevelAnalytics(limit);
+        res.json({
+          success: true,
+          files: fileAnalytics,
+          count: fileAnalytics.length,
+        });
+      } catch (error) {
+        console.error('File analytics error:', error);
+        res.status(500).json({
+          error: 'Failed to get file analytics',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // Admin Dashboard - Comprehensive Stats
+  // ---------------------------------------------------------------------------
+
+  app.get(
+    '/api/admin/dashboard',
+    adminAuthMiddleware,
+    adminRateLimitMiddleware,
+    async (req, res) => {
+      try {
+        const [
+          dashboardStats,
+          securityStats,
+          securityEvents,
+          recentExtractions,
+        ] = await Promise.all([
+          storage.getAdminDashboardStats(),
+          getSecurityStats(),
+          getRecentSecurityEvents(20),
+          storage.getRecentExtractions(20),
+        ]);
+
+        const criticalEvents = securityEvents.filter(
+          (e: any) => e.severity === 'critical' || e.severity === 'high'
+        );
+
+        res.json({
+          success: true,
+          dashboard: {
+            stats: dashboardStats,
+            security: {
+              stats: securityStats,
+              recentEvents: securityEvents.slice(0, 10),
+              alerts: criticalEvents.slice(0, 5),
+              threatLevel:
+                securityStats.criticalEvents > 5
+                  ? 'high'
+                  : securityStats.highRiskEvents > 10
+                    ? 'elevated'
+                    : 'normal',
+            },
+            extractions: {
+              recent: recentExtractions,
+              count: recentExtractions.length,
+            },
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('Admin dashboard error:', error);
+        res.status(500).json({
+          error: 'Failed to get dashboard data',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // Analytics by Custom Date Range (Admin)
+  // ---------------------------------------------------------------------------
+
+  app.get(
+    '/api/admin/analytics/range',
+    adminAuthMiddleware,
+    adminRateLimitMiddleware,
+    async (req, res) => {
+      try {
+        const startDateStr = req.query.start as string;
+        const endDateStr = req.query.end as string;
+        const product = req.query.product as string | undefined;
+
+        if (!startDateStr || !endDateStr) {
+          return res
+            .status(400)
+            .json({ error: 'start and end dates required' });
+        }
+
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return res.status(400).json({ error: 'Invalid date format' });
+        }
+
+        const analytics = await storage.getAnalyticsByDateRange(
+          startDate,
+          endDate,
+          product
+        );
+        res.json({
+          success: true,
+          analytics,
+        });
+      } catch (error) {
+        console.error('Admin analytics range error:', error);
+        res.status(500).json({
+          error: 'Failed to get analytics',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
 }

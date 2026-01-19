@@ -1,0 +1,119 @@
+{
+  "timestamp": "2026-01-19T07:11:21.492254Z",
+  "exiftool_available": true,
+  "tests": {
+    "mp_bucket_pricing": {
+      "category": "mp_bucket_pricing",
+      "tests": [
+        {
+          "file": "png_standard.png",
+          "size_mb": 8.6,
+          "dimensions": null,
+          "megapixels": null,
+          "bucket": null,
+          "expected_credits": 0
+        },
+        {
+          "file": "png_large.png",
+          "size_mb": 17.19,
+          "dimensions": null,
+          "megapixels": null,
+          "bucket": null,
+          "expected_credits": 0
+        },
+        {
+          "file": "png_xl.png",
+          "size_mb": 34.38,
+          "dimensions": null,
+          "megapixels": null,
+          "bucket": null,
+          "expected_credits": 0
+        },
+        {
+          "file": "large_xl.jpg",
+          "size_mb": 0.99,
+          "dimensions": null,
+          "megapixels": null,
+          "bucket": null,
+          "expected_credits": 0
+        },
+        {
+          "file": "large_xxl.jpg",
+          "size_mb": 1.72,
+          "dimensions": null,
+          "megapixels": null,
+          "bucket": null,
+          "expected_credits": 0
+        }
+      ]
+    },
+    "ocr_extraction": {
+      "category": "ocr_extraction",
+      "available": true,
+      "tests": [
+        {
+          "file": "test-data/ocr_test.png",
+          "extracted_text": "MotaBxtract OCR Test\n\nThis ssample text for OOR testing\n\n1234567890",
+          "success": true
+        }
+      ]
+    },
+    "embedding_generation": {
+      "category": "embedding_generation",
+      "available": false,
+      "tests": []
+    },
+    "image_forensics": {
+      "category": "image_forensics",
+      "available": true,
+      "tests": [
+        {
+          "file": "test-data/forensics_test.jpg",
+          "manipulation_detected": false,
+          "confidence_score": 0,
+          "analysis_complete": true
+        }
+      ]
+    },
+    "credit_calculations": {
+      "category": "credit_calculations",
+      "tests": [
+        {
+          "file": "test_image.jpg",
+          "features": "Base only",
+          "mp_bucket": "standard",
+          "mp_credits": 0,
+          "total_credits": 1
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "Base + OCR",
+          "mp_bucket": "standard",
+          "mp_credits": 0,
+          "total_credits": 6
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "Base + Embedding",
+          "mp_bucket": "standard",
+          "mp_credits": 0,
+          "total_credits": 4
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "Base + Forensics",
+          "mp_bucket": "standard",
+          "mp_credits": 0,
+          "total_credits": 5
+        },
+        {
+          "file": "test_image.jpg",
+          "features": "All features",
+          "mp_bucket": "standard",
+          "mp_credits": 0,
+          "total_credits": 13
+        }
+      ]
+    }
+  }
+}
