@@ -58,7 +58,7 @@ module.exports = {
   },
   coverageReporters: ['text', 'lcov', 'html'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  transformIgnorePatterns: ['/node_modules/(?!( @tanstack/react-query)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!( @tanstack/react-query|uuid)/)'],
   watchPlugins: [
     'jest-watch-typeahead/filename',
     'jest-watch-typeahead/testname',
