@@ -2,9 +2,16 @@
  * Professional Reports Generator - PDF report engine and templates
  */
 
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+
+// jsPDF and autoTable loaded dynamically to reduce initial bundle size
+async function loadJsPDF() {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  return { jsPDF, autoTable };
+}
 
 // Types for report data
 export interface ReportData {
@@ -59,6 +66,7 @@ export class ReportGenerator {
    * Generate a PDF report
    */
   static async generatePDFReport(data: ReportData): Promise<Blob> {
+    const { jsPDF, autoTable } = await loadJsPDF();
     const doc = new jsPDF();
     
     // Add title

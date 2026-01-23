@@ -54,8 +54,7 @@ import {
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import generatedBackground from '@assets/generated_images/chaotic_dark_forensic_data_visualization_with_connecting_lines.png';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// jsPDF loaded dynamically on export to reduce initial bundle size
 
 interface BurnedMetadata {
   has_burned_metadata: boolean;
@@ -319,7 +318,7 @@ export default function Results() {
     }
   };
 
-  const handlePDFExport = () => {
+  const handlePDFExport = async () => {
     // CRITICAL FIX: Handle null metadata gracefully
     if (!metadata) {
       showUploadError(toast, 'No metadata available to export');
@@ -331,6 +330,7 @@ export default function Results() {
       return;
     }
 
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     let yPosition = 20;

@@ -69,6 +69,36 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     build: {
       outDir: path.resolve(import.meta.dirname, 'dist/public'),
       emptyOutDir: true,
+      chunkSizeWarningLimit: 800,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react-dom') || id.includes('react-router')) {
+                return 'vendor-react';
+              }
+              if (id.includes('@radix-ui')) {
+                return 'vendor-radix';
+              }
+              if (id.includes('recharts') || id.includes('d3-') || id.includes('recharts-scale') || id.includes('victory')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('framer-motion')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('@tanstack')) {
+                return 'vendor-query';
+              }
+              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('canvg')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+            }
+          },
+        },
+      },
     },
     // Cache busting for development
     cacheDir: 'node_modules/.vite-cache-v2-update',

@@ -20,8 +20,7 @@ import {
   TrendingDown,
   TrendingUp
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// jsPDF loaded dynamically on export to reduce initial bundle size
 
 interface FileAnalysis {
   file_name: string;
@@ -93,7 +92,7 @@ export function ForensicReport({ reportData }: ForensicReportProps) {
     return 'text-red-600';
   };
 
-  const exportReport = (format: 'json' | 'pdf') => {
+  const exportReport = async (format: 'json' | 'pdf') => {
     if (format === 'json') {
       const blob = new Blob([JSON.stringify(reportData, null, 2)], { 
         type: 'application/json' 
@@ -107,11 +106,12 @@ export function ForensicReport({ reportData }: ForensicReportProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else {
-      generatePDFReport();
+      await generatePDFReport();
     }
   };
 
-  const generatePDFReport = () => {
+  const generatePDFReport = async () => {
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
