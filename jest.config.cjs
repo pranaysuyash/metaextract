@@ -57,7 +57,16 @@ module.exports = {
     },
   },
   coverageReporters: ['text', 'lcov', 'html'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    // Obsolete tests (deprecated tier-based pricing system)
+    'subscription\\.property\\.test\\.ts$',
+    'pricing\\.property\\.test\\.ts$',
+    // Env-gated tests (require RUN_PERF_TESTS=1 or RUN_DB_INIT_DEBUG=1)
+    'performance-load\\.test\\.ts$',
+    'db-init-debug\\.integration\\.test\\.ts$',
+  ],
   transformIgnorePatterns: ['/node_modules/(?!( @tanstack/react-query|uuid)/)'],
   watchPlugins: [
     'jest-watch-typeahead/filename',
