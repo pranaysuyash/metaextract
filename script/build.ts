@@ -4,8 +4,11 @@ import { rm, readFile } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
+// Server deps to bundle to reduce openat(2) syscalls on cold start.
+// Only include deps that are actually imported in server code.
+// Deps NOT bundled (externalized): xlsx, openai, stripe, @google/generative-ai,
+// nodemailer (all unused in server code as of Jan 2026).
 const allowlist = [
-  "@google/generative-ai",
   "axios",
   "connect-pg-simple",
   "cors",
@@ -19,15 +22,11 @@ const allowlist = [
   "memorystore",
   "multer",
   "nanoid",
-  "nodemailer",
-  "openai",
   "passport",
   "passport-local",
   "pg",
-  "stripe",
   "uuid",
   "ws",
-  "xlsx",
   "zod",
   "zod-validation-error",
 ];
